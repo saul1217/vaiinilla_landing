@@ -1,0 +1,71 @@
+---
+const features = [
+  { ic: '⚡', title: 'Cero filas', text: 'Ordena desde tu lugar y recoge cuando esté listo. El recreo es para comer, no para formarte.' },
+  { ic: '💳', title: 'Paga con saldo', text: 'Recarga una vez y paga en segundos. Sin cambio, sin efectivo suelto, sin pretextos.' },
+  { ic: '✨', title: 'Asistente con IA', text: 'Te recomienda qué pedir según tu antojo, tu presupuesto y lo que está listo pronto.' },
+  { ic: '📍', title: 'Explora como invitado', text: 'Descubre el menú y arma tu carrito sin crear cuenta. Regístrate solo cuando quieras pagar.' },
+  { ic: '🔔', title: 'Seguimiento en vivo', text: 'Del cobro a la entrega, sabes en qué paso va tu pedido en todo momento.' },
+  { ic: '☕', title: 'Multi-cafetería', text: 'Cambia de establecimiento cuando quieras: cada uno con su menú, su saldo y su contexto.' },
+];
+---
+
+<section class="features" id="ventajas">
+  <div class="container">
+    <div class="features__head" data-reveal>
+      <p class="eyebrow">Ventajas</p>
+      <h2>Hecho para que comer<br />en la escuela sea <span class="lime-text">fácil.</span></h2>
+    </div>
+
+    <div class="features__grid">
+      {features.map((f) => (
+        <article class="feature" data-reveal>
+          <span class="feature__ic">{f.ic}</span>
+          <h3 class="feature__title">{f.title}</h3>
+          <p class="feature__text">{f.text}</p>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .features { padding: 90px 0; }
+  .features__head { text-align: center; margin-bottom: 50px; }
+  .features__head h2 { font-size: clamp(2rem, 4.4vw, 3.2rem); margin-top: 14px; }
+
+  .features__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  .feature {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 32px 28px;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+  }
+  .feature:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow);
+  }
+  .feature__ic {
+    display: grid; place-items: center;
+    width: 54px; height: 54px;
+    background: var(--lime);
+    border-radius: 16px;
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 20px var(--lime-glow);
+  }
+  .feature__title { font-size: 1.3rem; margin-bottom: 10px; }
+  .feature__text { color: var(--ink-soft); font-size: 1rem; }
+
+  @media (max-width: 880px) {
+    .features__grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .features__grid { grid-template-columns: 1fr; }
+  }
+</style>

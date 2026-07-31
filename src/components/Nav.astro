@@ -1,0 +1,78 @@
+---
+---
+<header class="nav" data-nav>
+  <div class="container nav__inner">
+    <a class="nav__logo" href="#top" aria-label="Vaiinilla — inicio">
+      <span class="nav__mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+          <path d="M6 3h6l-1.5 4.5H8L6 3Z" fill="#16150F"/>
+          <rect x="7" y="8" width="7" height="13" rx="3" fill="#16150F"/>
+          <path d="M15 9c2.2 0 3.5 1.4 3.5 3.4 0 2.6-2.3 3.8-3.5 4.2V9Z" fill="#16150F"/>
+        </svg>
+      </span>
+      Vaiinilla
+    </a>
+
+    <nav class="nav__links">
+      <a href="#como-funciona">Cómo funciona</a>
+      <a href="#ventajas">Ventajas</a>
+    </nav>
+
+    <a class="btn btn--dark nav__cta" href="#cta">Probar la app</a>
+  </div>
+</header>
+
+<style>
+  .nav {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 50;
+    padding: 14px 0;
+    transition: background 0.3s ease, box-shadow 0.3s ease, padding 0.3s ease;
+  }
+  .nav.is-scrolled {
+    background: rgba(244, 240, 228, 0.82);
+    backdrop-filter: saturate(160%) blur(14px);
+    box-shadow: 0 1px 0 var(--line);
+    padding: 10px 0;
+  }
+  .nav__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+  }
+  .nav__logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 1.2rem;
+    letter-spacing: -0.02em;
+  }
+  .nav__mark {
+    display: grid;
+    place-items: center;
+    width: 34px; height: 34px;
+    background: var(--lime);
+    border-radius: 11px;
+    box-shadow: var(--shadow-sm);
+  }
+  .nav__links {
+    display: flex;
+    gap: 30px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+  }
+  .nav__links a { transition: color 0.2s; }
+  .nav__links a:hover { color: var(--lime-dark); }
+  .nav__cta { padding: 11px 22px; font-size: 0.95rem; }
+
+  @media (max-width: 780px) {
+    .nav__links { display: none; }
+  }
+  @media (max-width: 460px) {
+    .nav__cta { display: none; }
+  }
+</style>

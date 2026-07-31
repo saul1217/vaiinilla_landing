@@ -1,0 +1,170 @@
+---
+---
+<section class="hero" id="top">
+  <span class="blob hero__blob hero__blob--1"></span>
+  <span class="blob hero__blob hero__blob--2"></span>
+
+  <div class="container hero__inner">
+    <div class="hero__copy">
+      <p class="eyebrow" data-reveal>El POS para cafeterías escolares</p>
+
+      <h1 class="hero__title" data-reveal>
+        Pide y paga desde tu&nbsp;celular.
+        <span class="highlight"><span>Sin filas.</span></span>
+      </h1>
+
+      <p class="hero__sub" data-reveal>
+        Vaiinilla deja que los alumnos ordenen y paguen desde su lugar.
+        Menos tiempo formado, más recreo.
+      </p>
+
+      <div class="hero__actions" data-reveal>
+        <a class="btn btn--primary" href="#como-funciona">Ver cómo funciona</a>
+        <a class="btn btn--ghost" href="#ventajas">Descubrir ventajas</a>
+      </div>
+
+      <ul class="hero__chips" data-reveal>
+        <li>🍔 Menú del día</li>
+        <li>💳 Paga con saldo</li>
+        <li>✨ Asistente con IA</li>
+      </ul>
+    </div>
+
+    <div class="hero__visual" data-reveal>
+      <div class="hero__phone" data-float>
+        <div class="device">
+          <div class="device__island"></div>
+          <div class="device__screen">
+            <img class="device__shot" src="/screens/screen-1.jpeg" alt="Pantalla de inicio de la app Vaiinilla con el menú del día" width="300" height="650" />
+          </div>
+        </div>
+      </div>
+
+      <div class="hero__card hero__card--top" data-float="slow">
+        <span class="hero__card-ic">✅</span>
+        <div>
+          <strong>Agregado a tu pedido</strong>
+          <small>Torta de jamón · $45</small>
+        </div>
+      </div>
+
+      <div class="hero__card hero__card--bottom" data-float="slow">
+        <span class="hero__card-ic hero__card-ic--lime">$</span>
+        <div>
+          <strong>Saldo Vaiinilla</strong>
+          <small>$1,046 disponibles</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    padding: 150px 0 90px;
+    overflow: hidden;
+  }
+  .hero__blob--1 {
+    width: 520px; height: 520px;
+    background: var(--lime);
+    top: -120px; right: -80px;
+    opacity: 0.42;
+  }
+  .hero__blob--2 {
+    width: 420px; height: 420px;
+    background: #cfe89a;
+    bottom: -160px; left: -120px;
+    opacity: 0.5;
+  }
+  .hero__inner {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    align-items: center;
+    gap: 40px;
+  }
+  .hero__title {
+    font-size: clamp(2.6rem, 6vw, 4.4rem);
+    margin: 18px 0 22px;
+  }
+  .hero__sub {
+    font-size: clamp(1.05rem, 1.4vw, 1.28rem);
+    color: var(--ink-soft);
+    max-width: 30ch;
+  }
+  .hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin: 32px 0 26px;
+  }
+  .hero__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    list-style: none;
+    padding: 0; margin: 0;
+  }
+  .hero__chips li {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .hero__visual {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: 560px;
+  }
+  .hero__phone { position: relative; z-index: 2; --dw: 290px; }
+
+  .hero__card {
+    position: absolute;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 12px 18px 12px 12px;
+    box-shadow: var(--shadow);
+  }
+  .hero__card strong { display: block; font-size: 0.92rem; }
+  .hero__card small { color: var(--muted); font-size: 0.82rem; }
+  .hero__card-ic {
+    display: grid; place-items: center;
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: var(--cream-2);
+    font-size: 1.1rem;
+  }
+  .hero__card-ic--lime {
+    background: var(--lime);
+    font-weight: 800;
+    color: var(--ink);
+  }
+  .hero__card--top { top: 6%; left: -6%; }
+  .hero__card--bottom { bottom: 8%; right: -8%; }
+
+  @media (max-width: 900px) {
+    .hero { padding-top: 130px; }
+    .hero__inner { grid-template-columns: 1fr; text-align: center; }
+    .hero__sub { margin-inline: auto; }
+    .hero__actions, .hero__chips { justify-content: center; }
+    .hero__visual { margin-top: 30px; min-height: 520px; }
+    .hero__card--top { left: 2%; }
+    .hero__card--bottom { right: 2%; }
+  }
+  @media (max-width: 420px) {
+    .hero__card small { display: none; }
+    .hero__card--top { left: -2%; }
+    .hero__card--bottom { right: -2%; }
+  }
+</style>

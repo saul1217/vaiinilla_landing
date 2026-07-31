@@ -1,0 +1,707 @@
+---
+const steps = [
+  {
+    img: '/screens/screen-8.jpeg',
+    tag: 'Descubre',
+    title: 'Encuentra tu cafetería',
+    text: 'Explora el menú como invitado, sin crear cuenta. Escanea el QR de tu mesa o busca tu establecimiento.',
+  },
+  {
+    img: '/screens/screen-1.jpeg',
+    tag: 'Menú del día',
+    title: 'Todo lo de hoy, a la mano',
+    text: 'Lo que se cocina hoy en categorías claras y con fotos que dan hambre. Busca lo que se te antoja.',
+  },
+  {
+    img: '/screens/screen-2.jpeg',
+    tag: 'Detalle',
+    title: 'Cada platillo, con todo el detalle',
+    text: 'Ingredientes, alérgenos y tiempo estimado antes de pedir. Ajusta la cantidad y agrégalo al pedido.',
+  },
+  {
+    img: '/screens/screen-5.jpeg',
+    tag: 'Vaiinilla Plus',
+    title: '¿No sabes qué pedir?',
+    text: 'El asistente te recomienda opciones según tu antojo, tu presupuesto y lo que está listo pronto.',
+  },
+  {
+    img: '/screens/screen-7.jpeg',
+    tag: 'Tu pedido',
+    title: 'Arma y paga en segundos',
+    text: 'Elige para llevar o en mesa, paga con saldo o efectivo y deja notas para la cocina. Así de simple.',
+  },
+  {
+    img: '/screens/screen-4.jpeg',
+    tag: 'Cartera',
+    title: 'Tu saldo, siempre contigo',
+    text: 'Recarga en caja y paga al instante. Sin cambio, sin efectivo suelto, con tus movimientos a la vista.',
+  },
+  {
+    img: '/screens/screen-6.jpeg',
+    tag: 'Seguimiento',
+    title: 'Síguelo en tiempo real',
+    text: 'Del cobro a la entrega: mira exactamente en qué paso va tu pedido, sin preguntarle a nadie.',
+  },
+];
+
+const stepCount = String(steps.length).padStart(2, '0');
+const desktopTrackHeight = `${100 + (steps.length - 1) * 82}svh`;
+const mobileTrackHeight = `${100 + (steps.length - 1) * 70}svh`;
+---
+
+<section class="scrolly" id="como-funciona" aria-labelledby="scrolly-title">
+  <div class="container scrolly__head" data-reveal>
+    <p class="eyebrow">Cómo funciona</p>
+    <h2 id="scrolly-title">
+      Del antojo a la entrega,<br />
+      <span class="lime-text">sin salir de tu lugar.</span>
+    </h2>
+    <p class="scrolly__intro">
+      Sigue el recorrido de un pedido: el teléfono cambia contigo mientras avanzas.
+    </p>
+  </div>
+
+  <div
+    class="scrolly__track"
+    data-scrolly-track
+    style={`--track-height:${desktopTrackHeight};--track-height-mobile:${mobileTrackHeight}`}
+  >
+    <div class="scrolly__stage" data-scrolly-stage>
+      <div class="scrolly__backdrop" aria-hidden="true">
+        <span class="scrolly__orb scrolly__orb--lime"></span>
+        <span class="scrolly__orb scrolly__orb--cream"></span>
+        <span class="scrolly__line"></span>
+      </div>
+
+      <div class="scrolly__phone" data-scrolly-phone>
+        <span class="scrolly__phone-glow" aria-hidden="true"></span>
+        <div class="device">
+          <div class="device__island"></div>
+          <div class="device__screen">
+            {steps.map((step, index) => (
+              <img
+                class:list={['device__shot', 'scrolly__shot', { 'is-active': index === 0 }]}
+                data-shot={index}
+                src={step.img}
+                alt=""
+                aria-hidden="true"
+                loading={index < 2 ? 'eager' : 'lazy'}
+                decoding="async"
+                fetchpriority={index === 0 ? 'high' : 'auto'}
+                width="738"
+                height="1600"
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div class="scrolly__captions">
+        {steps.map((step, index) => {
+          const side = index % 2 === 0 ? 'left' : 'right';
+          return (
+            <article
+              class:list={['cap', { 'is-active': index === 0 }]}
+              data-cap={index}
+              data-side={side}
+              aria-hidden={index === 0 ? 'false' : 'true'}
+            >
+              <span class="cap__num">
+                {String(index + 1).padStart(2, '0')} <span>/ {stepCount}</span>
+              </span>
+              <span class="cap__tag">{step.tag}</span>
+              <h3 class="cap__title">{step.title}</h3>
+              <p class="cap__text">{step.text}</p>
+            </article>
+          );
+        })}
+      </div>
+
+      <div class="scrolly__progress">
+        <span class="scrolly__current" aria-hidden="true">
+          <strong data-current-step>01</strong>
+          <span>/ {stepCount}</span>
+        </span>
+        <div class="scrolly__steps" aria-label="Pasos del recorrido">
+          {steps.map((step, index) => (
+            <button
+              class:list={['scrolly__step', { 'is-active': index === 0 }]}
+              type="button"
+              data-step-nav={index}
+              aria-label={`Ir al paso ${index + 1}: ${step.title}`}
+              aria-current={index === 0 ? 'step' : undefined}
+            >
+              <span></span>
+            </button>
+          ))}
+        </div>
+        <span class="scrolly__hint" aria-hidden="true">Desliza para avanzar</span>
+      </div>
+    </div>
+  </div>
+
+  <ol class="scrolly__fallback container" aria-label="Cómo funciona Vaiinilla">
+    {steps.map((step, index) => (
+      <li class="fallback-step">
+        <div class="fallback-step__phone" aria-hidden="true">
+          <div class="device">
+            <div class="device__island"></div>
+            <div class="device__screen">
+              <img
+                class="device__shot"
+                src={step.img}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                width="738"
+                height="1600"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="fallback-step__copy">
+          <span class="cap__num">{String(index + 1).padStart(2, '0')} <span>/ {stepCount}</span></span>
+          <span class="cap__tag">{step.tag}</span>
+          <h3 class="cap__title">{step.title}</h3>
+          <p class="cap__text">{step.text}</p>
+        </div>
+      </li>
+    ))}
+  </ol>
+</section>
+
+<style>
+  .scrolly {
+    position: relative;
+    padding: clamp(70px, 9vw, 112px) 0 0;
+  }
+
+  .scrolly__head {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding-bottom: clamp(34px, 5vw, 64px);
+  }
+
+  .scrolly__head h2 {
+    margin-top: 14px;
+    font-size: clamp(2rem, 4.4vw, 3.35rem);
+  }
+
+  .scrolly__intro {
+    max-width: 54ch;
+    margin: 18px auto 0;
+    color: var(--muted);
+    font-size: clamp(0.98rem, 1.3vw, 1.08rem);
+  }
+
+  /* Progressive enhancement: without JS (or with reduced motion), show
+     a readable sequence instead of a long inactive sticky section. */
+  .scrolly__track {
+    display: none;
+    position: relative;
+    height: var(--track-height);
+  }
+
+  :global(.scrolly-ready) .scrolly__track {
+    display: block;
+  }
+
+  .scrolly__stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    min-height: 540px;
+    overflow: clip;
+    isolation: isolate;
+    perspective: 1400px;
+    background:
+      radial-gradient(circle at 50% 46%, rgba(255, 255, 255, 0.62), transparent 34%),
+      linear-gradient(180deg, rgba(234, 227, 211, 0.28), rgba(244, 240, 228, 0.92));
+  }
+
+  .scrolly__backdrop {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .scrolly__backdrop::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.36;
+    background-image:
+      linear-gradient(rgba(22, 21, 15, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(22, 21, 15, 0.045) 1px, transparent 1px);
+    background-size: 52px 52px;
+    mask-image: linear-gradient(to bottom, transparent, black 22%, black 78%, transparent);
+  }
+
+  .scrolly__orb {
+    position: absolute;
+    width: min(46vw, 680px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.28;
+    will-change: transform;
+  }
+
+  .scrolly__orb--lime {
+    top: 2%;
+    right: -16%;
+    background: var(--lime);
+  }
+
+  .scrolly__orb--cream {
+    bottom: -24%;
+    left: -14%;
+    background: #d8cbae;
+  }
+
+  .scrolly__line {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: min(70vw, 980px);
+    height: 1px;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(90deg, transparent, rgba(22, 21, 15, 0.1), transparent);
+  }
+
+  .scrolly__phone {
+    --phone-x: 0px;
+    --phone-y: 0px;
+    --phone-rx: -2deg;
+    --phone-ry: -7deg;
+    --phone-rz: -1deg;
+    --phone-scale: 1;
+    position: absolute;
+    left: 50%;
+    top: 48%;
+    z-index: 3;
+    transform:
+      translate3d(-50%, -50%, 0)
+      translate3d(var(--phone-x), var(--phone-y), 0)
+      rotateX(var(--phone-rx))
+      rotateY(var(--phone-ry))
+      rotateZ(var(--phone-rz))
+      scale(var(--phone-scale));
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+
+  .scrolly__phone .device {
+    --dw: clamp(206px, 18vw, 270px);
+  }
+
+  .scrolly__phone-glow {
+    position: absolute;
+    inset: 12% -22% -6%;
+    z-index: -1;
+    border-radius: 50%;
+    background: var(--lime);
+    filter: blur(56px);
+    opacity: 0.18;
+    transform: translateZ(-80px);
+  }
+
+  .scrolly__shot {
+    opacity: 0;
+    transform: scale(1.016);
+    will-change: opacity, transform;
+  }
+
+  .scrolly__shot.is-active {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .scrolly__captions {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+  }
+
+  .cap {
+    --cap-opacity: 0;
+    --cap-shift: 24px;
+    position: absolute;
+    top: 48%;
+    width: min(390px, 32vw);
+    opacity: var(--cap-opacity);
+    transform: translate3d(var(--cap-shift), -50%, 0);
+    will-change: opacity, transform;
+  }
+
+  .cap[data-side="left"] {
+    left: max(5.5vw, calc((100vw - var(--maxw)) / 2 + 24px));
+    --cap-shift: -24px;
+  }
+
+  .cap[data-side="right"] {
+    right: max(5.5vw, calc((100vw - var(--maxw)) / 2 + 24px));
+  }
+
+  .cap.is-active {
+    --cap-opacity: 1;
+    --cap-shift: 0px;
+  }
+
+  .cap__num {
+    display: block;
+    color: var(--lime-dark);
+    font-size: 0.84rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+  }
+
+  .cap__num span {
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .cap__tag {
+    display: inline-block;
+    width: fit-content;
+    margin: 13px 0 16px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--white);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    box-shadow: 0 8px 24px rgba(22, 21, 15, 0.12);
+  }
+
+  .cap__title {
+    max-width: 13ch;
+    margin-bottom: 15px;
+    font-size: clamp(1.8rem, 3vw, 2.75rem);
+  }
+
+  .cap__text {
+    max-width: 38ch;
+    color: var(--ink-soft);
+    font-size: clamp(1rem, 1.22vw, 1.14rem);
+  }
+
+  .scrolly__progress {
+    position: absolute;
+    left: 50%;
+    bottom: clamp(18px, 4vh, 42px);
+    z-index: 6;
+    display: grid;
+    grid-template-columns: 72px auto 132px;
+    align-items: center;
+    gap: 14px;
+    transform: translateX(-50%);
+    color: var(--muted);
+  }
+
+  .scrolly__current {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    font-size: 0.76rem;
+    letter-spacing: 0.08em;
+  }
+
+  .scrolly__current strong {
+    color: var(--ink);
+    font-size: 1rem;
+  }
+
+  .scrolly__steps {
+    display: flex;
+    align-items: center;
+  }
+
+  .scrolly__step {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    place-items: center;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .scrolly__step span {
+    display: block;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #c9c1ad;
+    transition:
+      width 0.35s var(--ease),
+      background 0.35s var(--ease),
+      transform 0.2s var(--ease);
+  }
+
+  .scrolly__step:hover span {
+    transform: scale(1.35);
+  }
+
+  .scrolly__step:active span {
+    transform: scale(0.85);
+  }
+
+  .scrolly__step.is-active span {
+    width: 24px;
+    background: var(--lime-dark);
+  }
+
+  .scrolly__hint {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .scrolly__fallback {
+    display: grid;
+    gap: 20px;
+    padding-bottom: clamp(70px, 9vw, 110px);
+  }
+
+  :global(.scrolly-ready) .scrolly__fallback {
+    display: none;
+  }
+
+  .fallback-step {
+    display: grid;
+    grid-template-columns: 0.78fr 1.22fr;
+    align-items: center;
+    gap: clamp(30px, 7vw, 96px);
+    min-height: min(720px, 90svh);
+    margin: 0;
+    padding: clamp(32px, 6vw, 72px);
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background: rgba(251, 249, 242, 0.7);
+    box-shadow: var(--shadow-sm);
+    list-style: none;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 680px;
+  }
+
+  .fallback-step:nth-child(even) {
+    grid-template-columns: 1.22fr 0.78fr;
+  }
+
+  .fallback-step:nth-child(even) .fallback-step__phone {
+    order: 2;
+  }
+
+  .fallback-step__phone {
+    display: grid;
+    place-items: center;
+  }
+
+  .fallback-step__phone .device {
+    --dw: clamp(200px, 22vw, 260px);
+  }
+
+  .fallback-step__copy {
+    max-width: 430px;
+  }
+
+  @media (max-width: 1020px) {
+    .scrolly__phone .device {
+      --dw: clamp(202px, 22vw, 248px);
+    }
+
+    .cap {
+      width: min(340px, 33vw);
+    }
+
+    .cap__title {
+      font-size: clamp(1.65rem, 3.1vw, 2.35rem);
+    }
+  }
+
+  @media (max-width: 820px) {
+    .scrolly__track {
+      height: var(--track-height-mobile);
+    }
+
+    .scrolly__stage {
+      min-height: 600px;
+    }
+
+    .scrolly__phone {
+      top: 31%;
+    }
+
+    .scrolly__phone .device {
+      --dw: clamp(158px, 21vh, 182px);
+    }
+
+    .scrolly__captions {
+      inset: auto 0 0;
+      height: 44%;
+    }
+
+    .cap,
+    .cap[data-side="left"],
+    .cap[data-side="right"] {
+      top: 0;
+      left: 50%;
+      right: auto;
+      width: min(88vw, 560px);
+      text-align: center;
+      transform: translate3d(calc(-50% + var(--cap-shift)), 0, 0);
+    }
+
+    .cap__tag {
+      margin: 9px auto 11px;
+    }
+
+    .cap__title {
+      max-width: 18ch;
+      margin: 0 auto 10px;
+      font-size: clamp(1.55rem, 6vw, 2.1rem);
+    }
+
+    .cap__text {
+      max-width: 46ch;
+      margin-inline: auto;
+      font-size: clamp(0.92rem, 3.5vw, 1.04rem);
+    }
+
+    .scrolly__progress {
+      bottom: max(10px, env(safe-area-inset-bottom));
+      grid-template-columns: auto;
+      gap: 0;
+    }
+
+    .scrolly__current,
+    .scrolly__hint {
+      display: none;
+    }
+  }
+
+  @media (max-width: 620px) {
+    .fallback-step,
+    .fallback-step:nth-child(even) {
+      grid-template-columns: 1fr;
+      gap: 30px;
+      min-height: 0;
+      padding: 34px 24px;
+      text-align: center;
+    }
+
+    .fallback-step:nth-child(even) .fallback-step__phone {
+      order: 0;
+    }
+
+    .fallback-step__copy {
+      margin-inline: auto;
+    }
+
+    .fallback-step__copy .cap__tag {
+      margin-inline: auto;
+    }
+
+    .fallback-step__copy .cap__title,
+    .fallback-step__copy .cap__text {
+      margin-inline: auto;
+    }
+  }
+
+  @media (max-width: 390px), (max-height: 650px) and (max-width: 820px) {
+    .scrolly__phone {
+      top: 30%;
+    }
+
+    .scrolly__phone .device {
+      --dw: 150px;
+    }
+
+    .scrolly__captions {
+      height: 43%;
+    }
+
+    .cap__tag {
+      margin-block: 7px 9px;
+    }
+
+    .cap__text {
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+  }
+
+  /* A pinned story cannot remain legible in a very short landscape viewport.
+     Switch to compact, naturally scrolling cards instead. */
+  @media (max-height: 600px) and (orientation: landscape) {
+    .scrolly__track {
+      display: none !important;
+    }
+
+    .scrolly__fallback {
+      display: grid !important;
+    }
+
+    .fallback-step,
+    .fallback-step:nth-child(even) {
+      grid-template-columns: 150px 1fr;
+      min-height: 0;
+      gap: clamp(24px, 5vw, 48px);
+      padding: 24px clamp(24px, 6vw, 52px);
+      text-align: left;
+      content-visibility: visible;
+    }
+
+    .fallback-step:nth-child(even) .fallback-step__phone {
+      order: 0;
+    }
+
+    .fallback-step__phone .device {
+      --dw: 120px;
+    }
+
+    .fallback-step__copy {
+      margin: 0;
+    }
+
+    .fallback-step__copy .cap__tag {
+      margin: 8px 0 10px;
+    }
+
+    .fallback-step__copy .cap__title {
+      max-width: 18ch;
+      margin: 0 0 8px;
+      font-size: clamp(1.45rem, 3vw, 1.9rem);
+    }
+
+    .fallback-step__copy .cap__text {
+      margin: 0;
+      font-size: 0.92rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scrolly__track {
+      display: none !important;
+    }
+
+    .scrolly__fallback {
+      display: grid !important;
+    }
+
+    .fallback-step {
+      content-visibility: visible;
+    }
+  }
+</style>
