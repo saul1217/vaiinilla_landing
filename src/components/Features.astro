@@ -1,71 +1,44 @@
----
-const features = [
-  { ic: '⚡', title: 'Cero filas', text: 'Ordena desde tu lugar y recoge cuando esté listo. El recreo es para comer, no para formarte.' },
-  { ic: '💳', title: 'Paga con saldo', text: 'Recarga una vez y paga en segundos. Sin cambio, sin efectivo suelto, sin pretextos.' },
-  { ic: '✨', title: 'Asistente con IA', text: 'Te recomienda qué pedir según tu antojo, tu presupuesto y lo que está listo pronto.' },
-  { ic: '📍', title: 'Explora como invitado', text: 'Descubre el menú y arma tu carrito sin crear cuenta. Regístrate solo cuando quieras pagar.' },
-  { ic: '🔔', title: 'Seguimiento en vivo', text: 'Del cobro a la entrega, sabes en qué paso va tu pedido en todo momento.' },
-  { ic: '☕', title: 'Multi-cafetería', text: 'Cambia de establecimiento cuando quieras: cada uno con su menú, su saldo y su contexto.' },
-];
----
-
-<section class="features" id="ventajas">
+<section class="audiences" id="ventajas">
   <div class="container">
-    <div class="features__head" data-reveal>
-      <p class="eyebrow">Ventajas</p>
-      <h2>Hecho para que comer<br />en la escuela sea <span class="lime-text">fácil.</span></h2>
+    <div class="section-intro section-intro--audiences" data-reveal>
+      <p class="eyebrow">Una misma red</p>
+      <h2>Lo simple para quien pide.<br /><span class="lime-text">Lo claro para quien opera.</span></h2>
     </div>
-
-    <div class="features__grid">
-      {features.map((f) => (
-        <article class="feature" data-reveal>
-          <span class="feature__ic">{f.ic}</span>
-          <h3 class="feature__title">{f.title}</h3>
-          <p class="feature__text">{f.text}</p>
-        </article>
-      ))}
+    <div class="audiences__grid">
+      <article class="audience audience--student" data-reveal>
+        <div class="audience__head"><span class="audience__index">A / ALUMNO</span><span class="audience__mark" aria-hidden="true">↗</span></div>
+        <h3>Come a tu ritmo.</h3>
+        <p>Descubre cafeterías, consulta lo disponible, personaliza tu producto y sigue el avance de tu pedido desde la app.</p>
+        <ul><li>Explora sin iniciar sesión</li><li>Menú, carrito y pago en un solo flujo</li><li>Estado del pedido hasta recogerlo</li></ul>
+        <a class="audience__link" href="#como-funciona">Ver el recorrido <span aria-hidden="true">→</span></a>
+      </article>
+      <article class="audience audience--operator" id="para-cafeterias" data-reveal>
+        <div class="audience__head"><span class="audience__index">B / CAFETERÍA</span><span class="audience__mark" aria-hidden="true">✦</span></div>
+        <h3>Opera con la vista completa.</h3>
+        <p>Administra menú, disponibilidad, pedidos y caja desde una operación conectada. Cada rol ve lo que necesita.</p>
+        <ul><li>Catálogo y productos actualizados</li><li>Pedidos activos e historial</li><li>Caja, entrega con QR y equipo por invitación</li></ul>
+        <a class="audience__link" href="https://app.vaiinilla.app" target="_blank" rel="noreferrer">Abrir el panel <span aria-hidden="true">↗</span></a>
+      </article>
+    </div>
+    <div class="proof-strip" data-reveal><span class="proof-strip__label">Diseñado alrededor de lo que ya pasa en una cafetería</span><span class="proof-strip__line"></span><span class="proof-strip__words">MENÚ · PEDIDOS · CAJA · ENTREGA</span></div>
+    <div class="surfaces" data-reveal>
+      <div><span class="surfaces__label">PARA QUIEN PIDE</span><strong>App móvil</strong><p>Descubre el menú, arma tu pedido y revisa su avance desde tu celular.</p></div>
+      <div><span class="surfaces__label">PARA QUIEN OPERA</span><strong>Panel web</strong><p>Administra catálogo, pedidos, caja y el equipo de tu establecimiento.</p></div>
     </div>
   </div>
 </section>
 
 <style>
-  .features { padding: 90px 0; }
-  .features__head { text-align: center; margin-bottom: 50px; }
-  .features__head h2 { font-size: clamp(2rem, 4.4vw, 3.2rem); margin-top: 14px; }
-
-  .features__grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-  }
-  .feature {
-    background: var(--white);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    padding: 32px 28px;
-    box-shadow: var(--shadow-sm);
-    transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
-  }
-  .feature:hover {
-    transform: translateY(-6px);
-    box-shadow: var(--shadow);
-  }
-  .feature__ic {
-    display: grid; place-items: center;
-    width: 54px; height: 54px;
-    background: var(--lime);
-    border-radius: 16px;
-    font-size: 1.5rem;
-    margin-bottom: 20px;
-    box-shadow: 0 8px 20px var(--lime-glow);
-  }
-  .feature__title { font-size: 1.3rem; margin-bottom: 10px; }
-  .feature__text { color: var(--ink-soft); font-size: 1rem; }
-
-  @media (max-width: 880px) {
-    .features__grid { grid-template-columns: repeat(2, 1fr); }
-  }
-  @media (max-width: 560px) {
-    .features__grid { grid-template-columns: 1fr; }
-  }
+  .audiences { padding: 110px 0 120px; background: var(--cream-2); }
+  .section-intro--audiences { display: block; margin-bottom: 50px; } .section-intro--audiences h2 { margin-top: 16px; font-size: clamp(2.5rem, 5vw, 4.4rem); }
+  .audiences__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .audience { position: relative; min-height: 500px; padding: 28px; border-radius: 28px; overflow: hidden; } .audience--student { background: var(--white); } .audience--operator { background: var(--ink); color: var(--white); }
+  .audience--student::after, .audience--operator::after { content: ''; position: absolute; right: -90px; bottom: -120px; width: 300px; height: 300px; border-radius: 50%; border: 36px solid var(--lime); opacity: .6; } .audience--operator::after { border-color: var(--lime); opacity: .25; }
+  .audience__head { position: relative; z-index: 1; display: flex; justify-content: space-between; color: var(--muted); font-size: .68rem; font-weight: 800; letter-spacing: .12em; } .audience--operator .audience__head { color: rgba(251,249,242,.6); } .audience__mark { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 13px; background: var(--lime); color: var(--ink); font-size: 1.3rem; }
+  .audience h3 { position: relative; z-index: 1; max-width: 10ch; margin-top: 105px; font-size: clamp(2.2rem, 4vw, 3.5rem); line-height: .94; } .audience > p { position: relative; z-index: 1; max-width: 36ch; margin-top: 18px; color: var(--ink-soft); } .audience--operator > p { color: rgba(251,249,242,.72); }
+  .audience ul { position: relative; z-index: 1; display: grid; gap: 10px; padding: 0; margin: 26px 0 0; list-style: none; font-size: .88rem; font-weight: 600; } .audience li::before { content: '↗'; display: inline-block; margin-right: 9px; color: var(--lime-dark); } .audience--operator li::before { color: var(--lime); }
+  .audience__link { position: absolute; z-index: 2; left: 28px; bottom: 26px; display: inline-flex; gap: 12px; align-items: center; font-weight: 800; font-size: .9rem; border-bottom: 1px solid currentColor; padding-bottom: 4px; transition: color 180ms ease; } .audience__link:hover { color: var(--lime-dark); }
+  .proof-strip { display: flex; align-items: center; gap: 22px; margin-top: 70px; color: var(--muted); font-size: .68rem; font-weight: 700; letter-spacing: .11em; } .proof-strip__line { flex: 1; height: 1px; background: var(--line); } .proof-strip__words { color: var(--ink-soft); white-space: nowrap; }
+  .surfaces { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 48px; padding-top: 28px; border-top: 1px solid var(--line); } .surfaces > div { display: grid; grid-template-columns: .75fr 1.25fr; column-gap: 20px; row-gap: 4px; } .surfaces__label { grid-row: span 2; color: var(--muted); font-size: .65rem; font-weight: 800; letter-spacing: .12em; } .surfaces strong { font-size: 1.2rem; } .surfaces p { color: var(--ink-soft); font-size: .85rem; line-height: 1.4; }
+  @media (max-width: 700px) { .audiences { padding: 80px 0 88px; } .audiences__grid { grid-template-columns: 1fr; } .audience { min-height: 460px; } .audience h3 { margin-top: 78px; } .proof-strip { align-items: flex-start; flex-direction: column; gap: 12px; margin-top: 44px; } .proof-strip__line { width: 100%; } .proof-strip__words { white-space: normal; } .surfaces { grid-template-columns: 1fr; gap: 24px; margin-top: 38px; } }
 </style>

@@ -2,8 +2,8 @@
 import '../styles/global.css';
 
 const {
-  title = 'Vaiinilla — Pide y paga desde tu celular. Sin filas.',
-  description = 'Vaiinilla es el POS para cafeterías escolares: los alumnos ordenan y pagan desde su lugar. Menos filas, más recreo.',
+  title = 'Vaiinilla — Tu cafetería, sin filas',
+  description = 'Descubre el menú, arma tu pedido y recoge en tu cafetería escolar. Vaiinilla conecta a quienes comen con quienes hacen que todo suceda.',
 } = Astro.props;
 ---
 
@@ -13,26 +13,21 @@ const {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" href="/favicon.ico" />
-
+    <link rel="icon" type="image/webp" href="/brand/vaiinilla-mark.webp" />
+    <link rel="apple-touch-icon" href="/brand/vaiinilla-mark.webp" />
+    <link rel="canonical" href="https://vaiinilla.app/" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#F4F0E4" />
-
-    <!-- Open Graph -->
+    <meta name="theme-color" content="#F4F1E7" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content="/screens/screen-1.jpeg" />
-
-    <!-- Fuentes -->
+    <meta property="og:image" content="/brand/vaiinilla-logo-splash-light.png" />
+    <meta property="og:url" content="https://vaiinilla.app/" />
+    <meta property="og:locale" content="es_MX" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   </head>
   <body>
     <a class="skip-link" href="#main-content">Saltar al contenido</a>

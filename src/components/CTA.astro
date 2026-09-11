@@ -1,101 +1,23 @@
----
-const year = new Date().getFullYear();
----
-
 <section class="cta" id="cta">
   <div class="container">
     <div class="cta__card" data-reveal>
-      <span class="blob cta__blob"></span>
-      <div class="cta__content">
-        <h2 class="cta__title">¿List@ para saltarte la fila?</h2>
-        <p class="cta__sub">
-          Pide, paga y recoge desde tu celular. Vaiinilla ya está en tu cafetería.
-        </p>
-        <div class="cta__actions">
-          <a class="btn btn--dark" href="#top">Probar la app</a>
-          <a class="btn btn--ghost btn--on-lime" href="#como-funciona">Ver cómo funciona</a>
-        </div>
-      </div>
+      <img class="cta__logo" src="/brand/vaiinilla-logo-splash-light.png" alt="Vaiinilla" width="1448" height="1086" loading="lazy" />
+      <div class="cta__copy"><p class="eyebrow">Cuando todo está en su lugar</p><h2>Tu siguiente pedido<br /><span>empieza aquí.</span></h2><p>Descubre cómo se siente una cafetería que fluye.</p><a class="btn btn--dark" href="https://app.vaiinilla.app" target="_blank" rel="noreferrer">Abrir Vaiinilla <span aria-hidden="true">↗</span></a></div>
     </div>
   </div>
 </section>
 
 <footer class="footer">
   <div class="container footer__inner">
-    <a class="footer__logo" href="#top">
-      <span class="footer__mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
-          <path d="M6 3h6l-1.5 4.5H8L6 3Z" fill="#16150F"/>
-          <rect x="7" y="8" width="7" height="13" rx="3" fill="#16150F"/>
-          <path d="M15 9c2.2 0 3.5 1.4 3.5 3.4 0 2.6-2.3 3.8-3.5 4.2V9Z" fill="#16150F"/>
-        </svg>
-      </span>
-      Vaiinilla
-    </a>
-    <p class="footer__tag">Cafeterías escolares, sin filas · Hecho en México 🇲🇽</p>
-    <p class="footer__copy">© {year} Vaiinilla</p>
+    <a class="footer__logo" href="#top" aria-label="Vaiinilla — inicio"><img src="/brand/vaiinilla-mark.webp" alt="" width="42" height="42" /><span translate="no">Vaiinilla</span></a>
+    <p class="footer__tag">Menú, pedidos y operación para cafeterías escolares.</p>
+    <a class="footer__app" href="https://app.vaiinilla.app" target="_blank" rel="noreferrer">app.vaiinilla.app ↗</a>
   </div>
 </footer>
 
 <style>
-  .cta { padding: 40px 0 90px; }
-  .cta__card {
-    position: relative;
-    overflow: hidden;
-    background: var(--lime);
-    border-radius: var(--radius-xl);
-    padding: clamp(40px, 7vw, 80px);
-    text-align: center;
-    box-shadow: 0 30px 70px var(--lime-glow);
-  }
-  .cta__blob {
-    width: 380px; height: 380px;
-    background: #ffffff;
-    opacity: 0.28;
-    top: -120px; right: -80px;
-    filter: blur(60px);
-  }
-  .cta__content { position: relative; z-index: 1; }
-  .cta__title {
-    font-size: clamp(2rem, 5vw, 3.4rem);
-    color: var(--ink);
-  }
-  .cta__sub {
-    font-size: clamp(1.05rem, 1.6vw, 1.3rem);
-    color: var(--ink-soft);
-    margin: 18px auto 32px;
-    max-width: 44ch;
-  }
-  .cta__actions {
-    display: flex;
-    gap: 14px;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-  .btn--on-lime { border-color: rgba(22,21,15,0.28); }
-  .btn--on-lime:hover { border-color: var(--ink); background: rgba(255,255,255,0.35); }
-
-  .footer { padding: 40px 0 60px; border-top: 1px solid var(--line); }
-  .footer__inner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-  .footer__logo {
-    display: inline-flex; align-items: center; gap: 9px;
-    font-weight: 800; font-size: 1.1rem;
-  }
-  .footer__mark {
-    display: grid; place-items: center;
-    width: 30px; height: 30px;
-    background: var(--lime); border-radius: 9px;
-  }
-  .footer__tag { color: var(--muted); font-size: 0.92rem; }
-  .footer__copy { color: var(--muted); font-size: 0.92rem; }
-
-  @media (max-width: 620px) {
-    .footer__inner { flex-direction: column; text-align: center; }
-  }
+  .cta { padding: 110px 0 72px; } .cta__card { position: relative; min-height: 420px; overflow: hidden; display: flex; align-items: center; padding: clamp(34px, 7vw, 80px); border-radius: 30px; background: var(--lime); } .cta__card::after { content: ''; position: absolute; right: -90px; bottom: -140px; width: 440px; height: 440px; border: 58px solid rgba(251,249,242,.34); border-radius: 50%; }
+  .cta__logo { position: absolute; right: 6%; bottom: -16%; width: min(390px, 43%); height: auto; opacity: .88; transform: rotate(8deg); } .cta__copy { position: relative; z-index: 1; } .cta__copy .eyebrow { color: rgba(22,21,15,.65); } .cta__copy h2 { margin: 18px 0 16px; font-size: clamp(2.6rem, 6vw, 5.2rem); line-height: .9; } .cta__copy h2 span { color: var(--white); } .cta__copy > p:last-of-type { margin-bottom: 28px; color: var(--ink-soft); }
+  .footer { padding: 0 0 42px; } .footer__inner { display: flex; align-items: center; gap: 24px; justify-content: space-between; padding-top: 26px; border-top: 1px solid var(--line); } .footer__logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; } .footer__logo img { width: 42px; height: 42px; object-fit: contain; } .footer__tag, .footer__app { color: var(--muted); font-size: .82rem; } .footer__app { transition: color 180ms ease; } .footer__app:hover { color: var(--ink); }
+  @media (max-width: 650px) { .cta { padding: 78px 0 54px; } .cta__card { min-height: 520px; align-items: flex-start; } .cta__logo { right: -8%; bottom: -2%; width: 78%; opacity: .5; } .footer__inner { align-items: flex-start; flex-direction: column; gap: 12px; } }
 </style>

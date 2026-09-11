@@ -18,195 +18,26 @@ import CTA from '../components/CTA.astro';
 </Layout>
 
 <script>
-  import { gsap } from 'gsap';
-  import { ScrollTrigger } from 'gsap/ScrollTrigger';
-  import Lenis from 'lenis';
-
-  gsap.registerPlugin(ScrollTrigger);
-
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  let smoothScroller: Lenis | null = null;
-
-  /* Smooth scrolling is opt-in and disabled for motion-sensitive visitors. */
-  if (!reduceMotion.matches) {
-    smoothScroller = new Lenis({
-      lerp: 0.1,
-      smoothWheel: true,
-      syncTouch: false,
-    });
-    smoothScroller.on('scroll', ScrollTrigger.update);
-    gsap.ticker.add((time) => smoothScroller?.raf(time * 1000));
-    gsap.ticker.lagSmoothing(0);
-
-    document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]').forEach((anchor) => {
-      anchor.addEventListener('click', (event) => {
-        const id = anchor.getAttribute('href');
-        if (!id || id === '#') return;
-        const target = document.querySelector<HTMLElement>(id);
-        if (!target) return;
-        event.preventDefault();
-        smoothScroller?.scrollTo(target, { duration: 1.05 });
-      });
-    });
-  }
-
-  /* Navigation treatment. */
   const nav = document.querySelector('[data-nav]');
-  ScrollTrigger.create({
-    start: 'top -60',
-    end: 'max',
-    onUpdate: (self) => {
-      nav?.classList.toggle('is-scrolled', self.scroll() > 60);
-    },
-  });
+  const updateNav = () => nav?.classList.toggle('is-scrolled', window.scrollY > 24);
+  updateNav();
+  window.addEventListener('scroll', updateNav, { passive: true });
 
-  /* Lightweight, progressive reveals outside the main showcase. */
-  document.body.classList.add('reveal-ready');
-  const revealEls = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
-  const revealObserver = new IntersectionObserver(
-    (entries, observer) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add('is-in');
-        observer.unobserve(entry.target);
-      });
-    },
-    { threshold: 0.08, rootMargin: '0px 0px -8% 0px' },
-  );
-  revealEls.forEach((element) => revealObserver.observe(element));
-
-  /* Scroll-driven phone story. A single trigger updates transform and opacity
-     values, avoiding layout reads during the scroll loop. */
-  const track = document.querySelector<HTMLElement>('[data-scrolly-track]');
-  const phone = document.querySelector<HTMLElement>('[data-scrolly-phone]');
-  const shots = Array.from(document.querySelectorAll<HTMLElement>('[data-shot]'));
-  const caps = Array.from(document.querySelectorAll<HTMLElement>('[data-cap]'));
-  const stepButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-step-nav]'));
-  const currentStep = document.querySelector<HTMLElement>('[data-current-step]');
-  const limeOrb = document.querySelector<HTMLElement>('.scrolly__orb--lime');
-  const creamOrb = document.querySelector<HTMLElement>('.scrolly__orb--cream');
-  const stepTotal = shots.length;
-
-  let activeStep = -1;
-  let viewportWidth = window.innerWidth;
-
-  const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
-  const mix = (from: number, to: number, amount: number) => from + (to - from) * amount;
-  const smoothstep = (value: number) => {
-    const x = clamp(value);
-    return x * x * (3 - 2 * x);
-  };
-
-  function setActive(index: number) {
-    const next = Math.max(0, Math.min(stepTotal - 1, index));
-    if (next === activeStep) return;
-    activeStep = next;
-
-    caps.forEach((element, elementIndex) => {
-      const isActive = elementIndex === next;
-      element.classList.toggle('is-active', isActive);
-      element.setAttribute('aria-hidden', String(!isActive));
-    });
-
-    stepButtons.forEach((button, buttonIndex) => {
-      const isActive = buttonIndex === next;
-      button.classList.toggle('is-active', isActive);
-      if (isActive) button.setAttribute('aria-current', 'step');
-      else button.removeAttribute('aria-current');
-    });
-
-    if (currentStep) currentStep.textContent = String(next + 1).padStart(2, '0');
-  }
-
-  function renderShowcase(progress: number) {
-    if (!phone || !stepTotal) return;
-
-    const unit = clamp(progress) * (stepTotal - 1);
-    const fromIndex = Math.min(stepTotal - 1, Math.floor(unit));
-    const toIndex = Math.min(stepTotal - 1, fromIndex + 1);
-    const local = clamp(unit - fromIndex);
-    const travel = smoothstep(local);
-    const activeIndex = local < 0.5 ? fromIndex : toIndex;
-    setActive(activeIndex);
-
-    const fromSide = fromIndex % 2 === 0 ? 1 : -1;
-    const toSide = toIndex % 2 === 0 ? 1 : -1;
-    const side = mix(fromSide, toSide, travel);
-    const direction = Math.sign(toSide - fromSide);
-    const arc = Math.sin(local * Math.PI);
-    const mobile = viewportWidth <= 820;
-    const xRange = mobile ? Math.min(18, viewportWidth * 0.04) : Math.min(282, viewportWidth * 0.19);
-
-    phone.style.setProperty('--phone-x', `${(side * xRange).toFixed(2)}px`);
-    phone.style.setProperty('--phone-y', `${(-arc * (mobile ? 8 : 18)).toFixed(2)}px`);
-    phone.style.setProperty('--phone-rx', `${(-2 - arc * 1.5).toFixed(2)}deg`);
-    phone.style.setProperty(
-      '--phone-ry',
-      `${(-side * (mobile ? 3.5 : 7) + arc * direction * (mobile ? 7 : 14)).toFixed(2)}deg`,
+  if (!reduceMotion.matches) {
+    document.body.classList.add('reveal-ready');
+    const observer = new IntersectionObserver(
+      (entries, currentObserver) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('is-in');
+          currentObserver.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -8% 0px' },
     );
-    phone.style.setProperty(
-      '--phone-rz',
-      `${(-side * (mobile ? 0.8 : 1.8) + arc * direction * 1.1).toFixed(2)}deg`,
-    );
-    phone.style.setProperty('--phone-scale', `${(1 - arc * (mobile ? 0.018 : 0.035)).toFixed(4)}`);
-
-    const screenMix = smoothstep((local - 0.28) / 0.44);
-    shots.forEach((shot, index) => {
-      let opacity = 0;
-      if (fromIndex === toIndex && index === fromIndex) opacity = 1;
-      else if (index === fromIndex) opacity = 1 - screenMix;
-      else if (index === toIndex) opacity = screenMix;
-
-      shot.style.opacity = opacity.toFixed(3);
-      shot.style.transform = `scale(${(1.016 - opacity * 0.016).toFixed(4)})`;
-      shot.classList.toggle('is-active', index === activeIndex);
-    });
-
-    const outgoingCaption = 1 - smoothstep((local - 0.12) / 0.28);
-    const incomingCaption = smoothstep((local - 0.6) / 0.28);
-    caps.forEach((caption, index) => {
-      let opacity = 0;
-      if (fromIndex === toIndex && index === fromIndex) opacity = 1;
-      else if (index === fromIndex) opacity = outgoingCaption;
-      else if (index === toIndex) opacity = incomingCaption;
-
-      const captionSide = caption.dataset.side === 'left' ? -1 : 1;
-      caption.style.setProperty('--cap-opacity', opacity.toFixed(3));
-      caption.style.setProperty('--cap-shift', `${(captionSide * (1 - opacity) * 26).toFixed(2)}px`);
-    });
-
-    limeOrb?.style.setProperty('transform', `translate3d(${(-side * 8).toFixed(2)}vw, ${(arc * 2).toFixed(2)}vh, 0)`);
-    creamOrb?.style.setProperty('transform', `translate3d(${(side * 7).toFixed(2)}vw, ${(-arc * 2).toFixed(2)}vh, 0)`);
+    document.querySelectorAll('[data-reveal]').forEach((element) => observer.observe(element));
+  } else {
+    document.querySelectorAll('[data-reveal]').forEach((element) => element.classList.add('is-in'));
   }
-
-  if (track && phone && stepTotal > 0 && !reduceMotion.matches) {
-    document.documentElement.classList.add('scrolly-ready');
-    renderShowcase(0);
-
-    ScrollTrigger.create({
-      trigger: track,
-      start: 'top top',
-      end: 'bottom bottom',
-      invalidateOnRefresh: true,
-      onUpdate: (self) => renderShowcase(self.progress),
-    });
-
-    stepButtons.forEach((button, index) => {
-      button.addEventListener('click', () => {
-        const trackTop = track.getBoundingClientRect().top + window.scrollY;
-        const distance = track.offsetHeight - window.innerHeight;
-        const target = trackTop + (index / Math.max(1, stepTotal - 1)) * distance;
-        if (smoothScroller) smoothScroller.scrollTo(target, { duration: 0.9 });
-        else window.scrollTo({ top: target, behavior: 'smooth' });
-      });
-    });
-  }
-
-  function handleResize() {
-    viewportWidth = window.innerWidth;
-    ScrollTrigger.refresh();
-  }
-
-  window.addEventListener('resize', handleResize, { passive: true });
-  window.addEventListener('load', () => ScrollTrigger.refresh(), { once: true });
 </script>
