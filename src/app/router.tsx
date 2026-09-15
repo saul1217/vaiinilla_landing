@@ -8,6 +8,7 @@ import { NotFoundPage } from '../pages/not-found-page';
 import { OrderDetailPage } from '../pages/order-detail-page';
 import { OrdersPage } from '../pages/orders-page';
 import { SupportPage } from '../pages/support-page';
+import { TableJoinPage } from '../pages/table-join-page';
 import { WalletPage, WalletQrPage } from '../pages/wallet-page';
 
 export function AppRouter() {
@@ -19,6 +20,8 @@ export function AppRouter() {
         <Route path="/pedir" element={<DiscoveryPage />} />
         <Route path="/e/:slug" element={<MenuPage />} />
         <Route path="/e/:slug/carrito" element={<CartPage />} />
+        <Route path="/e/:slug/m/:token" element={<TableJoinPage />} />
+        <Route path="/:slug/m/:token" element={<TableJoinPage />} />
         <Route path="/cuenta" element={<AccountPage />} />
         <Route path="/cuenta/pedidos" element={<OrdersPage />} />
         <Route path="/cuenta/pedidos/:id" element={<OrderDetailPage />} />

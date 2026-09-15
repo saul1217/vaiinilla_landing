@@ -69,4 +69,29 @@ describe('cart contract', () => {
       items: [{ producto_id: 103, cantidad: 1, opcion_ids: [310, 314] }],
     });
   });
+
+  it('arma POST /pedidos en_espacio con stripe', () => {
+    expect(
+      toCreateOrderInput(
+        [
+          {
+            productId: 103,
+            quantity: 1,
+            optionIds: [314, 310],
+            productName: 'Burrito norteño',
+            unitPreview: '82.00',
+            imageUrl: null,
+          },
+        ],
+        'stripe',
+        '',
+        'en_espacio',
+        12,
+      ),
+    ).toMatchObject({
+      metodo_pago: 'stripe',
+      destino: 'en_espacio',
+      espacio_id: 12,
+    });
+  });
 });

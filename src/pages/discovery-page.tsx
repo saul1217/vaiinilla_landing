@@ -1,15 +1,33 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { PageShell } from '../components/shell';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AppShell } from '../components/app-shell';
+import { AuthScreens } from '../components/auth-screens';
+import { useAuth } from '../context/auth-context';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
+import { isGuestExplore, enableGuestExplore } from '../lib/guest-explore';
+import { lastPlaceSlug, rememberPlace } from '../lib/last-place';
+import { rememberSpace } from '../lib/space-session';
 import type { PublicEstablishment } from '../types/api';
 
 export function DiscoveryPage() {
+  const { user, ready } = useAuth();
+  const navigate = useNavigate();
+  const [guest, setGuest] = useState(() => (typeof window === 'undefined' ? false : isGuestExplore()));
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<PublicEstablishment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [tableCode, setTableCode] = useState('');
+  const [clientId, setClientId] = useState('');
+  const [resolving, setResolving] = useState(false);
+  const [step, setStep] = useState<'list' | 'picker'>('list');
+
+  useEffect(() => {
+    if (!ready) return;
+    if (user) enableGuestExplore();
+  }, [ready, user]);
 
   useEffect(() => {
     let active = true;
@@ -21,6 +39,12 @@ export function DiscoveryPage() {
           if (!active) return;
           setItems(result.establishments);
           setError(null);
+          const remembered = lastPlaceSlug();
+          setSelectedId((current) => {
+            if (current && result.establishments.some((item) => item.id === current)) return current;
+            const preferred = result.establishments.find((item) => item.slug === remembered);
+            return preferred?.id ?? result.establishments[0]?.id ?? null;
+          });
         })
         .catch((cause: unknown) => {
           if (!active) return;
@@ -36,47 +60,223 @@ export function DiscoveryPage() {
     };
   }, [query]);
 
-  return (
-    <PageShell>
-      <main id="main-content" className="app-page">
-        <div className="container">
-          <p className="eyebrow">Comprador</p>
-          <h1>Encuentra tu cafetería</h1>
-          <p className="app-lead">
-            Explora el menú sin iniciar sesión. Para confirmar el pedido entra con tu cuenta de
-            alumno.
+  const selected = useMemo(
+    () => items.find((item) => item.id === selectedId) ?? null,
+    [items, selectedId],
+  );
+  const recommended = useMemo(() => {
+    const remembered = lastPlaceSlug();
+    return items.find((item) => item.slug === remembered) ?? items[0] ?? null;
+  }, [items]);
+
+  async function resolveTableCode() {
+    if (!tableCode.trim()) {
+      setError('Escribe el código de la mesa.');
+      return;
+    }
+    setResolving(true);
+    setError(null);
+    try {
+      const resolved = await api.resolveSpace(tableCode.trim(), selected?.slug);
+      rememberPlace(resolved.establecimiento_slug);
+      rememberSpace({
+        slug: resolved.establecimiento_slug,
+        espacioId: resolved.espacio_id,
+        nombre: resolved.espacio_nombre,
+      });
+      void navigate(`/e/${resolved.establecimiento_slug}`);
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setResolving(false);
+    }
+  }
+
+  function openPicker() {
+    if (!selected) return;
+    setError(null);
+    setClientId(sessionStorage.getItem(`vaiinilla.buyer.client-id.${selected.slug}`) ?? '');
+    setStep('picker');
+  }
+
+  function continueToMenu() {
+    if (!selected) return;
+    if (selected.identificador_cliente_obligatorio && !clientId.trim()) {
+      setError(`Captura tu ${selected.identificador_cliente_etiqueta.toLowerCase()} para continuar.`);
+      return;
+    }
+    if (clientId.trim()) {
+      sessionStorage.setItem(`vaiinilla.buyer.client-id.${selected.slug}`, clientId.trim());
+    }
+    rememberPlace(selected.slug);
+    void navigate(`/e/${selected.slug}`);
+  }
+
+  if (!ready) {
+    return (
+      <AppShell tab="none">
+        <main id="main-content" className="alumno-main" role="status">
+          Validando sesión…
+        </main>
+      </AppShell>
+    );
+  }
+
+  if (!user && !guest) {
+    return (
+      <AppShell tab="none">
+        <AuthScreens
+          allowExplore
+          onExplored={() => {
+            enableGuestExplore();
+            setGuest(true);
+          }}
+        />
+      </AppShell>
+    );
+  }
+
+  if (step === 'picker' && selected) {
+    return (
+      <AppShell tab="menu">
+        <main id="main-content" className="alumno-main">
+          <button className="alumno-link" type="button" onClick={() => setStep('list')}>
+            Cambiar tienda
+          </button>
+          <p className="alumno-kicker" style={{ marginTop: 16 }}>
+            Sede
           </p>
-          <div className="search-row">
-            <label className="sr-only" htmlFor="search-places">
-              Buscar cafetería
-            </label>
-            <input
-              id="search-places"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Busca por nombre"
-              autoComplete="off"
-            />
-          </div>
-          {error ? <p className="feedback">{error}</p> : null}
-          {loading ? <p role="status">Cargando cafeterías…</p> : null}
-          {!loading && items.length === 0 && !error ? (
-            <div className="empty-state">No hay cafeterías publicadas todavía.</div>
-          ) : (
-            <div className="card-grid">
-              {items.map((place) => (
-                <article className="place-card" key={place.id}>
-                  <h2>{place.nombre}</h2>
-                  <p>Menú público. Pedido para llevar.</p>
-                  <Link className="btn btn--primary" to={`/e/${place.slug}`}>
-                    Ver menú
-                  </Link>
-                </article>
-              ))}
+          <h1>{selected.nombre}</h1>
+          <p className="alumno-lead">
+            {selected.identificador_cliente_obligatorio
+              ? `Esta cafetería pide ${selected.identificador_cliente_etiqueta.toLowerCase()}.`
+              : 'Acceso libre. Puedes abrir el menú o usar el código de tu mesa.'}
+          </p>
+          {error ? <p className="alumno-error">{error}</p> : null}
+          <div className="alumno-picker">
+            <div>
+              {selected.identificador_cliente_obligatorio ? (
+                <label className="alumno-field">
+                  {selected.identificador_cliente_etiqueta}
+                  <input
+                    value={clientId}
+                    onChange={(event) => setClientId(event.target.value)}
+                    autoComplete="off"
+                  />
+                </label>
+              ) : null}
+              <button className="alumno-btn alumno-btn--lime" type="button" onClick={continueToMenu}>
+                Abrir menú
+              </button>
             </div>
-          )}
+            <div className="alumno-card">
+              <h2>Mesa</h2>
+              <p className="alumno-muted">Si ya estás sentado, usa el código del QR.</p>
+              <label className="alumno-field">
+                Código de mesa
+                <input
+                  value={tableCode}
+                  onChange={(event) => setTableCode(event.target.value)}
+                  placeholder="Usar código"
+                  autoComplete="off"
+                />
+              </label>
+              <button
+                className="alumno-btn alumno-btn--ghost"
+                type="button"
+                disabled={resolving}
+                onClick={() => void resolveTableCode()}
+              >
+                {resolving ? 'Buscando mesa…' : 'Usar código'}
+              </button>
+            </div>
+          </div>
+        </main>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell tab="menu">
+      <main id="main-content" className="alumno-main">
+        <p className="alumno-kicker">Hoy</p>
+        <h1>¿Dónde comes hoy?</h1>
+        <p className="alumno-lead">Elige tu cafetería. El menú se puede ver sin iniciar sesión.</p>
+        <div className="alumno-discovery">
+          <div className="alumno-discovery__list">
+            <div className="alumno-search-wrap">
+              <SearchIcon />
+              <label className="sr-only" htmlFor="search-places">
+                Buscar cafetería
+              </label>
+              <input
+                id="search-places"
+                className="alumno-search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Busca por nombre"
+                autoComplete="off"
+              />
+            </div>
+            {error ? <p className="alumno-error">{error}</p> : null}
+            {loading ? <p role="status">Cargando cafeterías…</p> : null}
+            {!loading && items.length === 0 && !error ? (
+              <div className="alumno-empty">
+                <img src="/vaini/cutout-frente.png" alt="" />
+                <p>No hay cafeterías publicadas todavía.</p>
+              </div>
+            ) : (
+              <div className="alumno-radio-list" role="radiogroup" aria-label="Cafeterías">
+                {items.map((place) => {
+                  const isRecommended = recommended?.id === place.id;
+                  const access = place.identificador_cliente_obligatorio
+                    ? place.identificador_cliente_etiqueta
+                    : 'Acceso libre';
+                  return (
+                    <button
+                      key={place.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected?.id === place.id}
+                      className={selected?.id === place.id ? 'alumno-radio is-on' : 'alumno-radio'}
+                      onClick={() => setSelectedId(place.id)}
+                    >
+                      <span className="alumno-dot" />
+                      <span>
+                        <strong>{place.nombre}</strong>
+                        <span>
+                          {access}
+                          {isRecommended ? ' · Recomendada' : ''}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          {selected ? (
+            <section className="alumno-sticky-cafe" aria-label="Cafetería activa">
+              <p>Cafetería activa</p>
+              <strong>{selected.nombre}</strong>
+              <button className="alumno-btn alumno-btn--lime" type="button" onClick={openPicker}>
+                Continuar
+              </button>
+            </section>
+          ) : null}
         </div>
       </main>
-    </PageShell>
+    </AppShell>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M10.5 3a7.5 7.5 0 0 1 5.9 12.13l3.74 3.73-1.28 1.28-3.73-3.74A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"
+      />
+    </svg>
   );
 }

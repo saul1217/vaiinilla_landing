@@ -47,11 +47,16 @@ const firebaseAuthMessages: Record<string, string> = {
   'auth/too-many-requests': 'Hay demasiados intentos. Espera un momento antes de continuar.',
   'auth/invalid-verification-code': 'El código no es válido o ya cambió. Prueba el código actual.',
   'auth/network-request-failed': 'No fue posible contactar Firebase. Revisa tu conexión.',
+  'auth/operation-not-allowed': 'Google no está habilitado en este entorno. Usa correo y contraseña.',
+  'auth/popup-closed-by-user': 'Cerraste la ventana de Google antes de terminar.',
+  'auth/popup-blocked': 'El navegador bloqueó la ventana de Google. Permite ventanas emergentes.',
+  'auth/account-exists-with-different-credential':
+    'Ese correo ya existe con otro método de acceso. Entra con correo y contraseña.',
 };
 
 export function firebaseAuthMessage(error: unknown): string {
   if (error && typeof error === 'object' && 'code' in error) {
-    const code = String((error as { code: unknown }).code);
+    const code = String(error.code);
     if (firebaseAuthMessages[code]) return firebaseAuthMessages[code];
   }
   return errorMessage(error);

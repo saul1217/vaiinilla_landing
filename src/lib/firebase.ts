@@ -4,9 +4,12 @@ import {
   createUserWithEmailAndPassword,
   getAuth,
   getMultiFactorResolver,
+  GoogleAuthProvider,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   setPersistence,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   TotpMultiFactorGenerator,
   updateProfile,
@@ -123,6 +126,29 @@ export async function createPasswordAccount(
 
 export async function firebaseIdToken(user: User): Promise<string> {
   return user.getIdToken();
+}
+
+export async function googleSignIn(): Promise<PasswordSignInResult> {
+  const auth = await readyAuth();
+  const hadBrowserSession = hasBrowserSession();
+  beginBrowserSession();
+  try {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const credential = await signInWithPopup(auth, provider);
+    return { user: credential.user };
+  } catch (error) {
+    if (error instanceof FirebaseError && error.code === 'auth/multi-factor-auth-required') {
+      return { mfaResolver: getMultiFactorResolver(auth, error as MultiFactorError) };
+    }
+    if (!hadBrowserSession) endBrowserSession();
+    throw error;
+  }
+}
+
+export async function sendPasswordReset(email: string): Promise<void> {
+  const auth = await readyAuth();
+  await sendPasswordResetEmail(auth, email.trim().toLowerCase());
 }
 
 export async function firebaseSignOut(): Promise<void> {

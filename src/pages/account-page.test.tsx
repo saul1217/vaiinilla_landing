@@ -2,10 +2,12 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ThemeProvider } from '../context/theme-context';
 import { AccountPage } from './account-page';
 
 const passwordSignIn = vi.fn();
 const completeTotpSignIn = vi.fn();
+const authState: { user: { email: string; displayName: string } | null } = { user: null };
 
 vi.mock('../lib/api', () => ({
   api: {
@@ -17,6 +19,13 @@ vi.mock('../lib/api', () => ({
     }),
     listAccesses: vi.fn().mockResolvedValue([]),
     registerIdentity: vi.fn(),
+    getEstablishment: vi.fn(),
+    getMyWallet: vi.fn().mockResolvedValue({
+      cliente: { usuario_id: 'u1', nombre: 'Ana Pérez', identificador_cliente: 'A01234' },
+      wallet: { id: 'w1', usuario_id: 'u1', establecimiento_id: 'e1', saldo: '10.00', actualizado_en: null },
+      movimientos: [],
+    }),
+    deleteIdentity: vi.fn(),
   },
 }));
 
@@ -24,19 +33,35 @@ vi.mock('../lib/firebase', () => ({
   passwordSignIn: (...args: unknown[]) => passwordSignIn(...args) as Promise<unknown>,
   completeTotpSignIn: (...args: unknown[]) => completeTotpSignIn(...args) as Promise<unknown>,
   createPasswordAccount: vi.fn(),
+  googleSignIn: vi.fn(),
+  sendPasswordReset: vi.fn(),
   firebaseIdToken: vi.fn().mockResolvedValue('token'),
 }));
 
 vi.mock('../context/auth-context', () => ({
-  useAuth: () => ({ user: null, ready: true, configured: true, signOut: vi.fn() }),
+  useAuth: () => ({ user: authState.user, ready: true, configured: true, signOut: vi.fn() }),
 }));
 
 vi.mock('../context/cart-context', () => ({
-  useCart: () => ({ cart: null }),
+  useCart: () => ({ cart: { slug: 'demo-a', establishmentName: 'Demo A', lines: [] } }),
+}));
+
+vi.mock('../context/buyer-session', () => ({
+  useBuyerSession: () => ({
+    context: { access_token: 'jwt', contexto: { establecimiento_id: 'e1' } },
+    opening: false,
+    openClientSession: vi.fn(),
+    clearSession: vi.fn(),
+  }),
+}));
+
+vi.mock('qrcode', () => ({
+  default: { toDataURL: vi.fn().mockResolvedValue('data:image/png;base64,qr') },
 }));
 
 describe('AccountPage', () => {
   beforeEach(() => {
+    authState.user = null;
     passwordSignIn.mockReset();
     completeTotpSignIn.mockReset();
   });
@@ -52,6 +77,7 @@ describe('AccountPage', () => {
       </MemoryRouter>,
     );
 
+    await user.click(screen.getByRole('button', { name: /iniciar sesión/i }));
     await user.type(screen.getByLabelText(/correo/i), 'jelm060716@gmail.com');
     await user.type(screen.getByLabelText(/contraseña/i), 'password1');
     await user.click(screen.getByRole('button', { name: /^entrar$/i }));
@@ -59,5 +85,25 @@ describe('AccountPage', () => {
     expect(await screen.findByRole('heading', { name: /verificación/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/código de 6 dígitos/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /confirmar y entrar/i })).toBeInTheDocument();
+  });
+
+  it('muestra configuración con QR, temas, salir y eliminar cuenta', async () => {
+    authState.user = { email: 'ana@example.test', displayName: 'Ana Pérez' };
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <AccountPage />
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole('heading', { name: /configuración/i })).toBeInTheDocument();
+    expect(await screen.findByAltText(/código qr para recargar saldo en caja/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sistema/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /claro/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /oscuro/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /amoled/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cambiar tienda/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^salir$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /eliminar cuenta/i })).toBeInTheDocument();
   });
 });

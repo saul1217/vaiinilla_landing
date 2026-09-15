@@ -1,4 +1,4 @@
-import type { CartLine, CatalogProduct, CreateOrderInput } from '../types/api';
+import type { CartLine, CatalogProduct, CreateOrderInput, OrderDestination, PaymentMethod } from '../types/api';
 import { cartPreview, linePreview, productUnitPreview } from './money';
 
 export function optionExtraPrices(product: CatalogProduct, optionIds: number[]): string[] {
@@ -61,16 +61,21 @@ export function cartTotal(lines: CartLine[]): string | null {
 
 export function toCreateOrderInput(
   lines: CartLine[],
-  paymentMethod: 'efectivo' | 'saldo',
+  paymentMethod: PaymentMethod,
   kitchenNotes: string,
+  destination: OrderDestination = 'para_llevar',
+  spaceId: number | null = null,
 ): CreateOrderInput {
   if (lines.length < 1 || lines.length > 50) {
     throw new Error('El pedido debe contener entre 1 y 50 líneas.');
   }
+  if (destination === 'en_espacio' && spaceId == null) {
+    throw new Error('Falta la mesa para pedir en el espacio.');
+  }
   return {
     metodo_pago: paymentMethod,
-    destino: 'para_llevar',
-    espacio_id: null,
+    destino: destination,
+    espacio_id: destination === 'en_espacio' ? spaceId : null,
     notas_cocina: kitchenNotes.trim() || null,
     items: lines.map((line) => {
       if (line.quantity < 1 || line.quantity > 20) {

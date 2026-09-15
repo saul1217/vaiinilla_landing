@@ -14,8 +14,10 @@ import type {
   OrderDetail,
   PublicEstablishment,
   SessionAccess,
+  StripePaymentSession,
   WalletData,
 } from '../types/api';
+import { normalizeResolvedSpace, type ResolvedTableSpace } from './resolved-space';
 
 const hostname = typeof window === 'undefined' ? '' : window.location.hostname;
 const apiUrl = resolveApiUrl(import.meta.env.VITE_API_URL, hostname);
@@ -165,5 +167,30 @@ export const api = {
 
   async getMyWallet(token: string): Promise<WalletData> {
     return (await request<WalletData>('/wallets/me', { token })).data;
+  },
+
+  async resolveSpace(token: string, slug?: string): Promise<ResolvedTableSpace> {
+    const response = await request<unknown>('/publico/espacios/resolver', {
+      method: 'POST',
+      body: { token, establecimiento_slug: slug ?? null },
+    });
+    return normalizeResolvedSpace(response.data, slug);
+  },
+
+  async deleteIdentity(firebaseToken: string): Promise<void> {
+    await request<unknown>('/identidad/cuenta', {
+      method: 'DELETE',
+      token: firebaseToken,
+    });
+  },
+
+  async createStripePayment(token: string, orderId: string): Promise<StripePaymentSession> {
+    return (
+      await request<StripePaymentSession>(`/pedidos/${orderId}/pago/stripe`, {
+        method: 'POST',
+        token,
+        idempotent: true,
+      })
+    ).data;
   },
 };

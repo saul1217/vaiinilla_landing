@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
-import { PageShell } from '../components/shell';
+import { AppShell } from '../components/app-shell';
 import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
@@ -17,8 +17,9 @@ export function WalletPage() {
   const { cart } = useCart();
   const { context, openClientSession } = useBuyerSession();
   const [wallet, setWallet] = useState<WalletData | null>(null);
-  const [qr, setQr] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const placeSlug = cart?.slug ?? lastPlaceSlug();
 
   useEffect(() => {
     if (!user) return;
@@ -26,9 +27,8 @@ export function WalletPage() {
     const run = async () => {
       try {
         let session = context;
-        const slug = cart?.slug ?? lastPlaceSlug();
-        if (!session && slug) {
-          const place = await api.getEstablishment(slug);
+        if (!session && placeSlug) {
+          const place = await api.getEstablishment(placeSlug);
           session = await openClientSession(user, place);
         }
         if (!session) {
@@ -36,84 +36,142 @@ export function WalletPage() {
           return;
         }
         const next = await api.getMyWallet(session.access_token);
-        if (!active) return;
-        setWallet(next);
-        const userId = next.wallet.usuario_id || next.cliente.usuario_id;
-        setQr(await QRCode.toDataURL(walletQrUrl(userId), { margin: 1, width: 320 }));
+        if (active) {
+          setWallet(next);
+          setError(null);
+        }
       } catch (cause) {
         if (active) setError(errorMessage(cause));
+      } finally {
+        if (active) setLoading(false);
       }
     };
     void run();
     return () => {
       active = false;
     };
-  }, [cart?.slug, context, openClientSession, user]);
+  }, [context, openClientSession, placeSlug, user]);
 
   if (ready && !user) return <Navigate to="/cuenta?next=/cuenta/saldo" replace />;
 
   return (
-    <PageShell>
-      <main id="main-content" className="app-page">
-        <div className="container" style={{ maxWidth: 720 }}>
-          <p className="eyebrow">Wallet</p>
-          <h1>Tu saldo</h1>
-          {error ? <p className="feedback">{error}</p> : null}
-          {wallet ? (
-            <section className="panel-card">
-              <p>
-                {wallet.cliente.nombre}
-                {wallet.cliente.identificador_cliente ? ` · ${wallet.cliente.identificador_cliente}` : ''}
-              </p>
-              <h2>{formatMoney(wallet.wallet.saldo)}</h2>
-              <p>Muestra este código en Caja para recargar. La recarga la hace el establecimiento.</p>
-              {qr ? <img className="wallet-qr" src={qr} alt="Código QR para recargar saldo en caja" /> : null}
-              <p className="muted">
-                {walletQrUrl(wallet.wallet.usuario_id || wallet.cliente.usuario_id)}
-              </p>
-              <h3>Movimientos</h3>
+    <AppShell tab="wallet">
+      <main id="main-content" className="alumno-main">
+        <p className="alumno-kicker">Cartera</p>
+        <h1>Tu saldo</h1>
+        {error ? <p className="alumno-error">{error}</p> : null}
+        {loading && !wallet && !error ? <p role="status">Cargando saldo…</p> : null}
+        {wallet ? (
+          <div className="alumno-wallet-board">
+            <div>
+              <section className="alumno-wallet-hero">
+                <p className="alumno-muted">
+                  {wallet.cliente.nombre}
+                  {wallet.cliente.identificador_cliente ? ` · ${wallet.cliente.identificador_cliente}` : ''}
+                </p>
+                <p className="alumno-wallet-balance">{formatMoney(wallet.wallet.saldo)}</p>
+              </section>
+              <div className="alumno-actions-3">
+                <Link to={placeSlug ? `/e/${placeSlug}/carrito` : '/pedir'}>
+                  <ShortcutPay />
+                  Pagar
+                </Link>
+                <Link to="/cuenta/pedidos">
+                  <ShortcutOrders />
+                  Pedidos
+                </Link>
+                <Link to="/cuenta">
+                  <ShortcutReload />
+                  Recargar
+                </Link>
+              </div>
+              <Link className="alumno-btn alumno-btn--lime" to={placeSlug ? `/e/${placeSlug}` : '/pedir'}>
+                Abrir menú
+              </Link>
+            </div>
+            <div>
+              <h2 style={{ fontSize: '1rem', margin: '0 0 8px' }}>Movimientos</h2>
               {wallet.movimientos.length === 0 ? (
-                <p className="muted">Todavía no hay movimientos.</p>
+                <p className="alumno-muted">Todavía no hay movimientos.</p>
               ) : (
-                <ul>
+                <ul className="alumno-moves">
                   {wallet.movimientos.map((item) => (
                     <li key={item.id}>
-                      {item.descripcion}: {formatMoney(item.monto)} → {formatMoney(item.saldo_posterior)}
+                      <span>
+                        <strong>{item.descripcion}</strong>
+                        <span className="alumno-muted">{item.tipo}</span>
+                      </span>
+                      <strong>{formatMoney(item.monto)}</strong>
                     </li>
                   ))}
                 </ul>
               )}
-            </section>
-          ) : null}
-          <p style={{ marginTop: 24 }}>
-            <Link className="btn btn--ghost" to="/cuenta">
-              Volver a cuenta
-            </Link>
-          </p>
-        </div>
+            </div>
+          </div>
+        ) : null}
       </main>
-    </PageShell>
+    </AppShell>
   );
 }
 
 export function WalletQrPage() {
   const { id = '' } = useParams();
+  const [qr, setQr] = useState<string | null>(null);
+
+  useEffect(() => {
+    void QRCode.toDataURL(walletQrUrl(id), { margin: 1, width: 320 }).then(setQr);
+  }, [id]);
+
   return (
-    <PageShell>
-      <main id="main-content" className="app-page">
-        <div className="container" style={{ maxWidth: 640 }}>
-          <p className="eyebrow">Recarga en caja</p>
-          <h1>Código de alumno</h1>
-          <p className="app-lead">
-            Este enlace identifica a un alumno para recargar saldo en Caja. Si llegaste aquí por
-            error, vuelve a tu cuenta.
-          </p>
-          <p className="muted">{walletQrUrl(id)}</p>
-          <Link className="btn btn--primary" to="/cuenta/saldo">
-            Ir a mi saldo
-          </Link>
-        </div>
+    <AppShell tab="none">
+      <main id="main-content" className="alumno-main">
+        <p className="alumno-kicker">Recarga en caja</p>
+        <h1>Código de alumno</h1>
+        <p className="alumno-lead">
+          Este enlace identifica a un alumno para recargar saldo en Caja. Si llegaste aquí por error, vuelve a tu
+          cuenta.
+        </p>
+        <section className="alumno-card alumno-card--qr">
+          {qr ? <img className="wallet-qr" src={qr} alt="Código QR de recarga" /> : null}
+          <p className="alumno-muted">{walletQrUrl(id)}</p>
+        </section>
+        <Link className="alumno-btn alumno-btn--lime" to="/cuenta/saldo">
+          Ir a mi saldo
+        </Link>
       </main>
-    </PageShell>
+    </AppShell>
+  );
+}
+
+function ShortcutPay() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18a2 2 0 0 1 2 2v1h-2V7H6.5a.5.5 0 0 0 0 1H20v9.5A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-10Z"
+      />
+    </svg>
+  );
+}
+
+function ShortcutOrders() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M7 3h10a2 2 0 0 1 2 2v15.2a.8.8 0 0 1-1.25.66L12 17.4l-5.75 3.46A.8.8 0 0 1 5 20.2V5a2 2 0 0 1 2-2Z"
+      />
+    </svg>
+  );
+}
+
+function ShortcutReload() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M12 4a8 8 0 1 1-7.45 5.2l1.86.74A6 6 0 1 0 12 6v3l4-4-4-4v3Z"
+      />
+    </svg>
   );
 }

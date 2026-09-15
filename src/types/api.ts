@@ -198,11 +198,16 @@ export interface CreateOrderItemInput {
 }
 
 export interface CreateOrderInput {
-  metodo_pago: Exclude<PaymentMethod, 'stripe'>;
-  destino: 'para_llevar';
-  espacio_id: null;
+  metodo_pago: PaymentMethod;
+  destino: OrderDestination;
+  espacio_id: number | null;
   notas_cocina: string | null;
   items: CreateOrderItemInput[];
+}
+
+export interface StripePaymentSession {
+  client_secret?: string;
+  url?: string;
 }
 
 export interface WalletSnapshot {

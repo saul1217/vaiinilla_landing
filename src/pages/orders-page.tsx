@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { PageShell } from '../components/shell';
+import { AppShell } from '../components/app-shell';
 import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
@@ -8,18 +8,10 @@ import { api } from '../lib/api';
 import { lastPlaceSlug } from '../lib/last-place';
 import { errorMessage } from '../lib/api-error';
 import { formatMoney } from '../lib/money';
+import { ORDER_STATUS_LABEL, orderDestinationLabel, orderStatusTone } from '../lib/order-labels';
 import type { OrderDetail, PublicEstablishment } from '../types/api';
 
-const STATUS_LABEL: Record<OrderDetail['estado'], string> = {
-  por_cobrar: 'Por cobrar',
-  cobrado: 'Cobrado',
-  preparando: 'Preparando',
-  listo: 'Listo',
-  entregado: 'Entregado',
-  cancelado: 'Cancelado',
-  no_recogido: 'No recogido',
-  expirado: 'Expirado',
-};
+const POLL_MS = 5000;
 
 export function OrdersPage() {
   const { user, ready } = useAuth();
@@ -28,12 +20,13 @@ export function OrdersPage() {
   const [orders, setOrders] = useState<OrderDetail[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [place, setPlace] = useState<PublicEstablishment | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     let active = true;
     const slug = cart?.slug ?? lastPlaceSlug();
-    const run = async () => {
+    const run = async (silent = false) => {
       try {
         let session = context;
         if (slug) {
@@ -46,57 +39,59 @@ export function OrdersPage() {
         }
         if (!session) {
           setError('Entra a una cafetería para ver tus pedidos de ese lugar.');
+          setLoading(false);
           return;
         }
         const result = await api.listOrders(session.access_token);
-        if (active) setOrders(result.orders);
+        if (!active) return;
+        setOrders(result.orders);
+        setError(null);
       } catch (cause) {
-        if (active) setError(errorMessage(cause));
+        if (active && !silent) setError(errorMessage(cause));
+      } finally {
+        if (active) setLoading(false);
       }
     };
     void run();
+    const timer = window.setInterval(() => {
+      void run(true);
+    }, POLL_MS);
     return () => {
       active = false;
+      window.clearInterval(timer);
     };
   }, [cart?.slug, context, openClientSession, user]);
 
   if (ready && !user) return <Navigate to="/cuenta?next=/cuenta/pedidos" replace />;
 
   return (
-    <PageShell>
-      <main id="main-content" className="app-page">
-        <div className="container">
-          <p className="eyebrow">Seguimiento</p>
-          <h1>Tus pedidos{place ? ` · ${place.nombre}` : ''}</h1>
-          <nav className="account-nav">
-            <Link className="btn btn--ghost" to="/cuenta">
-              Cuenta
-            </Link>
-            <Link className="btn btn--ghost" to="/cuenta/saldo">
-              Saldo
-            </Link>
-          </nav>
-          {error ? <p className="feedback">{error}</p> : null}
-          {orders.length === 0 && !error ? (
-            <div className="empty-state">Aún no hay pedidos en esta sesión.</div>
-          ) : (
-            <div className="card-grid">
-              {orders.map((order) => (
-                <article className="place-card" key={order.id}>
-                  <span className="status-pill">{STATUS_LABEL[order.estado]}</span>
-                  <h2>Folio {order.folio}</h2>
-                  <p>{formatMoney(order.total)}</p>
-                  <Link className="btn btn--primary" to={`/cuenta/pedidos/${order.id}`}>
-                    Ver seguimiento
-                  </Link>
-                </article>
-              ))}
-            </div>
-          )}
-        </div>
+    <AppShell tab="orders">
+      <main id="main-content" className="alumno-main">
+        <p className="alumno-kicker">Seguimiento</p>
+        <h1>Pedidos</h1>
+        {place ? <p className="alumno-lead">{place.nombre}</p> : null}
+        {error ? <p className="alumno-error">{error}</p> : null}
+        {loading && orders.length === 0 && !error ? <p role="status">Cargando pedidos…</p> : null}
+        {orders.length === 0 && !error && !loading ? (
+          <div className="alumno-empty">
+            <img src="/vaini/cutout-frente.png" alt="" />
+            <p>Aún no hay pedidos en esta sesión.</p>
+          </div>
+        ) : (
+          <div className="alumno-order-list">
+            {orders.map((order) => (
+              <Link className="alumno-order-card" key={order.id} to={`/cuenta/pedidos/${order.id}`}>
+                <span className={`alumno-status alumno-status--${orderStatusTone(order.estado)}`}>
+                  {ORDER_STATUS_LABEL[order.estado]}
+                </span>
+                <strong>Folio {order.folio}</strong>
+                <span className="alumno-muted">{orderDestinationLabel(order)}</span>
+                <span className="alumno-order-card__total">{formatMoney(order.total)}</span>
+              </Link>
+            ))}
+          </div>
+        )}
       </main>
-    </PageShell>
+    </AppShell>
   );
 }
-
-export { STATUS_LABEL };

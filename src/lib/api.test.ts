@@ -5,7 +5,7 @@ import { api } from './api';
 import { ESTABLISHMENT_CLOSED_MESSAGE } from '../types/api';
 import { isOperationallyReady } from './cart';
 
-const baseUrl = 'https://vaiinillaback-development.up.railway.app/api/v1';
+const baseUrl = api.apiUrl;
 const server = setupServer();
 
 const establishment = {
