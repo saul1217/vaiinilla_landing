@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { resolveApiUrl, walletQrUrl } from './env';
+import {
+  developmentFirebaseConfig,
+  productionFirebaseConfig,
+  resolveApiUrl,
+  resolveFirebaseConfig,
+  walletQrUrl,
+} from './env';
 
 describe('env', () => {
   it('usa el proxy local en localhost y production en vaiinilla.app', () => {
@@ -18,5 +24,21 @@ describe('env', () => {
 
   it('codifica el QR de recarga en el dominio público', () => {
     expect(walletQrUrl(' u-42 ')).toBe('https://vaiinilla.app/u/u-42');
+  });
+
+  it('usa Firebase de development en local y production en vaiinilla.app', () => {
+    expect(resolveFirebaseConfig({}, 'localhost')).toEqual(developmentFirebaseConfig);
+    expect(resolveFirebaseConfig({}, 'www.vaiinilla.app')).toEqual(productionFirebaseConfig);
+    expect(
+      resolveFirebaseConfig(
+        {
+          apiKey: 'from-env',
+          authDomain: 'x.firebaseapp.com',
+          projectId: 'x',
+          appId: '1:1:web:x',
+        },
+        'www.vaiinilla.app',
+      ).apiKey,
+    ).toBe('from-env');
   });
 });
