@@ -19,9 +19,11 @@ export function isTerminalOrderStatus(status: OrderStatus): boolean {
   return TERMINAL.includes(status);
 }
 
-export function orderPayLabel(method: OrderDetail['metodo_pago']): string {
-  if (method === 'saldo') return 'Pagado con saldo';
-  if (method === 'stripe') return 'Pagado con tarjeta';
+export function orderPayLabel(order: OrderDetail): string {
+  if (order.metodo_pago === 'saldo') return 'Pagado con saldo';
+  if (order.metodo_pago === 'stripe') {
+    return order.pago?.payment_status === 'confirmado' ? 'Pagado con tarjeta' : 'Tarjeta';
+  }
   return 'Efectivo al recoger';
 }
 

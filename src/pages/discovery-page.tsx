@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { AuthScreens } from '../components/auth-screens';
 import { useAuth } from '../context/auth-context';
@@ -140,18 +141,16 @@ export function DiscoveryPage() {
     return (
       <AppShell tab="menu">
         <main id="main-content" className="alumno-main">
-          <button className="alumno-link" type="button" onClick={() => setStep('list')}>
-            Cambiar tienda
-          </button>
-          <p className="alumno-kicker" style={{ marginTop: 16 }}>
-            Sede
-          </p>
-          <h1>{selected.nombre}</h1>
-          <p className="alumno-lead">
-            {selected.identificador_cliente_obligatorio
-              ? `Esta cafetería pide ${selected.identificador_cliente_etiqueta.toLowerCase()}.`
-              : 'Acceso libre. Puedes abrir el menú o usar el código de tu mesa.'}
-          </p>
+          <AlumnoPageHeader
+            kicker="Sede"
+            title={selected.nombre}
+            back={{ onClick: () => setStep('list'), label: 'Volver' }}
+            lead={
+              selected.identificador_cliente_obligatorio
+                ? `Esta cafetería pide ${selected.identificador_cliente_etiqueta.toLowerCase()}.`
+                : 'Acceso libre. Puedes abrir el menú o usar el código de tu mesa.'
+            }
+          />
           {error ? <p className="alumno-error">{error}</p> : null}
           <div className="alumno-picker">
             <div>
@@ -199,9 +198,11 @@ export function DiscoveryPage() {
   return (
     <AppShell tab="menu">
       <main id="main-content" className="alumno-main">
-        <p className="alumno-kicker">Hoy</p>
-        <h1>¿Dónde comes hoy?</h1>
-        <p className="alumno-lead">Elige tu cafetería. El menú se puede ver sin iniciar sesión.</p>
+        <AlumnoPageHeader
+          kicker="Hoy"
+          title="¿Dónde comes hoy?"
+          lead="Elige tu cafetería. El menú se puede ver sin iniciar sesión."
+        />
         <div className="alumno-discovery">
           <div className="alumno-discovery__list">
             <div className="alumno-search-wrap">

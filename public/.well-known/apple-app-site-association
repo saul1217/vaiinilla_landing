@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": [
+          "27M8XG9T93.com.innovapro.vaiinilla",
+          "27M8XG9T93.com.innovapro.vaiinilla.dev"
+        ],
+        "components": [
+          { "/": "/*/m/*" },
+          { "/": "/*" }
+        ]
+      }
+    ]
+  }
+}

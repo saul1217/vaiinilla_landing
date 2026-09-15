@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
@@ -10,7 +11,11 @@ import { cartTotal, isOperationallyReady, toCreateOrderInput } from '../lib/cart
 import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
 import { formatMoney, moneyToCents } from '../lib/money';
 import { clearSpace, readSpace } from '../lib/space-session';
+import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
 import { isStripeCheckoutEnabled, STRIPE_UNAVAILABLE_COPY } from '../lib/stripe-public';
+import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '../lib/stripe-session';
+import { isGuestBuy } from '../lib/guest-explore';
+import { GUEST_CHECKOUT_UNAVAILABLE } from '../lib/guest-checkout';
 import { ESTABLISHMENT_CLOSED_MESSAGE } from '../types/api';
 import type { OperationalStatus, PaymentMethod, PublicEstablishment, WalletData } from '../types/api';
 
@@ -34,6 +39,9 @@ export function CartPage() {
   const space = readSpace(slug);
   const [forHere, setForHere] = useState(Boolean(space));
   const stripeEnabled = isStripeCheckoutEnabled();
+  const pendingStripeOrderId = readPendingStripeOrderId();
+  const guestBuy = isGuestBuy();
+  const canCheckout = Boolean(user) || guestBuy;
 
   const lines = useMemo(() => (cart?.slug === slug ? cart.lines : []), [cart, slug]);
   const total = useMemo(() => cartTotal(lines), [lines]);
@@ -95,11 +103,21 @@ export function CartPage() {
     setError(null);
     if (!place || lines.length === 0 || !total) return;
     if (!user) {
-      void navigate(`/cuenta?next=/e/${slug}/carrito`);
+      if (!guestBuy) {
+        void navigate(`/cuenta?next=/e/${slug}/carrito`);
+        return;
+      }
+      setSheetOpen(false);
+      setError(GUEST_CHECKOUT_UNAVAILABLE);
       return;
     }
     if (payment === 'stripe' && !stripeEnabled) {
       setError(STRIPE_UNAVAILABLE_COPY);
+      return;
+    }
+    const pendingId = readPendingStripeOrderId();
+    if (pendingId) {
+      setError('Tienes un pago Stripe pendiente. Resuélvelo antes de crear otro pedido.');
       return;
     }
     setSubmitting(true);
@@ -126,11 +144,9 @@ export function CartPage() {
       const key = idempotencyKeyFor(fingerprint);
       const order = await api.createOrder(session.access_token, payload, key);
       if (payment === 'stripe') {
-        const checkout = await api.createStripePayment(session.access_token, order.id);
-        if (checkout.url) {
-          window.location.assign(checkout.url);
-          return;
-        }
+        const stripeSession = stripeSessionFromCreatedOrder(order);
+        rememberStripeCheckoutSession(order.id, stripeSession);
+        savePendingStripeOrderId(order.id);
       }
       reset();
       if (destination === 'en_espacio') clearSpace();
@@ -150,10 +166,19 @@ export function CartPage() {
   return (
     <AppShell tab="cart">
       <main id="main-content" className="alumno-main">
-        <p className="alumno-kicker">Pedido</p>
-        <h1>Tu pedido</h1>
+        <AlumnoPageHeader
+          kicker="Pedido"
+          title="Tu pedido"
+          back={{ to: `/e/${slug}`, label: 'Volver al menú' }}
+        />
         {error ? <p className="alumno-error">{error}</p> : null}
         {blocker ? <p className="alumno-banner alumno-banner--coral">{blocker}</p> : null}
+        {pendingStripeOrderId ? (
+          <p className="alumno-banner">
+            Tienes un pago Stripe pendiente.{' '}
+            <Link to={`/cuenta/pedidos/${pendingStripeOrderId}`}>Revisar pago pendiente</Link>
+          </p>
+        ) : null}
         {lines.length === 0 ? (
           <div className="alumno-empty">
             <img src="/vaini/cutout-frente.png" alt="" />
@@ -240,10 +265,12 @@ export function CartPage() {
                 <button
                   className="alumno-btn alumno-btn--lime"
                   type="button"
-                  disabled={!ready || Boolean(blocker)}
-                  onClick={() => (user ? setSheetOpen(true) : void navigate(`/cuenta?next=/e/${slug}/carrito`))}
+                  disabled={!ready || Boolean(blocker) || Boolean(pendingStripeOrderId)}
+                  onClick={() =>
+                    canCheckout ? setSheetOpen(true) : void navigate(`/cuenta?next=/e/${slug}/carrito`)
+                  }
                 >
-                  {user ? 'Pagar' : 'Entra para pagar'}
+                  {canCheckout ? 'Pagar' : 'Entra para pagar'}
                 </button>
               </div>
               </aside>
@@ -268,18 +295,20 @@ export function CartPage() {
                 <p className="alumno-muted">Pagas en caja cuando el pedido esté listo.</p>
               </span>
             </button>
-            <button
-              type="button"
-              className={payment === 'saldo' ? 'alumno-pay-row is-on' : 'alumno-pay-row'}
-              onClick={() => setPayment('saldo')}
-            >
-              <span>
-                <strong>Saldo</strong>
-                <p className="alumno-muted">
-                  {wallet ? `Disponible: ${formatMoney(wallet.wallet.saldo)}` : 'Entra a tu cuenta para ver el saldo.'}
-                </p>
-              </span>
-            </button>
+            {user ? (
+              <button
+                type="button"
+                className={payment === 'saldo' ? 'alumno-pay-row is-on' : 'alumno-pay-row'}
+                onClick={() => setPayment('saldo')}
+              >
+                <span>
+                  <strong>Saldo</strong>
+                  <p className="alumno-muted">
+                    {wallet ? `Disponible: ${formatMoney(wallet.wallet.saldo)}` : 'Entra a tu cuenta para ver el saldo.'}
+                  </p>
+                </span>
+              </button>
+            ) : null}
             <button
               type="button"
               className={payment === 'stripe' ? 'alumno-pay-row is-on' : 'alumno-pay-row'}
@@ -291,11 +320,12 @@ export function CartPage() {
                 <p className="alumno-muted">{stripeEnabled ? 'Pagas con Stripe.' : STRIPE_UNAVAILABLE_COPY}</p>
               </span>
             </button>
+            {error ? <p className="alumno-error">{error}</p> : null}
             {insufficientBalance ? <p className="alumno-error">No tienes saldo suficiente para este pedido.</p> : null}
             <button
               className="alumno-btn alumno-btn--lime"
               type="button"
-              disabled={submitting || Boolean(insufficientBalance)}
+              disabled={submitting || Boolean(insufficientBalance) || Boolean(pendingStripeOrderId)}
               onClick={() => void confirm()}
             >
               {submitting ? 'Confirmando…' : 'Confirmar'}

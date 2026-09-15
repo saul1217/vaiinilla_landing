@@ -78,6 +78,8 @@ describe('AccountPage', () => {
     );
 
     await user.click(screen.getByRole('button', { name: /iniciar sesión/i }));
+    expect(screen.getByRole('button', { name: /^volver$/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^inicia sesión$/i })).toBeInTheDocument();
     await user.type(screen.getByLabelText(/correo/i), 'jelm060716@gmail.com');
     await user.type(screen.getByLabelText(/contraseña/i), 'password1');
     await user.click(screen.getByRole('button', { name: /^entrar$/i }));
@@ -105,5 +107,36 @@ describe('AccountPage', () => {
     expect(screen.getByRole('button', { name: /cambiar tienda/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^salir$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /eliminar cuenta/i })).toBeInTheDocument();
+  });
+
+  it('alta usa split con volver, logo y legales separados', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AccountPage />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: /crear cuenta/i }));
+    expect(screen.getByRole('button', { name: /^volver$/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^crear cuenta$/i })).toBeInTheDocument();
+    expect(screen.getByAltText(/^vaiinilla$/i)).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /términos/i })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /privacidad/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^volver$/i }));
+    expect(screen.getByRole('heading', { name: /tu cafetería, a tu ritmo/i })).toBeInTheDocument();
+  });
+
+  it('splash ofrece comprar sin cuenta junto a los logins', async () => {
+    render(
+      <MemoryRouter>
+        <AccountPage />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole('heading', { name: /tu cafetería, a tu ritmo/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /crear cuenta/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /continuar con google/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /iniciar sesión/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /comprar sin cuenta/i })).toBeInTheDocument();
   });
 });

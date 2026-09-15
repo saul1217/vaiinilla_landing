@@ -69,8 +69,9 @@ describe('DiscoveryPage', () => {
         <DiscoveryPage />
       </MemoryRouter>,
     );
-    expect(await screen.findByRole('heading', { name: /tu cafetería, sin filas/i })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /explorar el menú/i }));
+    expect(await screen.findByRole('heading', { name: /tu cafetería, a tu ritmo/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /comprar sin cuenta/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^explorar$/i }));
     expect(await screen.findByRole('heading', { name: /dónde comes hoy/i })).toBeInTheDocument();
   });
 });

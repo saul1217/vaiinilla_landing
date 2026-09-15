@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
@@ -36,8 +37,11 @@ export function TableJoinPage() {
   return (
     <AppShell tab="none">
       <main id="main-content" className="alumno-main">
-        <p className="alumno-kicker">Mesa</p>
-        <h1>Abriendo tu mesa</h1>
+        <AlumnoPageHeader
+          kicker="Mesa"
+          title="Abriendo tu mesa"
+          back={error ? { to: '/pedir', label: 'Volver' } : undefined}
+        />
         {error ? (
           <>
             <p className="alumno-error">{error}</p>

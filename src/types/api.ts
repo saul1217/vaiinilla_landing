@@ -12,6 +12,17 @@ export type PaymentMethod = 'stripe' | 'efectivo' | 'saldo';
 export type OrderDestination = 'para_llevar' | 'en_espacio';
 export type OperationalRole = 'cliente' | 'cajero' | 'cocina' | 'admin' | 'mesero';
 
+export type StripePaymentStatus =
+  | 'pendiente_pago'
+  | 'processing'
+  | 'requires_action'
+  | 'confirmado'
+  | 'fallido'
+  | 'cancelado'
+  | 'pendiente_reembolso'
+  | 'reembolsando'
+  | 'reembolsado';
+
 export interface ApiEnvelope<T> {
   data: T;
   meta: {
@@ -189,6 +200,17 @@ export interface OrderDetail {
   } | null;
   items: OrderItem[];
   qr_token?: string | null;
+  pago?: OrderPayment | null;
+}
+
+export interface OrderPayment {
+  payment_attempt_id: string;
+  payment_intent_id: string;
+  stripe_account_id: string;
+  payment_status: StripePaymentStatus;
+  client_secret?: string;
+  publishable_key?: string;
+  currency?: string;
 }
 
 export interface CreateOrderItemInput {
@@ -206,8 +228,12 @@ export interface CreateOrderInput {
 }
 
 export interface StripePaymentSession {
-  client_secret?: string;
-  url?: string;
+  payment_attempt_id: string;
+  payment_intent_id: string;
+  client_secret: string;
+  stripe_account_id: string;
+  publishable_key: string;
+  payment_status: StripePaymentStatus;
 }
 
 export interface WalletSnapshot {

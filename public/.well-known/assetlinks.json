@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.vaiinilla.app",
+      "sha256_cert_fingerprints": [
+        "4F:93:81:4F:0B:67:68:12:22:23:08:70:9B:53:05:4E:70:CA:86:DD:0C:A1:E0:D0:DE:39:8C:86:9E:96:D8:7A"
+      ]
+    }
+  }
+]

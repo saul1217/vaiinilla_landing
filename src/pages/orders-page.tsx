@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
+import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
@@ -67,9 +68,7 @@ export function OrdersPage() {
   return (
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
-        <p className="alumno-kicker">Seguimiento</p>
-        <h1>Pedidos</h1>
-        {place ? <p className="alumno-lead">{place.nombre}</p> : null}
+        <AlumnoPageHeader kicker="Seguimiento" title="Pedidos" lead={place?.nombre} />
         {error ? <p className="alumno-error">{error}</p> : null}
         {loading && orders.length === 0 && !error ? <p role="status">Cargando pedidos…</p> : null}
         {orders.length === 0 && !error && !loading ? (

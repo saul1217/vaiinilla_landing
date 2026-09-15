@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
+import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
@@ -57,8 +58,7 @@ export function WalletPage() {
   return (
     <AppShell tab="wallet">
       <main id="main-content" className="alumno-main">
-        <p className="alumno-kicker">Cartera</p>
-        <h1>Tu saldo</h1>
+        <AlumnoPageHeader kicker="Cartera" title="Tu saldo" />
         {error ? <p className="alumno-error">{error}</p> : null}
         {loading && !wallet && !error ? <p role="status">Cargando saldo…</p> : null}
         {wallet ? (
@@ -125,12 +125,12 @@ export function WalletQrPage() {
   return (
     <AppShell tab="none">
       <main id="main-content" className="alumno-main">
-        <p className="alumno-kicker">Recarga en caja</p>
-        <h1>Código de alumno</h1>
-        <p className="alumno-lead">
-          Este enlace identifica a un alumno para recargar saldo en Caja. Si llegaste aquí por error, vuelve a tu
-          cuenta.
-        </p>
+        <AlumnoPageHeader
+          kicker="Recarga en caja"
+          title="Código de alumno"
+          back={{ to: '/cuenta/saldo', label: 'Volver' }}
+          lead="Este enlace identifica a un alumno para recargar saldo en Caja. Si llegaste aquí por error, vuelve a tu cuenta."
+        />
         <section className="alumno-card alumno-card--qr">
           {qr ? <img className="wallet-qr" src={qr} alt="Código QR de recarga" /> : null}
           <p className="alumno-muted">{walletQrUrl(id)}</p>

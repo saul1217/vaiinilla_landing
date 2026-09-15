@@ -150,4 +150,90 @@ describe('buyer API client', () => {
     ).toBe(false);
     expect(ESTABLISHMENT_CLOSED_MESSAGE).toContain('no está abierto');
   });
+
+  it('crea un pedido Stripe sin montos y no abre un segundo PaymentIntent', async () => {
+    const stripeOrder = {
+      ...order,
+      metodo_pago: 'stripe' as const,
+      total: '123.60',
+      pago: {
+        payment_attempt_id: 'attempt-1',
+        payment_intent_id: 'pi_test_001',
+        stripe_account_id: 'acct_test_001',
+        payment_status: 'pendiente_pago',
+        client_secret: 'pi_test_001_secret_test',
+        publishable_key: 'pk_test_51Vaiinilla',
+      },
+    };
+    let pedidoPosts = 0;
+    let stripeRetryPosts = 0;
+    server.use(
+      http.post(`${baseUrl}/pedidos`, async ({ request }) => {
+        pedidoPosts += 1;
+        expect(request.headers.get('Idempotency-Key')).toBe('create-key-1');
+        const body = (await request.json()) as Record<string, unknown>;
+        expect(body).toEqual({
+          metodo_pago: 'stripe',
+          destino: 'para_llevar',
+          espacio_id: null,
+          notas_cocina: null,
+          items: [{ producto_id: 101, cantidad: 1, opcion_ids: [] }],
+        });
+        expect(JSON.stringify(body)).not.toContain('"total"');
+        expect(JSON.stringify(body)).not.toContain('application_fee');
+        return HttpResponse.json({ data: stripeOrder, meta: {}, error: null }, { status: 201 });
+      }),
+      http.post(`${baseUrl}/pedidos/3d196e4d-9082-4b5d-aa7a-65f0e21ac654/pago/stripe`, async ({ request }) => {
+        stripeRetryPosts += 1;
+        expect(request.headers.get('Idempotency-Key')).toBe('retry-key-1');
+        expect(request.headers.get('Content-Type')).toBeNull();
+        expect(await request.text()).toBe('');
+        return HttpResponse.json({
+          data: { pago: stripeOrder.pago },
+          meta: {},
+          error: null,
+        });
+      }),
+      http.get(`${baseUrl}/pedidos/3d196e4d-9082-4b5d-aa7a-65f0e21ac654`, () =>
+        HttpResponse.json({
+          data: {
+            ...stripeOrder,
+            pago: {
+              payment_attempt_id: 'attempt-1',
+              payment_intent_id: 'pi_test_001',
+              stripe_account_id: 'acct_test_001',
+              payment_status: 'pendiente_pago',
+            },
+          },
+          meta: {},
+          error: null,
+        }),
+      ),
+    );
+
+    const created = await api.createOrder(
+      'jwt-client',
+      {
+        metodo_pago: 'stripe',
+        destino: 'para_llevar',
+        espacio_id: null,
+        notas_cocina: null,
+        items: [{ producto_id: 101, cantidad: 1, opcion_ids: [] }],
+      },
+      'create-key-1',
+    );
+    expect(created.total).toBe('123.60');
+    expect(created.pago?.client_secret).toBe('pi_test_001_secret_test');
+    expect(pedidoPosts).toBe(1);
+    expect(stripeRetryPosts).toBe(0);
+
+    const fetched = await api.getOrder('jwt-client', created.id);
+    expect(fetched.pago?.payment_status).toBe('pendiente_pago');
+    expect(fetched.pago?.client_secret).toBeUndefined();
+
+    const retried = await api.retryStripePayment('jwt-client', created.id, 'retry-key-1');
+    expect(retried.payment_intent_id).toBe('pi_test_001');
+    expect(stripeRetryPosts).toBe(1);
+    expect(pedidoPosts).toBe(1);
+  });
 });

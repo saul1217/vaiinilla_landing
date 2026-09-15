@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import QRCode from 'qrcode';
+import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { AuthScreens } from '../components/auth-screens';
 import { useAuth } from '../context/auth-context';
@@ -100,9 +101,7 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
   return (
     <AppShell tab="wallet">
       <main id="main-content" className="alumno-main">
-        <p className="alumno-kicker">Cuenta</p>
-        <h1>Configuración</h1>
-        <p className="alumno-lead">{user?.email}</p>
+        <AlumnoPageHeader kicker="Cuenta" title="Configuración" lead={user?.email ?? undefined} />
         {error ? <p className="alumno-error">{error}</p> : null}
         <div className="alumno-settings-layout">
           <section className="alumno-card alumno-card--qr">

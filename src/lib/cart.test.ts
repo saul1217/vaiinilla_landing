@@ -70,28 +70,34 @@ describe('cart contract', () => {
     });
   });
 
-  it('arma POST /pedidos en_espacio con stripe', () => {
-    expect(
-      toCreateOrderInput(
-        [
-          {
-            productId: 103,
-            quantity: 1,
-            optionIds: [314, 310],
-            productName: 'Burrito norteño',
-            unitPreview: '82.00',
-            imageUrl: null,
-          },
-        ],
-        'stripe',
-        '',
-        'en_espacio',
-        12,
-      ),
-    ).toMatchObject({
+  it('arma POST /pedidos en_espacio con stripe sin montos confiables', () => {
+    const payload = toCreateOrderInput(
+      [
+        {
+          productId: 103,
+          quantity: 1,
+          optionIds: [314, 310],
+          productName: 'Burrito norteño',
+          unitPreview: '82.00',
+          imageUrl: null,
+        },
+      ],
+      'stripe',
+      '',
+      'en_espacio',
+      12,
+    );
+    const raw = JSON.stringify(payload);
+    expect(payload).toMatchObject({
       metodo_pago: 'stripe',
       destino: 'en_espacio',
       espacio_id: 12,
+      items: [{ producto_id: 103, cantidad: 1, opcion_ids: [310, 314] }],
     });
+    expect(raw).not.toContain('"total"');
+    expect(raw).not.toContain('precio_unitario');
+    expect(raw).not.toContain('application_fee');
+    expect(raw).not.toContain('client_secret');
+    expect(raw).not.toContain('stripe_account_id');
   });
 });

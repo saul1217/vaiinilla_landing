@@ -4,6 +4,7 @@ import { applyAlumnoTheme, useTheme } from '../context/theme-context';
 import { useAuth } from '../context/auth-context';
 import { useCart } from '../context/cart-context';
 import { lastPlaceSlug } from '../lib/last-place';
+import { AlumnoLockup } from './alumno-brand';
 import { SkipLink } from './shell';
 
 export type AlumnoTab = 'menu' | 'orders' | 'wallet' | 'cart' | 'none';
@@ -73,7 +74,9 @@ export function BottomNav({ tab }: { tab: Exclude<AlumnoTab, 'none'> }) {
 
   return (
     <nav className="alumno-nav" aria-label="Navegación de alumno">
-      <p className="alumno-nav__brand">Vaiinilla</p>
+      <div className="alumno-nav__brand">
+        <AlumnoLockup />
+      </div>
       <div className="alumno-nav__items">
         {items.map((item) => (
           <Link

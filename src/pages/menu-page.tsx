@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { useAuth } from '../context/auth-context';
 import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import { defaultOptionIds, previewForProduct, validateSelections } from '../lib/cart';
+import { enableGuestBuy, isGuestBuy } from '../lib/guest-explore';
 import { initialsFrom } from '../lib/initials';
 import { rememberPlace } from '../lib/last-place';
 import { formatMoney } from '../lib/money';
@@ -13,8 +15,10 @@ import type { CatalogProduct, CatalogResponse, PublicEstablishment } from '../ty
 
 export function MenuPage() {
   const { slug = '' } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { addLine, cart } = useCart();
+  const canAddToCart = Boolean(user) || isGuestBuy();
   const [place, setPlace] = useState<PublicEstablishment | null>(null);
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
   const [categoryId, setCategoryId] = useState<number | null>(null);
@@ -82,16 +86,26 @@ export function MenuPage() {
     });
   }
 
-  function addToCart() {
-    if (!selected || !place) return;
+  function addCurrentProduct() {
+    if (!selected || !place) return false;
     const invalid = validateSelections(selected, optionIds);
     if (invalid) {
       setError(invalid);
-      return;
+      return false;
     }
     addLine(place.slug, place.nombre, selected, optionIds, quantity);
     setSelected(null);
     setError(null);
+    return true;
+  }
+
+  function addToCart() {
+    addCurrentProduct();
+  }
+
+  function buyWithoutAccount() {
+    enableGuestBuy();
+    if (addCurrentProduct()) void navigate(`/e/${slug}/carrito`);
   }
 
   const preview = selected ? previewForProduct(selected, optionIds, quantity) : null;
@@ -100,21 +114,21 @@ export function MenuPage() {
   return (
     <AppShell tab="menu">
       <main id="main-content" className="alumno-main">
-        <div className="alumno-top">
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <p className="alumno-kicker">Menú de hoy</p>
-            <h1>{place?.nombre ?? 'Cafetería'}</h1>
-          </div>
-          <div className="alumno-top__actions">
-            <Link className="alumno-icon-btn" to={`/e/${slug}/carrito`} aria-label="Carrito">
-              <CartIcon />
-              {cartCount > 0 ? <span className="alumno-badge">{cartCount}</span> : null}
-            </Link>
-            <Link className="alumno-avatar" to="/cuenta" aria-label="Cuenta">
-              {initialsFrom(user?.displayName, user?.email)}
-            </Link>
-          </div>
-        </div>
+        <AlumnoPageHeader
+          kicker="Menú de hoy"
+          title={place?.nombre ?? 'Cafetería'}
+          actions={
+            <>
+              <Link className="alumno-icon-btn" to={`/e/${slug}/carrito`} aria-label="Carrito">
+                <CartIcon />
+                {cartCount > 0 ? <span className="alumno-badge">{cartCount}</span> : null}
+              </Link>
+              <Link className="alumno-avatar" to="/cuenta" aria-label="Cuenta">
+                {initialsFrom(user?.displayName, user?.email)}
+              </Link>
+            </>
+          }
+        />
         <div className="alumno-search-wrap">
           <SearchIcon />
           <label className="sr-only" htmlFor="search-menu">
@@ -218,9 +232,24 @@ export function MenuPage() {
                 +
               </button>
             </div>
-            <button className="alumno-btn alumno-btn--lime" type="button" onClick={addToCart}>
-              Agregar · {preview ? formatMoney(preview.line) : ''}
-            </button>
+            {canAddToCart ? (
+              <div className="alumno-sheet__buy">
+                <button className="alumno-btn alumno-btn--lime" type="button" onClick={addToCart}>
+                  Agregar · {preview ? formatMoney(preview.line) : ''}
+                </button>
+              </div>
+            ) : (
+              <div className="alumno-sheet__buy">
+                <Link className="alumno-btn alumno-btn--lime" to={`/cuenta?next=/e/${slug}`}>
+                  Iniciar sesión para comprar
+                </Link>
+                <p className="alumno-guest-buy">
+                  <button className="alumno-link" type="button" onClick={buyWithoutAccount}>
+                    Comprar sin cuenta
+                  </button>
+                </p>
+              </div>
+            )}
           </div>
           </div>
         </section>

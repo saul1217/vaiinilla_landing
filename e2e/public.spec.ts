@@ -24,7 +24,7 @@ test('soporte sigue publicando el correo oficial', async ({ page }) => {
 
 test('discovery y menú públicos responden contra el backend de development', async ({ page }) => {
   await page.goto('/pedir');
-  await page.getByRole('button', { name: /explorar el menú/i }).click();
+  await page.getByRole('button', { name: /^explorar$/i }).click();
   await expect(page.getByRole('heading', { name: /dónde comes hoy/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /continuar/i })).toBeVisible({ timeout: 20_000 });
   await page.goto('/e/demo-a');

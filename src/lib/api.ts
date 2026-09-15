@@ -17,6 +17,7 @@ import type {
   StripePaymentSession,
   WalletData,
 } from '../types/api';
+import { parseStripePaymentSession } from './stripe-session';
 import { normalizeResolvedSpace, type ResolvedTableSpace } from './resolved-space';
 
 const hostname = typeof window === 'undefined' ? '' : window.location.hostname;
@@ -184,13 +185,16 @@ export const api = {
     });
   },
 
-  async createStripePayment(token: string, orderId: string): Promise<StripePaymentSession> {
-    return (
-      await request<StripePaymentSession>(`/pedidos/${orderId}/pago/stripe`, {
-        method: 'POST',
-        token,
-        idempotent: true,
-      })
-    ).data;
+  async retryStripePayment(
+    token: string,
+    orderId: string,
+    idempotencyKey: string,
+  ): Promise<StripePaymentSession> {
+    const response = await request<unknown>(`/pedidos/${orderId}/pago/stripe`, {
+      method: 'POST',
+      token,
+      idempotencyKey,
+    });
+    return parseStripePaymentSession(response.data);
   },
 };

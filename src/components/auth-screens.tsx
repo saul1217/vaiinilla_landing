@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { MultiFactorResolver, User } from 'firebase/auth';
 import { useAuth } from '../context/auth-context';
@@ -12,11 +12,78 @@ import {
   passwordSignIn,
   sendPasswordReset,
 } from '../lib/firebase';
-import { enableGuestExplore } from '../lib/guest-explore';
+import { enableGuestBuy, enableGuestExplore } from '../lib/guest-explore';
 import { unpublishedLegalTestingEnabled } from '../lib/legal';
 import type { LegalVersions } from '../types/api';
+import { AlumnoBack, AlumnoLockup, AlumnoLogo } from './alumno-brand';
 
 type AuthMode = 'splash' | 'entrar' | 'alta' | 'totp' | 'google-legal';
+
+const SPLASH_BUBBLES = [
+  { src: '/vaini/scene-laptop.png', kind: 'scene', className: 'is-1' },
+  { src: '/vaini/scene-taller.png', kind: 'scene', className: 'is-2' },
+  { src: '/vaini/cutout-lado.png', kind: 'cutout', className: 'is-3' },
+  { src: '/vaini/scene-karate.png', kind: 'scene', className: 'is-4' },
+  { src: '/vaini/scene-bloques.png', kind: 'scene', className: 'is-5' },
+  { src: '/vaini/cutout-espalda.png', kind: 'cutout', className: 'is-6' },
+  { src: '/vaini/scene-puente.png', kind: 'scene', className: 'is-7' },
+  { src: '/vaini/cutout-lado-reverso.png', kind: 'cutout', className: 'is-8' },
+] as const;
+
+const AUTH_COPY = {
+  entrar: {
+    kicker: 'Alumno',
+    headline: (
+      <>
+        Tu cafetería.
+        <br />
+        <span className="alumno-auth__accent">A tu ritmo.</span>
+      </>
+    ),
+    lead: 'Pide, sigue tu pedido y paga desde un solo lugar.',
+    panelKicker: 'Acceso seguro',
+    panelTitle: 'Inicia sesión',
+  },
+  alta: {
+    kicker: 'Nueva cuenta',
+    headline: (
+      <>
+        Únete a Vaiinilla.
+        <br />
+        <span className="alumno-auth__accent">Sin filas.</span>
+      </>
+    ),
+    lead: 'Crea tu cuenta de alumno para pedir y pagar en tu cafetería.',
+    panelKicker: 'Registro',
+    panelTitle: 'Crear cuenta',
+  },
+  'google-legal': {
+    kicker: 'Nueva cuenta',
+    headline: (
+      <>
+        Únete a Vaiinilla.
+        <br />
+        <span className="alumno-auth__accent">Sin filas.</span>
+      </>
+    ),
+    lead: 'Acepta los documentos vigentes para terminar el alta con Google.',
+    panelKicker: 'Registro',
+    panelTitle: 'Crear cuenta',
+  },
+  totp: {
+    kicker: 'Acceso seguro',
+    headline: (
+      <>
+        Un paso más.
+        <br />
+        <span className="alumno-auth__accent">Y entras.</span>
+      </>
+    ),
+    lead: 'Abre tu aplicación autenticadora y captura los 6 dígitos.',
+    panelKicker: 'Segundo factor',
+    panelTitle: 'Verificación',
+  },
+} as const;
 
 export function AuthScreens({
   next = '/pedir',
@@ -198,6 +265,25 @@ export function AuthScreens({
     if (window.location.pathname !== '/pedir') void navigate('/pedir');
   }
 
+  function buyAsGuest() {
+    enableGuestBuy();
+    onExplored?.();
+    void navigate(next);
+  }
+
+  function goBack() {
+    setError(null);
+    setNotice(null);
+    if (mode === 'totp') {
+      setMode('entrar');
+      setResolver(null);
+      setTotpCode('');
+      return;
+    }
+    setPendingGoogleUser(null);
+    setMode('splash');
+  }
+
   const legalLinks = legal ? (
     <>
       <a href={legal.terminos_url} target="_blank" rel="noreferrer">
@@ -215,10 +301,31 @@ export function AuthScreens({
   if (mode === 'splash') {
     return (
       <main id="main-content" className="alumno-splash">
-        <div className="alumno-splash__hero">
-          <img src="/vaini/cutout-frente.png" alt="Vaini, la mascota de Vaiinilla" />
-          <p className="alumno-kicker">Vaiinilla</p>
-          <h1>Tu cafetería, sin filas</h1>
+        <header className="alumno-splash__bar">
+          <AlumnoLockup linked={false} />
+          {allowExplore ? (
+            <button className="alumno-splash__explore" type="button" onClick={explore}>
+              Explorar
+            </button>
+          ) : null}
+        </header>
+        <div className="alumno-splash__stage">
+          <div className="alumno-splash__orbit" aria-hidden="true">
+            {SPLASH_BUBBLES.map((bubble) => (
+              <span key={bubble.className} className={`alumno-splash__bubble ${bubble.className} is-${bubble.kind}`}>
+                <img src={bubble.src} alt="" />
+              </span>
+            ))}
+          </div>
+          <div className="alumno-splash__vaini">
+            <img src="/vaini/cutout-frente.png" alt="Vaini, la mascota de Vaiinilla" />
+          </div>
+        </div>
+        <div className="alumno-splash__copy">
+          <h1>
+            Tu cafetería, <em>a tu ritmo.</em>
+          </h1>
+          <p>Pide, sigue tu pedido y paga desde un solo lugar.</p>
         </div>
         {error ? <p className="alumno-error">{error}</p> : null}
         <div className="alumno-splash__actions">
@@ -234,169 +341,144 @@ export function AuthScreens({
             <GoogleMark />
             Continuar con Google
           </button>
-          <button className="alumno-btn alumno-btn--ink" type="button" onClick={() => setMode('entrar')}>
-            Iniciar sesión
-          </button>
-          {allowExplore ? (
-            <button className="alumno-link" type="button" onClick={explore}>
-              Explorar el menú
-            </button>
-          ) : null}
-        </div>
-      </main>
-    );
-  }
-
-  if (mode === 'totp') {
-    return (
-      <main id="main-content" className="alumno-main">
-        <div className="alumno-banner">
-          <p className="alumno-kicker">Segundo factor</p>
-          <h1>Verificación</h1>
-        </div>
-        <p className="alumno-lead">Abre Google Authenticator y captura el código de 6 dígitos.</p>
-        <form onSubmit={(event) => void verifyTotp(event)}>
-          {error ? <p className="alumno-error">{error}</p> : null}
-          <label className="alumno-field">
-            Código de 6 dígitos
-            <input
-              className="alumno-totp"
-              name="totp"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              autoFocus
-              placeholder="000000"
-              value={totpCode}
-              onChange={(event) => setTotpCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-              required
-              minLength={6}
-              maxLength={6}
-            />
-          </label>
-          <button className="alumno-btn alumno-btn--lime" type="submit" disabled={busy}>
-            {busy ? 'Confirmando…' : 'Confirmar y entrar'}
-          </button>
-          <p style={{ marginTop: 16 }}>
-            <button
-              className="alumno-link"
-              type="button"
-              onClick={() => {
-                setMode('entrar');
-                setResolver(null);
-                setTotpCode('');
-                setError(null);
-              }}
-            >
-              Volver al acceso
+          <p className="alumno-splash__login">
+            ¿Ya tienes cuenta?{' '}
+            <button className="alumno-link" type="button" onClick={() => setMode('entrar')}>
+              Iniciar sesión
             </button>
           </p>
-        </form>
+          <button className="alumno-btn alumno-btn--ghost" type="button" onClick={buyAsGuest}>
+            Comprar sin cuenta
+          </button>
+        </div>
       </main>
     );
   }
 
-  const heading = mode === 'alta' || mode === 'google-legal' ? 'Crear cuenta' : 'Inicia sesión';
+  const copy = AUTH_COPY[mode];
 
   return (
-    <main id="main-content" className="alumno-main">
-      <div className="alumno-banner">
-        <p className="alumno-kicker">Alumno</p>
-        <h1>{heading}</h1>
-      </div>
-      <form
-        onSubmit={(event) =>
-          void (mode === 'google-legal' ? confirmGoogleLegal(event) : onPassword(event))
-        }
-      >
-        {error ? <p className="alumno-error">{error}</p> : null}
-        {notice ? <p className="alumno-ok">{notice}</p> : null}
-        {mode === 'alta' ? (
-          <label className="alumno-field">
-            Nombre
-            <input value={nombre} onChange={(event) => setNombre(event.target.value)} required autoComplete="name" />
-          </label>
-        ) : null}
-        {mode !== 'google-legal' ? (
-          <>
+    <AuthSplit mode={mode} onBack={goBack} copy={copy}>
+      {mode === 'totp' ? (
+        <>
+          <p className="alumno-lead">Abre Google Authenticator y captura el código de 6 dígitos.</p>
+          <form onSubmit={(event) => void verifyTotp(event)}>
+            {error ? <p className="alumno-error">{error}</p> : null}
             <label className="alumno-field">
-              Correo
+              Código de 6 dígitos
               <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                className="alumno-totp"
+                name="totp"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                autoFocus
+                placeholder="000000"
+                value={totpCode}
+                onChange={(event) => setTotpCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
                 required
-                autoComplete="email"
+                minLength={6}
+                maxLength={6}
               />
             </label>
-            {mode === 'entrar' || mode === 'alta' ? (
+            <button className="alumno-btn alumno-btn--lime" type="submit" disabled={busy}>
+              {busy ? 'Confirmando…' : 'Confirmar y entrar'}
+            </button>
+          </form>
+        </>
+      ) : (
+        <form
+          onSubmit={(event) =>
+            void (mode === 'google-legal' ? confirmGoogleLegal(event) : onPassword(event))
+          }
+        >
+          {error ? <p className="alumno-error">{error}</p> : null}
+          {notice ? <p className="alumno-ok">{notice}</p> : null}
+          {mode === 'alta' ? (
+            <label className="alumno-field">
+              Nombre
+              <input value={nombre} onChange={(event) => setNombre(event.target.value)} required autoComplete="name" />
+            </label>
+          ) : null}
+          {mode !== 'google-legal' ? (
+            <>
               <label className="alumno-field">
-                Contraseña
+                Correo
                 <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
                   required
-                  minLength={8}
-                  autoComplete={mode === 'alta' ? 'new-password' : 'current-password'}
+                  autoComplete="email"
                 />
               </label>
-            ) : null}
-          </>
-        ) : (
-          <p className="alumno-lead">Acepta los documentos vigentes para terminar el alta con Google.</p>
-        )}
-        {mode === 'entrar' ? (
-          <p style={{ margin: '-6px 0 16px' }}>
-            <button className="alumno-link" type="button" onClick={() => void onForgot()}>
-              ¿La olvidaste?
-            </button>
-          </p>
-        ) : null}
-        {mode === 'alta' || mode === 'google-legal' ? (
-          <>
-            <label className="alumno-check">
-              <input
-                type="checkbox"
-                checked={acceptedTerms}
-                onChange={(event) => setAcceptedTerms(event.target.checked)}
-              />
-              <span>
-                Acepto los{' '}
-                {legal ? (
-                  <a href={legal.terminos_url} target="_blank" rel="noreferrer">
-                    Términos {legal.terminos_version}
-                  </a>
-                ) : (
-                  'Términos'
-                )}
-                .
-              </span>
-            </label>
-            <label className="alumno-check">
-              <input
-                type="checkbox"
-                checked={acceptedPrivacy}
-                onChange={(event) => setAcceptedPrivacy(event.target.checked)}
-              />
-              <span>
-                Acepto la{' '}
-                {legal ? (
-                  <a href={legal.privacidad_url} target="_blank" rel="noreferrer">
-                    Privacidad {legal.privacidad_version}
-                  </a>
-                ) : (
-                  'Privacidad'
-                )}
-                .
-              </span>
-            </label>
-          </>
-        ) : null}
-        <button className="alumno-btn alumno-btn--lime" type="submit" disabled={busy || !configured}>
-          {busy ? 'Continuando…' : mode === 'entrar' ? 'Entrar' : 'Crear cuenta'}
-        </button>
-        {mode === 'entrar' ? (
-          <p style={{ marginTop: 14 }}>
+              {mode === 'entrar' || mode === 'alta' ? (
+                <label className="alumno-field">
+                  Contraseña
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                    minLength={8}
+                    autoComplete={mode === 'alta' ? 'new-password' : 'current-password'}
+                  />
+                </label>
+              ) : null}
+            </>
+          ) : (
+            <p className="alumno-lead">Acepta los documentos vigentes para terminar el alta con Google.</p>
+          )}
+          {mode === 'entrar' ? (
+            <p className="alumno-auth__forgot">
+              <button className="alumno-link" type="button" onClick={() => void onForgot()}>
+                ¿La olvidaste?
+              </button>
+            </p>
+          ) : null}
+          {mode === 'alta' || mode === 'google-legal' ? (
+            <>
+              <label className="alumno-check">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(event) => setAcceptedTerms(event.target.checked)}
+                />
+                <span>
+                  Acepto los{' '}
+                  {legal ? (
+                    <a href={legal.terminos_url} target="_blank" rel="noreferrer">
+                      Términos {legal.terminos_version}
+                    </a>
+                  ) : (
+                    'Términos'
+                  )}
+                  .
+                </span>
+              </label>
+              <label className="alumno-check">
+                <input
+                  type="checkbox"
+                  checked={acceptedPrivacy}
+                  onChange={(event) => setAcceptedPrivacy(event.target.checked)}
+                />
+                <span>
+                  Acepto la{' '}
+                  {legal ? (
+                    <a href={legal.privacidad_url} target="_blank" rel="noreferrer">
+                      Privacidad {legal.privacidad_version}
+                    </a>
+                  ) : (
+                    'Privacidad'
+                  )}
+                  .
+                </span>
+              </label>
+            </>
+          ) : null}
+          <button className="alumno-btn alumno-btn--lime" type="submit" disabled={busy || !configured}>
+            {busy ? 'Continuando…' : mode === 'entrar' ? 'Entrar' : 'Crear cuenta'}
+          </button>
+          {mode === 'entrar' ? (
             <button
               className="alumno-btn alumno-btn--google"
               type="button"
@@ -406,25 +488,60 @@ export function AuthScreens({
               <GoogleMark />
               Continuar con Google
             </button>
-          </p>
-        ) : null}
-        <p style={{ marginTop: 16 }}>
-          <button
-            className="alumno-link"
-            type="button"
-            onClick={() => {
-              setError(null);
-              setNotice(null);
-              setMode(mode === 'entrar' ? 'alta' : 'entrar');
-            }}
-          >
-            {mode === 'entrar' ? 'Crear cuenta de alumno' : 'Ya tengo cuenta'}
-          </button>
-        </p>
-        <p className="alumno-muted" style={{ marginTop: 18 }}>
-          Al continuar aceptas {legalLinks}.
-        </p>
-      </form>
+          ) : null}
+          {mode === 'google-legal' ? null : (
+            <p className="alumno-auth__switch">
+              <button
+                className="alumno-link"
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setNotice(null);
+                  setMode(mode === 'entrar' ? 'alta' : 'entrar');
+                }}
+              >
+                {mode === 'entrar' ? 'Crear cuenta de alumno' : 'Ya tengo cuenta'}
+              </button>
+            </p>
+          )}
+          <p className="alumno-muted alumno-auth__legal">Al continuar aceptas {legalLinks}.</p>
+        </form>
+      )}
+    </AuthSplit>
+  );
+}
+
+function AuthSplit({
+  mode,
+  onBack,
+  copy,
+  children,
+}: {
+  mode: Exclude<AuthMode, 'splash'>;
+  onBack: () => void;
+  copy: (typeof AUTH_COPY)[Exclude<AuthMode, 'splash'>];
+  children: ReactNode;
+}) {
+  return (
+    <main id="main-content" className={`alumno-auth alumno-auth--${mode}`}>
+      <section className="alumno-auth__brand">
+        <AlumnoLogo onDark className="alumno-auth__logo" />
+        <p className="alumno-kicker">{copy.kicker}</p>
+        <h2 className="alumno-auth__headline">{copy.headline}</h2>
+        <p className="alumno-auth__brand-lead">{copy.lead}</p>
+        <span className="alumno-auth__blob alumno-auth__blob--lime" aria-hidden="true" />
+        <span className="alumno-auth__blob alumno-auth__blob--olive" aria-hidden="true" />
+        <span className="alumno-auth__blob alumno-auth__blob--yolk" aria-hidden="true" />
+      </section>
+      <section className="alumno-auth__panel">
+        <AlumnoBack onClick={onBack}>Volver</AlumnoBack>
+        <div className="alumno-auth__mark" aria-hidden="true">
+          <img src="/brand/vaiinilla-mark.webp" alt="" />
+        </div>
+        <p className="alumno-kicker">{copy.panelKicker}</p>
+        <h1>{copy.panelTitle}</h1>
+        {children}
+      </section>
     </main>
   );
 }
