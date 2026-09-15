@@ -43,6 +43,14 @@
 .pay-choice label { display: flex; gap: 10px; align-items: flex-start; background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; cursor: pointer; }
 .pay-choice label.is-on { border-color: var(--ink); box-shadow: 0 0 0 2px var(--lime); }
 
+.totp-input {
+  max-width: 12em;
+  text-align: center;
+  letter-spacing: 0.28em;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
 .account-nav { display: flex; gap: 12px; flex-wrap: wrap; margin: 8px 0 24px; }
 .status-pill { display: inline-flex; border-radius: 999px; padding: 4px 10px; background: var(--cream-2); font-size: .75rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .order-steps { display: grid; gap: 8px; margin: 22px 0; }

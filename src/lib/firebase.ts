@@ -1,14 +1,18 @@
-import { getApp, getApps, initializeApp } from 'firebase/app';
+import { FirebaseError, getApp, getApps, initializeApp } from 'firebase/app';
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
   getAuth,
+  getMultiFactorResolver,
   onAuthStateChanged,
   setPersistence,
   signInWithEmailAndPassword,
   signOut,
+  TotpMultiFactorGenerator,
   updateProfile,
   type Auth,
+  type MultiFactorError,
+  type MultiFactorResolver,
   type User,
 } from 'firebase/auth';
 import { beginBrowserSession, endBrowserSession, hasBrowserSession } from './browser-session';
@@ -59,15 +63,41 @@ export function observeAuth(callback: (user: User | null) => void): () => void {
   return onAuthStateChanged(auth, callback);
 }
 
-export async function passwordSignIn(email: string, password: string): Promise<User> {
+export interface PasswordSignInResult {
+  user?: User;
+  mfaResolver?: MultiFactorResolver;
+}
+
+export async function passwordSignIn(
+  email: string,
+  password: string,
+): Promise<PasswordSignInResult> {
   const auth = await readyAuth();
+  const hadBrowserSession = hasBrowserSession();
   beginBrowserSession();
   try {
-    return (await signInWithEmailAndPassword(auth, email, password)).user;
+    const credential = await signInWithEmailAndPassword(auth, email, password);
+    return { user: credential.user };
   } catch (error) {
-    if (!hasBrowserSession()) endBrowserSession();
+    if (error instanceof FirebaseError && error.code === 'auth/multi-factor-auth-required') {
+      return { mfaResolver: getMultiFactorResolver(auth, error as MultiFactorError) };
+    }
+    if (!hadBrowserSession) endBrowserSession();
     throw error;
   }
+}
+
+export async function completeTotpSignIn(
+  resolver: MultiFactorResolver,
+  verificationCode: string,
+): Promise<User> {
+  beginBrowserSession();
+  const totpHint = resolver.hints.find(
+    (hint) => hint.factorId === TotpMultiFactorGenerator.FACTOR_ID,
+  );
+  if (!totpHint) throw new Error('La cuenta no tiene un factor TOTP compatible.');
+  const assertion = TotpMultiFactorGenerator.assertionForSignIn(totpHint.uid, verificationCode);
+  return (await resolver.resolveSignIn(assertion)).user;
 }
 
 export async function createPasswordAccount(

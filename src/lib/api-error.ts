@@ -38,3 +38,21 @@ export function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return 'Ocurrió un error inesperado. Intenta nuevamente.';
 }
+
+const firebaseAuthMessages: Record<string, string> = {
+  'auth/invalid-credential': 'El correo o la contraseña no son correctos.',
+  'auth/wrong-password': 'El correo o la contraseña no son correctos.',
+  'auth/user-not-found': 'El correo o la contraseña no son correctos.',
+  'auth/invalid-email': 'El correo no tiene un formato válido.',
+  'auth/too-many-requests': 'Hay demasiados intentos. Espera un momento antes de continuar.',
+  'auth/invalid-verification-code': 'El código no es válido o ya cambió. Prueba el código actual.',
+  'auth/network-request-failed': 'No fue posible contactar Firebase. Revisa tu conexión.',
+};
+
+export function firebaseAuthMessage(error: unknown): string {
+  if (error && typeof error === 'object' && 'code' in error) {
+    const code = String((error as { code: unknown }).code);
+    if (firebaseAuthMessages[code]) return firebaseAuthMessages[code];
+  }
+  return errorMessage(error);
+}

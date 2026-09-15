@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import type { MultiFactorResolver, User } from 'firebase/auth';
 import { PageShell } from '../components/shell';
 import { useAuth } from '../context/auth-context';
 import { api } from '../lib/api';
-import { errorMessage, VaiinillaApiError } from '../lib/api-error';
-import { createPasswordAccount, firebaseIdToken, passwordSignIn } from '../lib/firebase';
+import { firebaseAuthMessage, VaiinillaApiError } from '../lib/api-error';
+import {
+  completeTotpSignIn,
+  createPasswordAccount,
+  firebaseIdToken,
+  passwordSignIn,
+} from '../lib/firebase';
 import { unpublishedLegalTestingEnabled } from '../lib/legal';
 import type { LegalVersions } from '../types/api';
 
@@ -19,6 +25,8 @@ export function AccountPage() {
   const [nombre, setNombre] = useState('');
   const [accepted, setAccepted] = useState(false);
   const [legal, setLegal] = useState<LegalVersions | null>(null);
+  const [resolver, setResolver] = useState<MultiFactorResolver | null>(null);
+  const [totpCode, setTotpCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -27,7 +35,7 @@ export function AccountPage() {
       .getLegalVersions()
       .then(setLegal)
       .catch((cause: unknown) => {
-        if (!unpublishedLegalTestingEnabled) setError(errorMessage(cause));
+        if (!unpublishedLegalTestingEnabled) setError(firebaseAuthMessage(cause));
       });
   }, []);
 
@@ -35,10 +43,11 @@ export function AccountPage() {
 
   const subtitle = useMemo(() => {
     if (!configured) return 'Falta configurar Firebase en este entorno. El menú público sí funciona.';
+    if (resolver) return 'Abre Google Authenticator y captura el código de 6 dígitos.';
     return 'Usa la misma cuenta de alumno que en la app.';
-  }, [configured]);
+  }, [configured, resolver]);
 
-  async function enrollIfNeeded(nextUser: NonNullable<typeof user>) {
+  async function enrollIfNeeded(nextUser: User) {
     if (!legalReady || !legal) return;
     const token = await firebaseIdToken(nextUser);
     try {
@@ -53,25 +62,51 @@ export function AccountPage() {
     }
   }
 
+  async function finish(nextUser: User) {
+    await enrollIfNeeded(nextUser);
+    setResolver(null);
+    setTotpCode('');
+    void navigate(next);
+  }
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
     if (!configured) return;
     setBusy(true);
     try {
-      const nextUser =
-        mode === 'alta'
-          ? await (async () => {
-              if (!accepted || !legalReady || !legal) {
-                throw new Error('Acepta los términos y la privacidad vigentes para crear tu cuenta.');
-              }
-              return createPasswordAccount(email, password, nombre);
-            })()
-          : await passwordSignIn(email, password);
-      await enrollIfNeeded(nextUser);
-      void navigate(next);
+      if (mode === 'alta') {
+        if (!accepted || !legalReady || !legal) {
+          throw new Error('Acepta los términos y la privacidad vigentes para crear tu cuenta.');
+        }
+        await finish(await createPasswordAccount(email, password, nombre));
+        return;
+      }
+      const result = await passwordSignIn(email.trim().toLowerCase(), password);
+      if (result.mfaResolver) {
+        setResolver(result.mfaResolver);
+        return;
+      }
+      if (result.user) await finish(result.user);
     } catch (cause) {
-      setError(errorMessage(cause));
+      setError(firebaseAuthMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function verifyTotp(event: FormEvent) {
+    event.preventDefault();
+    if (!resolver || !/^\d{6}$/.test(totpCode)) {
+      setError('Captura los 6 dígitos de tu aplicación autenticadora.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await finish(await completeTotpSignIn(resolver, totpCode));
+    } catch (cause) {
+      setError(firebaseAuthMessage(cause));
     } finally {
       setBusy(false);
     }
@@ -94,7 +129,9 @@ export function AccountPage() {
       <main id="main-content" className="app-page">
         <div className="container" style={{ maxWidth: 640 }}>
           <p className="eyebrow">Cuenta de alumno</p>
-          <h1>{user ? 'Tu cuenta' : mode === 'alta' ? 'Crear cuenta' : 'Entrar'}</h1>
+          <h1>
+            {user ? 'Tu cuenta' : resolver ? 'Verificación' : mode === 'alta' ? 'Crear cuenta' : 'Entrar'}
+          </h1>
           <p className="app-lead">{subtitle}</p>
           {user ? (
             <>
@@ -114,6 +151,42 @@ export function AccountPage() {
                 <a href="https://app.vaiinilla.app">app.vaiinilla.app</a>.
               </p>
             </>
+          ) : resolver ? (
+            <form className="panel-card" onSubmit={(event) => void verifyTotp(event)}>
+              {error ? <p className="feedback">{error}</p> : null}
+              <label className="field">
+                Código de 6 dígitos
+                <input
+                  className="totp-input"
+                  name="totp"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  placeholder="000000"
+                  value={totpCode}
+                  onChange={(event) => setTotpCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                  required
+                  minLength={6}
+                  maxLength={6}
+                />
+              </label>
+              <button className="btn btn--primary" type="submit" disabled={busy}>
+                {busy ? 'Confirmando…' : 'Confirmar y entrar'}
+              </button>
+              <p style={{ marginTop: 16 }}>
+                <button
+                  className="text-link"
+                  type="button"
+                  onClick={() => {
+                    setResolver(null);
+                    setTotpCode('');
+                    setError(null);
+                  }}
+                >
+                  Volver al acceso
+                </button>
+              </p>
+            </form>
           ) : (
             <form className="panel-card" onSubmit={(event) => void onSubmit(event)}>
               {error ? <p className="feedback">{error}</p> : null}
