@@ -170,6 +170,7 @@ describe('CartPage', () => {
       estado: 'por_cobrar',
       metodo_pago: 'stripe',
       destino: 'para_llevar',
+      qr_token: 'pickup-token',
       espacio: null,
       total: '123.60',
       items: [],
@@ -195,6 +196,7 @@ describe('CartPage', () => {
     expect(payload.items).toEqual([{ producto_id: 1, cantidad: 1, opcion_ids: [] }]);
     expect(JSON.stringify(payload)).not.toContain('"total"');
     expect(createOrder.mock.calls[0]?.[2]).toEqual(expect.any(String));
+    expect(sessionStorage.getItem('vaiinilla.buyer.pickup-qr.v1.ord-stripe')).toBe('pickup-token');
   });
 
   it('invitado con comprar-sin-cuenta no va a /cuenta al pagar', async () => {

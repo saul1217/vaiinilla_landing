@@ -10,6 +10,7 @@ import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { cartTotal, isOperationallyReady, toCreateOrderInput } from '../lib/cart';
 import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
 import { formatMoney, moneyToCents } from '../lib/money';
+import { rememberPickupQrToken } from '../lib/pickup-qr';
 import { clearSpace, readSpace } from '../lib/space-session';
 import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
 import { isStripeCheckoutEnabled, STRIPE_UNAVAILABLE_COPY } from '../lib/stripe-public';
@@ -143,6 +144,7 @@ export function CartPage() {
       const fingerprint = orderFingerprint(payload);
       const key = idempotencyKeyFor(fingerprint);
       const order = await api.createOrder(session.access_token, payload, key);
+      rememberPickupQrToken(order.id, order.qr_token);
       if (payment === 'stripe') {
         const stripeSession = stripeSessionFromCreatedOrder(order);
         rememberStripeCheckoutSession(order.id, stripeSession);

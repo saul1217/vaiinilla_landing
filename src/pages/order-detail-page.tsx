@@ -12,6 +12,7 @@ import { lastPlaceSlug } from '../lib/last-place';
 import { errorMessage } from '../lib/api-error';
 import { forgetIdempotencyKey, idempotencyKeyFor } from '../lib/idempotency';
 import { formatMoney } from '../lib/money';
+import { readPickupQrToken } from '../lib/pickup-qr';
 import {
   isTerminalOrderStatus,
   ORDER_FLOW,
@@ -124,10 +125,14 @@ export function OrderDetailPage() {
   }, [accessToken, id, stripePolling]);
 
   useEffect(() => {
-    const qrToken = order?.qr_token;
+    const currentOrder = order;
+    const qrToken = currentOrder
+      ? currentOrder.qr_token ?? readPickupQrToken(currentOrder.id)
+      : null;
     const hideQr =
+      !currentOrder ||
       !qrToken ||
-      (order.metodo_pago === 'stripe' && !isStripePaymentConfirmedByBackend(order));
+      (currentOrder.metodo_pago === 'stripe' && !isStripePaymentConfirmedByBackend(currentOrder));
     if (hideQr) {
       setQr(null);
       return;

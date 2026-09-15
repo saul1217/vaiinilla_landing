@@ -133,6 +133,17 @@ describe('OrderDetailPage', () => {
     expect(screen.getByText(/sin cebolla/i)).toBeInTheDocument();
   });
 
+  it('recupera el QR guardado al crear el pedido cuando el detalle no lo devuelve', async () => {
+    sessionStorage.setItem('vaiinilla.buyer.pickup-qr.v1.ord-1', 'pickup-token');
+    getOrder.mockResolvedValue({
+      ...stripeOrder({ metodo_pago: 'saldo', estado: 'listo' }),
+      metodo_pago: 'saldo',
+      qr_token: undefined,
+    });
+    renderOrder();
+    expect(await screen.findByRole('img', { name: /código qr del pedido/i })).toBeInTheDocument();
+  });
+
   it('muestra el total del backend antes de pagar y nunca copy de caja', async () => {
     rememberStripeCheckoutSession('ord-1', {
       payment_attempt_id: 'attempt-1',
