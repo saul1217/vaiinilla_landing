@@ -30,17 +30,31 @@ export const productionFirebaseConfig: FirebaseClientConfig = {
   appId: '1:1063589785442:web:fe98c2b66f95fb1055463b',
 };
 
+/** Public buyer sandbox; same Railway/Firebase development as localhost. */
+export const buyerSandboxHostnames = ['sand-user.vaiinilla.app'] as const;
+
+export function isLocalHostname(hostname: string): boolean {
+  return hostname === '' || hostname === 'localhost' || hostname === '127.0.0.1';
+}
+
+export function isBuyerDevelopmentHostname(hostname: string): boolean {
+  return (
+    isLocalHostname(hostname) ||
+    (buyerSandboxHostnames as readonly string[]).includes(hostname.toLowerCase())
+  );
+}
+
 export function resolveApiUrl(
   envUrl: string | undefined,
   hostname: string,
 ): string {
+  // Sandbox/local win over Vercel Production `VITE_API_URL`, otherwise a shared
+  // www deploy would force sand-user onto the empty production API.
+  if (isLocalHostname(hostname)) return '/api/v1';
+  if (isBuyerDevelopmentHostname(hostname)) return developmentApiUrl;
   const explicit = envUrl?.replace(/\/$/, '');
   if (explicit) return explicit;
-  const usesLocalFallback =
-    hostname === '' || hostname === 'localhost' || hostname === '127.0.0.1';
-  // Same-origin proxy in Vite avoids CORS during local/e2e. Production hosts
-  // talk to Railway directly.
-  return usesLocalFallback ? '/api/v1' : productionApiUrl;
+  return productionApiUrl;
 }
 
 export function isFirebaseConfigReady(config: FirebaseClientConfig): boolean {
@@ -51,10 +65,9 @@ export function resolveFirebaseConfig(
   envConfig: FirebaseClientConfig,
   hostname: string,
 ): FirebaseClientConfig {
+  if (isBuyerDevelopmentHostname(hostname)) return developmentFirebaseConfig;
   if (isFirebaseConfigReady(envConfig)) return envConfig;
-  const usesDevelopment =
-    hostname === '' || hostname === 'localhost' || hostname === '127.0.0.1';
-  return usesDevelopment ? developmentFirebaseConfig : productionFirebaseConfig;
+  return productionFirebaseConfig;
 }
 
 export function walletQrUrl(userId: string): string {

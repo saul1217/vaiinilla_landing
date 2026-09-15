@@ -22,6 +22,21 @@ describe('env', () => {
     );
   });
 
+  it('fuerza API y Firebase de development en sand-user aunque Vercel inyecte prod', () => {
+    expect(resolveApiUrl('https://vaiinillaback.up.railway.app/api/v1', 'sand-user.vaiinilla.app')).toBe(
+      'https://vaiinillaback-development.up.railway.app/api/v1',
+    );
+    expect(resolveFirebaseConfig(
+      {
+        apiKey: 'from-env',
+        authDomain: 'vaiinilla-produc.firebaseapp.com',
+        projectId: 'vaiinilla-produc',
+        appId: '1:1:web:prod',
+      },
+      'sand-user.vaiinilla.app',
+    )).toEqual(developmentFirebaseConfig);
+  });
+
   it('codifica el QR de recarga en el dominio público', () => {
     expect(walletQrUrl(' u-42 ')).toBe('https://vaiinilla.app/u/u-42');
   });
