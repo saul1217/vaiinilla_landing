@@ -4,13 +4,15 @@ import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
+import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
 import { rememberStripeCheckoutSession } from '../lib/stripe-session';
 import { CASH_COUNTER_COPY, STRIPE_COPY, STRIPE_TOTAL_LABEL } from '../lib/stripe-status';
 import type { OrderDetail } from '../types/api';
 import { OrderDetailPage } from './order-detail-page';
 
-const { getOrder, retryStripePayment } = vi.hoisted(() => ({
+const { getOrder, getOrderQr, retryStripePayment } = vi.hoisted(() => ({
   getOrder: vi.fn(),
+  getOrderQr: vi.fn(),
   retryStripePayment: vi.fn(),
 }));
 
@@ -18,6 +20,7 @@ vi.mock('../lib/api', () => ({
   api: {
     getEstablishment: vi.fn(),
     getOrder: (...args: unknown[]) => getOrder(...args) as Promise<unknown>,
+    getOrderQr: (...args: unknown[]) => getOrderQr(...args) as Promise<unknown>,
     retryStripePayment: (...args: unknown[]) => retryStripePayment(...args) as Promise<unknown>,
     apiUrl: '/api/v1',
   },
@@ -105,6 +108,8 @@ describe('OrderDetailPage', () => {
   beforeEach(() => {
     sessionStorage.clear();
     getOrder.mockReset();
+    getOrderQr.mockReset();
+    getOrderQr.mockRejectedValue(new Error('QR recovery not configured in this test'));
     retryStripePayment.mockReset();
   });
 
@@ -142,6 +147,18 @@ describe('OrderDetailPage', () => {
     });
     renderOrder();
     expect(await screen.findByRole('img', { name: /código qr del pedido/i })).toBeInTheDocument();
+  });
+
+  it('recupera el QR desde el backend si se abre en otro dispositivo', async () => {
+    getOrder.mockResolvedValue({
+      ...stripeOrder({ metodo_pago: 'saldo', estado: 'listo' }),
+      metodo_pago: 'saldo',
+      qr_token: undefined,
+    });
+    getOrderQr.mockResolvedValue({ qr_token: 'recovered-token' });
+    renderOrder();
+    expect(await screen.findByRole('img', { name: /código qr del pedido/i })).toBeInTheDocument();
+    expect(getOrderQr).toHaveBeenCalledWith('jwt', 'ord-1');
   });
 
   it('muestra el total del backend antes de pagar y nunca copy de caja', async () => {
@@ -225,5 +242,40 @@ describe('OrderDetailPage', () => {
     expect(retryStripePayment.mock.calls[0]?.[1]).toBe('ord-1');
     expect(retryStripePayment.mock.calls[0]?.[2]).toEqual(expect.any(String));
     expect(await screen.findByTestId('stripe-payment-element')).toBeInTheDocument();
+  });
+
+  it('libera el bloqueo local cuando el intento ya terminó fallido', async () => {
+    savePendingStripeOrderId('ord-1');
+    getOrder.mockResolvedValue(
+      stripeOrder({
+        pago: {
+          payment_attempt_id: 'attempt-1',
+          payment_intent_id: 'pi_test_001',
+          stripe_account_id: 'acct_test_001',
+          payment_status: 'fallido',
+        },
+      }),
+    );
+    renderOrder();
+    expect(await screen.findByText(STRIPE_COPY.failed)).toBeInTheDocument();
+    expect(readPendingStripeOrderId()).toBeNull();
+  });
+
+  it('conserva el bloqueo local si el pago todavía no tiene estado terminal', async () => {
+    savePendingStripeOrderId('ord-1');
+    rememberStripeCheckoutSession('ord-1', {
+      payment_attempt_id: 'attempt-1',
+      payment_intent_id: 'pi_test_001',
+      client_secret: 'pi_test_001_secret_test',
+      stripe_account_id: 'acct_test_001',
+      publishable_key: 'pk_test_51Vaiinilla',
+      payment_status: 'pendiente_pago',
+    });
+    getOrder.mockResolvedValue(stripeOrder({}));
+    const user = userEvent.setup();
+    renderOrder();
+    await user.click(await screen.findByRole('button', { name: /salir del pago/i }));
+    expect(readPendingStripeOrderId()).toBe('ord-1');
+    expect(await screen.findByRole('button', { name: /reintentar pago/i })).toBeInTheDocument();
   });
 });

@@ -87,11 +87,17 @@ function StripeCheckoutForm({
 }) {
   const stripe = useStripe();
   const elements = useElements();
+  const [elementReady, setElementReady] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function pay() {
-    if (!stripe || !elements) return;
+    if (!stripe || !elements || !elementReady) return;
+    if (!elements.getElement(PaymentElement)) {
+      setError('El formulario de pago todavía no está listo. Espera un momento.');
+      setElementReady(false);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -122,10 +128,21 @@ function StripeCheckoutForm({
         void pay();
       }}
     >
-      <PaymentElement />
+      <PaymentElement
+        onReady={() => setElementReady(true)}
+        onLoadError={() => {
+          setElementReady(false);
+          setError('No se pudo cargar el formulario seguro de pago. Inténtalo de nuevo.');
+        }}
+      />
+      {!elementReady && !error ? <p role="status">Preparando formulario seguro…</p> : null}
       {error ? <p className="alumno-error">{error}</p> : null}
-      <button className="alumno-btn alumno-btn--lime" type="submit" disabled={!stripe || submitting}>
-        {submitting ? 'Confirmando…' : 'Pagar ahora'}
+      <button
+        className="alumno-btn alumno-btn--lime"
+        type="submit"
+        disabled={!stripe || !elements || !elementReady || submitting}
+      >
+        {submitting ? 'Confirmando…' : elementReady ? 'Pagar ahora' : 'Cargando pago…'}
       </button>
       <button className="alumno-btn alumno-btn--ghost" type="button" onClick={onCanceled} disabled={submitting}>
         Salir del pago

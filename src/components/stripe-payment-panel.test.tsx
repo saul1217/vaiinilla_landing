@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { StripeOrderTotal, StripePaymentPanel } from '../components/stripe-payment-panel';
 import { STRIPE_TOTAL_LABEL } from '../lib/stripe-status';
@@ -15,7 +15,10 @@ vi.mock('@stripe/stripe-js', () => ({
 
 vi.mock('@stripe/react-stripe-js', () => ({
   Elements: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  PaymentElement: () => <div data-testid="stripe-payment-element" />,
+  PaymentElement: ({ onReady }: { onReady?: () => void }) => {
+    useEffect(() => onReady?.(), [onReady]);
+    return <div data-testid="stripe-payment-element" />;
+  },
   useStripe: () => ({ confirmPayment: vi.fn().mockResolvedValue({}) }),
   useElements: () => ({}),
 }));

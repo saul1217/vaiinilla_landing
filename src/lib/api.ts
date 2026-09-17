@@ -166,6 +166,10 @@ export const api = {
     return (await request<OrderDetail>(`/pedidos/${id}`, { token })).data;
   },
 
+  async getOrderQr(token: string, id: string): Promise<{ qr_token: string }> {
+    return (await request<{ qr_token: string }>(`/pedidos/${id}/qr`, { token })).data;
+  },
+
   async getMyWallet(token: string): Promise<WalletData> {
     return (await request<WalletData>('/wallets/me', { token })).data;
   },

@@ -12,7 +12,7 @@ import { lastPlaceSlug } from '../lib/last-place';
 import { errorMessage } from '../lib/api-error';
 import { forgetIdempotencyKey, idempotencyKeyFor } from '../lib/idempotency';
 import { formatMoney } from '../lib/money';
-import { readPickupQrToken } from '../lib/pickup-qr';
+import { readPickupQrToken, rememberPickupQrToken } from '../lib/pickup-qr';
 import {
   isTerminalOrderStatus,
   ORDER_FLOW,
@@ -45,6 +45,7 @@ export function OrderDetailPage() {
   const { cart } = useCart();
   const { context, openClientSession } = useBuyerSession();
   const [order, setOrder] = useState<OrderDetail | null>(null);
+  const [pickupQrToken, setPickupQrToken] = useState<string | null>(null);
   const [qr, setQr] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [stripeSession, setStripeSession] = useState<StripePaymentSession | null>(() =>
@@ -79,6 +80,13 @@ export function OrderDetailPage() {
         setOrder(next);
         setError(null);
         if (isStripePaymentConfirmedByBackend(next)) {
+          clearPendingStripeOrderId(next.id);
+          clearStripeCheckoutSession(next.id);
+        } else if (
+          next.metodo_pago === 'stripe' &&
+          (next.pago?.payment_status === 'fallido' || next.pago?.payment_status === 'cancelado')
+        ) {
+          // Un intento terminado no debe bloquear la creación de un pedido nuevo.
           clearPendingStripeOrderId(next.id);
           clearStripeCheckoutSession(next.id);
         }
@@ -126,8 +134,48 @@ export function OrderDetailPage() {
 
   useEffect(() => {
     const currentOrder = order;
+    if (!currentOrder) {
+      setPickupQrToken(null);
+      return;
+    }
+
+    const localToken = currentOrder.qr_token ?? readPickupQrToken(currentOrder.id);
+    if (localToken) {
+      setPickupQrToken(localToken);
+      return;
+    }
+
+    const paidStates = ['cobrado', 'preparando', 'listo', 'entregado'];
+    const stripeConfirmed = isStripePaymentConfirmedByBackend(currentOrder);
+    if (
+      !accessToken ||
+      !paidStates.includes(currentOrder.estado) ||
+      (currentOrder.metodo_pago === 'stripe' && !stripeConfirmed)
+    ) {
+      setPickupQrToken(null);
+      return;
+    }
+
+    let active = true;
+    void api
+      .getOrderQr(accessToken, currentOrder.id)
+      .then(({ qr_token: recoveredToken }) => {
+        if (!active) return;
+        setPickupQrToken(recoveredToken);
+        rememberPickupQrToken(currentOrder.id, recoveredToken);
+      })
+      .catch(() => {
+        // El pedido seguirá actualizándose; un fallo transitorio no bloquea la pantalla.
+      });
+    return () => {
+      active = false;
+    };
+  }, [accessToken, order]);
+
+  useEffect(() => {
+    const currentOrder = order;
     const qrToken = currentOrder
-      ? currentOrder.qr_token ?? readPickupQrToken(currentOrder.id)
+      ? currentOrder.qr_token ?? pickupQrToken ?? readPickupQrToken(currentOrder.id)
       : null;
     const hideQr =
       !currentOrder ||
@@ -144,7 +192,7 @@ export function OrderDetailPage() {
     return () => {
       active = false;
     };
-  }, [order]);
+  }, [order, pickupQrToken]);
 
   if (ready && !user) return <Navigate to={`/cuenta?next=/cuenta/pedidos/${id}`} replace />;
 
