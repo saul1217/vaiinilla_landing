@@ -194,8 +194,9 @@ describe('buyer API client', () => {
           error: null,
         });
       }),
-      http.get(`${baseUrl}/pedidos/3d196e4d-9082-4b5d-aa7a-65f0e21ac654`, () =>
-        HttpResponse.json({
+      http.get(`${baseUrl}/pedidos/3d196e4d-9082-4b5d-aa7a-65f0e21ac654`, ({ request }) => {
+        expect(request.cache).toBe('no-store');
+        return HttpResponse.json({
           data: {
             ...stripeOrder,
             pago: {
@@ -207,8 +208,8 @@ describe('buyer API client', () => {
           },
           meta: {},
           error: null,
-        }),
-      ),
+        });
+      }),
     );
 
     const created = await api.createOrder(

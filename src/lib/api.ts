@@ -163,7 +163,10 @@ export const api = {
   },
 
   async getOrder(token: string, id: string): Promise<OrderDetail> {
-    return (await request<OrderDetail>(`/pedidos/${id}`, { token })).data;
+    // El detalle contiene el estado de un pago Stripe recién confirmado. En el
+    // navegador no puede reutilizar una respuesta HTTP anterior: el webhook es
+    // la fuente de verdad y el polling debe observar su actualización enseguida.
+    return (await request<OrderDetail>(`/pedidos/${id}`, { token, cache: 'no-store' })).data;
   },
 
   async getOrderQr(token: string, id: string): Promise<{ qr_token: string }> {
