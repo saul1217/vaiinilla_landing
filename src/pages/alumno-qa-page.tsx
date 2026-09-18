@@ -156,7 +156,7 @@ export function AlumnoQaWalletPage() {
 
 export function AlumnoQaOrdersPage() {
   const deskPane = useDeskPane();
-  const [expandedId, setExpandedId] = useState(CARD.id);
+  const [expandedId, setExpandedId] = useState<string | null>(CARD.id);
   if (!import.meta.env.DEV) return <Navigate to="/" replace />;
   const live = [CASH, CARD, CARD_AGAIN];
   const selected = live.find((order) => order.id === expandedId) ?? CARD;
