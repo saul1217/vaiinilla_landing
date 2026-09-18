@@ -112,6 +112,7 @@ function renderOrder() {
 describe('OrderDetailPage', () => {
   beforeEach(() => {
     sessionStorage.clear();
+    localStorage.clear();
     getOrder.mockReset();
     getOrderQr.mockReset();
     getOrderQr.mockRejectedValue(new Error('QR recovery not configured in this test'));
@@ -133,7 +134,7 @@ describe('OrderDetailPage', () => {
     });
     renderOrder();
     expect(await screen.findByRole('heading', { name: /#42/i })).toBeInTheDocument();
-    expect(await screen.findByAltText(/código qr del pedido/i)).toHaveAttribute(
+    expect((await screen.findAllByAltText(/código qr del pedido/i))[0]).toHaveAttribute(
       'src',
       'data:image/png;base64,qr',
     );
@@ -151,7 +152,40 @@ describe('OrderDetailPage', () => {
       qr_token: undefined,
     });
     renderOrder();
-    expect(await screen.findByRole('img', { name: /código qr del pedido/i })).toBeInTheDocument();
+    expect((await screen.findAllByRole('img', { name: /código qr del pedido/i })).length).toBeGreaterThan(0);
+  });
+
+  it('conserva el QR en localStorage si la visita nueva pierde sessionStorage', async () => {
+    localStorage.setItem('vaiinilla.buyer.pickup-qr.v1.ord-1', 'pickup-token');
+    sessionStorage.clear();
+    getOrder.mockResolvedValue({
+      ...stripeOrder({ metodo_pago: 'saldo', estado: 'listo' }),
+      metodo_pago: 'saldo',
+      qr_token: undefined,
+    });
+    renderOrder();
+    expect((await screen.findAllByRole('img', { name: /código qr del pedido/i })).length).toBeGreaterThan(0);
+  });
+
+  it('en listo muestra folio de retiro si el API no envía secreto', async () => {
+    getOrder.mockResolvedValue(
+      stripeOrder({
+        folio: 1,
+        estado: 'listo',
+        qr_token: undefined,
+        pago: {
+          payment_attempt_id: 'attempt-1',
+          payment_intent_id: 'pi_test_001',
+          stripe_account_id: 'acct_test_001',
+          payment_status: 'confirmado',
+        },
+      }),
+    );
+    renderOrder();
+    expect((await screen.findAllByRole('region', { name: /código de retiro/i })).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('#1').length).toBeGreaterThan(1);
+    expect(screen.getAllByText(/muestra esto en la barra/i).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('img', { name: /código qr/i })).not.toBeInTheDocument();
   });
 
   it('recupera el QR desde el backend si se abre en otro dispositivo', async () => {
@@ -162,7 +196,7 @@ describe('OrderDetailPage', () => {
     });
     getOrderQr.mockResolvedValue({ qr_token: 'recovered-token' });
     renderOrder();
-    expect(await screen.findByRole('img', { name: /código qr del pedido/i })).toBeInTheDocument();
+    expect((await screen.findAllByRole('img', { name: /código qr del pedido/i })).length).toBeGreaterThan(0);
     expect(getOrderQr).toHaveBeenCalledWith('jwt', 'ord-1');
   });
 

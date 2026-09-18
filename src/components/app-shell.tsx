@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useId, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { applyAlumnoTheme, useTheme } from '../context/theme-context';
 import { useAuth } from '../context/auth-context';
@@ -9,46 +9,102 @@ import { SkipLink } from './shell';
 
 export type AlumnoTab = 'menu' | 'orders' | 'wallet' | 'cart' | 'none';
 
-function IconMenu() {
+const stroke = {
+  fill: 'none' as const,
+  stroke: 'currentColor',
+  strokeWidth: 1.7,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+};
+
+function IconMenu({ filled }: { filled: boolean }) {
+  const holeId = `nav-home-${useId().replace(/:/g, '')}`;
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v3A1.5 1.5 0 0 1 18.5 11h-13A1.5 1.5 0 0 1 4 9.5v-3Zm0 8A1.5 1.5 0 0 1 5.5 13h13a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-3Z"
-      />
+      {filled ? (
+        <>
+          <mask id={holeId} maskUnits="userSpaceOnUse">
+            <rect width="24" height="24" fill="white" />
+            <rect x="10.4" y="13.05" width="3.2" height="5.55" rx="0.5" fill="black" />
+          </mask>
+          <path
+            fill="currentColor"
+            mask={`url(#${holeId})`}
+            d="M12 3.15 16.6 6.75V4.4h2.9v4.55L20.6 9.95V20.8H3.4V9.95L12 3.15Z"
+          />
+        </>
+      ) : (
+        <>
+          <path
+            {...stroke}
+            d="M4.4 10.2 12 4.3l4.5 3.5V6.15h2.55v3.95L19.6 10.2v9.45H4.4V10.2Z"
+          />
+          <rect x="10.2" y="13.35" width="3.6" height="4.35" rx="0.55" {...stroke} />
+        </>
+      )}
     </svg>
   );
 }
 
-function IconOrders() {
+function IconOrders({ filled }: { filled: boolean }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M7 3h10a2 2 0 0 1 2 2v15.2a.8.8 0 0 1-1.25.66L12 17.4l-5.75 3.46A.8.8 0 0 1 5 20.2V5a2 2 0 0 1 2-2Zm0 2v13.12l4.25-2.56a1.5 1.5 0 0 1 1.5 0L17 18.12V5H7Z"
-      />
+      {filled ? (
+        <>
+          <rect x="3.9" y="4.85" width="16.2" height="5.85" rx="1.9" fill="currentColor" />
+          <rect x="3.9" y="13.3" width="16.2" height="5.85" rx="1.9" fill="currentColor" />
+        </>
+      ) : (
+        <>
+          <rect x="4.2" y="5.15" width="15.6" height="5.45" rx="1.7" {...stroke} />
+          <rect x="4.2" y="13.4" width="15.6" height="5.45" rx="1.7" {...stroke} />
+        </>
+      )}
     </svg>
   );
 }
 
-function IconWallet() {
+function IconWallet({ filled }: { filled: boolean }) {
+  const holeId = `nav-wallet-${useId().replace(/:/g, '')}`;
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18a2 2 0 0 1 2 2v1h-2V7H6.5a.5.5 0 0 0 0 1H20v9.5A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-10Zm13.25 6.25a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5Z"
-      />
+      {filled ? (
+        <>
+          <mask id={holeId} maskUnits="userSpaceOnUse">
+            <rect width="24" height="24" fill="white" />
+            <rect x="7.7" y="7.7" width="8.6" height="2.6" rx="0.8" fill="black" />
+          </mask>
+          <path
+            fill="currentColor"
+            mask={`url(#${holeId})`}
+            d="M6.35 4.3h11.3a2.3 2.3 0 0 1 2.3 2.3v10.8a2.3 2.3 0 0 1-2.3 2.3H6.35a2.3 2.3 0 0 1-2.3-2.3V6.6a2.3 2.3 0 0 1 2.3-2.3Z"
+          />
+        </>
+      ) : (
+        <>
+          <rect x="5.15" y="4.4" width="13.7" height="15.2" rx="2.35" {...stroke} />
+          <rect x="7.6" y="7.7" width="8.8" height="2.55" rx="0.75" {...stroke} />
+        </>
+      )}
     </svg>
   );
 }
 
-function IconCart() {
+function IconCart({ filled }: { filled: boolean }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M7 6V5a5 5 0 0 1 10 0v1h2.2a1 1 0 0 1 .98 1.2l-1.5 8A2 2 0 0 1 16.7 17H8.3a2 2 0 0 1-1.97-1.8l-1.5-8A1 1 0 0 1 5.8 6H7Zm2 0h6V5a3 3 0 0 0-6 0v1Z"
-      />
+      {filled ? (
+        <path
+          fill="currentColor"
+          d="M3.4 3.85h2.85l.55 1.95h12.05a1.15 1.15 0 0 1 1.1 1.48l-1.55 5.05a2.05 2.05 0 0 1-1.97 1.47H9.1L8.2 16.7h10.15v1.7H7.3a1.25 1.25 0 0 1-1.21-1.52l1.22-4.38-2.35-8.3H3.4V3.85Zm5.7 14.4a1.55 1.55 0 1 1 0 3.1 1.55 1.55 0 0 1 0-3.1Zm7.4 0a1.55 1.55 0 1 1 0 3.1 1.55 1.55 0 0 1 0-3.1Z"
+        />
+      ) : (
+        <>
+          <path {...stroke} d="M3.55 4.45h2.25l2.05 7.4h8.75l1.45-5.25H7.15L5.8 4.45" />
+          <circle cx="9.2" cy="18.4" r="1.35" {...stroke} />
+          <circle cx="16.4" cy="18.4" r="1.35" {...stroke} />
+        </>
+      )}
     </svg>
   );
 }
@@ -66,10 +122,10 @@ export function BottomNav({ tab }: { tab: Exclude<AlumnoTab, 'none'> }) {
   const menuActive = tab === 'menu' || location.pathname === '/pedir';
 
   const items = [
-    { id: 'menu' as const, href: menuHref, label: 'Menú', icon: <IconMenu />, active: menuActive && tab !== 'cart' },
-    { id: 'orders' as const, href: ordersHref, label: 'Pedidos', icon: <IconOrders />, active: tab === 'orders' },
-    { id: 'wallet' as const, href: walletHref, label: 'Cartera', icon: <IconWallet />, active: tab === 'wallet' },
-    { id: 'cart' as const, href: cartHref, label: 'Carrito', icon: <IconCart />, badge: count, active: tab === 'cart' },
+    { id: 'menu' as const, href: menuHref, label: 'Menú', Icon: IconMenu, active: menuActive && tab !== 'cart' },
+    { id: 'orders' as const, href: ordersHref, label: 'Pedidos', Icon: IconOrders, active: tab === 'orders' },
+    { id: 'wallet' as const, href: walletHref, label: 'Cartera', Icon: IconWallet, active: tab === 'wallet' },
+    { id: 'cart' as const, href: cartHref, label: 'Carrito', Icon: IconCart, badge: count, active: tab === 'cart' },
   ];
 
   return (
@@ -85,7 +141,7 @@ export function BottomNav({ tab }: { tab: Exclude<AlumnoTab, 'none'> }) {
             className={item.active ? 'is-on' : undefined}
             aria-current={item.active ? 'page' : undefined}
           >
-            {item.icon}
+            <item.Icon filled={item.active} />
             {item.badge ? <span className="alumno-badge">{item.badge}</span> : null}
             {item.label}
           </Link>

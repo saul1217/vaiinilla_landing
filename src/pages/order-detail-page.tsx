@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
-import QRCode from 'qrcode';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { PedidoChargeOverlay } from '../components/pedido-charge-overlay';
 import { StripePaymentPanel } from '../components/stripe-payment-panel';
+import { OrderPickupPanel } from '../components/order-pickup-panel';
 import { OrderTrackCard } from '../components/order-track-card';
 import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
@@ -13,9 +13,9 @@ import { api } from '../lib/api';
 import { lastPlaceSlug } from '../lib/last-place';
 import { errorMessage } from '../lib/api-error';
 import { forgetIdempotencyKey, idempotencyKeyFor } from '../lib/idempotency';
-import { formatAmount, formatMoney } from '../lib/money';
-import { readPickupQrToken, rememberPickupQrToken } from '../lib/pickup-qr';
+import { formatAmount } from '../lib/money';
 import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
+import { usePickupQrToken } from '../lib/use-pickup-qr';
 import {
   isTerminalOrderStatus,
   orderDestinationLabel,
@@ -45,8 +45,6 @@ export function OrderDetailPage() {
   const { cart } = useCart();
   const { context, openClientSession } = useBuyerSession();
   const [order, setOrder] = useState<OrderDetail | null>(null);
-  const [pickupQrToken, setPickupQrToken] = useState<string | null>(null);
-  const [qr, setQr] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [stripeSession, setStripeSession] = useState<StripePaymentSession | null>(() =>
     takeStripeCheckoutSession(id),
@@ -65,6 +63,7 @@ export function OrderDetailPage() {
   const awaitingChargeRef = useRef(false);
   const orderRef = useRef<OrderDetail | null>(null);
   orderRef.current = order;
+  const pickupQrToken = usePickupQrToken(order, accessToken);
 
   useEffect(() => {
     if (!user) return;
@@ -157,68 +156,6 @@ export function OrderDetailPage() {
       abort.abort();
     };
   }, [accessToken, id, stripePolling]);
-
-  useEffect(() => {
-    const currentOrder = order;
-    if (!currentOrder) {
-      setPickupQrToken(null);
-      return;
-    }
-
-    const localToken = currentOrder.qr_token ?? readPickupQrToken(currentOrder.id);
-    if (localToken) {
-      setPickupQrToken(localToken);
-      return;
-    }
-
-    const paidStates = ['cobrado', 'preparando', 'listo', 'entregado'];
-    const stripeConfirmed = isStripePaymentConfirmedByBackend(currentOrder);
-    if (
-      !accessToken ||
-      !paidStates.includes(currentOrder.estado) ||
-      (currentOrder.metodo_pago === 'stripe' && !stripeConfirmed)
-    ) {
-      setPickupQrToken(null);
-      return;
-    }
-
-    let active = true;
-    void api
-      .getOrderQr(accessToken, currentOrder.id)
-      .then(({ qr_token: recoveredToken }) => {
-        if (!active) return;
-        setPickupQrToken(recoveredToken);
-        rememberPickupQrToken(currentOrder.id, recoveredToken);
-      })
-      .catch(() => {
-        // El pedido seguirá actualizándose; un fallo transitorio no bloquea la pantalla.
-      });
-    return () => {
-      active = false;
-    };
-  }, [accessToken, order]);
-
-  useEffect(() => {
-    const currentOrder = order;
-    const qrToken = currentOrder
-      ? currentOrder.qr_token ?? pickupQrToken ?? readPickupQrToken(currentOrder.id)
-      : null;
-    const hideQr =
-      !currentOrder ||
-      !qrToken ||
-      (currentOrder.metodo_pago === 'stripe' && !isStripePaymentConfirmedByBackend(currentOrder));
-    if (hideQr) {
-      setQr(null);
-      return;
-    }
-    let active = true;
-    void QRCode.toDataURL(qrToken, { margin: 1, width: 280 }).then((next) => {
-      if (active) setQr(next);
-    });
-    return () => {
-      active = false;
-    };
-  }, [order, pickupQrToken]);
 
   const stripeOrder = order?.metodo_pago === 'stripe';
   const confirmed = order ? isStripePaymentConfirmedByBackend(order) : false;
@@ -359,44 +296,48 @@ export function OrderDetailPage() {
               toggle={false}
               onToggle={() => undefined}
               imageUrl={orderThumbUrl(order, catalogImageMap(catalogProducts), catalogProducts)}
+              pickupToken={pickupQrToken}
             />
-            <section className="alumno-card alumno-card--ticket">
-              <p className="alumno-muted">
-                {orderPayLabel(order)} · {orderDestinationLabel(order)}
-              </p>
-              <p className="alumno-wallet-balance">{formatAmount(order.total)}</p>
-              {qr ? (
-                <div className="alumno-card--qr">
-                  <img
-                    className="wallet-qr"
-                    src={qr}
-                    alt={
-                      stripeOrder
-                        ? 'Código QR del pedido para entregar'
-                        : 'Código QR del pedido para mostrar en caja'
-                    }
-                  />
-                  <p className="alumno-muted">
-                    {stripeOrder ? 'Muéstralo en cocina para entregar.' : 'Muéstralo en caja o cocina para entregar.'}
-                  </p>
-                </div>
-              ) : null}
-              <ul className="alumno-ticket-items">
-                {order.items.map((item) => (
-                  <li key={item.id}>
-                    <span>
-                      {item.cantidad} × {item.nombre_producto}
-                    </span>
-                    <strong>{formatMoney(item.subtotal)}</strong>
-                  </li>
-                ))}
-              </ul>
-              {order.notas_cocina ? <p className="alumno-muted">Nota: {order.notas_cocina}</p> : null}
-            </section>
+            <OrderTicketView
+              order={order}
+              pickupToken={pickupQrToken}
+              stripeOrder={Boolean(stripeOrder)}
+            />
           </div>
         ) : null}
       </main>
     </AppShell>
+  );
+}
+
+export function OrderTicketView({
+  order,
+  pickupToken = null,
+  stripeOrder = false,
+}: {
+  order: OrderDetail;
+  pickupToken?: string | null;
+  stripeOrder?: boolean;
+}) {
+  return (
+    <section className="alumno-card alumno-card--ticket">
+      <p className="alumno-muted">
+        {orderPayLabel(order)} · {orderDestinationLabel(order)}
+      </p>
+      <p className="alumno-wallet-balance">{formatAmount(order.total)}</p>
+      <OrderPickupPanel order={order} token={pickupToken} stripeOrder={stripeOrder} />
+      <ul className="alumno-ticket-items">
+        {order.items.map((item) => (
+          <li key={item.id}>
+            <span>
+              {item.cantidad} × {item.nombre_producto}
+            </span>
+            <strong>{formatAmount(item.subtotal)}</strong>
+          </li>
+        ))}
+      </ul>
+      {order.notas_cocina ? <p className="alumno-muted">Nota: {order.notas_cocina}</p> : null}
+    </section>
   );
 }
 

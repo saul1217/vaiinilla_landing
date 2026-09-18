@@ -7,6 +7,26 @@ import { WalletPage } from './wallet-page';
 vi.mock('../lib/api', () => ({
   api: {
     getEstablishment: vi.fn(),
+    getGuestCatalog: vi.fn().mockResolvedValue({
+      categorias: [],
+      productos: [
+        {
+          id: 2,
+          categoria_id: 1,
+          estacion_preparacion: 'caja',
+          nombre: 'fruti Lupis',
+          descripcion: null,
+          ingredientes: null,
+          alergenos: null,
+          tiempo_estimado_min: 4,
+          precio_mostrador: '22.00',
+          precio_digital: '22.00',
+          disponible: true,
+          imagen_url: null,
+          grupos_opcion: [],
+        },
+      ],
+    }),
     getMyWallet: vi.fn().mockResolvedValue({
       cliente: { usuario_id: 'u1', nombre: 'Ana Pérez', identificador_cliente: 'A01234' },
       wallet: { id: 'w1', usuario_id: 'u1', establecimiento_id: 'e1', saldo: '125.00', actualizado_en: null },
@@ -78,5 +98,7 @@ describe('WalletPage', () => {
     expect(screen.getByRole('link', { name: /abrir menú/i })).toHaveAttribute('href', '/e/demo-a');
     expect(screen.getByText('Saldo Vaiinilla')).toBeInTheDocument();
     expect(screen.getByText('Pedido #42')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /del menú/i })).toBeInTheDocument();
+    expect(screen.getByText('fruti Lupis')).toBeInTheDocument();
   });
 });

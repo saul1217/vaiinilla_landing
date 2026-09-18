@@ -10,7 +10,9 @@ import { api } from '../lib/api';
 import { lastPlaceSlug } from '../lib/last-place';
 import { errorMessage } from '../lib/api-error';
 import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
+import { persistPickupQrFromOrder } from '../lib/pickup-qr';
 import { isActiveOrderStatus } from '../lib/order-labels';
+import { usePickupQrToken } from '../lib/use-pickup-qr';
 import type { CatalogProduct, OrderDetail, PublicEstablishment } from '../types/api';
 
 const POLL_MS = 5000;
@@ -53,6 +55,7 @@ export function OrdersPage() {
         }
         const result = await api.listOrders(session.access_token);
         if (!active) return;
+        result.orders.forEach((item) => persistPickupQrFromOrder(item));
         setOrders(result.orders);
         setError(null);
       } catch (cause) {
@@ -77,11 +80,13 @@ export function OrdersPage() {
     setExpandedId(firstActive?.id ?? orders[0]?.id ?? null);
   }, [deskPane, expandedId, orders]);
 
+  const selected = orders.find((order) => order.id === expandedId) ?? null;
+  const pickupToken = usePickupQrToken(selected, context?.access_token ?? null);
+
   if (ready && !user) return <Navigate to="/cuenta?next=/cuenta/pedidos" replace />;
 
   const activeOrders = orders.filter((order) => isActiveOrderStatus(order.estado));
   const pastOrders = orders.filter((order) => !isActiveOrderStatus(order.estado));
-  const selected = orders.find((order) => order.id === expandedId) ?? null;
 
   function toggle(id: string) {
     setExpandedId((current) => (current === id ? null : id));
@@ -115,6 +120,7 @@ export function OrdersPage() {
                         expanded={expandedId === order.id}
                         onToggle={() => toggle(order.id)}
                         imageUrl={orderThumbUrl(order, thumbImages, catalogProducts)}
+                        pickupToken={expandedId === order.id ? pickupToken : null}
                       />
                     ))}
                   </div>
@@ -133,6 +139,7 @@ export function OrdersPage() {
                         expanded={expandedId === order.id}
                         onToggle={() => toggle(order.id)}
                         imageUrl={orderThumbUrl(order, thumbImages, catalogProducts)}
+                        pickupToken={expandedId === order.id ? pickupToken : null}
                       />
                     ))}
                   </div>
@@ -146,9 +153,10 @@ export function OrdersPage() {
                     order={selected}
                     expanded
                     completeLink
-                    toggle
-                    onToggle={() => toggle(selected.id)}
+                    toggle={false}
+                    onToggle={() => undefined}
                     imageUrl={orderThumbUrl(selected, thumbImages, catalogProducts)}
+                    pickupToken={pickupToken}
                   />
                 ) : (
                   <div className="alumno-orders-desk__hint">

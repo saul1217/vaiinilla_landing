@@ -27,7 +27,9 @@ describe('AppShell', () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole('navigation', { name: /navegación de alumno/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /menú/i })).toHaveAttribute('href', '/e/demo-a');
+    const menu = screen.getByRole('link', { name: /menú/i });
+    expect(menu).toHaveAttribute('href', '/e/demo-a');
+    expect(menu.querySelector('svg path')?.getAttribute('d') ?? '').toMatch(/12 /);
     expect(screen.getByRole('link', { name: /pedidos/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /cartera/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /carrito/i })).toHaveAttribute('href', '/e/demo-a/carrito');

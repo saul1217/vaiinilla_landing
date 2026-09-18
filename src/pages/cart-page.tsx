@@ -2,16 +2,17 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
+import { MenuPeek } from '../components/menu-peek';
 import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { cartTotal, isOperationallyReady, toCreateOrderInput } from '../lib/cart';
-import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
-import { formatAmount, formatMoney, moneyToCents } from '../lib/money';
-import { lastPlaceSlug } from '../lib/last-place';
 import { productImageUrl } from '../lib/catalog-images';
+import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
+import { formatAmount, formatMoney, linePreview, moneyToCents } from '../lib/money';
+import { lastPlaceSlug } from '../lib/last-place';
 import { orderHistoryHeadline } from '../lib/order-labels';
 import { rememberPickupQrToken } from '../lib/pickup-qr';
 import { clearSpace, readSpace } from '../lib/space-session';
@@ -251,108 +252,26 @@ export function CartPage() {
           </p>
         ) : null}
         {lines.length === 0 ? (
-          <div className="alumno-cart-empty">
-            <div className="alumno-empty">
-              <div className="alumno-antojo" aria-hidden="true">
-                <span className="alumno-antojo__deco alumno-antojo__deco--note">
-                  <NoteIcon />
-                </span>
-                <span className="alumno-antojo__q">
-                  <span className="alumno-antojo__q-face">?</span>
-                </span>
-                <img className="alumno-antojo__vaini" src="/vaini/cutout-frente.png" alt="" />
-                <span className="alumno-antojo__deco alumno-antojo__deco--cup">
-                  <CupIcon />
-                </span>
-                <span className="alumno-antojo__deco alumno-antojo__deco--spark">✦</span>
-              </div>
-              <div className="alumno-empty__copy">
-                <h2>¿Qué se te antoja?</h2>
-                <p className="alumno-lead">Pide algo del menú y aparece aquí.</p>
-                <Link className="alumno-btn alumno-btn--lime" to={`/e/${slug}`}>
-                  Ver menú
-                </Link>
-              </div>
-            </div>
-            {previousOrders.length > 0 ? (
-              <section className="alumno-history" aria-labelledby="prev-orders">
-                <h2 className="alumno-section-label" id="prev-orders">
-                  Pedidos anteriores
-                </h2>
-                <div className="alumno-history-list">
-                {previousOrders.map((order) => (
-                  <Link className="alumno-history-row" key={order.id} to={`/cuenta/pedidos/${order.id}`}>
-                    <span>
-                      <strong>{orderHistoryHeadline(order)}</strong>
-                      <p>#{order.folio} · Entregado</p>
-                    </span>
-                    <span className="alumno-history-row__price">{formatAmount(order.total)}</span>
-                    <span className="alumno-history-row__chev" aria-hidden="true">
-                      ›
-                    </span>
-                  </Link>
-                ))}
-                </div>
-              </section>
-            ) : (
-              <aside className="alumno-cart-peek" aria-labelledby="menu-peek" data-peek-count={menuPeek.length}>
-                <h2 className="alumno-section-label" id="menu-peek">
-                  Del menú
-                </h2>
-                {menuPeek.length > 0 ? (
-                  <>
-                    {menuPeek.map((product) => {
-                      const thumb = productImageUrl(product.imagen_url);
-                      return (
-                      <Link className="alumno-cart-peek__row" key={product.id} to={`/e/${slug}`}>
-                        {thumb ? (
-                          <img src={thumb} alt="" />
-                        ) : (
-                          <span className="alumno-cart-peek__vaini" aria-hidden="true">
-                            <img src="/vaini/cutout-frente.png" alt="" />
-                          </span>
-                        )}
-                        <span>
-                          <strong>{product.nombre}</strong>
-                          <p>{formatAmount(product.precio_digital)}</p>
-                        </span>
-                      </Link>
-                      );
-                    })}
-                    <Link className="alumno-link" to={`/e/${slug}`}>
-                      Ver todo el menú
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <div className="alumno-cart-peek__art" aria-hidden="true">
-                      <img src="/vaini/scene-laptop.png" alt="" />
-                    </div>
-                    <p className="alumno-cart-peek__idle">
-                      Abre el menú y arma tu pedido. Las sugerencias y tus anteriores aparecen aquí.
-                    </p>
-                    <Link className="alumno-btn alumno-btn--lime" to={`/e/${slug}`}>
-                      Ir al menú
-                    </Link>
-                  </>
-                )}
-              </aside>
-            )}
-          </div>
+          <CartEmptyView slug={slug} previousOrders={previousOrders} menuPeek={menuPeek} />
         ) : (
           <>
             <div className="alumno-cart-layout">
               <div className="alumno-cart-layout__lines">
-            {lines.map((line) => (
+            {lines.map((line) => {
+              const thumb = productImageUrl(line.imageUrl);
+              const lineTotal = linePreview(line.unitPreview, line.quantity);
+              return (
               <div className="alumno-line" key={`${line.productId}-${line.optionIds.join(',')}`}>
-                {line.imageUrl ? (
-                  <img src={line.imageUrl} alt="" />
+                {thumb ? (
+                  <img className="alumno-line__thumb" src={thumb} alt="" />
                 ) : (
-                  <div className="alumno-line__ph" />
+                  <div className="alumno-line__thumb alumno-line__thumb--vaini" aria-hidden="true">
+                    <img src="/vaini/cutout-frente.png" alt="" />
+                  </div>
                 )}
-                <div>
+                <div className="alumno-line__copy">
                   <strong>{line.productName}</strong>
-                  <p className="alumno-muted">{formatMoney(line.unitPreview)} c/u</p>
+                  <p>{formatAmount(line.unitPreview)} c/u</p>
                   <div className="alumno-qty">
                     <button
                       type="button"
@@ -371,11 +290,15 @@ export function CartPage() {
                     </button>
                   </div>
                 </div>
-                <button className="alumno-link" type="button" onClick={() => removeLine(line.productId, line.optionIds)}>
-                  Quitar
-                </button>
+                <div className="alumno-line__side">
+                  <span className="alumno-line__price">{lineTotal ? formatAmount(lineTotal) : '—'}</span>
+                  <button className="alumno-line__remove" type="button" onClick={() => removeLine(line.productId, line.optionIds)}>
+                    Quitar
+                  </button>
+                </div>
               </div>
-            ))}
+              );
+            })}
               </div>
               <aside className="alumno-cart-layout__side">
             <button
@@ -410,7 +333,7 @@ export function CartPage() {
               <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} />
             </label>
             <p>
-              <strong>Total {total ? formatMoney(total) : '—'}</strong>
+              <strong>Total {total ? formatAmount(total) : '—'}</strong>
             </p>
               <div className="alumno-sticky-pay">
                 <button
@@ -497,6 +420,73 @@ export function CartPage() {
         </div>
       ) : null}
     </AppShell>
+  );
+}
+
+export function CartEmptyView({
+  slug,
+  previousOrders,
+  menuPeek,
+}: {
+  slug: string;
+  previousOrders: OrderDetail[];
+  menuPeek: CatalogProduct[];
+}) {
+  const showHistory = previousOrders.length > 0;
+  const showPeek = menuPeek.length > 0 || !showHistory;
+  const showRail = showHistory || showPeek;
+
+  return (
+    <div className="alumno-cart-empty">
+      <div className="alumno-empty">
+        <div className="alumno-antojo" aria-hidden="true">
+          <span className="alumno-antojo__deco alumno-antojo__deco--note">
+            <NoteIcon />
+          </span>
+          <img className="alumno-antojo__vaini" src="/vaini/cutout-frente.png" alt="" />
+          <span className="alumno-antojo__q">
+            <img className="alumno-antojo__q-face" src="/vaini/question-mark.png" alt="" />
+          </span>
+          <span className="alumno-antojo__deco alumno-antojo__deco--cup">
+            <CupIcon />
+          </span>
+          <span className="alumno-antojo__deco alumno-antojo__deco--spark">✦</span>
+        </div>
+        <div className="alumno-empty__copy">
+          <h2>¿Qué se te antoja?</h2>
+          <p className="alumno-lead">Pide algo del menú y aparece aquí.</p>
+          <Link className="alumno-btn alumno-btn--lime" to={`/e/${slug}`}>
+            Ver menú
+          </Link>
+        </div>
+      </div>
+      {showRail ? (
+        <div className="alumno-cart-empty__rail">
+          {showHistory ? (
+            <section className="alumno-history" aria-labelledby="prev-orders">
+              <h2 className="alumno-section-label" id="prev-orders">
+                Pedidos anteriores
+              </h2>
+              <div className="alumno-history-list">
+                {previousOrders.map((order) => (
+                  <Link className="alumno-history-row" key={order.id} to={`/cuenta/pedidos/${order.id}`}>
+                    <span>
+                      <strong>{orderHistoryHeadline(order)}</strong>
+                      <p>#{order.folio} · Entregado</p>
+                    </span>
+                    <span className="alumno-history-row__price">{formatAmount(order.total)}</span>
+                    <span className="alumno-history-row__chev" aria-hidden="true">
+                      {'>'}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          ) : null}
+          {showPeek ? <MenuPeek slug={slug} products={menuPeek} /> : null}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

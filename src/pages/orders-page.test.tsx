@@ -26,6 +26,7 @@ vi.mock('../lib/api', () => ({
         },
       ],
     }),
+    getOrderQr: vi.fn().mockRejectedValue(new Error('QR recovery not configured in this test')),
     getGuestCatalog: vi.fn().mockResolvedValue({
       categorias: [],
       productos: [
@@ -106,6 +107,11 @@ describe('OrdersPage', () => {
       'href',
       '/cuenta/pedidos/ord-1',
     );
-    expect(screen.getByRole('button', { name: /ocultar seguimiento/i })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /código de retiro/i })).toBeInTheDocument();
+    expect(screen.getAllByText('#42').length).toBeGreaterThan(1);
+    const hide = screen.getByRole('button', { name: /ocultar seguimiento/i });
+    expect(hide).toBeInTheDocument();
+    const cta = screen.getByRole('link', { name: /ver pedido completo/i });
+    expect(cta.compareDocumentPosition(hide) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

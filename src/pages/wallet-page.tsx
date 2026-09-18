@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
+import { MenuPeek } from '../components/menu-peek';
 import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
@@ -11,13 +12,14 @@ import { lastPlaceSlug } from '../lib/last-place';
 import { errorMessage } from '../lib/api-error';
 import { walletQrUrl } from '../lib/env';
 import { formatAmount } from '../lib/money';
-import type { WalletData } from '../types/api';
+import type { CatalogProduct, WalletData } from '../types/api';
 
 export function WalletPage() {
   const { user, ready } = useAuth();
   const { cart } = useCart();
   const { context, openClientSession } = useBuyerSession();
   const [wallet, setWallet] = useState<WalletData | null>(null);
+  const [menuPeek, setMenuPeek] = useState<CatalogProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const placeSlug = cart?.slug ?? lastPlaceSlug();
@@ -55,6 +57,26 @@ export function WalletPage() {
     };
   }, [context, openClientSession, placeSlug, user]);
 
+  useEffect(() => {
+    if (!placeSlug) {
+      setMenuPeek([]);
+      return;
+    }
+    let active = true;
+    void api
+      .getGuestCatalog(placeSlug)
+      .then((catalog) => {
+        const products = Array.isArray(catalog?.productos) ? catalog.productos : [];
+        if (active) setMenuPeek(products.filter((item) => item.disponible).slice(0, 4));
+      })
+      .catch(() => {
+        if (active) setMenuPeek([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [placeSlug]);
+
   if (ready && !user) return <Navigate to="/cuenta?next=/cuenta/saldo" replace />;
 
   return (
@@ -69,6 +91,7 @@ export function WalletPage() {
             placeSlug={placeSlug}
             reloadHref={reloadHref}
             movimientos={wallet.movimientos}
+            menuPeek={menuPeek}
           />
         ) : null}
       </main>
@@ -81,82 +104,83 @@ export function WalletBoardView({
   placeSlug,
   reloadHref,
   movimientos,
+  menuPeek = [],
 }: {
   saldo: string;
   placeSlug: string | null;
   reloadHref: string;
   movimientos: WalletData['movimientos'];
+  menuPeek?: CatalogProduct[];
 }) {
   return (
     <div className="alumno-wallet-board">
-      <section className="alumno-wallet-hero">
-        <div className="alumno-wallet-orb" aria-hidden="true">
-          <ShortcutWallet />
-        </div>
-        <p className="alumno-wallet-balance">{formatAmount(saldo, 'always')}</p>
-        <p className="alumno-muted">Saldo Vaiinilla</p>
-      </section>
-      <div className="alumno-actions-3">
-        <Link to={placeSlug ? `/e/${placeSlug}/carrito` : '/pedir'}>
-          <span className="alumno-lime-orb" aria-hidden="true">
-            <ShortcutPay />
-          </span>
-          Pagar
-          <span aria-hidden="true">Usar saldo</span>
-        </Link>
-        <Link to="/cuenta/pedidos">
-          <span className="alumno-lime-orb" aria-hidden="true">
-            <ShortcutOrders />
-          </span>
-          Pedidos
-          <span aria-hidden="true">Ver actividad</span>
-        </Link>
-        <Link to={reloadHref}>
-          <span className="alumno-lime-orb" aria-hidden="true">
-            <ShortcutReload />
-          </span>
-          Recargar
-          <span aria-hidden="true">Mostrar QR</span>
-        </Link>
-      </div>
-      <Link className="alumno-wallet-menu" to={placeSlug ? `/e/${placeSlug}` : '/pedir'}>
-        <span className="alumno-wallet-menu__icon" aria-hidden="true">
-          <ShortcutMenu />
-        </span>
-        <span>
-          <strong>Abrir menú</strong>
-          <p>Usa tu saldo en tu siguiente pedido</p>
-        </span>
-        <span className="alumno-wallet-menu__chev" aria-hidden="true">
-          →
-        </span>
-      </Link>
-      <section
-        className={movimientos.length > 0 ? 'alumno-wallet-rest' : 'alumno-wallet-rest alumno-wallet-rest--idle'}
-        aria-labelledby="wallet-moves"
-      >
-        <h2 className="alumno-section-label" id="wallet-moves">
-          Movimientos
-        </h2>
-        {movimientos.length > 0 ? (
-          <ul className="alumno-moves">
-            {movimientos.map((item) => (
-              <li key={item.id}>
-                <span>
-                  <strong>{item.descripcion}</strong>
-                  <span className="alumno-muted">{item.tipo}</span>
-                </span>
-                <strong>{formatAmount(item.monto, 'always')}</strong>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="alumno-wallet-idle">
-            <img src="/vaini/scene-laptop.png" alt="" />
-            <p>Aún no hay movimientos en este lugar.</p>
+      <div className="alumno-wallet-bento">
+        <section className="alumno-wallet-hero">
+          <div className="alumno-wallet-orb" aria-hidden="true">
+            <ShortcutWallet />
           </div>
-        )}
-      </section>
+          <p className="alumno-wallet-balance">{formatAmount(saldo, 'always')}</p>
+          <p className="alumno-muted">Saldo Vaiinilla</p>
+        </section>
+        <div className="alumno-wallet-shortcuts">
+          <div className="alumno-actions-3">
+            <Link to={placeSlug ? `/e/${placeSlug}/carrito` : '/pedir'}>
+              <span className="alumno-lime-orb" aria-hidden="true">
+                <ShortcutPay />
+              </span>
+              Pagar
+              <span aria-hidden="true">Usar saldo</span>
+            </Link>
+            <Link to="/cuenta/pedidos">
+              <span className="alumno-lime-orb" aria-hidden="true">
+                <ShortcutOrders />
+              </span>
+              Pedidos
+              <span aria-hidden="true">Ver actividad</span>
+            </Link>
+            <Link to={reloadHref}>
+              <span className="alumno-lime-orb" aria-hidden="true">
+                <ShortcutReload />
+              </span>
+              Recargar
+              <span aria-hidden="true">Mostrar QR</span>
+            </Link>
+          </div>
+          <Link className="alumno-wallet-menu" to={placeSlug ? `/e/${placeSlug}` : '/pedir'}>
+            <span className="alumno-wallet-menu__icon" aria-hidden="true">
+              <ShortcutMenu />
+            </span>
+            <span>
+              <strong>Abrir menú</strong>
+              <p>Usa tu saldo en tu siguiente pedido</p>
+            </span>
+            <span className="alumno-wallet-menu__chev" aria-hidden="true">
+              →
+            </span>
+          </Link>
+        </div>
+      </div>
+      <div className="alumno-wallet-fill">
+        {movimientos.length > 0 ? (
+          <section className="alumno-wallet-rest" aria-labelledby="wallet-moves">
+            <h2 className="alumno-section-label" id="wallet-moves">
+              Movimientos
+            </h2>
+            <ul className="alumno-moves">
+              {movimientos.map((item) => (
+                <li key={item.id}>
+                  <span>
+                    <strong>{item.descripcion}</strong>
+                    <span className="alumno-muted">{item.tipo}</span>
+                  </span>
+                  <strong>{formatAmount(item.monto, 'always')}</strong>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+        <MenuPeek slug={placeSlug ?? ''} products={menuPeek} headingId="wallet-menu-peek" />
+      </div>
     </div>
   );
 }
@@ -217,7 +241,7 @@ function ShortcutOrders() {
     <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
       <path
         fill="currentColor"
-        d="M7 3h10a2 2 0 0 1 2 2v15.2a.8.8 0 0 1-1.25.66L12 17.4l-5.75 3.46A.8.8 0 0 1 5 20.2V5a2 2 0 0 1 2-2Zm1.5 4h7v1.6h-7V7Zm0 3.2h7v1.6h-7v-1.6Z"
+        d="M6.5 3h11A1.5 1.5 0 0 1 19 4.5V21H5V4.5A1.5 1.5 0 0 1 6.5 3ZM7 5v14h10V5H7Zm2 3h6v1.6H9V8Zm0 3.2h6v1.6H9v-1.6Z"
       />
     </svg>
   );
@@ -239,7 +263,7 @@ function ShortcutMenu() {
     <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
       <path
         fill="currentColor"
-        d="M6 3.5h11.2A2.3 2.3 0 0 1 19.5 5.8V21H8.2A2.2 2.2 0 0 0 6 23.2V3.5Zm2.2 3.2h8.2V8.4H8.2V6.7Zm0 3.3h8.2v1.6H8.2v-1.6Z"
+        d="M12 5.1c1.5-.9 3.4-1.4 5.6-1.4.7 0 1.4.06 2 .18V18.2c-.6-.14-1.3-.22-2-.22-1.9 0-3.5.4-4.8 1.2V5.1Zm0 0C10.5 4.2 8.6 3.7 6.4 3.7c-.7 0-1.4.06-2 .18V18.2c.6-.14 1.3-.22 2-.22 1.9 0 3.5.4 4.8 1.2V5.1ZM6.4 5.3c1.8 0 3.3.4 4.4 1.1v9.7c-1.2-.6-2.7-.9-4.4-.9-.5 0-1 .04-1.4.1V5.48c.45-.12.95-.18 1.4-.18Zm11.2 0c.45 0 .95.06 1.4.18V15.3c-.4-.06-.9-.1-1.4-.1-1.7 0-3.2.3-4.4.9V6.4c1.1-.7 2.6-1.1 4.4-1.1Z"
       />
     </svg>
   );

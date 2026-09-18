@@ -106,6 +106,7 @@ function renderCart() {
 describe('CartPage', () => {
   beforeEach(() => {
     sessionStorage.clear();
+    localStorage.clear();
     authState.user = { email: 'ana@example.test', displayName: 'Ana' };
     buyerSessionState.context = null;
     getEstablishment.mockResolvedValue({
@@ -202,7 +203,14 @@ describe('CartPage', () => {
     };
     const user = userEvent.setup();
     renderCart();
-    await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+    expect(await screen.findByRole('button', { name: /^pagar$/i })).toBeInTheDocument();
+    expect(document.querySelector('.alumno-line__thumb--vaini img')).toHaveAttribute(
+      'src',
+      '/vaini/cutout-frente.png',
+    );
+    expect(screen.getByText('$120 c/u')).toBeInTheDocument();
+    expect(screen.getByText('Total $120')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^pagar$/i }));
     expect(await screen.findByRole('heading', { name: /cómo quieres pagar/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /efectivo al recoger/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /saldo/i })).toBeInTheDocument();
@@ -257,7 +265,7 @@ describe('CartPage', () => {
     expect(payload.items).toEqual([{ producto_id: 1, cantidad: 1, opcion_ids: [] }]);
     expect(JSON.stringify(payload)).not.toContain('"total"');
     expect(createOrder.mock.calls[0]?.[2]).toEqual(expect.any(String));
-    expect(sessionStorage.getItem('vaiinilla.buyer.pickup-qr.v1.ord-stripe')).toBe('pickup-token');
+    expect(localStorage.getItem('vaiinilla.buyer.pickup-qr.v1.ord-stripe')).toBe('pickup-token');
   });
 
   it('espera la validación operativa sin mostrar un error transitorio', async () => {

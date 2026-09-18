@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { formatAmount } from '../lib/money';
+import { resolvePickupQrToken } from '../lib/pickup-qr';
 import {
   ORDER_FLOW,
   ORDER_STATUS_HINT,
@@ -12,6 +13,7 @@ import {
   orderTrackSteps,
 } from '../lib/order-labels';
 import type { OrderDetail } from '../types/api';
+import { OrderPickupPanel } from './order-pickup-panel';
 
 export function OrderTrackCard({
   order,
@@ -20,6 +22,7 @@ export function OrderTrackCard({
   completeLink = true,
   toggle = true,
   imageUrl = null,
+  pickupToken = null,
 }: {
   order: OrderDetail;
   expanded: boolean;
@@ -27,6 +30,7 @@ export function OrderTrackCard({
   completeLink?: boolean;
   toggle?: boolean;
   imageUrl?: string | null;
+  pickupToken?: string | null;
 }) {
   const filled = orderProgressFilled(order);
   const steps = orderTrackSteps(order);
@@ -36,14 +40,21 @@ export function OrderTrackCard({
 
   useEffect(() => {
     if (!expanded || !completeLink) return;
-    const cta = followRef.current?.querySelector<HTMLElement>('.alumno-btn');
-    if (typeof cta?.scrollIntoView !== 'function') return;
-    const nav = document.querySelector('.alumno-nav');
-    const navTop = nav instanceof HTMLElement ? nav.getBoundingClientRect().top : window.innerHeight;
-    const obscured = cta.getBoundingClientRect().bottom > navTop - 12;
-    if (obscured) {
-      cta.scrollIntoView({ block: 'end', inline: 'nearest', behavior: 'smooth' });
-    }
+    const frame = window.requestAnimationFrame(() => {
+      const follow = followRef.current;
+      if (!follow) return;
+      const target = (follow.lastElementChild as HTMLElement | null) ?? follow;
+      const nav = document.querySelector('.alumno-nav');
+      if (!(nav instanceof HTMLElement) || typeof window.scrollBy !== 'function') return;
+      const navBox = nav.getBoundingClientRect();
+      const bottomNav =
+        window.getComputedStyle(nav).position === 'fixed' && navBox.top > window.innerHeight * 0.55;
+      if (!bottomNav) return;
+      const gap = 20;
+      const extra = target.getBoundingClientRect().bottom - (navBox.top - gap);
+      if (extra > 0) window.scrollBy({ top: extra, left: 0, behavior: 'auto' });
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [completeLink, expanded]);
 
   return (
@@ -85,6 +96,11 @@ export function OrderTrackCard({
       </p>
       {expanded ? (
         <div className="alumno-track-card__follow" ref={followRef}>
+          <OrderPickupPanel
+            order={order}
+            token={pickupToken ?? resolvePickupQrToken(order)}
+            stripeOrder={order.metodo_pago === 'stripe'}
+          />
           <ol className="alumno-timeline">
             {steps.map((step, index) => (
               <li key={step.key} className={`is-${step.state}`}>
@@ -96,17 +112,17 @@ export function OrderTrackCard({
               </li>
             ))}
           </ol>
-          {toggle && (isActiveOrderStatus(order.estado) || inFlow) ? (
-            <button className="alumno-track-card__toggle" type="button" onClick={onToggle} aria-expanded={expanded}>
-              Ocultar seguimiento
-              <ChevronIcon up />
-            </button>
-          ) : null}
           {completeLink ? (
             <Link className="alumno-btn alumno-btn--lime" to={`/cuenta/pedidos/${order.id}`}>
               Ver pedido completo
               <ArrowIcon />
             </Link>
+          ) : null}
+          {toggle && (isActiveOrderStatus(order.estado) || inFlow) ? (
+            <button className="alumno-track-card__toggle" type="button" onClick={onToggle} aria-expanded={expanded}>
+              Ocultar seguimiento
+              <ChevronIcon up />
+            </button>
           ) : null}
         </div>
       ) : toggle && (isActiveOrderStatus(order.estado) || inFlow) ? (
