@@ -252,7 +252,9 @@ describe('OrderDetailPage', () => {
       }),
     );
     retryStripePayment.mockResolvedValue({
-      payment_attempt_id: 'attempt-2',
+      // The backend may safely reuse the same PaymentIntent when it is still
+      // requires_payment_method; the retry must still remount the form.
+      payment_attempt_id: 'attempt-1',
       payment_intent_id: 'pi_test_001',
       client_secret: 'pi_test_001_secret_retry',
       stripe_account_id: 'acct_test_001',

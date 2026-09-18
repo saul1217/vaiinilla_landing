@@ -56,6 +56,7 @@ export function OrderDetailPage() {
   );
   const [localCanceled, setLocalCanceled] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [retrySessionReady, setRetrySessionReady] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [panelProcessing, setPanelProcessing] = useState(false);
@@ -246,7 +247,8 @@ export function OrderDetailPage() {
     stripeSession &&
       order &&
       canRetryStripePayment(order) &&
-      stripeSession.payment_attempt_id === order.pago?.payment_attempt_id,
+      stripeSession.payment_attempt_id === order.pago?.payment_attempt_id &&
+      !retrySessionReady,
   );
   const showPaymentForm =
     Boolean(stripeSession) &&
@@ -285,6 +287,7 @@ export function OrderDetailPage() {
       forgetIdempotencyKey(fingerprint);
       rememberStripeCheckoutSession(order.id, session);
       setStripeSession(session);
+      setRetrySessionReady(true);
       setLocalCanceled(false);
       setTimedOut(false);
       clearStripeConfirming(order.id);
@@ -330,6 +333,7 @@ export function OrderDetailPage() {
                   setPanelProcessing(false);
                   clearStripeConfirming(order.id);
                   setLocalCanceled(true);
+                  setRetrySessionReady(false);
                   setStripeSession(null);
                 }}
               />
