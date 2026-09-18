@@ -400,7 +400,11 @@ export function CartPage() {
             >
               <span>
                 <strong>Tarjeta</strong>
-                <p className="alumno-muted">{stripeEnabled ? 'Pagas con Stripe.' : STRIPE_UNAVAILABLE_COPY}</p>
+                <p className="alumno-muted">
+                  {stripeEnabled
+                    ? 'Pagas con Stripe. El total final lo calcula Vaiinilla al crear el pedido antes de abrir Stripe.'
+                    : STRIPE_UNAVAILABLE_COPY}
+                </p>
               </span>
             </button>
             {error ? <p className="alumno-error">{error}</p> : null}

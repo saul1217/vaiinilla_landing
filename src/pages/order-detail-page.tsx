@@ -4,7 +4,6 @@ import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { PedidoChargeOverlay } from '../components/pedido-charge-overlay';
 import { StripePaymentPanel } from '../components/stripe-payment-panel';
-import { OrderPickupPanel } from '../components/order-pickup-panel';
 import { OrderTrackCard } from '../components/order-track-card';
 import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
@@ -13,7 +12,7 @@ import { api } from '../lib/api';
 import { lastPlaceSlug } from '../lib/last-place';
 import { errorMessage } from '../lib/api-error';
 import { forgetIdempotencyKey, idempotencyKeyFor } from '../lib/idempotency';
-import { formatAmount } from '../lib/money';
+import { formatAmount, formatMoney } from '../lib/money';
 import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
 import { usePickupQrToken } from '../lib/use-pickup-qr';
 import {
@@ -298,11 +297,7 @@ export function OrderDetailPage() {
               imageUrl={orderThumbUrl(order, catalogImageMap(catalogProducts), catalogProducts)}
               pickupToken={pickupQrToken}
             />
-            <OrderTicketView
-              order={order}
-              pickupToken={pickupQrToken}
-              stripeOrder={Boolean(stripeOrder)}
-            />
+            <OrderTicketView order={order} />
           </div>
         ) : null}
       </main>
@@ -312,31 +307,28 @@ export function OrderDetailPage() {
 
 export function OrderTicketView({
   order,
-  pickupToken = null,
-  stripeOrder = false,
 }: {
   order: OrderDetail;
-  pickupToken?: string | null;
-  stripeOrder?: boolean;
 }) {
   return (
     <section className="alumno-card alumno-card--ticket">
-      <p className="alumno-muted">
-        {orderPayLabel(order)} · {orderDestinationLabel(order)}
-      </p>
-      <p className="alumno-wallet-balance">{formatAmount(order.total)}</p>
-      <OrderPickupPanel order={order} token={pickupToken} stripeOrder={stripeOrder} />
+      <div className="alumno-ticket-head">
+        <p className="alumno-muted">
+          {orderPayLabel(order)} · {orderDestinationLabel(order)}
+        </p>
+        <p className="alumno-wallet-balance">{formatAmount(order.total)}</p>
+      </div>
       <ul className="alumno-ticket-items">
         {order.items.map((item) => (
           <li key={item.id}>
             <span>
               {item.cantidad} × {item.nombre_producto}
             </span>
-            <strong>{formatAmount(item.subtotal)}</strong>
+            <strong>{formatMoney(item.subtotal)}</strong>
           </li>
         ))}
       </ul>
-      {order.notas_cocina ? <p className="alumno-muted">Nota: {order.notas_cocina}</p> : null}
+      {order.notas_cocina ? <p className="alumno-muted alumno-ticket-note">Nota: {order.notas_cocina}</p> : null}
     </section>
   );
 }

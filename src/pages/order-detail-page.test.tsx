@@ -134,13 +134,18 @@ describe('OrderDetailPage', () => {
     });
     renderOrder();
     expect(await screen.findByRole('heading', { name: /#42/i })).toBeInTheDocument();
-    expect((await screen.findAllByAltText(/código qr del pedido/i))[0]).toHaveAttribute(
+    expect(await screen.findByRole('img', { name: /código qr del pedido/i })).toHaveAttribute(
       'src',
       'data:image/png;base64,qr',
     );
+    expect(screen.getAllByRole('region', { name: /código de retiro/i })).toHaveLength(1);
+    expect(document.querySelector('.alumno-card--ticket .alumno-pickup')).toBeNull();
+    expect(document.querySelector('.alumno-track-card__status')).toBeNull();
+    expect(document.querySelector('.alumno-detail-split .alumno-card--ticket')).not.toBeNull();
     expect(screen.getByText(/pagado con saldo/i)).toBeInTheDocument();
     expect(screen.getAllByText(/mesa 4/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/1 × burrito/i)).toBeInTheDocument();
+    expect(screen.getByText('$70.00 MXN')).toBeInTheDocument();
     expect(screen.getByText(/sin cebolla/i)).toBeInTheDocument();
   });
 
@@ -152,7 +157,7 @@ describe('OrderDetailPage', () => {
       qr_token: undefined,
     });
     renderOrder();
-    expect((await screen.findAllByRole('img', { name: /código qr del pedido/i })).length).toBeGreaterThan(0);
+    expect(await screen.findByRole('img', { name: /código qr del pedido/i })).toBeInTheDocument();
   });
 
   it('conserva el QR en localStorage si la visita nueva pierde sessionStorage', async () => {
@@ -164,7 +169,7 @@ describe('OrderDetailPage', () => {
       qr_token: undefined,
     });
     renderOrder();
-    expect((await screen.findAllByRole('img', { name: /código qr del pedido/i })).length).toBeGreaterThan(0);
+    expect(await screen.findByRole('img', { name: /código qr del pedido/i })).toBeInTheDocument();
   });
 
   it('en listo muestra folio de retiro si el API no envía secreto', async () => {
@@ -182,9 +187,10 @@ describe('OrderDetailPage', () => {
       }),
     );
     renderOrder();
-    expect((await screen.findAllByRole('region', { name: /código de retiro/i })).length).toBeGreaterThan(0);
+    expect(await screen.findByRole('region', { name: /código de retiro/i })).toBeInTheDocument();
     expect(screen.getAllByText('#1').length).toBeGreaterThan(1);
-    expect(screen.getAllByText(/muestra esto en la barra/i).length).toBeGreaterThan(0);
+    expect((document.body.textContent?.match(/Recógelo en la barra/gi) ?? []).length).toBe(1);
+    expect(document.querySelector('.alumno-card--ticket .alumno-pickup')).toBeNull();
     expect(screen.queryByRole('img', { name: /código qr/i })).not.toBeInTheDocument();
   });
 
@@ -196,7 +202,7 @@ describe('OrderDetailPage', () => {
     });
     getOrderQr.mockResolvedValue({ qr_token: 'recovered-token' });
     renderOrder();
-    expect((await screen.findAllByRole('img', { name: /código qr del pedido/i })).length).toBeGreaterThan(0);
+    expect(await screen.findByRole('img', { name: /código qr del pedido/i })).toBeInTheDocument();
     expect(getOrderQr).toHaveBeenCalledWith('jwt', 'ord-1');
   });
 

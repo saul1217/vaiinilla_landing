@@ -89,6 +89,10 @@ export function OrdersPage() {
   const pastOrders = orders.filter((order) => !isActiveOrderStatus(order.estado));
 
   function toggle(id: string) {
+    if (deskPane) {
+      setExpandedId(id);
+      return;
+    }
     setExpandedId((current) => (current === id ? null : id));
   }
 
@@ -117,10 +121,12 @@ export function OrdersPage() {
                       <OrderTrackCard
                         key={order.id}
                         order={order}
-                        expanded={expandedId === order.id}
+                        expanded={!deskPane && expandedId === order.id}
+                        compact={!deskPane && expandedId !== null && expandedId !== order.id}
+                        selected={deskPane && expandedId === order.id}
                         onToggle={() => toggle(order.id)}
                         imageUrl={orderThumbUrl(order, thumbImages, catalogProducts)}
-                        pickupToken={expandedId === order.id ? pickupToken : null}
+                        pickupToken={!deskPane && expandedId === order.id ? pickupToken : null}
                       />
                     ))}
                   </div>
@@ -136,10 +142,12 @@ export function OrdersPage() {
                       <OrderTrackCard
                         key={order.id}
                         order={order}
-                        expanded={expandedId === order.id}
+                        expanded={!deskPane && expandedId === order.id}
+                        compact={!deskPane && expandedId !== null && expandedId !== order.id}
+                        selected={deskPane && expandedId === order.id}
                         onToggle={() => toggle(order.id)}
                         imageUrl={orderThumbUrl(order, thumbImages, catalogProducts)}
-                        pickupToken={expandedId === order.id ? pickupToken : null}
+                        pickupToken={!deskPane && expandedId === order.id ? pickupToken : null}
                       />
                     ))}
                   </div>
@@ -173,7 +181,7 @@ export function OrdersPage() {
   );
 }
 
-function useDeskPane() {
+export function useDeskPane() {
   const [wide, setWide] = useState(false);
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') return;

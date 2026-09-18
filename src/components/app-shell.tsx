@@ -72,18 +72,18 @@ function IconWallet({ filled }: { filled: boolean }) {
         <>
           <mask id={holeId} maskUnits="userSpaceOnUse">
             <rect width="24" height="24" fill="white" />
-            <rect x="7.7" y="7.7" width="8.6" height="2.6" rx="0.8" fill="black" />
+            <rect x="8" y="10.25" width="8" height="2.15" rx="0.7" fill="black" />
           </mask>
-          <path
-            fill="currentColor"
-            mask={`url(#${holeId})`}
-            d="M6.35 4.3h11.3a2.3 2.3 0 0 1 2.3 2.3v10.8a2.3 2.3 0 0 1-2.3 2.3H6.35a2.3 2.3 0 0 1-2.3-2.3V6.6a2.3 2.3 0 0 1 2.3-2.3Z"
-          />
+          <g mask={`url(#${holeId})`}>
+            <rect x="5.15" y="6.15" width="13.7" height="13.55" rx="2.2" fill="currentColor" />
+            <rect x="8.1" y="3.1" width="7.8" height="4.85" rx="1.25" fill="currentColor" />
+          </g>
         </>
       ) : (
         <>
-          <rect x="5.15" y="4.4" width="13.7" height="15.2" rx="2.35" {...stroke} />
-          <rect x="7.6" y="7.7" width="8.8" height="2.55" rx="0.75" {...stroke} />
+          <rect x="5.25" y="6.35" width="13.5" height="13.2" rx="2.15" {...stroke} />
+          <rect x="8.15" y="3.2" width="7.7" height="4.6" rx="1.2" {...stroke} />
+          <rect x="8.05" y="10.4" width="7.9" height="2.1" rx="0.65" {...stroke} />
         </>
       )}
     </svg>

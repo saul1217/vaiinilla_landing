@@ -1,3 +1,4 @@
+import { moneyToCents } from './money';
 import type { OrderDetail, OrderPayment, StripePaymentSession, StripePaymentStatus } from '../types/api';
 
 let memorySession: { orderId: string; session: StripePaymentSession } | null = null;
@@ -52,6 +53,9 @@ export function parseOrderPayment(source: unknown): OrderPayment {
     client_secret: readString(pago, 'client_secret'),
     publishable_key: readString(pago, 'publishable_key'),
     currency: readString(pago, 'currency'),
+    amount_cents: typeof pago.amount_cents === 'number' && Number.isSafeInteger(pago.amount_cents)
+      ? pago.amount_cents
+      : undefined,
   };
 }
 
@@ -72,6 +76,14 @@ export function parseStripePaymentSession(source: unknown): StripePaymentSession
 export function stripeSessionFromCreatedOrder(order: OrderDetail): StripePaymentSession {
   if (order.metodo_pago !== 'stripe') {
     throw new Error('El pedido no es un pago Stripe.');
+  }
+  const payment = parseOrderPayment(order);
+  const totalCents = moneyToCents(order.total);
+  if (
+    totalCents === null ||
+    (payment.amount_cents !== undefined && payment.amount_cents !== Number(totalCents))
+  ) {
+    throw new Error('El total del pedido no coincide con el PaymentIntent del backend.');
   }
   return parseStripePaymentSession(order);
 }

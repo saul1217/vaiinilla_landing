@@ -98,6 +98,11 @@ export type OrderTrackStep = {
   state: 'done' | 'current' | 'todo';
 };
 
+export function orderCollapsedStatusHint(status: OrderStatus): string {
+  if (status === 'listo') return '';
+  return ORDER_STATUS_HINT[status];
+}
+
 export function orderTrackSteps(order: OrderDetail): OrderTrackStep[] {
   const stripe = order.metodo_pago === 'stripe';
   const flowIndex = orderFlowIndex(order.estado);
@@ -108,19 +113,20 @@ export function orderTrackSteps(order: OrderDetail): OrderTrackStep[] {
   const labels = stripe
     ? ['Pago confirmado', 'Cobrado', 'Preparando', 'Listo', 'Entregado']
     : ['Por cobrar', 'Cobrado', 'Preparando', 'Listo', 'Entregado'];
+  const listoHint = order.estado === 'listo' ? '' : ORDER_STATUS_HINT.listo;
   const hints = stripe
     ? [
         PAYMENT_CONFIRMED_HINT,
         ORDER_STATUS_HINT.cobrado,
         ORDER_STATUS_HINT.preparando,
-        ORDER_STATUS_HINT.listo,
+        listoHint,
         ORDER_STATUS_HINT.entregado,
       ]
     : [
         ORDER_STATUS_HINT.por_cobrar,
         ORDER_STATUS_HINT.cobrado,
         ORDER_STATUS_HINT.preparando,
-        ORDER_STATUS_HINT.listo,
+        listoHint,
         ORDER_STATUS_HINT.entregado,
       ];
 

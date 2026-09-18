@@ -69,12 +69,18 @@ describe('pickup-qr', () => {
     expect(pickupQrPayloadFromOrder(order({ qr_token: 'server-token' }))).toBe('server-token');
   });
 
-  it('muestra retiro en cobrado+ confirmado y QR solo con token', () => {
-    const paid = order({ qr_token: undefined });
-    expect(shouldShowPickupSurface(paid)).toBe(true);
-    expect(shouldShowPickupQr(paid, null)).toBe(false);
-    expect(shouldShowPickupQr(paid, 'abc')).toBe(true);
-    expect(shouldShowPickupSurface(order({ estado: 'por_cobrar', pago: { ...paid.pago!, payment_status: 'pendiente_pago' } }))).toBe(false);
+  it('muestra retiro en listo y QR solo con token', () => {
+    const ready = order({ qr_token: undefined });
+    expect(shouldShowPickupSurface(ready)).toBe(true);
+    expect(shouldShowPickupQr(ready, null)).toBe(false);
+    expect(shouldShowPickupQr(ready, 'abc')).toBe(true);
+    expect(shouldShowPickupSurface(order({ estado: 'cobrado' }))).toBe(false);
+    expect(shouldShowPickupSurface(order({ estado: 'preparando' }))).toBe(false);
+    expect(
+      shouldShowPickupSurface(
+        order({ estado: 'por_cobrar', pago: { ...ready.pago!, payment_status: 'pendiente_pago' } }),
+      ),
+    ).toBe(false);
   });
 
   it('reconoce un código corto para mostrarlo en texto', () => {

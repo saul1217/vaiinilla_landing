@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { OrderDetail } from '../types/api';
 import {
+  orderCollapsedStatusHint,
   orderCompactPayLabel,
   orderHistoryHeadline,
   orderItemHeadline,
@@ -80,5 +81,44 @@ describe('order-labels Android tracking', () => {
     expect(steps[1]?.state).toBe('current');
     expect(orderProgressFilled(card)).toBe(2);
     expect(orderMetaLine(card)).toBe('Para llevar · Tarjeta');
+  });
+
+  it('marca LISTO como paso 4 actual, no como palomita', () => {
+    const ready = order({
+      estado: 'listo',
+      metodo_pago: 'stripe',
+      pago: {
+        payment_attempt_id: 'a1',
+        payment_intent_id: 'pi',
+        stripe_account_id: 'acct',
+        payment_status: 'confirmado',
+      },
+    });
+    const steps = orderTrackSteps(ready);
+    expect(steps[3]?.label).toBe('Listo');
+    expect(steps[3]?.state).toBe('current');
+    expect(steps[3]?.hint).toBe('');
+    expect(orderProgressFilled(ready)).toBe(4);
+    expect(steps.slice(0, 3).every((step) => step.state === 'done')).toBe(true);
+    expect(steps[4]?.state).toBe('todo');
+  });
+
+  it('deja Recógelo en la barra para LISTO futuro', () => {
+    const preparing = order({
+      estado: 'preparando',
+      metodo_pago: 'stripe',
+      pago: {
+        payment_attempt_id: 'a1',
+        payment_intent_id: 'pi',
+        stripe_account_id: 'acct',
+        payment_status: 'confirmado',
+      },
+    });
+    expect(orderTrackSteps(preparing)[3]?.hint).toBe('Recógelo en la barra.');
+  });
+
+  it('en fila colapsada LISTO es solo Listo, Recógelo queda al expandir', () => {
+    expect(orderCollapsedStatusHint('listo')).toBe('');
+    expect(orderCollapsedStatusHint('preparando')).toBe('Tu comida se está preparando.');
   });
 });

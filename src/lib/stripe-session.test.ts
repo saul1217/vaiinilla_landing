@@ -10,6 +10,7 @@ const createdPago = {
   payment_intent_id: 'pi_test_001',
   stripe_account_id: 'acct_test_establecimiento_001',
   payment_status: 'pendiente_pago' as const,
+  amount_cents: 6200,
   client_secret: 'pi_test_001_secret_test',
   publishable_key: 'pk_test_51Vaiinilla',
 };
@@ -37,6 +38,19 @@ describe('stripe session contract', () => {
     expect(session.client_secret).toBe('pi_test_001_secret_test');
   });
 
+  it('rechaza abrir Stripe si PaymentIntent.amount no coincide con el total del backend', () => {
+    const order = {
+      id: 'order-mismatch',
+      folio: 43,
+      estado: 'por_cobrar',
+      metodo_pago: 'stripe',
+      total: '62.00',
+      pago: { ...createdPago, amount_cents: 6199 },
+    } as OrderDetail;
+
+    expect(() => stripeSessionFromCreatedOrder(order)).toThrow(/no coincide/i);
+  });
+
   it('GET sin secretos no inventa un PaymentIntent', () => {
     expect(() =>
       parseStripePaymentSession({
@@ -45,6 +59,7 @@ describe('stripe session contract', () => {
           payment_intent_id: 'pi_test_001',
           stripe_account_id: 'acct_test_001',
           payment_status: 'pendiente_pago',
+          amount_cents: 6200,
         },
       }),
     ).toThrow(/client_secret/);

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
@@ -5,6 +6,7 @@ import { OrderTrackCard } from '../components/order-track-card';
 import type { CatalogProduct, OrderDetail } from '../types/api';
 import { CartEmptyView } from './cart-page';
 import { OrderTicketView } from './order-detail-page';
+import { useDeskPane } from './orders-page';
 import { WalletBoardView } from './wallet-page';
 
 function qaOrder(overrides: Partial<OrderDetail>): OrderDetail {
@@ -46,7 +48,7 @@ const CASH = qaOrder({});
 const CARD = qaOrder({
   id: 'qa-94',
   folio: 94,
-  estado: 'cobrado',
+  estado: 'listo',
   metodo_pago: 'stripe',
   qr_token: 'QA94LISTO',
   pago: {
@@ -153,7 +155,11 @@ export function AlumnoQaWalletPage() {
 }
 
 export function AlumnoQaOrdersPage() {
+  const deskPane = useDeskPane();
+  const [expandedId, setExpandedId] = useState(CARD.id);
   if (!import.meta.env.DEV) return <Navigate to="/" replace />;
+  const live = [CASH, CARD, CARD_AGAIN];
+  const selected = live.find((order) => order.id === expandedId) ?? CARD;
   return (
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
@@ -166,14 +172,37 @@ export function AlumnoQaOrdersPage() {
                 En curso
               </h2>
               <div className="alumno-order-list">
-                <OrderTrackCard order={CASH} expanded={false} onToggle={() => undefined} />
-                <OrderTrackCard order={CARD} expanded onToggle={() => undefined} />
-                <OrderTrackCard order={CARD_AGAIN} expanded={false} onToggle={() => undefined} />
+                {live.map((order) => {
+                  const open = !deskPane && expandedId === order.id;
+                  return (
+                    <OrderTrackCard
+                      key={order.id}
+                      order={order}
+                      expanded={open}
+                      compact={!deskPane && expandedId !== null && expandedId !== order.id}
+                      selected={deskPane && expandedId === order.id}
+                      onToggle={() => {
+                        if (deskPane) {
+                          setExpandedId(order.id);
+                          return;
+                        }
+                        setExpandedId((current) => (current === order.id ? null : order.id));
+                      }}
+                      pickupToken={open ? order.qr_token ?? null : null}
+                    />
+                  );
+                })}
               </div>
             </section>
           </div>
           <aside className="alumno-orders-desk__detail">
-            <OrderTrackCard order={CARD} expanded toggle={false} onToggle={() => undefined} />
+            <OrderTrackCard
+              order={selected}
+              expanded
+              toggle={false}
+              onToggle={() => undefined}
+              pickupToken={selected.qr_token ?? null}
+            />
           </aside>
         </div>
       </main>
@@ -198,8 +227,9 @@ export function AlumnoQaOrderDetailPage() {
             completeLink={false}
             toggle={false}
             onToggle={() => undefined}
+            pickupToken={CARD.qr_token ?? null}
           />
-          <OrderTicketView order={CARD} pickupToken={CARD.qr_token ?? null} stripeOrder />
+          <OrderTicketView order={CARD} />
         </div>
       </main>
     </AppShell>

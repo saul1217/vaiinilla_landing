@@ -107,8 +107,7 @@ describe('OrdersPage', () => {
       'href',
       '/cuenta/pedidos/ord-1',
     );
-    expect(screen.getByRole('region', { name: /código de retiro/i })).toBeInTheDocument();
-    expect(screen.getAllByText('#42').length).toBeGreaterThan(1);
+    expect(screen.queryByRole('region', { name: /código de retiro/i })).not.toBeInTheDocument();
     const hide = screen.getByRole('button', { name: /ocultar seguimiento/i });
     expect(hide).toBeInTheDocument();
     const cta = screen.getByRole('link', { name: /ver pedido completo/i });

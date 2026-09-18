@@ -211,6 +211,13 @@ export interface OrderPayment {
   client_secret?: string;
   publishable_key?: string;
   currency?: string;
+  amount_cents?: number;
+  application_fee_cents?: number;
+  stripe_processing_fee_cents?: number;
+  stripe_tax_cents?: number;
+  total_deductions_cents?: number;
+  cafeteria_net_cents?: number;
+  vaiinilla_revenue_cents?: number;
 }
 
 export interface CreateOrderItemInput {

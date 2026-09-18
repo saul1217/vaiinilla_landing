@@ -217,10 +217,9 @@ export function WalletQrPage() {
 function ShortcutWallet() {
   return (
     <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18a2 2 0 0 1 2 2v1h-2V7H6.5a.5.5 0 0 0 0 1H20v9.5A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-10Zm13.25 6.25a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5Z"
-      />
+      <rect x="5.2" y="6.15" width="13.6" height="13.7" rx="2.2" fill="currentColor" />
+      <rect x="8.15" y="3.05" width="7.7" height="4.9" rx="1.25" fill="currentColor" />
+      <rect x="8.05" y="10.15" width="7.9" height="1.9" rx="0.65" fill="var(--lime)" />
     </svg>
   );
 }

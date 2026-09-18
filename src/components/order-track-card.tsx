@@ -1,12 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { formatAmount } from '../lib/money';
-import { resolvePickupQrToken } from '../lib/pickup-qr';
+import { resolvePickupQrToken, shouldShowPickupSurface } from '../lib/pickup-qr';
 import {
   ORDER_FLOW,
-  ORDER_STATUS_HINT,
   ORDER_STATUS_LABEL,
   isActiveOrderStatus,
+  orderCollapsedStatusHint,
   orderItemHeadline,
   orderMetaLine,
   orderProgressFilled,
@@ -21,6 +21,8 @@ export function OrderTrackCard({
   onToggle,
   completeLink = true,
   toggle = true,
+  compact = false,
+  selected = false,
   imageUrl = null,
   pickupToken = null,
 }: {
@@ -29,6 +31,8 @@ export function OrderTrackCard({
   onToggle: () => void;
   completeLink?: boolean;
   toggle?: boolean;
+  compact?: boolean;
+  selected?: boolean;
   imageUrl?: string | null;
   pickupToken?: string | null;
 }) {
@@ -36,30 +40,42 @@ export function OrderTrackCard({
   const steps = orderTrackSteps(order);
   const inFlow = ORDER_FLOW.includes(order.estado);
   const showBar = inFlow;
-  const followRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLElement>(null);
+  const pickupTokenResolved = pickupToken ?? resolvePickupQrToken(order);
+  const showPickup = shouldShowPickupSurface(order);
+  const collapsedStatusHint = orderCollapsedStatusHint(order.estado);
+  const collapsedCompact = compact && !expanded;
 
-  useEffect(() => {
-    if (!expanded || !completeLink) return;
-    const frame = window.requestAnimationFrame(() => {
-      const follow = followRef.current;
-      if (!follow) return;
-      const target = (follow.lastElementChild as HTMLElement | null) ?? follow;
-      const nav = document.querySelector('.alumno-nav');
-      if (!(nav instanceof HTMLElement) || typeof window.scrollBy !== 'function') return;
-      const navBox = nav.getBoundingClientRect();
-      const bottomNav =
-        window.getComputedStyle(nav).position === 'fixed' && navBox.top > window.innerHeight * 0.55;
-      if (!bottomNav) return;
-      const gap = 20;
-      const extra = target.getBoundingClientRect().bottom - (navBox.top - gap);
-      if (extra > 0) window.scrollBy({ top: extra, left: 0, behavior: 'auto' });
+  useLayoutEffect(() => {
+    if (!expanded || !toggle) return;
+    const card = cardRef.current;
+    if (!card) return;
+    let inner = 0;
+    const outer = window.requestAnimationFrame(() => {
+      inner = window.requestAnimationFrame(() => {
+        focusExpandedTrackCard(card);
+      });
     });
-    return () => window.cancelAnimationFrame(frame);
-  }, [completeLink, expanded]);
+    return () => {
+      window.cancelAnimationFrame(outer);
+      window.cancelAnimationFrame(inner);
+    };
+  }, [expanded, toggle]);
+
+  const className = [
+    'alumno-track-card',
+    expanded ? 'is-open' : null,
+    collapsedCompact ? 'is-compact' : null,
+    selected ? 'is-selected' : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <article
-      className={expanded ? 'alumno-track-card is-open' : 'alumno-track-card'}
+      ref={cardRef}
+      className={className}
+      aria-current={selected ? 'true' : undefined}
       onClick={(event) => {
         const target = event.target as HTMLElement;
         if (target.closest('a, button, .alumno-track-card__follow')) return;
@@ -70,7 +86,7 @@ export function OrderTrackCard({
         <span className="alumno-track-card__folio">#{order.folio}</span>
         <span className="alumno-track-card__pill">{ORDER_STATUS_LABEL[order.estado]}</span>
       </header>
-        <div className="alumno-track-card__body">
+      <div className="alumno-track-card__body">
         {imageUrl ? (
           <img className="alumno-track-card__thumb" src={imageUrl} alt="" />
         ) : (
@@ -91,14 +107,17 @@ export function OrderTrackCard({
           ))}
         </div>
       ) : null}
-      <p className="alumno-track-card__status">
-        <strong>{ORDER_STATUS_LABEL[order.estado]}</strong> {ORDER_STATUS_HINT[order.estado]}
-      </p>
+      {showPickup && expanded ? null : (
+        <p className="alumno-track-card__status">
+          <strong>{ORDER_STATUS_LABEL[order.estado]}</strong>
+          {collapsedStatusHint ? ` ${collapsedStatusHint}` : null}
+        </p>
+      )}
       {expanded ? (
-        <div className="alumno-track-card__follow" ref={followRef}>
+        <div className="alumno-track-card__follow">
           <OrderPickupPanel
             order={order}
-            token={pickupToken ?? resolvePickupQrToken(order)}
+            token={pickupTokenResolved}
             stripeOrder={order.metodo_pago === 'stripe'}
           />
           <ol className="alumno-timeline">
@@ -108,7 +127,7 @@ export function OrderTrackCard({
                   {step.state === 'done' ? <CheckIcon /> : index + 1}
                 </span>
                 <strong>{step.label}</strong>
-                <span className="alumno-timeline__hint">{step.hint}</span>
+                {step.hint ? <span className="alumno-timeline__hint">{step.hint}</span> : null}
               </li>
             ))}
           </ol>
@@ -133,6 +152,29 @@ export function OrderTrackCard({
       ) : null}
     </article>
   );
+}
+
+function focusExpandedTrackCard(card: HTMLElement) {
+  if (typeof card.scrollIntoView !== 'function') return;
+  card.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+
+  const nav = document.querySelector('.alumno-nav');
+  if (!(nav instanceof HTMLElement) || typeof window.scrollBy !== 'function') return;
+  const navBox = nav.getBoundingClientRect();
+  const bottomNav =
+    window.getComputedStyle(nav).position === 'fixed' && navBox.top > window.innerHeight * 0.55;
+  if (!bottomNav) return;
+
+  const gap = 12;
+  const floor = navBox.top - gap;
+  const pickup = card.querySelector('.alumno-pickup');
+  const pickupBox = pickup instanceof HTMLElement ? pickup.getBoundingClientRect() : null;
+  if (!pickupBox || pickupBox.height < 2) return;
+
+  if (pickupBox.bottom <= floor) return;
+  const extra = pickupBox.bottom - floor;
+  const room = Math.max(0, pickupBox.top - 8);
+  if (room > 0) window.scrollBy({ top: Math.min(extra, room), left: 0, behavior: 'auto' });
 }
 
 function CheckIcon() {
