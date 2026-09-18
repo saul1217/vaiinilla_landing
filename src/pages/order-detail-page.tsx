@@ -22,7 +22,7 @@ import {
   orderPayLabel,
   orderStatusTone,
 } from '../lib/order-labels';
-import { clearPendingStripeOrderId, stripeRetryFingerprint } from '../lib/stripe-pending';
+import { clearPendingStripeOrderId, stripeRetryFingerprint, markStripeConfirming, isStripeConfirming, clearStripeConfirming } from '../lib/stripe-pending';
 import {
   clearStripeCheckoutSession,
   rememberStripeCheckoutSession,
@@ -52,7 +52,9 @@ export function OrderDetailPage() {
   const [stripeSession, setStripeSession] = useState<StripePaymentSession | null>(() =>
     takeStripeCheckoutSession(id),
   );
-  const [stripePolling, setStripePolling] = useState(() => hasStripeRedirectParams());
+  const [stripePolling, setStripePolling] = useState(
+    () => hasStripeRedirectParams() || isStripeConfirming(id),
+  );
   const [localCanceled, setLocalCanceled] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
@@ -86,6 +88,7 @@ export function OrderDetailPage() {
         if (isStripePaymentConfirmedByBackend(next)) {
           clearPendingStripeOrderId(next.id);
           clearStripeCheckoutSession(next.id);
+          clearStripeConfirming(next.id);
         } else if (
           next.metodo_pago === 'stripe' &&
           (next.pago?.payment_status === 'fallido' || next.pago?.payment_status === 'cancelado')
@@ -93,6 +96,7 @@ export function OrderDetailPage() {
           // Un intento terminado no debe bloquear la creación de un pedido nuevo.
           clearPendingStripeOrderId(next.id);
           clearStripeCheckoutSession(next.id);
+          clearStripeConfirming(next.id);
         }
       } catch (cause) {
         if (active && !silent) setError(errorMessage(cause));
@@ -127,6 +131,7 @@ export function OrderDetailPage() {
       if (result.order && isStripePaymentConfirmedByBackend(result.order)) {
         clearPendingStripeOrderId(result.order.id);
         clearStripeCheckoutSession(result.order.id);
+        clearStripeConfirming(result.order.id);
         setStripeSession(null);
       }
     });
@@ -206,6 +211,7 @@ export function OrderDetailPage() {
     !confirmed &&
     (stripePolling ||
       panelProcessing ||
+      timedOut ||
       paymentStatus === 'processing' ||
       paymentStatus === 'requires_action');
   if (awaitingCharge) awaitingChargeRef.current = true;
@@ -226,7 +232,7 @@ export function OrderDetailPage() {
     Boolean(stripeOrder) &&
     !confirmed &&
     !stripePolling &&
-    !panelProcessing &&
+    !timedOut &&
     !celebrate &&
     paymentStatus !== 'processing' &&
     paymentStatus !== 'requires_action';
@@ -235,6 +241,7 @@ export function OrderDetailPage() {
     !showPaymentForm &&
     !stripePolling &&
     !panelProcessing &&
+    !timedOut &&
     !celebrate &&
     !confirmed;
   const stripeMessage = timedOut
@@ -258,6 +265,7 @@ export function OrderDetailPage() {
       setStripeSession(session);
       setLocalCanceled(false);
       setTimedOut(false);
+      clearStripeConfirming(order.id);
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -290,12 +298,15 @@ export function OrderDetailPage() {
                 onProcessing={() => setPanelProcessing(true)}
                 onProcessingFailed={() => setPanelProcessing(false)}
                 onConfirmed={() => {
+                  markStripeConfirming(order.id);
                   setPanelProcessing(false);
                   setStripePolling(true);
+                  setTimedOut(false);
                   setLocalCanceled(false);
                 }}
                 onCanceled={() => {
                   setPanelProcessing(false);
+                  clearStripeConfirming(order.id);
                   setLocalCanceled(true);
                   setStripeSession(null);
                 }}

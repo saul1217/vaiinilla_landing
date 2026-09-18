@@ -20,7 +20,7 @@ vi.mock('@stripe/react-stripe-js', () => ({
     return <div data-testid="stripe-payment-element" />;
   },
   useStripe: () => ({ confirmPayment: vi.fn().mockResolvedValue({}) }),
-  useElements: () => ({}),
+  useElements: () => ({ getElement: () => ({}) }),
 }));
 
 const order = {

@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
+import { useEffect } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
@@ -58,9 +59,12 @@ vi.mock('@stripe/stripe-js', () => ({
 
 vi.mock('@stripe/react-stripe-js', () => ({
   Elements: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  PaymentElement: () => <div data-testid="stripe-payment-element" />,
+  PaymentElement: ({ onReady }: { onReady?: () => void }) => {
+    useEffect(() => onReady?.(), [onReady]);
+    return <div data-testid="stripe-payment-element" />;
+  },
   useStripe: () => ({ confirmPayment: vi.fn().mockResolvedValue({}) }),
-  useElements: () => ({}),
+  useElements: () => ({ getElement: () => ({}) }),
 }));
 
 function stripeOrder(overrides: Partial<OrderDetail> & { pago?: OrderDetail['pago'] }): OrderDetail {
@@ -179,6 +183,23 @@ describe('OrderDetailPage', () => {
     expect(screen.getByText(STRIPE_COPY.waiting)).toBeInTheDocument();
     expect(screen.getByTestId('stripe-payment-element')).toBeInTheDocument();
     expect(screen.queryByText(CASH_COUNTER_COPY)).not.toBeInTheDocument();
+  });
+
+  it('después de Pagar ahora no vuelve a mostrar el formulario', async () => {
+    rememberStripeCheckoutSession('ord-1', {
+      payment_attempt_id: 'attempt-1',
+      payment_intent_id: 'pi_test_001',
+      client_secret: 'pi_test_001_secret_test',
+      stripe_account_id: 'acct_test_001',
+      publishable_key: 'pk_test_51Vaiinilla',
+      payment_status: 'pendiente_pago',
+    });
+    getOrder.mockResolvedValue(stripeOrder({}));
+    const user = userEvent.setup();
+    renderOrder();
+    await user.click(await screen.findByRole('button', { name: /pagar ahora/i }));
+    expect(await screen.findByText(STRIPE_COPY.processing)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /pagar ahora/i })).not.toBeInTheDocument();
   });
 
   it('processing no se muestra como cobrado ni permite retry', async () => {
