@@ -10,6 +10,11 @@ const friendlyMessages: Record<string, string> = {
   LEGAL_CONSENT_REQUIRED:
     'Debes aceptar las versiones vigentes de Términos y Privacidad para continuar.',
   ESTABLISHMENT_SUSPENDED: 'El establecimiento está suspendido para operaciones nuevas.',
+  SPACE_NOT_FOUND: 'No encontramos esa mesa. Revisa el código e inténtalo de nuevo.',
+  SPACE_INACTIVE: 'Esa mesa está inactiva. Pide ayuda en Caja.',
+  SPACE_TOKEN_INVALID: 'Ese código de mesa no es válido.',
+  SPACE_TOKEN_REVOKED: 'Ese QR de mesa ya no sirve. Pide el código actualizado.',
+  BACKEND_UNAVAILABLE: 'El servicio no está disponible. Inténtalo de nuevo en un momento.',
   CONTEXT_NOT_ALLOWED: 'Esta cuenta no puede pedir en este establecimiento.',
   RATE_LIMITED: 'Se alcanzó el límite temporal. Espera antes de volver a intentar.',
   VALIDATION_ERROR: 'Revisa los datos capturados e inténtalo nuevamente.',

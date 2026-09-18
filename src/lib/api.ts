@@ -39,11 +39,19 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<A
   if (idempotencyKey) headers.set('Idempotency-Key', idempotencyKey);
   else if (idempotent) headers.set('Idempotency-Key', createIdempotencyKey());
 
-  const response = await fetch(`${apiUrl}${path}`, {
-    ...requestOptions,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${apiUrl}${path}`, {
+      ...requestOptions,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    throw new VaiinillaApiError(0, {
+      code: 'BACKEND_UNAVAILABLE',
+      message: 'El servicio no está disponible. Inténtalo de nuevo en un momento.',
+    });
+  }
 
   if (response.ok && response.status === 204) {
     return { data: undefined as T, meta: {}, error: null };

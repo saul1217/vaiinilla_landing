@@ -237,4 +237,28 @@ describe('buyer API client', () => {
     expect(stripeRetryPosts).toBe(1);
     expect(pedidoPosts).toBe(1);
   });
+
+  it('resuelve mesa con el token en el body, no en la URL', async () => {
+    server.use(
+      http.post(`${baseUrl}/publico/espacios/resolver`, async ({ request }) => {
+        const url = new URL(request.url);
+        expect(url.search).toBe('');
+        const body = (await request.json()) as { token: string };
+        expect(body.token).toBe('opaque-space-token');
+        return HttpResponse.json({
+          data: {
+            espacio: { id: 12, nombre: 'Mesa 4' },
+            establecimiento: { slug: 'cafeteria-centro', nombre: 'Cafetería Centro' },
+          },
+          meta: {},
+          error: null,
+        });
+      }),
+    );
+    await expect(api.resolveSpace('opaque-space-token', 'cafeteria-centro')).resolves.toMatchObject({
+      espacio_id: 12,
+      espacio_nombre: 'Mesa 4',
+      establecimiento_slug: 'cafeteria-centro',
+    });
+  });
 });
