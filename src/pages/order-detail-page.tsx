@@ -3,6 +3,7 @@ import { Navigate, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
+import { PedidoChargeOverlay } from '../components/pedido-charge-overlay';
 import { StripePaymentPanel } from '../components/stripe-payment-panel';
 import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
@@ -56,6 +57,9 @@ export function OrderDetailPage() {
   const [retrying, setRetrying] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [panelProcessing, setPanelProcessing] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);
+  const awaitingChargeRef = useRef(false);
   const orderRef = useRef<OrderDetail | null>(null);
   orderRef.current = order;
 
@@ -194,23 +198,44 @@ export function OrderDetailPage() {
     };
   }, [order, pickupQrToken]);
 
-  if (ready && !user) return <Navigate to={`/cuenta?next=/cuenta/pedidos/${id}`} replace />;
-
-  const currentIndex = order ? ORDER_FLOW.indexOf(order.estado) : -1;
   const stripeOrder = order?.metodo_pago === 'stripe';
   const confirmed = order ? isStripePaymentConfirmedByBackend(order) : false;
   const paymentStatus = order?.pago?.payment_status;
+  const awaitingCharge =
+    Boolean(stripeOrder) &&
+    !confirmed &&
+    (stripePolling ||
+      panelProcessing ||
+      paymentStatus === 'processing' ||
+      paymentStatus === 'requires_action');
+  if (awaitingCharge) awaitingChargeRef.current = true;
+
+  useEffect(() => {
+    if (!confirmed || !awaitingChargeRef.current) return;
+    awaitingChargeRef.current = false;
+    setPanelProcessing(false);
+    setCelebrate(true);
+  }, [confirmed]);
+
+  if (ready && !user) return <Navigate to={`/cuenta?next=/cuenta/pedidos/${id}`} replace />;
+
+  const currentIndex = order ? ORDER_FLOW.indexOf(order.estado) : -1;
+  const chargePhase = celebrate ? 'success' : awaitingCharge ? 'processing' : null;
   const showPaymentForm =
     Boolean(stripeSession) &&
     Boolean(stripeOrder) &&
     !confirmed &&
     !stripePolling &&
+    !panelProcessing &&
+    !celebrate &&
     paymentStatus !== 'processing' &&
     paymentStatus !== 'requires_action';
   const showRetry =
     Boolean(order && (canRetryStripePayment(order) || localCanceled)) &&
     !showPaymentForm &&
     !stripePolling &&
+    !panelProcessing &&
+    !celebrate &&
     !confirmed;
   const stripeMessage = timedOut
     ? STRIPE_COPY.timedOut
@@ -249,18 +274,28 @@ export function OrderDetailPage() {
           back={{ to: '/cuenta/pedidos', label: 'Volver' }}
         />
         {error ? <p className="alumno-error">{error}</p> : null}
+        {chargePhase ? (
+          <PedidoChargeOverlay
+            phase={chargePhase}
+            onDismiss={chargePhase === 'success' ? () => setCelebrate(false) : undefined}
+          />
+        ) : null}
         {order && stripeOrder ? (
           <section className="alumno-card alumno-stripe-status">
-            <p role="status">{stripeMessage}</p>
+            {chargePhase ? null : <p role="status">{stripeMessage}</p>}
             {showPaymentForm && stripeSession ? (
               <StripePaymentPanel
                 order={order}
                 session={stripeSession}
+                onProcessing={() => setPanelProcessing(true)}
+                onProcessingFailed={() => setPanelProcessing(false)}
                 onConfirmed={() => {
+                  setPanelProcessing(false);
                   setStripePolling(true);
                   setLocalCanceled(false);
                 }}
                 onCanceled={() => {
+                  setPanelProcessing(false);
                   setLocalCanceled(true);
                   setStripeSession(null);
                 }}

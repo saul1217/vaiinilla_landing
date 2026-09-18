@@ -9,8 +9,8 @@ export const CASH_COUNTER_COPY = 'Pasa a Caja';
 
 export const STRIPE_COPY = {
   waiting: 'Esperando confirmación del pago',
-  processing: 'El pago sigue procesándose',
-  confirmed: 'Pago confirmado',
+  processing: 'Tu compra está en proceso',
+  confirmed: '¡Ya se cobró!',
   failed: 'El pago no se completó. Puedes reintentarlo.',
   canceled: 'El pago fue cancelado. Puedes reintentarlo.',
   timedOut: 'Seguimos confirmando tu pago',

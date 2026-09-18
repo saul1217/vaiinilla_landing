@@ -14,6 +14,8 @@ interface StripePaymentPanelProps {
   hostname?: string;
   onConfirmed: () => void;
   onCanceled: () => void;
+  onProcessing?: () => void;
+  onProcessingFailed?: () => void;
 }
 
 export function StripeOrderTotal({ order }: { order: OrderDetail }) {
@@ -34,6 +36,8 @@ export function StripePaymentPanel({
   hostname = typeof window === 'undefined' ? '' : window.location.hostname,
   onConfirmed,
   onCanceled,
+  onProcessing,
+  onProcessingFailed,
 }: StripePaymentPanelProps) {
   const resolved = useMemo(() => {
     try {
@@ -69,7 +73,13 @@ export function StripePaymentPanel({
             appearance: { theme: 'stripe' },
           }}
         >
-          <StripeCheckoutForm orderId={order.id} onConfirmed={onConfirmed} onCanceled={onCanceled} />
+          <StripeCheckoutForm
+            orderId={order.id}
+            onConfirmed={onConfirmed}
+            onCanceled={onCanceled}
+            onProcessing={onProcessing}
+            onProcessingFailed={onProcessingFailed}
+          />
         </Elements>
       )}
     </section>
@@ -80,10 +90,14 @@ function StripeCheckoutForm({
   orderId,
   onConfirmed,
   onCanceled,
+  onProcessing,
+  onProcessingFailed,
 }: {
   orderId: string;
   onConfirmed: () => void;
   onCanceled: () => void;
+  onProcessing?: () => void;
+  onProcessingFailed?: () => void;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -100,6 +114,7 @@ function StripeCheckoutForm({
     }
     setSubmitting(true);
     setError(null);
+    onProcessing?.();
     try {
       const result = await stripe.confirmPayment({
         elements,
@@ -110,11 +125,13 @@ function StripeCheckoutForm({
       });
       if (result.error) {
         setError(result.error.message ?? 'No se pudo confirmar el pago.');
+        onProcessingFailed?.();
         return;
       }
       onConfirmed();
     } catch (cause) {
       setError(errorMessage(cause));
+      onProcessingFailed?.();
     } finally {
       setSubmitting(false);
     }

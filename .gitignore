@@ -30,3 +30,4 @@ coverage
 
 # jetbrains setting folder
 .idea/
+.vercel

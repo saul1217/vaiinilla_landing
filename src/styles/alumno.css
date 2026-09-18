@@ -1480,6 +1480,154 @@ html[data-theme='amoled'] .alumno-empty img {
   gap: 12px;
 }
 
+.alumno-charge {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.alumno-charge__card {
+  width: min(100%, 420px);
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 36px 28px 28px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  box-shadow: var(--shadow);
+}
+
+.alumno-charge__card h2 {
+  margin: 8px 0 0;
+  font-size: 1.7rem;
+  letter-spacing: -0.05em;
+}
+
+.alumno-charge__card .alumno-lead {
+  margin: 0;
+}
+
+.alumno-charge__mark {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  display: grid;
+  place-items: center;
+}
+
+.alumno-charge__mark img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  animation: alumno-charge-breathe 1.4s ease-in-out infinite;
+}
+
+.alumno-charge__spinner {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 5px solid color-mix(in srgb, var(--lime) 28%, transparent);
+  border-top-color: var(--lime);
+  animation: alumno-charge-spin 0.9s linear infinite;
+}
+
+.alumno-charge__check {
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  background: var(--lime);
+  display: grid;
+  place-items: center;
+  animation: alumno-charge-pop 0.55s cubic-bezier(0.2, 1.4, 0.3, 1) both;
+}
+
+.alumno-charge__check svg {
+  width: 72px;
+  height: 72px;
+}
+
+.alumno-charge__ring {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 18%, transparent);
+  stroke-width: 3;
+}
+
+.alumno-charge__tick {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: alumno-charge-draw 0.45s 0.18s ease forwards;
+}
+
+.alumno-charge__burst {
+  position: absolute;
+  inset: -10px;
+  background:
+    radial-gradient(circle at 12% 30%, var(--yolk) 0 6px, transparent 7px),
+    radial-gradient(circle at 88% 24%, var(--lime) 0 5px, transparent 6px),
+    radial-gradient(circle at 80% 78%, var(--coral) 0 5px, transparent 6px),
+    radial-gradient(circle at 18% 76%, var(--lime-light) 0 6px, transparent 7px);
+  animation: alumno-charge-burst 0.7s ease-out both;
+  pointer-events: none;
+}
+
+@keyframes alumno-charge-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes alumno-charge-breathe {
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes alumno-charge-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes alumno-charge-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes alumno-charge-burst {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.15);
+    opacity: 0.85;
+  }
+}
+
 .alumno-lockup {
   display: inline-flex;
   align-items: center;
@@ -1804,7 +1952,16 @@ html[data-theme='amoled'] .alumno-lockup img,
 
 @media (prefers-reduced-motion: reduce) {
   .alumno-splash__orbit,
-  .alumno-splash__bubble {
+  .alumno-splash__bubble,
+  .alumno-charge__spinner,
+  .alumno-charge__mark img,
+  .alumno-charge__check,
+  .alumno-charge__tick,
+  .alumno-charge__burst {
     animation: none;
+  }
+
+  .alumno-charge__tick {
+    stroke-dashoffset: 0;
   }
 }

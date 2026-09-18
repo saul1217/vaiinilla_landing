@@ -194,6 +194,7 @@ describe('OrderDetailPage', () => {
     );
     renderOrder();
     expect(await screen.findByText(STRIPE_COPY.processing)).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
     expect(screen.queryByText(STRIPE_COPY.confirmed)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /reintentar pago/i })).not.toBeInTheDocument();
     expect(screen.queryByText(CASH_COUNTER_COPY)).not.toBeInTheDocument();
@@ -213,6 +214,7 @@ describe('OrderDetailPage', () => {
     );
     renderOrder();
     expect(await screen.findByText(STRIPE_COPY.confirmed)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ver pedido/i })).not.toBeInTheDocument();
     expect(screen.queryByText(CASH_COUNTER_COPY)).not.toBeInTheDocument();
   });
 
