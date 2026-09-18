@@ -167,14 +167,20 @@ function focusExpandedTrackCard(card: HTMLElement) {
 
   const gap = 12;
   const floor = navBox.top - gap;
+  const toggle = card.querySelector('.alumno-track-card__follow .alumno-track-card__toggle');
+  const cta = card.querySelector('.alumno-btn--lime');
+  const timeline = card.querySelector('.alumno-timeline');
   const pickup = card.querySelector('.alumno-pickup');
-  const pickupBox = pickup instanceof HTMLElement ? pickup.getBoundingClientRect() : null;
-  if (!pickupBox || pickupBox.height < 2) return;
+  const target =
+    (toggle instanceof HTMLElement && toggle.getBoundingClientRect().height > 2 && toggle) ||
+    (cta instanceof HTMLElement && cta.getBoundingClientRect().height > 2 && cta) ||
+    (timeline instanceof HTMLElement ? timeline : null) ||
+    (pickup instanceof HTMLElement ? pickup : null);
+  if (!target) return;
 
-  if (pickupBox.bottom <= floor) return;
-  const extra = pickupBox.bottom - floor;
-  const room = Math.max(0, pickupBox.top - 8);
-  if (room > 0) window.scrollBy({ top: Math.min(extra, room), left: 0, behavior: 'auto' });
+  const targetBox = target.getBoundingClientRect();
+  if (targetBox.bottom <= floor) return;
+  window.scrollBy({ top: targetBox.bottom - floor, left: 0, behavior: 'auto' });
 }
 
 function CheckIcon() {

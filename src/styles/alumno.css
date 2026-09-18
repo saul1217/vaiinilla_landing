@@ -1835,7 +1835,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
 
   .alumno-main:has(.alumno-track-card.is-open) {
     padding-top: 8px;
-    padding-bottom: 96px;
+    padding-bottom: 128px;
   }
 
   .alumno-main:has(.alumno-track-card.is-open) .alumno-pagehead .alumno-back {

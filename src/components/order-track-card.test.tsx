@@ -137,6 +137,44 @@ describe('OrderTrackCard pickup', () => {
     });
   });
 
+  it('si el CTA queda bajo el nav móvil, hace scroll para dejarlo arriba', () => {
+    const scrollBy = vi.fn();
+    vi.stubGlobal('scrollBy', scrollBy);
+    const nav = document.createElement('nav');
+    nav.className = 'alumno-nav';
+    document.body.appendChild(nav);
+    const style = window.getComputedStyle.bind(window);
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+      if (el instanceof Element && el.classList.contains('alumno-nav')) {
+        return { position: 'fixed' } as CSSStyleDeclaration;
+      }
+      return style(el);
+    });
+    const rects = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function () {
+      if (this.classList.contains('alumno-nav')) {
+        return DOMRect.fromRect({ x: 0, y: 765, width: 390, height: 79 });
+      }
+      if (this.classList.contains('alumno-track-card__toggle')) {
+        return DOMRect.fromRect({ x: 16, y: 820, width: 358, height: 36 });
+      }
+      if (this.classList.contains('alumno-btn--lime')) {
+        return DOMRect.fromRect({ x: 16, y: 780, width: 358, height: 48 });
+      }
+      if (this.classList.contains('alumno-pickup')) {
+        return DOMRect.fromRect({ x: 16, y: 400, width: 358, height: 150 });
+      }
+      return DOMRect.fromRect({ x: 0, y: 180, width: 390, height: 680 });
+    };
+
+    renderCard(order());
+    expect(scrollBy).toHaveBeenCalled();
+    expect(scrollBy.mock.calls[0]?.[0]?.top).toBeGreaterThan(40);
+
+    Element.prototype.getBoundingClientRect = rects;
+    nav.remove();
+  });
+
   it('en listo muestra QR si el token quedó persistido', async () => {
     rememberPickupQrToken('ord-1', 'pickup-secret');
     renderCard(order({ qr_token: undefined }));
