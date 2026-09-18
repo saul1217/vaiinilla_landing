@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
@@ -9,7 +9,10 @@ import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { cartTotal, isOperationallyReady, toCreateOrderInput } from '../lib/cart';
 import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
-import { formatMoney, moneyToCents } from '../lib/money';
+import { formatAmount, formatMoney, moneyToCents } from '../lib/money';
+import { lastPlaceSlug } from '../lib/last-place';
+import { productImageUrl } from '../lib/catalog-images';
+import { orderHistoryHeadline } from '../lib/order-labels';
 import { rememberPickupQrToken } from '../lib/pickup-qr';
 import { clearSpace, readSpace } from '../lib/space-session';
 import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
@@ -18,7 +21,14 @@ import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '..
 import { isGuestBuy } from '../lib/guest-explore';
 import { GUEST_CHECKOUT_UNAVAILABLE } from '../lib/guest-checkout';
 import { ESTABLISHMENT_CLOSED_MESSAGE } from '../types/api';
-import type { OperationalStatus, PaymentMethod, PublicEstablishment, WalletData } from '../types/api';
+import type {
+  CatalogProduct,
+  OperationalStatus,
+  OrderDetail,
+  PaymentMethod,
+  PublicEstablishment,
+  WalletData,
+} from '../types/api';
 
 export function CartPage() {
   const { slug = '' } = useParams();
@@ -26,8 +36,11 @@ export function CartPage() {
   const { cart, updateQuantity, removeLine, reset } = useCart();
   const { user, ready } = useAuth();
   const { context, openClientSession } = useBuyerSession();
+  const openClientSessionRef = useRef(openClientSession);
+  openClientSessionRef.current = openClientSession;
   const [place, setPlace] = useState<PublicEstablishment | null>(null);
   const [status, setStatus] = useState<OperationalStatus | null>(null);
+  const [operationalError, setOperationalError] = useState<string | null>(null);
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [payment, setPayment] = useState<PaymentMethod>('efectivo');
   const [notes, setNotes] = useState('');
@@ -37,6 +50,8 @@ export function CartPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [previousOrders, setPreviousOrders] = useState<OrderDetail[]>([]);
+  const [menuPeek, setMenuPeek] = useState<CatalogProduct[]>([]);
   const space = readSpace(slug);
   const [forHere, setForHere] = useState(Boolean(space));
   const stripeEnabled = isStripeCheckoutEnabled();
@@ -49,10 +64,15 @@ export function CartPage() {
 
   useEffect(() => {
     let active = true;
-    void api
-      .getEstablishment(slug)
-      .then((next) => {
-        if (active) setPlace(next);
+    void Promise.all([
+      api.getEstablishment(slug),
+      api.getGuestCatalog(slug).catch(() => ({ categorias: [], productos: [] })),
+    ])
+      .then(([next, catalog]) => {
+        const products = Array.isArray(catalog?.productos) ? catalog.productos : [];
+        setMenuPeek(products.filter((item) => item.disponible).slice(0, 4));
+        if (!active) return;
+        setPlace(next);
       })
       .catch((cause: unknown) => {
         if (active) setError(errorMessage(cause));
@@ -63,8 +83,15 @@ export function CartPage() {
   }, [slug]);
 
   useEffect(() => {
-    if (!context || !place || context.contexto.establecimiento_id !== place.id) return;
+    if (!context || !place || context.contexto.establecimiento_id !== place.id) {
+      setStatus(null);
+      setWallet(null);
+      setOperationalError(null);
+      return;
+    }
     let active = true;
+    setStatus(null);
+    setOperationalError(null);
     void Promise.all([
       api.getOperationalStatus(context.access_token),
       api.getMyWallet(context.access_token).catch(() => null),
@@ -75,13 +102,59 @@ export function CartPage() {
         setWallet(nextWallet);
       })
       .catch((cause: unknown) => {
-        if (active) setError(errorMessage(cause));
+        if (!active) return;
+        setStatus(null);
+        setOperationalError(errorMessage(cause));
       });
     return () => {
       active = false;
     };
   }, [context, place]);
 
+  useEffect(() => {
+    if (!user) {
+      setPreviousOrders([]);
+      return;
+    }
+    let active = true;
+    const run = async () => {
+      try {
+        let session = context;
+        const placeSlug = slug || lastPlaceSlug();
+        let establishment = place;
+        if (!establishment && placeSlug) {
+          establishment = await api.getEstablishment(placeSlug);
+        }
+        if (establishment && (!session || session.contexto.establecimiento_id !== establishment.id)) {
+          session = await openClientSessionRef.current(user, establishment);
+        }
+        if (!session) return;
+        const result = await api.listOrders(session.access_token);
+        if (!active) return;
+        const next = result.orders.filter((item) => item.estado === 'entregado').slice(0, 8);
+        setPreviousOrders((current) => {
+          if (
+            current.length === next.length &&
+            current.every((item, index) => item.id === next[index]?.id && item.estado === next[index]?.estado)
+          ) {
+            return current;
+          }
+          return next;
+        });
+      } catch {
+        if (active) setPreviousOrders([]);
+      }
+    };
+    void run();
+    return () => {
+      active = false;
+    };
+  }, [context, place, slug, user]);
+
+  const hasMatchingContext = Boolean(
+    context && place && context.contexto.establecimiento_id === place.id,
+  );
+  const operationalVerificationPending = hasMatchingContext && !status && !operationalError;
   const operationalReady = isOperationallyReady(status);
   const blocker =
     lines.length === 0
@@ -90,7 +163,7 @@ export function CartPage() {
         ? operationalReady
           ? null
           : ESTABLISHMENT_CLOSED_MESSAGE
-        : context
+        : operationalError
           ? 'No pudimos verificar si el establecimiento está recibiendo pedidos.'
           : null;
 
@@ -168,11 +241,7 @@ export function CartPage() {
   return (
     <AppShell tab="cart">
       <main id="main-content" className="alumno-main">
-        <AlumnoPageHeader
-          kicker="Pedido"
-          title="Tu pedido"
-          back={{ to: `/e/${slug}`, label: 'Volver al menú' }}
-        />
+        <AlumnoPageHeader kicker="Revisa y confirma" title="Tu pedido" />
         {error ? <p className="alumno-error">{error}</p> : null}
         {blocker ? <p className="alumno-banner alumno-banner--coral">{blocker}</p> : null}
         {pendingStripeOrderId ? (
@@ -182,13 +251,93 @@ export function CartPage() {
           </p>
         ) : null}
         {lines.length === 0 ? (
-          <div className="alumno-empty">
-            <img src="/vaini/cutout-frente.png" alt="" />
-            <h2>Tu carrito está vacío</h2>
-            <p className="alumno-lead">Arma tu pedido del menú de hoy.</p>
-            <Link className="alumno-btn alumno-btn--lime" to={`/e/${slug}`}>
-              Explorar menú
-            </Link>
+          <div className="alumno-cart-empty">
+            <div className="alumno-empty">
+              <div className="alumno-antojo" aria-hidden="true">
+                <span className="alumno-antojo__deco alumno-antojo__deco--note">
+                  <NoteIcon />
+                </span>
+                <span className="alumno-antojo__q">
+                  <span className="alumno-antojo__q-face">?</span>
+                </span>
+                <img className="alumno-antojo__vaini" src="/vaini/cutout-frente.png" alt="" />
+                <span className="alumno-antojo__deco alumno-antojo__deco--cup">
+                  <CupIcon />
+                </span>
+                <span className="alumno-antojo__deco alumno-antojo__deco--spark">✦</span>
+              </div>
+              <div className="alumno-empty__copy">
+                <h2>¿Qué se te antoja?</h2>
+                <p className="alumno-lead">Pide algo del menú y aparece aquí.</p>
+                <Link className="alumno-btn alumno-btn--lime" to={`/e/${slug}`}>
+                  Ver menú
+                </Link>
+              </div>
+            </div>
+            {previousOrders.length > 0 ? (
+              <section className="alumno-history" aria-labelledby="prev-orders">
+                <h2 className="alumno-section-label" id="prev-orders">
+                  Pedidos anteriores
+                </h2>
+                <div className="alumno-history-list">
+                {previousOrders.map((order) => (
+                  <Link className="alumno-history-row" key={order.id} to={`/cuenta/pedidos/${order.id}`}>
+                    <span>
+                      <strong>{orderHistoryHeadline(order)}</strong>
+                      <p>#{order.folio} · Entregado</p>
+                    </span>
+                    <span className="alumno-history-row__price">{formatAmount(order.total)}</span>
+                    <span className="alumno-history-row__chev" aria-hidden="true">
+                      ›
+                    </span>
+                  </Link>
+                ))}
+                </div>
+              </section>
+            ) : (
+              <aside className="alumno-cart-peek" aria-labelledby="menu-peek" data-peek-count={menuPeek.length}>
+                <h2 className="alumno-section-label" id="menu-peek">
+                  Del menú
+                </h2>
+                {menuPeek.length > 0 ? (
+                  <>
+                    {menuPeek.map((product) => {
+                      const thumb = productImageUrl(product.imagen_url);
+                      return (
+                      <Link className="alumno-cart-peek__row" key={product.id} to={`/e/${slug}`}>
+                        {thumb ? (
+                          <img src={thumb} alt="" />
+                        ) : (
+                          <span className="alumno-cart-peek__vaini" aria-hidden="true">
+                            <img src="/vaini/cutout-frente.png" alt="" />
+                          </span>
+                        )}
+                        <span>
+                          <strong>{product.nombre}</strong>
+                          <p>{formatAmount(product.precio_digital)}</p>
+                        </span>
+                      </Link>
+                      );
+                    })}
+                    <Link className="alumno-link" to={`/e/${slug}`}>
+                      Ver todo el menú
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <div className="alumno-cart-peek__art" aria-hidden="true">
+                      <img src="/vaini/scene-laptop.png" alt="" />
+                    </div>
+                    <p className="alumno-cart-peek__idle">
+                      Abre el menú y arma tu pedido. Las sugerencias y tus anteriores aparecen aquí.
+                    </p>
+                    <Link className="alumno-btn alumno-btn--lime" to={`/e/${slug}`}>
+                      Ir al menú
+                    </Link>
+                  </>
+                )}
+              </aside>
+            )}
           </div>
         ) : (
           <>
@@ -267,12 +416,21 @@ export function CartPage() {
                 <button
                   className="alumno-btn alumno-btn--lime"
                   type="button"
-                  disabled={!ready || Boolean(blocker) || Boolean(pendingStripeOrderId)}
+                  disabled={
+                    !ready ||
+                    operationalVerificationPending ||
+                    Boolean(blocker) ||
+                    Boolean(pendingStripeOrderId)
+                  }
                   onClick={() =>
                     canCheckout ? setSheetOpen(true) : void navigate(`/cuenta?next=/e/${slug}/carrito`)
                   }
                 >
-                  {canCheckout ? 'Pagar' : 'Entra para pagar'}
+                  {canCheckout
+                    ? operationalVerificationPending
+                      ? 'Verificando…'
+                      : 'Pagar'
+                    : 'Entra para pagar'}
                 </button>
               </div>
               </aside>
@@ -339,5 +497,27 @@ export function CartPage() {
         </div>
       ) : null}
     </AppShell>
+  );
+}
+
+function NoteIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M7 3h8l5 5v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm8 1.8V9h4.2L15 4.8ZM8 12h8v1.6H8V12Zm0 4h8v1.6H8V16Z"
+      />
+    </svg>
+  );
+}
+
+function CupIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M4 10h13v4.5A4.5 4.5 0 0 1 12.5 19h-4A4.5 4.5 0 0 1 4 14.5V10Zm13 1.2h1.6A2.4 2.4 0 0 1 21 13.6 2.4 2.4 0 0 1 18.6 16H17v-1.6h1.6a.8.8 0 0 0 .8-.8.8.8 0 0 0-.8-.8H17V11.2ZM7 4.5c.6.7 1 1.6 1 2.6S7.6 8.7 7 9.4c-.6-.7-1-1.6-1-2.3s.4-1.9 1-2.6Zm3.2 0c.6.7 1 1.6 1 2.6s-.4 1.6-1 2.3c-.6-.7-1-1.6-1-2.3s.4-1.9 1-2.6Z"
+      />
+    </svg>
   );
 }

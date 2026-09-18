@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
+import { OrderTrackCard } from '../components/order-track-card';
 import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { lastPlaceSlug } from '../lib/last-place';
 import { errorMessage } from '../lib/api-error';
-import { formatMoney } from '../lib/money';
-import { ORDER_STATUS_LABEL, orderDestinationLabel, orderStatusTone } from '../lib/order-labels';
-import type { OrderDetail, PublicEstablishment } from '../types/api';
+import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
+import { isActiveOrderStatus } from '../lib/order-labels';
+import type { CatalogProduct, OrderDetail, PublicEstablishment } from '../types/api';
 
 const POLL_MS = 5000;
 
@@ -22,6 +23,10 @@ export function OrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [place, setPlace] = useState<PublicEstablishment | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
+  const deskPane = useDeskPane();
+  const thumbImages = catalogImageMap(catalogProducts);
 
   useEffect(() => {
     if (!user) return;
@@ -34,6 +39,9 @@ export function OrdersPage() {
           const nextPlace = await api.getEstablishment(slug);
           if (!active) return;
           setPlace(nextPlace);
+          void api.getGuestCatalog(slug).then((catalog) => {
+            if (active) setCatalogProducts(catalog.productos);
+          }).catch(() => undefined);
           if (!session || session.contexto.establecimiento_id !== nextPlace.id) {
             session = await openClientSession(user, nextPlace);
           }
@@ -63,12 +71,27 @@ export function OrdersPage() {
     };
   }, [cart?.slug, context, openClientSession, user]);
 
+  useEffect(() => {
+    if (!deskPane || expandedId || orders.length === 0) return;
+    const firstActive = orders.find((item) => isActiveOrderStatus(item.estado));
+    setExpandedId(firstActive?.id ?? orders[0]?.id ?? null);
+  }, [deskPane, expandedId, orders]);
+
   if (ready && !user) return <Navigate to="/cuenta?next=/cuenta/pedidos" replace />;
+
+  const activeOrders = orders.filter((order) => isActiveOrderStatus(order.estado));
+  const pastOrders = orders.filter((order) => !isActiveOrderStatus(order.estado));
+  const selected = orders.find((order) => order.id === expandedId) ?? null;
+
+  function toggle(id: string) {
+    setExpandedId((current) => (current === id ? null : id));
+  }
 
   return (
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
-        <AlumnoPageHeader kicker="Seguimiento" title="Pedidos" lead={place?.nombre} />
+        <AlumnoPageHeader title="Mis pedidos" />
+        {place?.nombre ? <p className="alumno-place-name">{place.nombre}</p> : null}
         {error ? <p className="alumno-error">{error}</p> : null}
         {loading && orders.length === 0 && !error ? <p role="status">Cargando pedidos…</p> : null}
         {orders.length === 0 && !error && !loading ? (
@@ -77,20 +100,80 @@ export function OrdersPage() {
             <p>Aún no hay pedidos en esta sesión.</p>
           </div>
         ) : (
-          <div className="alumno-order-list">
-            {orders.map((order) => (
-              <Link className="alumno-order-card" key={order.id} to={`/cuenta/pedidos/${order.id}`}>
-                <span className={`alumno-status alumno-status--${orderStatusTone(order.estado)}`}>
-                  {ORDER_STATUS_LABEL[order.estado]}
-                </span>
-                <strong>Folio {order.folio}</strong>
-                <span className="alumno-muted">{orderDestinationLabel(order)}</span>
-                <span className="alumno-order-card__total">{formatMoney(order.total)}</span>
-              </Link>
-            ))}
+          <div className="alumno-orders-desk">
+            <div className="alumno-orders-desk__list">
+              {activeOrders.length > 0 ? (
+                <section aria-labelledby="orders-live">
+                  <h2 className="alumno-section-label alumno-section-label--live" id="orders-live">
+                    En curso
+                  </h2>
+                  <div className="alumno-order-list">
+                    {activeOrders.map((order) => (
+                      <OrderTrackCard
+                        key={order.id}
+                        order={order}
+                        expanded={expandedId === order.id}
+                        onToggle={() => toggle(order.id)}
+                        imageUrl={orderThumbUrl(order, thumbImages, catalogProducts)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+              {pastOrders.length > 0 ? (
+                <section aria-labelledby="orders-past">
+                  <h2 className="alumno-section-label" id="orders-past">
+                    Anteriores
+                  </h2>
+                  <div className="alumno-order-list">
+                    {pastOrders.map((order) => (
+                      <OrderTrackCard
+                        key={order.id}
+                        order={order}
+                        expanded={expandedId === order.id}
+                        onToggle={() => toggle(order.id)}
+                        imageUrl={orderThumbUrl(order, thumbImages, catalogProducts)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+            </div>
+            {deskPane ? (
+              <aside className="alumno-orders-desk__detail">
+                {selected ? (
+                  <OrderTrackCard
+                    order={selected}
+                    expanded
+                    completeLink
+                    toggle
+                    onToggle={() => toggle(selected.id)}
+                    imageUrl={orderThumbUrl(selected, thumbImages, catalogProducts)}
+                  />
+                ) : (
+                  <div className="alumno-orders-desk__hint">
+                    <img src="/vaini/cutout-frente.png" alt="" />
+                    <p>Elige un pedido para ver el seguimiento.</p>
+                  </div>
+                )}
+              </aside>
+            ) : null}
           </div>
         )}
       </main>
     </AppShell>
   );
+}
+
+function useDeskPane() {
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const onChange = () => setWide(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return wide;
 }

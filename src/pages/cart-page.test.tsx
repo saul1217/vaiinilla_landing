@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -10,20 +10,30 @@ const authState: { user: { email: string; displayName: string } | null } = {
   user: { email: 'ana@example.test', displayName: 'Ana' },
 };
 
+const buyerSessionState: {
+  context: { access_token: string; contexto: { establecimiento_id: string } } | null;
+} = {
+  context: null,
+};
+
 const {
   getEstablishment,
   getOperationalStatus,
   getMyWallet,
+  getGuestCatalog,
   createOrder,
   retryStripePayment,
   openClientSession,
+  listOrders,
 } = vi.hoisted(() => ({
   getEstablishment: vi.fn(),
   getOperationalStatus: vi.fn(),
   getMyWallet: vi.fn(),
+  getGuestCatalog: vi.fn(),
   createOrder: vi.fn(),
   retryStripePayment: vi.fn(),
   openClientSession: vi.fn(),
+  listOrders: vi.fn(),
 }));
 
 vi.mock('../lib/api', () => ({
@@ -31,8 +41,10 @@ vi.mock('../lib/api', () => ({
     getEstablishment: (...args: unknown[]) => getEstablishment(...args) as Promise<unknown>,
     getOperationalStatus: (...args: unknown[]) => getOperationalStatus(...args) as Promise<unknown>,
     getMyWallet: (...args: unknown[]) => getMyWallet(...args) as Promise<unknown>,
+    getGuestCatalog: (...args: unknown[]) => getGuestCatalog(...args) as Promise<unknown>,
     createOrder: (...args: unknown[]) => createOrder(...args) as Promise<unknown>,
     retryStripePayment: (...args: unknown[]) => retryStripePayment(...args) as Promise<unknown>,
+    listOrders: (...args: unknown[]) => listOrders(...args) as Promise<unknown>,
     apiUrl: '/api/v1',
   },
 }));
@@ -48,7 +60,7 @@ vi.mock('../context/auth-context', () => ({
 
 vi.mock('../context/buyer-session', () => ({
   useBuyerSession: () => ({
-    context: null,
+    context: buyerSessionState.context,
     opening: false,
     openClientSession: (...args: unknown[]) => openClientSession(...args) as Promise<unknown>,
     clearSession: vi.fn(),
@@ -95,6 +107,7 @@ describe('CartPage', () => {
   beforeEach(() => {
     sessionStorage.clear();
     authState.user = { email: 'ana@example.test', displayName: 'Ana' };
+    buyerSessionState.context = null;
     getEstablishment.mockResolvedValue({
       id: '1',
       nombre: 'Cafetería Demo A',
@@ -116,12 +129,60 @@ describe('CartPage', () => {
     cartState.cart = null;
     createOrder.mockReset();
     retryStripePayment.mockReset();
+    listOrders.mockResolvedValue({ orders: [] });
+    getGuestCatalog.mockResolvedValue({
+      categorias: [],
+      productos: [
+        {
+          id: 10,
+          categoria_id: 1,
+          estacion_preparacion: 'caja',
+          nombre: 'Chocolate frío',
+          descripcion: null,
+          ingredientes: null,
+          alergenos: null,
+          tiempo_estimado_min: 4,
+          precio_mostrador: '40.00',
+          precio_digital: '38.00',
+          disponible: true,
+          imagen_url: null,
+          grupos_opcion: [],
+        },
+      ],
+    });
   });
 
   it('muestra el vacío ilustrado', async () => {
     renderCart();
-    expect(await screen.findByRole('heading', { name: /tu carrito está vacío/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /explorar menú/i })).toHaveAttribute('href', '/e/demo-a');
+    expect(await screen.findByRole('heading', { name: /qué se te antoja/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^ver menú$/i })).toHaveAttribute('href', '/e/demo-a');
+    expect(await screen.findByRole('heading', { name: /del menú/i })).toBeInTheDocument();
+    expect(screen.getByText('Chocolate frío')).toBeInTheDocument();
+  });
+
+  it('lista pedidos anteriores compactos en el carrito vacío', async () => {
+    buyerSessionState.context = {
+      access_token: 'jwt',
+      contexto: { establecimiento_id: '1' },
+    };
+    listOrders.mockResolvedValue({
+      orders: [
+        {
+          id: 'ord-76',
+          folio: 76,
+          estado: 'entregado',
+          metodo_pago: 'efectivo',
+          destino: 'para_llevar',
+          total: '22.00',
+          items: [{ id: 1, nombre_producto: 'fruti Lupis', cantidad: 1, subtotal: '22.00' }],
+        },
+      ],
+    });
+    renderCart();
+    expect(await screen.findByRole('heading', { name: /pedidos anteriores/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /fruti lupis/i })).toHaveAttribute('href', '/cuenta/pedidos/ord-76');
+    expect(screen.getByText('#76 · Entregado')).toBeInTheDocument();
+    expect(screen.getByText('$22')).toBeInTheDocument();
   });
 
   it('abre el sheet de pago con efectivo, saldo y tarjeta', async () => {
@@ -197,6 +258,48 @@ describe('CartPage', () => {
     expect(JSON.stringify(payload)).not.toContain('"total"');
     expect(createOrder.mock.calls[0]?.[2]).toEqual(expect.any(String));
     expect(sessionStorage.getItem('vaiinilla.buyer.pickup-qr.v1.ord-stripe')).toBe('pickup-token');
+  });
+
+  it('espera la validación operativa sin mostrar un error transitorio', async () => {
+    cartState.cart = {
+      slug: 'demo-a',
+      establishmentName: 'Cafetería Demo A',
+      lines: [
+        {
+          productId: 1,
+          quantity: 1,
+          optionIds: [],
+          productName: 'Chocolate',
+          unitPreview: '120.00',
+          imageUrl: null,
+        },
+      ],
+    };
+    buyerSessionState.context = {
+      access_token: 'jwt',
+      contexto: { establecimiento_id: '1' },
+    };
+    let resolveStatus: (value: unknown) => void;
+    getOperationalStatus.mockReturnValue(
+      new Promise((resolve) => {
+        resolveStatus = resolve;
+      }),
+    );
+
+    renderCart();
+
+    await waitFor(() => expect(getOperationalStatus).toHaveBeenCalledWith('jwt'));
+    expect(screen.queryByText(/no pudimos verificar si el establecimiento/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /verificando/i })).toBeDisabled();
+
+    resolveStatus!({
+      recibiendo_pedidos: true,
+      sesion_caja_abierta: true,
+      caja_en_linea: true,
+      cocina_en_linea: true,
+    });
+
+    expect(await screen.findByRole('button', { name: /^pagar$/i })).toBeEnabled();
   });
 
   it('invitado con comprar-sin-cuenta no va a /cuenta al pagar', async () => {

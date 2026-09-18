@@ -7,6 +7,7 @@ import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import { defaultOptionIds, previewForProduct, validateSelections } from '../lib/cart';
+import { productImageUrl } from '../lib/catalog-images';
 import { enableGuestBuy, isGuestBuy } from '../lib/guest-explore';
 import { initialsFrom } from '../lib/initials';
 import { rememberPlace } from '../lib/last-place';
@@ -65,6 +66,8 @@ export function MenuPage() {
       return haystack.includes(needle);
     });
   }, [catalog, categoryId, query]);
+
+  const selectedThumb = productImageUrl(selected?.imagen_url);
 
   function openProduct(product: CatalogProduct) {
     if (!product.disponible) return;
@@ -164,31 +167,36 @@ export function MenuPage() {
             ))}
         </div>
         <div className="alumno-grid">
-          {products.map((product) => (
+            {products.map((product) => {
+              const thumb = productImageUrl(product.imagen_url);
+              return (
             <button
               key={product.id}
               type="button"
               className={product.disponible ? 'alumno-product' : 'alumno-product is-off'}
               onClick={() => openProduct(product)}
             >
-              {product.imagen_url ? (
-                <img src={product.imagen_url} alt="" width="160" height="112" />
+              {thumb ? (
+                <img src={thumb} alt="" width="160" height="112" />
               ) : (
-                <div className="alumno-product__ph">Vaini</div>
+                <span className="alumno-product__ph alumno-product__ph--vaini" aria-hidden="true">
+                  <img src="/vaini/cutout-frente.png" alt="" />
+                </span>
               )}
               <div>
                 <h2>{product.nombre}</h2>
                 <p>{formatMoney(product.precio_digital)}</p>
               </div>
             </button>
-          ))}
+              );
+            })}
         </div>
       </main>
       {selected ? (
         <section className="alumno-sheet" aria-labelledby="product-detail">
           <div className="alumno-sheet__dialog">
-            {selected.imagen_url ? (
-              <img className="alumno-sheet__photo" src={selected.imagen_url} alt="" />
+            {selectedThumb ? (
+              <img className="alumno-sheet__photo" src={selectedThumb} alt="" />
             ) : (
               <img className="alumno-sheet__photo" src="/vaini/cutout-frente.png" alt="" />
             )}

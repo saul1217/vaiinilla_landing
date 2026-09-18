@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
@@ -21,7 +22,19 @@ vi.mock('../lib/api', () => ({
           destino: 'para_llevar',
           espacio: null,
           total: '70.00',
-          items: [],
+          items: [{ id: 1, producto_id: 10, nombre_producto: 'Quiere keke', cantidad: 1, subtotal: '70.00' }],
+        },
+      ],
+    }),
+    getGuestCatalog: vi.fn().mockResolvedValue({
+      categorias: [],
+      productos: [
+        {
+          id: 10,
+          nombre: 'Quiere keke',
+          disponible: true,
+          imagen_url: 'https://cdn.example/keke.jpg',
+          grupos_opcion: [],
         },
       ],
     }),
@@ -59,12 +72,40 @@ describe('OrdersPage', () => {
         </ThemeProvider>
       </MemoryRouter>,
     );
-    expect(await screen.findByRole('link', { name: /folio 42/i })).toHaveAttribute(
+    expect(await screen.findByRole('heading', { name: /mis pedidos/i })).toBeInTheDocument();
+    expect(screen.getByText('#42')).toBeInTheDocument();
+    expect(screen.getByText(/1 quiere keke/i)).toBeInTheDocument();
+    expect(screen.getByText(/para llevar · efectivo/i)).toBeInTheDocument();
+    expect(screen.getByText('$70')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /ver seguimiento/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.querySelector('img.alumno-track-card__thumb')).toHaveAttribute(
+        'src',
+        'https://cdn.example/keke.jpg',
+      );
+    });
+  });
+
+  it('expande el seguimiento con timeline y pedido completo', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <OrdersPage />
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('button', { name: /ver seguimiento/i }));
+    expect(screen.getByText(/pago confirmado|por cobrar/i)).toBeInTheDocument();
+    expect(document.querySelectorAll('.alumno-timeline li')).toHaveLength(5);
+    expect(document.querySelector('.alumno-timeline li.is-current .alumno-timeline__mark')?.textContent).toBe(
+      '3',
+    );
+    expect(document.querySelectorAll('.alumno-timeline li.is-done svg')).toHaveLength(2);
+    expect(screen.getByRole('link', { name: /ver pedido completo/i })).toHaveAttribute(
       'href',
       '/cuenta/pedidos/ord-1',
     );
-    expect(screen.getByText(/preparando/i)).toBeInTheDocument();
-    expect(screen.getByText(/para llevar/i)).toBeInTheDocument();
-    expect(screen.getByText('$70.00 MXN')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /ocultar seguimiento/i })).toBeInTheDocument();
   });
 });

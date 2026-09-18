@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
@@ -59,8 +59,8 @@ describe('WalletPage', () => {
         </ThemeProvider>
       </MemoryRouter>,
     );
-    expect(await screen.findByText('$125.00 MXN')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /tu saldo/i })).toBeInTheDocument();
+    expect(await screen.findByText('$125.00')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /cartera/i })).toBeInTheDocument();
     const shortcuts = document.querySelector('.alumno-actions-3');
     expect(shortcuts).toBeTruthy();
     expect(within(shortcuts as HTMLElement).getByRole('link', { name: /^pagar$/i })).toHaveAttribute(
@@ -73,10 +73,10 @@ describe('WalletPage', () => {
     );
     expect(within(shortcuts as HTMLElement).getByRole('link', { name: /^recargar$/i })).toHaveAttribute(
       'href',
-      '/cuenta',
+      '/u/u1',
     );
     expect(screen.getByRole('link', { name: /abrir menú/i })).toHaveAttribute('href', '/e/demo-a');
+    expect(screen.getByText('Saldo Vaiinilla')).toBeInTheDocument();
     expect(screen.getByText('Pedido #42')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText(/ana pérez/i)).toBeInTheDocument());
   });
 });

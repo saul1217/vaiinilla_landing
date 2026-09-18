@@ -21,6 +21,12 @@ export function formatMoney(value: string): string {
   return `$${value} MXN`;
 }
 
+/** Android-style amount: `$73.70`, or `$22` when cents are zero. */
+export function formatAmount(value: string, cents: 'trim' | 'always' = 'trim'): string {
+  if (cents === 'always' || !value.endsWith('.00')) return `$${value}`;
+  return `$${value.slice(0, -3)}`;
+}
+
 export function productUnitPreview(digitalPrice: string, extraPrices: string[]): string | null {
   const base = moneyToCents(digitalPrice);
   if (base === null) return null;

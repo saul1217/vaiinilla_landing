@@ -20,6 +20,7 @@ const { getOrder, getOrderQr, retryStripePayment } = vi.hoisted(() => ({
 vi.mock('../lib/api', () => ({
   api: {
     getEstablishment: vi.fn(),
+    getGuestCatalog: vi.fn().mockResolvedValue({ categorias: [], productos: [] }),
     getOrder: (...args: unknown[]) => getOrder(...args) as Promise<unknown>,
     getOrderQr: (...args: unknown[]) => getOrderQr(...args) as Promise<unknown>,
     retryStripePayment: (...args: unknown[]) => retryStripePayment(...args) as Promise<unknown>,
@@ -131,13 +132,13 @@ describe('OrderDetailPage', () => {
       items: [{ id: 1, nombre_producto: 'Burrito', cantidad: 1, subtotal: '70.00' }],
     });
     renderOrder();
-    expect(await screen.findByRole('heading', { name: /folio 42/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /#42/i })).toBeInTheDocument();
     expect(await screen.findByAltText(/código qr del pedido/i)).toHaveAttribute(
       'src',
       'data:image/png;base64,qr',
     );
     expect(screen.getByText(/pagado con saldo/i)).toBeInTheDocument();
-    expect(screen.getByText(/mesa 4/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/mesa 4/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/1 × burrito/i)).toBeInTheDocument();
     expect(screen.getByText(/sin cebolla/i)).toBeInTheDocument();
   });
@@ -269,6 +270,14 @@ describe('OrderDetailPage', () => {
 
   it('libera el bloqueo local cuando el intento ya terminó fallido', async () => {
     savePendingStripeOrderId('ord-1');
+    rememberStripeCheckoutSession('ord-1', {
+      payment_attempt_id: 'attempt-1',
+      payment_intent_id: 'pi_test_001',
+      client_secret: 'pi_test_001_secret_test',
+      stripe_account_id: 'acct_test_001',
+      publishable_key: 'pk_test_51Vaiinilla',
+      payment_status: 'pendiente_pago',
+    });
     getOrder.mockResolvedValue(
       stripeOrder({
         pago: {
@@ -282,6 +291,8 @@ describe('OrderDetailPage', () => {
     renderOrder();
     expect(await screen.findByText(STRIPE_COPY.failed)).toBeInTheDocument();
     expect(readPendingStripeOrderId()).toBeNull();
+    expect(await screen.findByRole('button', { name: /reintentar pago/i })).toBeInTheDocument();
+    expect(screen.queryByTestId('stripe-payment-element')).not.toBeInTheDocument();
   });
 
   it('conserva el bloqueo local si el pago todavía no tiene estado terminal', async () => {

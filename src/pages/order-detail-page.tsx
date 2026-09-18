@@ -5,6 +5,7 @@ import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { PedidoChargeOverlay } from '../components/pedido-charge-overlay';
 import { StripePaymentPanel } from '../components/stripe-payment-panel';
+import { OrderTrackCard } from '../components/order-track-card';
 import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
@@ -12,15 +13,13 @@ import { api } from '../lib/api';
 import { lastPlaceSlug } from '../lib/last-place';
 import { errorMessage } from '../lib/api-error';
 import { forgetIdempotencyKey, idempotencyKeyFor } from '../lib/idempotency';
-import { formatMoney } from '../lib/money';
+import { formatAmount, formatMoney } from '../lib/money';
 import { readPickupQrToken, rememberPickupQrToken } from '../lib/pickup-qr';
+import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
 import {
   isTerminalOrderStatus,
-  ORDER_FLOW,
-  ORDER_STATUS_LABEL,
   orderDestinationLabel,
   orderPayLabel,
-  orderStatusTone,
 } from '../lib/order-labels';
 import { clearPendingStripeOrderId, stripeRetryFingerprint, markStripeConfirming, isStripeConfirming, clearStripeConfirming } from '../lib/stripe-pending';
 import {
@@ -36,7 +35,7 @@ import {
   STRIPE_POLL_INTERVAL_MS,
   stripePaymentCopy,
 } from '../lib/stripe-status';
-import type { OrderDetail, StripePaymentSession } from '../types/api';
+import type { CatalogProduct, OrderDetail, StripePaymentSession } from '../types/api';
 
 const POLL_MS = 5000;
 
@@ -61,6 +60,7 @@ export function OrderDetailPage() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [panelProcessing, setPanelProcessing] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
+  const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
   const awaitingChargeRef = useRef(false);
   const orderRef = useRef<OrderDetail | null>(null);
   orderRef.current = order;
@@ -89,6 +89,7 @@ export function OrderDetailPage() {
           clearPendingStripeOrderId(next.id);
           clearStripeCheckoutSession(next.id);
           clearStripeConfirming(next.id);
+          setStripeSession(null);
         } else if (
           next.metodo_pago === 'stripe' &&
           (next.pago?.payment_status === 'fallido' || next.pago?.payment_status === 'cancelado')
@@ -113,6 +114,21 @@ export function OrderDetailPage() {
       window.clearInterval(timer);
     };
   }, [cart?.slug, context, id, openClientSession, user]);
+
+  useEffect(() => {
+    const slug = cart?.slug ?? lastPlaceSlug();
+    if (!slug) return;
+    let active = true;
+    void api
+      .getGuestCatalog(slug)
+      .then((catalog) => {
+        if (active) setCatalogProducts(catalog.productos);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [cart?.slug]);
 
   useEffect(() => {
     if (!stripePolling || !id) return;
@@ -225,8 +241,13 @@ export function OrderDetailPage() {
 
   if (ready && !user) return <Navigate to={`/cuenta?next=/cuenta/pedidos/${id}`} replace />;
 
-  const currentIndex = order ? ORDER_FLOW.indexOf(order.estado) : -1;
   const chargePhase = celebrate ? 'success' : awaitingCharge ? 'processing' : null;
+  const staleTerminalStripeSession = Boolean(
+    stripeSession &&
+      order &&
+      canRetryStripePayment(order) &&
+      stripeSession.payment_attempt_id === order.pago?.payment_attempt_id,
+  );
   const showPaymentForm =
     Boolean(stripeSession) &&
     Boolean(stripeOrder) &&
@@ -234,6 +255,7 @@ export function OrderDetailPage() {
     !stripePolling &&
     !timedOut &&
     !celebrate &&
+    !staleTerminalStripeSession &&
     paymentStatus !== 'processing' &&
     paymentStatus !== 'requires_action';
   const showRetry =
@@ -278,7 +300,7 @@ export function OrderDetailPage() {
       <main id="main-content" className="alumno-main">
         <AlumnoPageHeader
           kicker="Pedido"
-          title={order ? `Folio ${order.folio}` : 'Seguimiento'}
+          title={order ? `#${order.folio}` : 'Seguimiento'}
           back={{ to: '/cuenta/pedidos', label: 'Volver' }}
         />
         {error ? <p className="alumno-error">{error}</p> : null}
@@ -325,53 +347,49 @@ export function OrderDetailPage() {
           </section>
         ) : null}
         {order ? (
-          <section className="alumno-card alumno-card--ticket">
-            <p>
-              <span className={`alumno-status alumno-status--${orderStatusTone(order.estado)}`}>
-                {ORDER_STATUS_LABEL[order.estado]}
-              </span>
-            </p>
-            <p className="alumno-muted">
-              {orderPayLabel(order)} · {orderDestinationLabel(order)}
-            </p>
-            <p className="alumno-wallet-balance" style={{ fontSize: '1.6rem', margin: '8px 0 12px' }}>
-              {formatMoney(order.total)}
-            </p>
-            {qr ? (
-              <div className="alumno-card--qr">
-                <img
-                  className="wallet-qr"
-                  src={qr}
-                  alt={
-                    stripeOrder
-                      ? 'Código QR del pedido para entregar'
-                      : 'Código QR del pedido para mostrar en caja'
-                  }
-                />
-                <p className="alumno-muted">
-                  {stripeOrder ? 'Muéstralo en cocina para entregar.' : 'Muéstralo en caja o cocina para entregar.'}
-                </p>
-              </div>
-            ) : null}
-            <ol className="alumno-steps">
-              {ORDER_FLOW.map((step, index) => (
-                <li key={step} className={currentIndex >= index ? 'is-done' : undefined}>
-                  {ORDER_STATUS_LABEL[step]}
-                </li>
-              ))}
-            </ol>
-            <ul className="alumno-ticket-items">
-              {order.items.map((item) => (
-                <li key={item.id}>
-                  <span>
-                    {item.cantidad} × {item.nombre_producto}
-                  </span>
-                  <strong>{formatMoney(item.subtotal)}</strong>
-                </li>
-              ))}
-            </ul>
-            {order.notas_cocina ? <p className="alumno-muted">Nota: {order.notas_cocina}</p> : null}
-          </section>
+          <div className="alumno-detail-split">
+            <OrderTrackCard
+              order={order}
+              expanded
+              completeLink={false}
+              toggle={false}
+              onToggle={() => undefined}
+              imageUrl={orderThumbUrl(order, catalogImageMap(catalogProducts), catalogProducts)}
+            />
+            <section className="alumno-card alumno-card--ticket">
+              <p className="alumno-muted">
+                {orderPayLabel(order)} · {orderDestinationLabel(order)}
+              </p>
+              <p className="alumno-wallet-balance">{formatAmount(order.total)}</p>
+              {qr ? (
+                <div className="alumno-card--qr">
+                  <img
+                    className="wallet-qr"
+                    src={qr}
+                    alt={
+                      stripeOrder
+                        ? 'Código QR del pedido para entregar'
+                        : 'Código QR del pedido para mostrar en caja'
+                    }
+                  />
+                  <p className="alumno-muted">
+                    {stripeOrder ? 'Muéstralo en cocina para entregar.' : 'Muéstralo en caja o cocina para entregar.'}
+                  </p>
+                </div>
+              ) : null}
+              <ul className="alumno-ticket-items">
+                {order.items.map((item) => (
+                  <li key={item.id}>
+                    <span>
+                      {item.cantidad} × {item.nombre_producto}
+                    </span>
+                    <strong>{formatMoney(item.subtotal)}</strong>
+                  </li>
+                ))}
+              </ul>
+              {order.notas_cocina ? <p className="alumno-muted">Nota: {order.notas_cocina}</p> : null}
+            </section>
+          </div>
         ) : null}
       </main>
     </AppShell>

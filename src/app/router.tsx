@@ -10,6 +10,7 @@ import { OrdersPage } from '../pages/orders-page';
 import { SupportPage } from '../pages/support-page';
 import { TableJoinPage } from '../pages/table-join-page';
 import { WalletPage, WalletQrPage } from '../pages/wallet-page';
+import { AlumnoQaOrdersPage, AlumnoQaWalletPage } from '../pages/alumno-qa-page';
 
 export function AppRouter() {
   return (
@@ -27,6 +28,12 @@ export function AppRouter() {
         <Route path="/cuenta/pedidos/:id" element={<OrderDetailPage />} />
         <Route path="/cuenta/saldo" element={<WalletPage />} />
         <Route path="/u/:id" element={<WalletQrPage />} />
+        {import.meta.env.DEV ? (
+          <>
+            <Route path="/__qa/cartera" element={<AlumnoQaWalletPage />} />
+            <Route path="/__qa/pedidos" element={<AlumnoQaOrdersPage />} />
+          </>
+        ) : null}
         <Route path="/cafeterias" element={<Navigate to="/pedir" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
