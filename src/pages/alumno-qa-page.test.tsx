@@ -243,6 +243,14 @@ describe('AlumnoQaOrdersPage', () => {
     expect(await screen.findByRole('img', { name: /código qr/i })).toBeInTheDocument();
     expect(document.querySelectorAll('.alumno-pickup')).toHaveLength(1);
     expect((document.body.textContent?.match(/Recógelo en la barra/gi) ?? []).length).toBe(1);
+
+    const hide = screen.getByRole('button', { name: /^ocultar$/i });
+    expect(hide.compareDocumentPosition(detailListo!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await user.click(hide);
+    expect(document.querySelector('.alumno-orders-desk__list .alumno-track-card.is-selected')).toBeNull();
+    expect(document.querySelector('.alumno-orders-desk__detail .alumno-track-card')).toBeNull();
+    expect(screen.getByText(/elige un pedido para ver el seguimiento/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^ocultar$/i })).not.toBeInTheDocument();
   });
 });
 

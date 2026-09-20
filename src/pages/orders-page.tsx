@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
@@ -28,6 +28,7 @@ export function OrdersPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
   const deskPane = useDeskPane();
+  const deskAutoSelected = useRef(false);
   const thumbImages = catalogImageMap(catalogProducts);
 
   useEffect(() => {
@@ -75,7 +76,12 @@ export function OrdersPage() {
   }, [cart?.slug, context, openClientSession, user]);
 
   useEffect(() => {
-    if (!deskPane || expandedId || orders.length === 0) return;
+    if (!deskPane) {
+      deskAutoSelected.current = false;
+      return;
+    }
+    if (deskAutoSelected.current || expandedId || orders.length === 0) return;
+    deskAutoSelected.current = true;
     const firstActive = orders.find((item) => isActiveOrderStatus(item.estado));
     setExpandedId(firstActive?.id ?? orders[0]?.id ?? null);
   }, [deskPane, expandedId, orders]);
@@ -89,10 +95,6 @@ export function OrdersPage() {
   const pastOrders = orders.filter((order) => !isActiveOrderStatus(order.estado));
 
   function toggle(id: string) {
-    if (deskPane) {
-      setExpandedId(id);
-      return;
-    }
     setExpandedId((current) => (current === id ? null : id));
   }
 
@@ -155,15 +157,24 @@ export function OrdersPage() {
             {deskPane ? (
               <aside className="alumno-orders-desk__detail">
                 {selected ? (
-                  <OrderTrackCard
-                    order={selected}
-                    expanded
-                    completeLink
-                    toggle={false}
-                    onToggle={() => undefined}
-                    imageUrl={orderThumbUrl(selected, thumbImages, catalogProducts)}
-                    pickupToken={pickupToken}
-                  />
+                  <>
+                    <button
+                      className="alumno-orders-desk__hide"
+                      type="button"
+                      onClick={() => setExpandedId(null)}
+                    >
+                      Ocultar
+                    </button>
+                    <OrderTrackCard
+                      order={selected}
+                      expanded
+                      completeLink
+                      toggle={false}
+                      onToggle={() => undefined}
+                      imageUrl={orderThumbUrl(selected, thumbImages, catalogProducts)}
+                      pickupToken={pickupToken}
+                    />
+                  </>
                 ) : (
                   <div className="alumno-orders-desk__hint">
                     <img src="/vaini/cutout-frente.png" alt="" />

@@ -360,6 +360,110 @@ describe('CartPage', () => {
     expect(await screen.findByRole('button', { name: /^pagar$/i })).toBeEnabled();
   });
 
+  it('en el vacío de invitado no fabrica pedidos anteriores', async () => {
+    authState.user = null;
+    listOrders.mockResolvedValue({
+      orders: [
+        {
+          id: 'ord-guest',
+          folio: 11,
+          estado: 'entregado',
+          metodo_pago: 'efectivo',
+          destino: 'para_llevar',
+          total: '16.50',
+          items: [{ id: 1, nombre_producto: 'Chicharrones', cantidad: 1, subtotal: '16.50' }],
+        },
+      ],
+    });
+    listOrders.mockClear();
+    renderCart();
+    expect(await screen.findByRole('heading', { name: /qué se te antoja/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /pedidos anteriores/i })).not.toBeInTheDocument();
+    expect(listOrders).not.toHaveBeenCalled();
+  });
+
+  it('en el carrito lleno el peek solo muestra lo que no está en el carrito', async () => {
+    cartState.cart = {
+      slug: 'demo-a',
+      establishmentName: 'Cafetería Demo A',
+      lines: [
+        {
+          productId: 10,
+          quantity: 1,
+          optionIds: [],
+          productName: 'Chocolate frío',
+          unitPreview: '38.00',
+          imageUrl: null,
+        },
+      ],
+    };
+    getGuestCatalog.mockResolvedValue({
+      categorias: [],
+      productos: [
+        {
+          id: 10,
+          categoria_id: 1,
+          estacion_preparacion: 'caja',
+          nombre: 'Chocolate frío',
+          descripcion: null,
+          ingredientes: null,
+          alergenos: null,
+          tiempo_estimado_min: 4,
+          precio_mostrador: '40.00',
+          precio_digital: '38.00',
+          disponible: true,
+          imagen_url: null,
+          grupos_opcion: [],
+        },
+        {
+          id: 11,
+          categoria_id: 1,
+          estacion_preparacion: 'caja',
+          nombre: 'Chicharrones',
+          descripcion: null,
+          ingredientes: null,
+          alergenos: null,
+          tiempo_estimado_min: 4,
+          precio_mostrador: '16.50',
+          precio_digital: '16.50',
+          disponible: true,
+          imagen_url: null,
+          grupos_opcion: [],
+        },
+      ],
+    });
+    renderCart();
+    expect(await screen.findByRole('heading', { name: /del menú/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /chicharrones/i })).toBeInTheDocument();
+    expect(document.querySelectorAll('.alumno-cart-peek__row')).toHaveLength(1);
+    expect(document.querySelector('.alumno-cart-peek')).toHaveAttribute('data-peek-count', '1');
+    expect(screen.queryByRole('link', { name: /chocolate frío/i })).not.toBeInTheDocument();
+  });
+
+  it('si no queda peek, el lleno no fabrica filas ni el idle de canyon', async () => {
+    cartState.cart = {
+      slug: 'demo-a',
+      establishmentName: 'Cafetería Demo A',
+      lines: [
+        {
+          productId: 10,
+          quantity: 2,
+          optionIds: [],
+          productName: 'Chocolate frío',
+          unitPreview: '38.00',
+          imageUrl: null,
+        },
+      ],
+    };
+    renderCart();
+    expect(await screen.findByRole('heading', { name: /del menú/i })).toBeInTheDocument();
+    expect(document.querySelector('.alumno-cart-peek')).toHaveAttribute('data-peek-count', '0');
+    expect(document.querySelector('.alumno-cart-peek__row')).toBeNull();
+    expect(document.querySelector('.alumno-cart-peek__art')).toBeNull();
+    expect(screen.queryByText(/abre el menú y arma tu pedido/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /ver todo el menú/i })).toHaveAttribute('href', '/e/demo-a');
+  });
+
   it('invitado con comprar-sin-cuenta no va a /cuenta al pagar', async () => {
     authState.user = null;
     sessionStorage.setItem('vaiinilla.buyer.guest-buy.v1', '1');

@@ -29,6 +29,18 @@ export function peekCatalogProducts(products: CatalogProduct[], limit = 4): Cata
     .slice(0, limit);
 }
 
+export function leftoverPeekProducts(
+  products: CatalogProduct[],
+  cartProductIds: Iterable<number>,
+  limit = 4,
+): CatalogProduct[] {
+  const inCart = new Set(cartProductIds);
+  return peekCatalogProducts(
+    products.filter((item) => !inCart.has(item.id)),
+    limit,
+  );
+}
+
 export function orderThumbUrl(
   order: OrderDetail,
   images: Map<number, string>,

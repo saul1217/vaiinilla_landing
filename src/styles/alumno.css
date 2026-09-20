@@ -2290,6 +2290,16 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     width: 100%;
   }
 
+  .alumno-cart-layout > .alumno-cart-peek[data-peek-count="0"] {
+    flex: 1 1 auto;
+    justify-content: flex-end;
+  }
+
+  .alumno-cart-layout > .alumno-cart-peek[data-peek-count="0"] .alumno-cart-peek__sheet {
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+
   .alumno-cart-layout__side {
     display: flex;
     flex-direction: column;
@@ -2777,6 +2787,33 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     width: 100%;
   }
 
+  .alumno-main:has(.alumno-cart-layout:has(> .alumno-cart-peek[data-peek-count="0"])) {
+    height: 100dvh;
+  }
+
+  .alumno-cart-layout:has(> .alumno-cart-peek[data-peek-count="0"]) {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+    align-content: stretch;
+    grid-template-rows: auto 1fr;
+  }
+
+  .alumno-cart-layout > .alumno-cart-peek[data-peek-count="0"] {
+    align-self: stretch;
+    justify-content: flex-end;
+    min-height: 0;
+  }
+
+  .alumno-cart-layout > .alumno-cart-peek[data-peek-count="0"] .alumno-cart-peek__sheet {
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+
+  .alumno-cart-layout > .alumno-cart-peek[data-peek-count="0"] .alumno-cart-peek__art {
+    display: none;
+  }
+
   .alumno-cart-layout__side {
     position: static;
     height: auto;
@@ -3044,6 +3081,23 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     box-shadow: none;
     outline: 2.5px solid var(--lime);
     outline-offset: 4px;
+  }
+
+  .alumno-orders-desk__hide {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    align-self: end;
+    gap: 4px;
+    margin: 0 4px 8px;
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
   }
 
   .alumno-orders-desk__detail {

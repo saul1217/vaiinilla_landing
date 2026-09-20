@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { catalogImageMap, orderThumbUrl, peekCatalogProducts, productImageUrl } from './catalog-images';
+import {
+  catalogImageMap,
+  leftoverPeekProducts,
+  orderThumbUrl,
+  peekCatalogProducts,
+  productImageUrl,
+} from './catalog-images';
 import type { CatalogProduct, OrderDetail } from '../types/api';
 
 describe('catalog-images', () => {
@@ -45,5 +51,14 @@ describe('catalog-images', () => {
       { id: 3, disponible: false, imagen_url: 'https://cdn.example/c.jpg', nombre: 'Agotado' },
     ] as CatalogProduct[];
     expect(peekCatalogProducts(products, 2).map((item) => item.id)).toEqual([2, 1]);
+  });
+
+  it('deja el peek lleno sin filas que ya están en el carrito', () => {
+    const products = [
+      { id: 1, disponible: true, imagen_url: 'https://cdn.example/a.jpg', nombre: 'Chicharrones' },
+      { id: 2, disponible: true, imagen_url: 'https://cdn.example/b.jpg', nombre: 'Tacos' },
+    ] as CatalogProduct[];
+    expect(leftoverPeekProducts(products, [1]).map((item) => item.id)).toEqual([2]);
+    expect(leftoverPeekProducts(products, [1, 2])).toEqual([]);
   });
 });

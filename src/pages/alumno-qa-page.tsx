@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { OrderTrackCard } from '../components/order-track-card';
@@ -165,6 +165,8 @@ const FILL_KEKE: CartLine = {
 };
 
 export function AlumnoQaFilledCartPage() {
+  const [params] = useSearchParams();
+  const leftoverEmpty = params.get('leftover') === '0';
   const [lines, setLines] = useState<CartLine[]>([FILL_LUPIS, FILL_KEKE]);
   const total = useMemo(() => {
     const totals = lines
@@ -208,7 +210,7 @@ export function AlumnoQaFilledCartPage() {
           onNotesChange={() => undefined}
           total={total}
           slug={QA_CATALOG_SLUG}
-          menuPeek={QA_CATALOG}
+          menuPeek={leftoverEmpty ? [] : QA_CATALOG}
           payLabel="Pagar"
           payDisabled={false}
           onPay={() => undefined}
@@ -241,7 +243,7 @@ export function AlumnoQaOrdersPage() {
   const [expandedId, setExpandedId] = useState<string | null>(CARD.id);
   if (!import.meta.env.DEV) return <Navigate to="/" replace />;
   const live = [CASH, CARD, CARD_LISTO];
-  const selected = live.find((order) => order.id === expandedId) ?? CARD;
+  const selected = live.find((order) => order.id === expandedId) ?? null;
   return (
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
@@ -263,10 +265,6 @@ export function AlumnoQaOrdersPage() {
                       expanded={open}
                       selected={deskPane && expandedId === order.id}
                       onToggle={() => {
-                        if (deskPane) {
-                          setExpandedId(order.id);
-                          return;
-                        }
                         setExpandedId((current) => (current === order.id ? null : order.id));
                       }}
                       imageUrl={qaOrderThumb(order)}
@@ -279,14 +277,30 @@ export function AlumnoQaOrdersPage() {
           </div>
           {deskPane ? (
             <aside className="alumno-orders-desk__detail">
-              <OrderTrackCard
-                order={selected}
-                expanded
-                toggle={false}
-                onToggle={() => undefined}
-                imageUrl={qaOrderThumb(selected)}
-                pickupToken={selected.qr_token ?? null}
-              />
+              {selected ? (
+                <>
+                  <button
+                    className="alumno-orders-desk__hide"
+                    type="button"
+                    onClick={() => setExpandedId(null)}
+                  >
+                    Ocultar
+                  </button>
+                  <OrderTrackCard
+                    order={selected}
+                    expanded
+                    toggle={false}
+                    onToggle={() => undefined}
+                    imageUrl={qaOrderThumb(selected)}
+                    pickupToken={selected.qr_token ?? null}
+                  />
+                </>
+              ) : (
+                <div className="alumno-orders-desk__hint">
+                  <img src="/vaini/cutout-frente.png" alt="" />
+                  <p>Elige un pedido para ver el seguimiento.</p>
+                </div>
+              )}
             </aside>
           ) : null}
         </div>

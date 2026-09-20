@@ -9,7 +9,7 @@ import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { canAcceptOrders, cartTotal, toCreateOrderInput } from '../lib/cart';
-import { peekCatalogProducts, productImageUrl } from '../lib/catalog-images';
+import { leftoverPeekProducts, peekCatalogProducts, productImageUrl } from '../lib/catalog-images';
 import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
 import { formatAmount, formatMoney, linePreview, moneyToCents } from '../lib/money';
 import { lastPlaceSlug } from '../lib/last-place';
@@ -63,6 +63,10 @@ export function CartPage() {
   const canCheckout = Boolean(user) || guestBuy;
 
   const lines = useMemo(() => (cart?.slug === slug ? cart.lines : []), [cart, slug]);
+  const leftoverPeek = useMemo(
+    () => leftoverPeekProducts(catalogProducts, lines.map((line) => line.productId)),
+    [catalogProducts, lines],
+  );
   const total = useMemo(() => cartTotal(lines), [lines]);
 
   useEffect(() => {
@@ -275,7 +279,7 @@ export function CartPage() {
             onNotesChange={setNotes}
             total={total}
             slug={slug}
-            menuPeek={menuPeek}
+            menuPeek={leftoverPeek}
             payLabel={
               canCheckout
                 ? operationalVerificationPending
@@ -487,7 +491,9 @@ export function CartFilledView({
           </div>
         </div>
       </aside>
-      {slug ? <MenuPeek slug={slug} products={menuPeek} headingId="filled-menu-peek" /> : null}
+      {slug ? (
+        <MenuPeek slug={slug} products={menuPeek} headingId="filled-menu-peek" emptyMode="compact" />
+      ) : null}
     </div>
   );
 }

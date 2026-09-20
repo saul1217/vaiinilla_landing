@@ -7,10 +7,12 @@ export function MenuPeek({
   slug,
   products,
   headingId = 'menu-peek',
+  emptyMode = 'idle',
 }: {
   slug: string;
   products: CatalogProduct[];
   headingId?: string;
+  emptyMode?: 'idle' | 'compact';
 }) {
   const menuHref = slug ? `/e/${slug}` : '/pedir';
 
@@ -46,6 +48,10 @@ export function MenuPeek({
               Ver todo el menú
             </Link>
           </>
+        ) : emptyMode === 'compact' ? (
+          <Link className="alumno-link" to={menuHref}>
+            Ver todo el menú
+          </Link>
         ) : (
           <>
             <div className="alumno-cart-peek__art" aria-hidden="true">
