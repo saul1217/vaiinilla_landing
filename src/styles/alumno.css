@@ -507,6 +507,7 @@ html[data-theme='amoled'] .alumno-nav {
 .alumno-splash__bubble.is-6 { --bubble: 50px; bottom: 2%; left: 28%; }
 .alumno-splash__bubble.is-7 { --bubble: 42px; bottom: 22%; left: 0; }
 .alumno-splash__bubble.is-8 { --bubble: 48px; top: 36%; left: 2%; }
+.alumno-splash__bubble.is-9 { --bubble: 46px; top: 16%; left: 4%; }
 
 .alumno-splash__copy {
   text-align: center;
@@ -3638,23 +3639,41 @@ html[data-theme='amoled'] .alumno-lockup img,
 
 .alumno-auth {
   min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-areas:
+    'brand'
+    'mosaic'
+    'panel';
   background: #171817;
 }
 
+.alumno-auth__mosaic {
+  grid-area: mosaic;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: 64px;
+  height: 64px;
+  min-height: 64px;
+  overflow: hidden;
+}
+
+.alumno-auth__scene {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  object-fit: cover;
+  display: block;
+}
+
 .alumno-auth__brand {
+  grid-area: brand;
   position: relative;
   overflow: hidden;
   background: #171817;
   color: #f4f1e7;
-  padding: 20px 22px 28px;
+  padding: 20px 22px 16px;
   isolation: isolate;
-}
-
-.alumno-auth__brand > *:not(.alumno-auth__blob) {
-  position: relative;
-  z-index: 1;
 }
 
 .alumno-auth__logo {
@@ -3703,36 +3722,6 @@ html[data-theme='amoled'] .alumno-lockup img,
   max-width: 28em;
 }
 
-.alumno-auth__blob {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.alumno-auth__blob--lime {
-  width: 220px;
-  height: 220px;
-  background: color-mix(in srgb, #b9d86d 38%, transparent);
-  top: -80px;
-  right: -60px;
-}
-
-.alumno-auth__blob--olive {
-  width: 280px;
-  height: 280px;
-  background: color-mix(in srgb, #3d4a22 80%, transparent);
-  bottom: -120px;
-  left: -80px;
-}
-
-.alumno-auth__blob--yolk {
-  width: 90px;
-  height: 90px;
-  background: color-mix(in srgb, var(--yolk) 35%, transparent);
-  top: 42%;
-  right: 12%;
-}
-
 .alumno-auth__panel {
   --bg: #f4f1e7;
   --bg-2: #e9e6da;
@@ -3742,7 +3731,7 @@ html[data-theme='amoled'] .alumno-lockup img,
   --muted: #77796f;
   --white: #fbf9f2;
   --line: rgba(23, 24, 23, 0.12);
-  flex: 1;
+  grid-area: panel;
   background: #f4f1e7;
   color: #171817;
   padding: 18px 22px 36px;
@@ -3842,30 +3831,43 @@ html[data-theme='amoled'] .alumno-lockup img,
   }
 
   .alumno-auth {
-    display: grid;
-    grid-template-columns: minmax(280px, 1.15fr) minmax(340px, 0.85fr);
+    height: 100dvh;
     min-height: 100dvh;
+    overflow: hidden;
+    grid-template-columns: minmax(280px, 1.15fr) minmax(340px, 0.85fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      'brand panel'
+      'mosaic panel';
+  }
+
+  .alumno-auth__mosaic {
+    height: auto;
+    min-height: 0;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
   }
 
   .alumno-auth__brand {
-    min-height: 100dvh;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    padding: 48px 56px 56px;
+    justify-content: flex-end;
+    padding: 40px 40px 28px;
   }
 
   .alumno-auth__headline {
-    font-size: clamp(2.6rem, 5vw, 4.2rem);
+    font-size: clamp(2.4rem, 4.4vw, 3.6rem);
     margin: 14px 0 18px;
   }
 
   .alumno-auth__logo {
-    width: min(240px, 54%);
+    width: min(220px, 58%);
   }
 
   .alumno-auth__panel {
-    min-height: 100dvh;
+    min-height: 0;
+    height: auto;
+    overflow: auto;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -3874,6 +3876,66 @@ html[data-theme='amoled'] .alumno-lockup img,
 
   .alumno-auth__panel .alumno-btn {
     width: 100%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .alumno-auth {
+    grid-template-columns: minmax(220px, 1fr) minmax(380px, 460px) minmax(220px, 1fr);
+    grid-template-rows: 1fr 1fr;
+    grid-template-areas: none;
+  }
+
+  .alumno-auth__mosaic,
+  .alumno-auth__brand,
+  .alumno-auth__panel {
+    grid-area: auto;
+  }
+
+  .alumno-auth__mosaic {
+    display: contents;
+  }
+
+  .alumno-auth__scene.is-oxxo {
+    grid-column: 1;
+    grid-row: 1;
+    min-height: 0;
+  }
+
+  .alumno-auth__scene.is-camion {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 0;
+  }
+
+  .alumno-auth__scene.is-tacos {
+    grid-column: 3;
+    grid-row: 1;
+    min-height: 0;
+  }
+
+  .alumno-auth__scene.is-moto {
+    grid-column: 3;
+    grid-row: 2;
+    min-height: 0;
+  }
+
+  .alumno-auth__brand {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    z-index: 1;
+    justify-content: flex-end;
+    padding: 48px 36px 40px;
+    background: linear-gradient(180deg, rgba(23, 24, 23, 0.18) 0%, rgba(23, 24, 23, 0.08) 42%, rgba(23, 24, 23, 0.78) 100%);
+  }
+
+  .alumno-auth__panel {
+    grid-column: 2;
+    grid-row: 1 / -1;
+  }
+
+  .alumno-auth__headline {
+    font-size: clamp(2.5rem, 3.6vw, 3.8rem);
   }
 }
 

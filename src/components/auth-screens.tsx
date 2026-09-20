@@ -20,14 +20,22 @@ import { AlumnoBack, AlumnoLockup, AlumnoLogo } from './alumno-brand';
 type AuthMode = 'splash' | 'entrar' | 'alta' | 'totp' | 'google-legal';
 
 const SPLASH_BUBBLES = [
-  { src: '/vaini/scene-laptop.png', kind: 'scene', className: 'is-1' },
-  { src: '/vaini/scene-taller.png', kind: 'scene', className: 'is-2' },
-  { src: '/vaini/cutout-lado.png', kind: 'cutout', className: 'is-3' },
-  { src: '/vaini/scene-karate.png', kind: 'scene', className: 'is-4' },
-  { src: '/vaini/scene-bloques.png', kind: 'scene', className: 'is-5' },
-  { src: '/vaini/cutout-espalda.png', kind: 'cutout', className: 'is-6' },
-  { src: '/vaini/scene-puente.png', kind: 'scene', className: 'is-7' },
-  { src: '/vaini/cutout-lado-reverso.png', kind: 'cutout', className: 'is-8' },
+  { src: '/vaini/scene-laptop.png', className: 'is-1' },
+  { src: '/vaini/scene-taller.png', className: 'is-2' },
+  { src: '/assets/vaini-oxxo.jpg', className: 'is-3' },
+  { src: '/vaini/scene-karate.png', className: 'is-4' },
+  { src: '/vaini/scene-bloques.png', className: 'is-5' },
+  { src: '/assets/vaini-tacos.jpg', className: 'is-6' },
+  { src: '/vaini/scene-puente.png', className: 'is-7' },
+  { src: '/assets/vaini-camion.jpg', className: 'is-8' },
+  { src: '/assets/vaini-moto.jpg', className: 'is-9' },
+] as const;
+
+const AUTH_SCENES = [
+  { src: '/assets/vaini-oxxo.jpg', className: 'is-oxxo' },
+  { src: '/assets/vaini-tacos.jpg', className: 'is-tacos' },
+  { src: '/assets/vaini-camion.jpg', className: 'is-camion' },
+  { src: '/assets/vaini-moto.jpg', className: 'is-moto' },
 ] as const;
 
 const AUTH_COPY = {
@@ -312,7 +320,7 @@ export function AuthScreens({
         <div className="alumno-splash__stage">
           <div className="alumno-splash__orbit" aria-hidden="true">
             {SPLASH_BUBBLES.map((bubble) => (
-              <span key={bubble.className} className={`alumno-splash__bubble ${bubble.className} is-${bubble.kind}`}>
+              <span key={bubble.className} className={`alumno-splash__bubble ${bubble.className} is-scene`}>
                 <img src={bubble.src} alt="" />
               </span>
             ))}
@@ -524,14 +532,16 @@ function AuthSplit({
 }) {
   return (
     <main id="main-content" className={`alumno-auth alumno-auth--${mode}`}>
+      <div className="alumno-auth__mosaic" aria-hidden="true">
+        {AUTH_SCENES.map((scene) => (
+          <img key={scene.className} className={`alumno-auth__scene ${scene.className}`} src={scene.src} alt="" />
+        ))}
+      </div>
       <section className="alumno-auth__brand">
         <AlumnoLogo onDark className="alumno-auth__logo" />
         <p className="alumno-kicker">{copy.kicker}</p>
         <h2 className="alumno-auth__headline">{copy.headline}</h2>
         <p className="alumno-auth__brand-lead">{copy.lead}</p>
-        <span className="alumno-auth__blob alumno-auth__blob--lime" aria-hidden="true" />
-        <span className="alumno-auth__blob alumno-auth__blob--olive" aria-hidden="true" />
-        <span className="alumno-auth__blob alumno-auth__blob--yolk" aria-hidden="true" />
       </section>
       <section className="alumno-auth__panel">
         <AlumnoBack onClick={onBack}>Volver</AlumnoBack>
