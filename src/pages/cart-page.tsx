@@ -447,45 +447,47 @@ export function CartFilledView({
             </div>
           );
         })}
-        {slug ? <MenuPeek slug={slug} products={menuPeek} headingId="filled-menu-peek" /> : null}
       </div>
       <aside className="alumno-cart-layout__side">
-        <button type="button" className="alumno-card" onClick={onToggleDestination}>
-          <h2>{forHere && space ? space.nombre : 'Para llevar'}</h2>
-          <p className="alumno-muted">
-            {forHere && space
-              ? 'El pedido se entrega en tu mesa. Toca para cambiar a para llevar.'
-              : space
-                ? `Toca para pedir en ${space.nombre}.`
-                : 'Recoges en mostrador cuando esté listo.'}
-          </p>
-        </button>
-        {place?.identificador_cliente_obligatorio ? (
+        <div className="alumno-cart-layout__checkout">
+          <button type="button" className="alumno-card" onClick={onToggleDestination}>
+            <h2>{forHere && space ? space.nombre : 'Para llevar'}</h2>
+            <p className="alumno-muted">
+              {forHere && space
+                ? 'El pedido se entrega en tu mesa. Toca para cambiar a para llevar.'
+                : space
+                  ? `Toca para pedir en ${space.nombre}.`
+                  : 'Recoges en mostrador cuando esté listo.'}
+            </p>
+          </button>
+          {place?.identificador_cliente_obligatorio ? (
+            <label className="alumno-field">
+              {place.identificador_cliente_etiqueta}
+              <input
+                value={clientId}
+                onChange={(event) => onClientIdChange(event.target.value)}
+                required
+                autoComplete="off"
+              />
+            </label>
+          ) : null}
           <label className="alumno-field">
-            {place.identificador_cliente_etiqueta}
-            <input
-              value={clientId}
-              onChange={(event) => onClientIdChange(event.target.value)}
-              required
-              autoComplete="off"
-            />
+            Nota para cocina
+            <textarea value={notes} onChange={(event) => onNotesChange(event.target.value)} rows={2} />
           </label>
-        ) : null}
-        <label className="alumno-field">
-          Nota para cocina
-          <textarea value={notes} onChange={(event) => onNotesChange(event.target.value)} rows={3} />
-        </label>
-        <div className="alumno-cart-layout__pay">
-          <p className="alumno-cart-layout__total">
-            <strong>Total {total ? formatAmount(total) : '—'}</strong>
-          </p>
-          <div className="alumno-sticky-pay">
-            <button className="alumno-btn alumno-btn--lime" type="button" disabled={payDisabled} onClick={onPay}>
-              {payLabel}
-            </button>
+          <div className="alumno-cart-layout__pay">
+            <p className="alumno-cart-layout__total">
+              <strong>Total {total ? formatAmount(total) : '—'}</strong>
+            </p>
+            <div className="alumno-sticky-pay">
+              <button className="alumno-btn alumno-btn--lime" type="button" disabled={payDisabled} onClick={onPay}>
+                {payLabel}
+              </button>
+            </div>
           </div>
         </div>
       </aside>
+      {slug ? <MenuPeek slug={slug} products={menuPeek} headingId="filled-menu-peek" /> : null}
     </div>
   );
 }

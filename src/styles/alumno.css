@@ -1478,7 +1478,7 @@ html[data-theme='dark'] .alumno-actions-3 a,
 html[data-theme='dark'] .alumno-actions-3 button,
 html[data-theme='dark'] .alumno-wallet-menu,
 html[data-theme='dark'] .alumno-history-row,
-html[data-theme='dark'] .alumno-cart-peek {
+html[data-theme='dark'] .alumno-cart-peek__sheet {
   background: #2a2b26;
 }
 
@@ -1486,7 +1486,7 @@ html[data-theme='amoled'] .alumno-actions-3 a,
 html[data-theme='amoled'] .alumno-actions-3 button,
 html[data-theme='amoled'] .alumno-wallet-menu,
 html[data-theme='amoled'] .alumno-history-row,
-html[data-theme='amoled'] .alumno-cart-peek {
+html[data-theme='amoled'] .alumno-cart-peek__sheet {
   background: #1c1c1c;
 }
 
@@ -2106,6 +2106,11 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   flex-direction: column;
 }
 
+.alumno-cart-layout__checkout {
+  display: flex;
+  flex-direction: column;
+}
+
 .alumno-cart-layout__pay {
   display: flex;
   flex-direction: column;
@@ -2204,8 +2209,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-main:has(.alumno-wallet-board),
-  .alumno-main:has(.alumno-cart-empty),
-  .alumno-main:has(.alumno-cart-layout) {
+  .alumno-main:has(.alumno-cart-empty) {
     height: calc(100dvh - 64px);
   }
 
@@ -2259,8 +2263,8 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(240px, 0.82fr);
     gap: 24px;
-    align-items: stretch;
-    flex: 1 1 auto;
+    align-items: start;
+    flex: 0 0 auto;
     min-height: 0;
     height: auto;
   }
@@ -2280,36 +2284,58 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     flex: 0 0 auto;
   }
 
-  .alumno-cart-layout__lines .alumno-cart-peek {
-    flex: 1 1 auto;
+  .alumno-cart-layout > .alumno-cart-peek {
+    flex: 0 0 auto;
     min-height: 0;
+    width: 100%;
   }
 
   .alumno-cart-layout__side {
     display: flex;
     flex-direction: column;
-    align-self: stretch;
+    align-self: start;
     min-height: 0;
     height: auto;
     position: static;
-    gap: 14px;
+    gap: 0;
     justify-content: flex-start;
   }
 
-  .alumno-cart-layout__side > .alumno-card {
+  .alumno-cart-layout__checkout {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    padding: 16px 16px 14px;
+    flex: 0 0 auto;
+  }
+
+  .alumno-cart-layout__checkout > .alumno-card {
     display: block;
     width: 100%;
     text-align: left;
     margin: 0;
     box-sizing: border-box;
     flex: 0 0 auto;
+    background: var(--bg);
+    border: 0;
   }
 
-  .alumno-cart-layout__side > .alumno-field,
-  .alumno-cart-layout__pay {
+  .alumno-cart-layout__checkout > .alumno-field,
+  .alumno-cart-layout__checkout > .alumno-cart-layout__pay {
     width: 100%;
     flex: 0 0 auto;
     margin: 0;
+  }
+
+  .alumno-cart-layout__checkout .alumno-field textarea,
+  .alumno-cart-layout__checkout .alumno-field input {
+    min-height: 72px;
+    background: var(--bg);
   }
 
   .alumno-cart-layout__pay {
@@ -2354,8 +2380,8 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   .alumno-cart-empty > .alumno-empty {
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    padding-top: 8px;
+    justify-content: flex-start;
+    padding-top: 4px;
     min-height: 100%;
     text-align: left;
   }
@@ -2370,19 +2396,36 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   .alumno-cart-peek {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 24px;
-    padding: 18px 16px 16px;
+    gap: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 0;
     flex: 1 1 auto;
     min-height: 0;
     height: auto;
     align-self: stretch;
   }
 
+  .alumno-cart-peek__sheet {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 18px 16px 16px;
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+
   .alumno-cart-peek[data-peek-count="0"] {
     flex: 1 1 auto;
+  }
+
+  .alumno-cart-peek[data-peek-count="0"] .alumno-cart-peek__sheet {
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .alumno-cart-peek .alumno-section-label {
@@ -2403,7 +2446,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   .alumno-cart-peek .alumno-link,
   .alumno-cart-peek .alumno-btn {
     flex: 0 0 auto;
-    margin-top: auto;
+    margin-top: 8px;
   }
 
   .alumno-cart-peek__art {
@@ -2549,13 +2592,14 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   html[data-theme='dark'] .alumno-actions-3 button,
   html[data-theme='dark'] .alumno-wallet-menu,
   html[data-theme='dark'] .alumno-history-row,
-  html[data-theme='dark'] .alumno-cart-peek,
+  html[data-theme='dark'] .alumno-cart-peek__sheet,
   html[data-theme='dark'] .alumno-line,
   html[data-theme='dark'] .alumno-track-card,
   html[data-theme='dark'] .alumno-card--ticket,
   html[data-theme='dark'] .alumno-cart-layout .alumno-card,
   html[data-theme='dark'] .alumno-cart-layout .alumno-field input,
-  html[data-theme='dark'] .alumno-cart-layout .alumno-field textarea {
+  html[data-theme='dark'] .alumno-cart-layout .alumno-field textarea,
+  html[data-theme='dark'] .alumno-cart-layout__checkout {
     background: #2a2b26;
   }
 
@@ -2563,14 +2607,63 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   html[data-theme='amoled'] .alumno-actions-3 button,
   html[data-theme='amoled'] .alumno-wallet-menu,
   html[data-theme='amoled'] .alumno-history-row,
-  html[data-theme='amoled'] .alumno-cart-peek,
+  html[data-theme='amoled'] .alumno-cart-peek__sheet,
   html[data-theme='amoled'] .alumno-line,
   html[data-theme='amoled'] .alumno-track-card,
   html[data-theme='amoled'] .alumno-card--ticket,
   html[data-theme='amoled'] .alumno-cart-layout .alumno-card,
   html[data-theme='amoled'] .alumno-cart-layout .alumno-field input,
-  html[data-theme='amoled'] .alumno-cart-layout .alumno-field textarea {
+  html[data-theme='amoled'] .alumno-cart-layout .alumno-field textarea,
+  html[data-theme='amoled'] .alumno-cart-layout__checkout {
     background: #1c1c1c;
+  }
+
+  html[data-theme='dark'] .alumno-cart-layout__checkout > .alumno-card,
+  html[data-theme='dark'] .alumno-cart-layout__checkout .alumno-field input,
+  html[data-theme='dark'] .alumno-cart-layout__checkout .alumno-field textarea {
+    background: #171817;
+  }
+
+  html[data-theme='amoled'] .alumno-cart-layout__checkout > .alumno-card,
+  html[data-theme='amoled'] .alumno-cart-layout__checkout .alumno-field input,
+  html[data-theme='amoled'] .alumno-cart-layout__checkout .alumno-field textarea {
+    background: #000;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .alumno-main:has(.alumno-cart-layout) {
+    height: calc(100dvh - 64px);
+  }
+
+  .alumno-cart-layout {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+    grid-template-rows: auto auto;
+    align-items: start;
+    align-content: space-between;
+  }
+
+  .alumno-cart-layout > .alumno-cart-peek {
+    grid-column: 1 / -1;
+    align-self: end;
+    width: 100%;
+  }
+
+  .alumno-cart-layout > .alumno-cart-peek .alumno-cart-peek__sheet {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .alumno-cart-empty__rail .alumno-cart-peek,
+  .alumno-wallet-fill .alumno-cart-peek {
+    justify-content: flex-end;
+  }
+
+  .alumno-cart-empty__rail .alumno-cart-peek__sheet,
+  .alumno-wallet-fill .alumno-cart-peek__sheet {
+    flex: 0 0 auto;
   }
 }
 
@@ -2668,17 +2761,28 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   .alumno-cart-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 360px;
+    grid-template-rows: auto auto;
     gap: 32px;
-    align-items: stretch;
-    flex: 1 1 auto;
+    align-items: start;
+    align-content: start;
+    flex: 0 0 auto;
     min-height: 0;
     height: auto;
+  }
+
+  .alumno-cart-layout > .alumno-cart-peek {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+    width: 100%;
   }
 
   .alumno-cart-layout__side {
     position: static;
     height: auto;
     align-self: start;
+    grid-column: 2;
+    grid-row: 1;
   }
 
   .alumno-sticky-pay {
@@ -2799,7 +2903,6 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     height: 100dvh;
   }
 
-  .alumno-main:has(.alumno-cart-layout),
   .alumno-main:has(.alumno-orders-desk),
   .alumno-main:has(.alumno-detail-split) {
     height: 100dvh;
@@ -3027,7 +3130,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   .alumno-cart-empty > .alumno-empty {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     min-height: 100%;
     max-width: none;
     text-align: left;
@@ -3098,7 +3201,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-detail-split .alumno-card--ticket {
-    padding: 24px 22px 22px;
+    padding: 28px 24px 24px;
     align-self: start;
   }
 
@@ -3174,13 +3277,14 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   html[data-theme='dark'] .alumno-actions-3 button,
   html[data-theme='dark'] .alumno-wallet-menu,
   html[data-theme='dark'] .alumno-history-row,
-  html[data-theme='dark'] .alumno-cart-peek,
+  html[data-theme='dark'] .alumno-cart-peek__sheet,
   html[data-theme='dark'] .alumno-line,
   html[data-theme='dark'] .alumno-track-card,
   html[data-theme='dark'] .alumno-card--ticket,
   html[data-theme='dark'] .alumno-cart-layout .alumno-card,
   html[data-theme='dark'] .alumno-cart-layout .alumno-field input,
-  html[data-theme='dark'] .alumno-cart-layout .alumno-field textarea {
+  html[data-theme='dark'] .alumno-cart-layout .alumno-field textarea,
+  html[data-theme='dark'] .alumno-cart-layout__checkout {
     background: #2a2b26;
   }
 
@@ -3188,14 +3292,27 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   html[data-theme='amoled'] .alumno-actions-3 button,
   html[data-theme='amoled'] .alumno-wallet-menu,
   html[data-theme='amoled'] .alumno-history-row,
-  html[data-theme='amoled'] .alumno-cart-peek,
+  html[data-theme='amoled'] .alumno-cart-peek__sheet,
   html[data-theme='amoled'] .alumno-line,
   html[data-theme='amoled'] .alumno-track-card,
   html[data-theme='amoled'] .alumno-card--ticket,
   html[data-theme='amoled'] .alumno-cart-layout .alumno-card,
   html[data-theme='amoled'] .alumno-cart-layout .alumno-field input,
-  html[data-theme='amoled'] .alumno-cart-layout .alumno-field textarea {
+  html[data-theme='amoled'] .alumno-cart-layout .alumno-field textarea,
+  html[data-theme='amoled'] .alumno-cart-layout__checkout {
     background: #1c1c1c;
+  }
+
+  html[data-theme='dark'] .alumno-cart-layout__checkout > .alumno-card,
+  html[data-theme='dark'] .alumno-cart-layout__checkout .alumno-field input,
+  html[data-theme='dark'] .alumno-cart-layout__checkout .alumno-field textarea {
+    background: #171817;
+  }
+
+  html[data-theme='amoled'] .alumno-cart-layout__checkout > .alumno-card,
+  html[data-theme='amoled'] .alumno-cart-layout__checkout .alumno-field input,
+  html[data-theme='amoled'] .alumno-cart-layout__checkout .alumno-field textarea {
+    background: #000;
   }
 }
 

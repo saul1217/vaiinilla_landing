@@ -271,20 +271,20 @@ function ShortcutReload() {
   const finder = {
     fill: 'none' as const,
     stroke: 'currentColor',
-    strokeWidth: 2.15,
+    strokeWidth: 2.45,
   };
   return (
     <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" data-wallet-reload="qr">
-      <rect x="3.55" y="3.55" width="6.7" height="6.7" rx="1.2" {...finder} />
-      <rect x="5.55" y="5.55" width="2.7" height="2.7" rx="0.35" fill="currentColor" />
-      <rect x="13.75" y="3.55" width="6.7" height="6.7" rx="1.2" {...finder} />
-      <rect x="15.75" y="5.55" width="2.7" height="2.7" rx="0.35" fill="currentColor" />
-      <rect x="3.55" y="13.75" width="6.7" height="6.7" rx="1.2" {...finder} />
-      <rect x="5.55" y="15.75" width="2.7" height="2.7" rx="0.35" fill="currentColor" />
-      <rect x="13.45" y="13.45" width="2.6" height="2.6" rx="0.35" fill="currentColor" />
-      <rect x="16.85" y="13.45" width="2.6" height="2.6" rx="0.35" fill="currentColor" />
-      <rect x="13.45" y="16.85" width="2.6" height="2.6" rx="0.35" fill="currentColor" />
-      <rect x="16.85" y="16.85" width="2.6" height="2.6" rx="0.35" fill="currentColor" />
+      <rect x="2.85" y="2.85" width="7.9" height="7.9" rx="1.35" {...finder} />
+      <rect x="5.35" y="5.35" width="2.9" height="2.9" rx="0.4" fill="currentColor" />
+      <rect x="13.25" y="2.85" width="7.9" height="7.9" rx="1.35" {...finder} />
+      <rect x="15.75" y="5.35" width="2.9" height="2.9" rx="0.4" fill="currentColor" />
+      <rect x="2.85" y="13.25" width="7.9" height="7.9" rx="1.35" {...finder} />
+      <rect x="5.35" y="15.75" width="2.9" height="2.9" rx="0.4" fill="currentColor" />
+      <rect x="13.15" y="13.15" width="2.85" height="2.85" rx="0.4" fill="currentColor" />
+      <rect x="17" y="13.15" width="2.85" height="2.85" rx="0.4" fill="currentColor" />
+      <rect x="13.15" y="17" width="2.85" height="2.85" rx="0.4" fill="currentColor" />
+      <rect x="17" y="17" width="2.85" height="2.85" rx="0.4" fill="currentColor" />
     </svg>
   );
 }
