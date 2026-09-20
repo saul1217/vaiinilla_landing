@@ -36,11 +36,14 @@ describe('HomePage', () => {
     expect(screen.queryByRole('link', { name: /google play/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /^entrar$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /^panel/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /la cafetería del campus/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /el menú del lugar/i })).toBeInTheDocument();
+    expect(screen.queryByText(/cafetería escolar/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/del campus/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/cualquier negocio de comida/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/pago confirmado/i).length).toBeGreaterThan(0);
   });
 
-  it('Pedir vuelve a la última cafetería si ya hay una guardada', async () => {
+  it('Pedir vuelve al último lugar si ya hay uno guardado', async () => {
     rememberPlace('renasci-bar');
     render(
       <MemoryRouter>

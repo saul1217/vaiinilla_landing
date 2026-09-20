@@ -30,12 +30,12 @@ export function HomePage() {
                 />
               </div>
               <h1 data-reveal>
-                Más recreo.
+                Más tiempo.
                 <br />
                 <span className="highlight">Menos fila.</span>
               </h1>
               <p className="hero__lead" data-reveal>
-                Pide en tu cafetería escolar desde la web. Menú, pago y retiro, sin hacer fila.
+                Pide en cualquier negocio de comida desde la web. Menú, pago y retiro, sin hacer fila.
               </p>
               <div className="hero__actions" data-reveal>
                 <BuyerEntryLink className="btn btn--primary">Pedir</BuyerEntryLink>
@@ -92,12 +92,13 @@ export function HomePage() {
             />
             <div className="product__copy">
               <h2 id="product-title">
-                La cafetería del campus,
+                El menú del lugar,
                 <br />
                 en tu celular.
               </h2>
               <p>
-                Vaiinilla es para alumnos. Eliges tu establecimiento, ves lo que hay hoy, pagas con
+                Vaiinilla es para cualquier negocio de comida que lo necesite: cafetería, club, snack,
+                barra o el local que sirva. Eliges el establecimiento, ves lo que hay hoy, pagas con
                 tarjeta o saldo y recoges cuando está listo.
               </p>
             </div>
@@ -108,7 +109,7 @@ export function HomePage() {
               </li>
               <li>
                 <strong>Cartera</strong>
-                <span>Saldo Vaiinilla para pagar en la cafetería. La recarga se hace en Caja.</span>
+                <span>Saldo Vaiinilla para pagar en el establecimiento. La recarga se hace en Caja.</span>
               </li>
               <li>
                 <strong>Mis pedidos</strong>
@@ -138,14 +139,14 @@ export function HomePage() {
                   <span>Elige sede</span>
                 </div>
                 <div className="story-card__copy">
-                  <h3>Encuentra tu cafetería.</h3>
-                  <p>Si ya pediste aquí, volvemos a esa sede. Si no, eliges en el listado del campus.</p>
+                  <h3>Encuentra tu lugar.</h3>
+                  <p>Si ya pediste aquí, volvemos a esa sede. Si no, eliges en el listado.</p>
                 </div>
                 <div className="story-card__phone device">
                   <div className="device__screen">
                     <img
                       src="/screens/screen-8.jpeg"
-                      alt="Pantalla para elegir cafetería en Vaiinilla"
+                      alt="Pantalla para elegir establecimiento en Vaiinilla"
                       width="738"
                       height="1600"
                       loading="lazy"
@@ -259,7 +260,7 @@ export function HomePage() {
               </p>
               <p>
                 Paga el pedido con saldo, con Stripe o en efectivo al recoger, según lo que abra tu
-                cafetería.
+                establecimiento.
               </p>
             </div>
           </div>
@@ -302,11 +303,11 @@ export function HomePage() {
             <div className="audiences__grid">
               <article className="audience audience--student" data-reveal>
                 <div className="audience__head">
-                  <span className="audience__index">Alumno</span>
+                  <span className="audience__index">Cliente</span>
                 </div>
                 <h3>Come a tu ritmo.</h3>
                 <p>
-                  Descubre cafeterías del campus, consulta lo disponible, paga y sigue el pedido hasta
+                  Descubre establecimientos, consulta lo disponible, paga y sigue el pedido hasta
                   recogerlo.
                 </p>
                 <ul>
@@ -318,7 +319,7 @@ export function HomePage() {
                   Pedir <span aria-hidden="true">→</span>
                 </BuyerEntryLink>
               </article>
-              <article className="audience audience--operator" id="para-cafeterias" data-reveal>
+              <article className="audience audience--operator" id="para-establecimientos" data-reveal>
                 <div className="audience__head">
                   <span className="audience__index">Establecimiento</span>
                 </div>
@@ -358,7 +359,7 @@ export function HomePage() {
                   <br />
                   <span>empieza aquí.</span>
                 </h2>
-                <p>Entra a pedir en tu cafetería. Si ya tienes cuenta, inicia sesión.</p>
+                <p>Entra a pedir en tu lugar. Si ya tienes cuenta, inicia sesión.</p>
                 <div className="cta__actions">
                   <BuyerEntryLink className="btn btn--dark">Pedir</BuyerEntryLink>
                   <Link className="text-link" to="/cuenta">

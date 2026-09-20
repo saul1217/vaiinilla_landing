@@ -131,7 +131,7 @@ export function DiscoveryPage() {
             back={{ onClick: () => setStep('list'), label: 'Volver' }}
             lead={
               selected.identificador_cliente_obligatorio
-                ? `Esta cafetería pide ${selected.identificador_cliente_etiqueta.toLowerCase()}.`
+                ? `Este lugar pide ${selected.identificador_cliente_etiqueta.toLowerCase()}.`
                 : 'Acceso libre. Puedes abrir el menú o usar el código de tu mesa.'
             }
           />
@@ -185,14 +185,14 @@ export function DiscoveryPage() {
         <AlumnoPageHeader
           kicker="Hoy"
           title="¿Dónde comes hoy?"
-          lead="Elige tu cafetería. El menú se puede ver sin iniciar sesión."
+          lead="Elige tu establecimiento. El menú se puede ver sin iniciar sesión."
         />
         <div className="alumno-discovery">
           <div className="alumno-discovery__list">
             <div className="alumno-search-wrap">
               <SearchIcon />
               <label className="sr-only" htmlFor="search-places">
-                Buscar cafetería
+                Buscar establecimiento
               </label>
               <input
                 id="search-places"
@@ -204,14 +204,14 @@ export function DiscoveryPage() {
               />
             </div>
             {error ? <p className="alumno-error">{error}</p> : null}
-            {loading ? <p role="status">Cargando cafeterías…</p> : null}
+            {loading ? <p role="status">Cargando establecimientos…</p> : null}
             {!loading && items.length === 0 && !error ? (
               <div className="alumno-empty">
                 <img src="/vaini/cutout-frente.png" alt="" />
-                <p>No hay cafeterías publicadas todavía.</p>
+                <p>No hay establecimientos publicados todavía.</p>
               </div>
             ) : (
-              <div className="alumno-radio-list" role="radiogroup" aria-label="Cafeterías">
+              <div className="alumno-radio-list" role="radiogroup" aria-label="Establecimientos">
                 {items.map((place) => {
                   const isRecommended = recommended?.id === place.id;
                   const access = place.identificador_cliente_obligatorio
@@ -231,7 +231,7 @@ export function DiscoveryPage() {
                         <strong>{place.nombre}</strong>
                         <span>
                           {access}
-                          {isRecommended ? ' · Recomendada' : ''}
+                          {isRecommended ? ' · Recomendado' : ''}
                         </span>
                       </span>
                     </button>
@@ -241,8 +241,8 @@ export function DiscoveryPage() {
             )}
           </div>
           {selected ? (
-            <section className="alumno-sticky-cafe" aria-label="Cafetería activa">
-              <p>Cafetería activa</p>
+            <section className="alumno-sticky-cafe" aria-label="Lugar activo">
+              <p>Lugar activo</p>
               <strong>{selected.nombre}</strong>
               <button className="alumno-btn alumno-btn--lime" type="button" onClick={openPicker}>
                 Continuar

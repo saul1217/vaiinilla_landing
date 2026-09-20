@@ -82,7 +82,7 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
 
   async function deleteAccount() {
     if (!user) return;
-    const confirmed = window.confirm('¿Eliminar tu cuenta de alumno? Esta acción no se puede deshacer.');
+    const confirmed = window.confirm('¿Eliminar tu cuenta? Esta acción no se puede deshacer.');
     if (!confirmed) return;
     setBusy(true);
     setError(null);

@@ -31,7 +31,7 @@ export function SupportPage() {
               <h3>Pedidos y saldo</h3>
               <p>
                 Si tu pedido no aparece, tardó más de lo indicado o tu saldo no se refleja después
-                de una recarga, escríbenos con la hora aproximada y la cafetería donde lo hiciste.
+                de una recarga, escríbenos con la hora aproximada y el establecimiento donde lo hiciste.
               </p>
             </article>
             <article className="support__card">
@@ -55,8 +55,8 @@ export function SupportPage() {
           </div>
 
           <p className="support__foot">
-            Vaiinilla conecta a quienes comen con quienes hacen que todo suceda en la cafetería
-            escolar. Gracias por tu paciencia mientras crecemos.
+            Vaiinilla conecta a quienes comen con quienes sirven en cualquier negocio de comida.
+            Gracias por tu paciencia mientras crecemos.
           </p>
         </section>
       </main>

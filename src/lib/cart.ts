@@ -104,3 +104,9 @@ export function isOperationallyReady(status: {
     status.cocina_en_linea
   );
 }
+
+/** La política del establecimiento decide si recibe pedidos; las estaciones
+ * pueden recuperarse después y no deben bloquear el checkout. */
+export function canAcceptOrders(status: { recibiendo_pedidos: boolean } | null): boolean {
+  return Boolean(status?.recibiendo_pedidos);
+}

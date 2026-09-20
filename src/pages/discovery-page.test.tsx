@@ -61,7 +61,7 @@ describe('DiscoveryPage', () => {
     expect(screen.getByRole('button', { name: /abrir menú/i })).toBeInTheDocument();
   });
 
-  it('abre el picker de cafeterías sin pedir splash ni cuenta', async () => {
+  it('abre el picker de establecimientos sin pedir splash ni cuenta', async () => {
     sessionStorage.clear();
     render(
       <MemoryRouter>
@@ -69,7 +69,7 @@ describe('DiscoveryPage', () => {
       </MemoryRouter>,
     );
     expect(await screen.findByRole('heading', { name: /dónde comes hoy/i })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /tu cafetería, a tu ritmo/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: /navegación de alumno/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /tu lugar, a tu ritmo/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: /^navegación$/i })).toBeInTheDocument();
   });
 });

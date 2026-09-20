@@ -44,7 +44,7 @@ describe('TableJoinPage', () => {
     );
     renderJoin();
     expect(await screen.findByText(/no encontramos esa mesa/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /elegir cafetería/i })).toHaveAttribute('href', '/pedir');
+    expect(screen.getByRole('link', { name: /elegir lugar/i })).toHaveAttribute('href', '/pedir');
   });
 
   it('explica QR revocado', async () => {

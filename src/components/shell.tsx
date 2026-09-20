@@ -63,11 +63,11 @@ export function SiteNav({ marketing = false }: { marketing?: boolean }) {
           <nav className="nav__links" aria-label="Navegación principal">
             <a href="#como-funciona">Cómo pedir</a>
             <a href="#apps">Apps</a>
-            <a href="#para-cafeterias">Para campus</a>
+            <a href="#para-establecimientos">Para negocios</a>
           </nav>
         ) : (
           <nav className="nav__links" aria-label="Navegación principal">
-            <NavLink to="/pedir">Cafeterías</NavLink>
+            <NavLink to="/pedir">Lugares</NavLink>
             <NavLink to="/cuenta">Cuenta</NavLink>
             <NavLink to="/soporte">Soporte</NavLink>
           </nav>
@@ -110,7 +110,7 @@ export function SiteFooter() {
           <img src="/brand/vaiinilla-mark.webp" alt="" width="42" height="42" />
           <span translate="no">Vaiinilla</span>
         </Link>
-        <p className="footer__tag">Menú, pedidos y retiro para cafeterías escolares. Apps nativas, próximamente.</p>
+        <p className="footer__tag">Menú, pedidos y retiro para cualquier negocio de comida. Apps nativas, próximamente.</p>
         <nav className="footer__links" aria-label="Pie de página">
           <BuyerEntryLink className="footer__app">Pedir</BuyerEntryLink>
           <Link className="footer__app" to="/soporte">

@@ -2,8 +2,7 @@ import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { api } from './api';
-import { ESTABLISHMENT_CLOSED_MESSAGE } from '../types/api';
-import { isOperationallyReady } from './cart';
+import { canAcceptOrders } from './cart';
 
 const baseUrl = api.apiUrl;
 const server = setupServer();
@@ -139,16 +138,9 @@ describe('buyer API client', () => {
     });
   });
 
-  it('bloquea checkout con el mensaje genérico de Android si Caja/Cocina no están listas', () => {
-    expect(
-      isOperationallyReady({
-        recibiendo_pedidos: true,
-        sesion_caja_abierta: true,
-        caja_en_linea: false,
-        cocina_en_linea: true,
-      }),
-    ).toBe(false);
-    expect(ESTABLISHMENT_CLOSED_MESSAGE).toContain('no está abierto');
+  it('permite checkout cuando el establecimiento recibe pedidos aunque Caja esté fuera de línea', () => {
+    expect(canAcceptOrders({ recibiendo_pedidos: true })).toBe(true);
+    expect(canAcceptOrders({ recibiendo_pedidos: false })).toBe(false);
   });
 
   it('crea un pedido Stripe sin montos y no abre un segundo PaymentIntent', async () => {

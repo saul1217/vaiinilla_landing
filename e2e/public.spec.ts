@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test('la landing de marketing conserva soporte y manda a pedir, no al panel', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: /más recreo/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /más tiempo/i })).toBeVisible();
   await expect(page.getByRole('link', { name: /^pedir$/i }).first()).toHaveAttribute('href', '/pedir');
   await expect(page.getByRole('link', { name: /ya tengo cuenta/i }).first()).toHaveAttribute(
     'href',
@@ -13,7 +13,8 @@ test('la landing de marketing conserva soporte y manda a pedir, no al panel', as
     'https://app.vaiinilla.app',
   );
   await expect(page.getByText(/próximamente/i).first()).toBeVisible();
-  await expect(page.getByRole('heading', { name: /la cafetería del campus/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /el menú del lugar/i })).toBeVisible();
+  await expect(page.getByText(/cualquier negocio de comida/i).first()).toBeVisible();
 });
 
 test('Pedir en la landing entra al app del comprador', async ({ page }) => {
@@ -21,7 +22,7 @@ test('Pedir en la landing entra al app del comprador', async ({ page }) => {
   await page.getByRole('banner').getByRole('link', { name: /^pedir$/i }).click();
   await expect(page).toHaveURL(/\/pedir$/);
   await expect(page.getByRole('heading', { name: /dónde comes hoy/i })).toBeVisible();
-  await expect(page.getByRole('navigation', { name: /navegación de alumno/i })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: /^navegación$/i })).toBeVisible();
   await expect(page).not.toHaveURL(/app\.vaiinilla\.app/);
 });
 

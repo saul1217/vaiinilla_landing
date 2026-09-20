@@ -37,6 +37,10 @@ html[data-theme='amoled'] {
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
 }
 
+html:has(body[data-shell='alumno']) {
+  scroll-behavior: auto;
+}
+
 body[data-shell='alumno'] {
   background: var(--bg);
   color: var(--text);
@@ -1351,11 +1355,10 @@ html[data-theme='amoled'] .alumno-antojo__deco {
 }
 
 .alumno-wallet-menu__icon {
-  --menu-book-gap: color-mix(in srgb, var(--ink) 12%, var(--surface));
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  background: var(--menu-book-gap);
+  border-radius: 0;
+  background: none;
   color: var(--text);
   display: grid;
   place-items: center;
@@ -1487,14 +1490,9 @@ html[data-theme='amoled'] .alumno-cart-peek {
   background: #1c1c1c;
 }
 
-html[data-theme='dark'] .alumno-wallet-menu__icon {
-  --menu-book-gap: #2a2b26;
-  background: #171817;
-}
-
+html[data-theme='dark'] .alumno-wallet-menu__icon,
 html[data-theme='amoled'] .alumno-wallet-menu__icon {
-  --menu-book-gap: #1c1c1c;
-  background: #000000;
+  background: none;
 }
 
 .alumno-setting--danger {
@@ -1892,12 +1890,12 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
 
 @media (max-width: 767.98px) {
   .alumno--nav:has(.alumno-track-card.is-open) {
-    padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(176px + env(safe-area-inset-bottom, 0px));
   }
 
   .alumno-main:has(.alumno-track-card.is-open) {
     padding-top: 8px;
-    padding-bottom: 128px;
+    padding-bottom: 168px;
   }
 
   .alumno-main:has(.alumno-track-card.is-open) .alumno-pagehead .alumno-back {
@@ -1919,9 +1917,9 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-track-card.is-open {
-    padding: 14px 16px 8px;
+    padding: 12px 16px 4px;
     scroll-margin-top: 8px;
-    scroll-margin-bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+    scroll-margin-bottom: calc(132px + env(safe-area-inset-bottom, 0px));
   }
 
   .alumno-track-card.is-open .alumno-track-card__top {
@@ -1946,28 +1944,37 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-track-card.is-open .alumno-track-card__follow {
-    padding-bottom: 8px;
+    padding-bottom: 2px;
   }
 
   .alumno-track-card.is-open .alumno-timeline {
-    gap: 8px;
-    margin: 2px 0 4px;
-    padding: 0 2px 2px;
+    gap: 6px;
+    margin: 0 0 2px;
+    padding: 0 2px 0;
+  }
+
+  .alumno-track-card.is-open .alumno-btn--lime {
+    margin-top: 4px;
+  }
+
+  .alumno-track-card.is-open .alumno-track-card__toggle {
+    margin-top: 0;
+    padding: 8px 8px 6px;
   }
 
   .alumno-pickup__qr-pad {
-    width: min(112px, 36%);
-    margin-top: 8px;
-    padding: 8px;
+    width: min(96px, 32%);
+    margin-top: 6px;
+    padding: 6px;
   }
 
   .alumno-main:has(.alumno-detail-split) {
     padding-top: 4px;
-    padding-bottom: 160px;
+    padding-bottom: 196px;
   }
 
   .alumno--nav:has(.alumno-detail-split) {
-    padding-bottom: calc(168px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(204px + env(safe-area-inset-bottom, 0px));
   }
 
   .alumno-main:has(.alumno-detail-split) .alumno-pagehead .alumno-kicker {
@@ -1994,9 +2001,10 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
 
   .alumno-detail-split .alumno-card--ticket {
     margin: 0;
-    padding: 12px 16px 8px;
+    padding: 10px 16px 12px;
     height: auto;
     flex: 0 0 auto;
+    scroll-margin-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
   }
 
   .alumno-detail-split .alumno-card--ticket .alumno-wallet-balance {
@@ -2263,8 +2271,18 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     justify-content: flex-start;
     align-self: stretch;
     min-height: 0;
-    height: 100%;
-    overflow: auto;
+    height: auto;
+    overflow: visible;
+    gap: 14px;
+  }
+
+  .alumno-cart-layout__lines .alumno-line {
+    flex: 0 0 auto;
+  }
+
+  .alumno-cart-layout__lines .alumno-cart-peek {
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .alumno-cart-layout__side {
@@ -2272,15 +2290,17 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     flex-direction: column;
     align-self: stretch;
     min-height: 0;
-    height: 100%;
+    height: auto;
     position: static;
+    gap: 14px;
+    justify-content: flex-start;
   }
 
   .alumno-cart-layout__side > .alumno-card {
     display: block;
     width: 100%;
     text-align: left;
-    margin-top: 0;
+    margin: 0;
     box-sizing: border-box;
     flex: 0 0 auto;
   }
@@ -2289,10 +2309,11 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   .alumno-cart-layout__pay {
     width: 100%;
     flex: 0 0 auto;
+    margin: 0;
   }
 
   .alumno-cart-layout__pay {
-    margin-top: auto;
+    margin-top: 0;
     gap: 4px;
   }
 
@@ -2342,8 +2363,8 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   .alumno-cart-empty .alumno-antojo {
     overflow: hidden;
     margin: 0 0 12px;
-    height: 224px;
-    width: min(280px, 100%);
+    height: 268px;
+    width: min(332px, 100%);
   }
 
   .alumno-cart-peek {
@@ -2477,8 +2498,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-wallet-menu__icon {
-    --menu-book-gap: color-mix(in srgb, var(--ink) 11%, var(--bg));
-    background: var(--menu-book-gap);
+    background: none;
   }
 
   .alumno-actions-3 {
@@ -2652,11 +2672,13 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     align-items: stretch;
     flex: 1 1 auto;
     min-height: 0;
+    height: auto;
   }
 
   .alumno-cart-layout__side {
     position: static;
-    height: 100%;
+    height: auto;
+    align-self: start;
   }
 
   .alumno-sticky-pay {
@@ -2671,7 +2693,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-cart-layout__pay {
-    margin-top: auto;
+    margin-top: 0;
   }
 
   .alumno-sheet:not(.alumno-sheet--pay) {
@@ -2773,8 +2795,13 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-main:has(.alumno-wallet-board),
-  .alumno-main:has(.alumno-cart-empty),
-  .alumno-main:has(.alumno-cart-layout) {
+  .alumno-main:has(.alumno-cart-empty) {
+    height: 100dvh;
+  }
+
+  .alumno-main:has(.alumno-cart-layout),
+  .alumno-main:has(.alumno-orders-desk),
+  .alumno-main:has(.alumno-detail-split) {
     height: 100dvh;
   }
 
@@ -2855,8 +2882,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-wallet-menu__icon {
-    --menu-book-gap: color-mix(in srgb, var(--ink) 11%, var(--bg));
-    background: var(--menu-book-gap);
+    background: none;
   }
 
   .alumno-wallet-fill {
@@ -2894,7 +2920,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     display: grid;
     grid-template-columns: minmax(340px, 0.95fr) minmax(380px, 1.15fr);
     gap: 24px;
-    align-items: start;
+    align-items: stretch;
     width: 100%;
     flex: 1 1 auto;
     min-height: 0;
@@ -2922,11 +2948,12 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     position: sticky;
     top: 28px;
     min-height: 0;
+    height: 100%;
   }
 
   .alumno-orders-desk__detail .alumno-track-card {
-    min-height: 0;
-    height: auto;
+    min-height: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     cursor: default;
@@ -2934,14 +2961,15 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-orders-desk__detail .alumno-track-card__follow {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     gap: 2px;
+    min-height: 0;
   }
 
   .alumno-orders-desk__detail .alumno-track-card .alumno-btn--lime {
-    margin-top: 10px;
+    margin-top: auto;
   }
 
   .alumno-orders-desk__detail .alumno-track-card__toggle {
@@ -3038,8 +3066,8 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   .alumno-cart-empty .alumno-antojo {
     margin-inline: 0;
     margin-bottom: 8px;
-    height: 240px;
-    width: 296px;
+    height: 324px;
+    width: 400px;
     max-width: none;
     overflow: hidden;
   }

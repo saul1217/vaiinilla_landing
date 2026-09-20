@@ -38,7 +38,7 @@ export function WalletPage() {
           session = await openClientSession(user, place);
         }
         if (!session) {
-          setError('Entra a una cafetería para ver el saldo de ese lugar.');
+          setError('Entra a un establecimiento para ver el saldo de ese lugar.');
           return;
         }
         const next = await api.getMyWallet(session.access_token);
@@ -199,9 +199,9 @@ export function WalletQrPage() {
       <main id="main-content" className="alumno-main">
         <AlumnoPageHeader
           kicker="Recarga en caja"
-          title="Código de alumno"
+          title="Código de recarga"
           back={{ to: '/cuenta/saldo', label: 'Volver' }}
-          lead="Este enlace identifica a un alumno para recargar saldo en Caja. Si llegaste aquí por error, vuelve a tu cuenta."
+          lead="Este enlace identifica tu cuenta para recargar saldo en Caja. Si llegaste aquí por error, vuelve a tu cuenta."
         />
         <section className="alumno-card alumno-card--qr">
           {qr ? <img className="wallet-qr" src={qr} alt="Código QR de recarga" /> : null}
@@ -294,8 +294,7 @@ function ShortcutMenu() {
     <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" data-wallet-menu="book">
       <path
         fill="currentColor"
-        fillRule="evenodd"
-        d="M1.45 6.55c0-1.02.83-1.85 1.85-1.85h17.4c1.02 0 1.85.83 1.85 1.85v10.9c0 1.02-.83 1.85-1.85 1.85H3.3c-1.02 0-1.85-.83-1.85-1.85V6.55Zm10.7 1.85h6.95c.58 0 1.05.47 1.05 1.05v6.2c0 .58-.47 1.05-1.05 1.05h-6.95c-.58 0-1.05-.47-1.05-1.05v-6.2c0-.58.47-1.05 1.05-1.05Z"
+        d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z"
       />
     </svg>
   );

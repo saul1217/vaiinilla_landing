@@ -133,13 +133,13 @@ test.describe('alumno responsive', () => {
     expect(discovery.discoveryCols).toBe(2);
 
     await page.goto('/cuenta');
-    await expect(page.getByRole('heading', { name: /tu cafetería, a tu ritmo/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /tu lugar, a tu ritmo/i })).toBeVisible();
     const splash = await metrics(page);
     expect(splash.splashCols).toBeLessThanOrEqual(1);
     expect(splash.hasAlumnoNav).toBe(false);
 
     await page.goto('/demo-a/m/bad-token');
-    await expect(page.getByRole('link', { name: /elegir cafetería/i })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('link', { name: /elegir lugar/i })).toBeVisible({ timeout: 20_000 });
   });
 
   test('marketing no usa nav de alumno', async ({ page }) => {

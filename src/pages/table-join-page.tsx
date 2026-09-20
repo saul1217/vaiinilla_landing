@@ -46,7 +46,7 @@ export function TableJoinPage() {
           <>
             <p className="alumno-error">{error}</p>
             <Link className="alumno-btn alumno-btn--lime" to="/pedir">
-              Elegir cafetería
+              Elegir lugar
             </Link>
           </>
         ) : (

@@ -32,10 +32,10 @@ const SPLASH_BUBBLES = [
 
 const AUTH_COPY = {
   entrar: {
-    kicker: 'Alumno',
+    kicker: 'Cliente',
     headline: (
       <>
-        Tu cafetería.
+        Tu lugar.
         <br />
         <span className="alumno-auth__accent">A tu ritmo.</span>
       </>
@@ -53,7 +53,7 @@ const AUTH_COPY = {
         <span className="alumno-auth__accent">Sin filas.</span>
       </>
     ),
-    lead: 'Crea tu cuenta de alumno para pedir y pagar en tu cafetería.',
+    lead: 'Crea tu cuenta para pedir y pagar en cualquier establecimiento de comida.',
     panelKicker: 'Registro',
     panelTitle: 'Crear cuenta',
   },
@@ -132,7 +132,7 @@ export function AuthScreens({
         throw cause;
       }
       await api.registerIdentity(token, {
-        nombre: (displayName ?? nombre).trim() || nextUser.displayName || 'Alumno',
+        nombre: (displayName ?? nombre).trim() || nextUser.displayName || 'Cliente',
         terminos_version: legal.terminos_version,
         privacidad_version: legal.privacidad_version,
       });
@@ -323,7 +323,7 @@ export function AuthScreens({
         </div>
         <div className="alumno-splash__copy">
           <h1>
-            Tu cafetería, <em>a tu ritmo.</em>
+            Tu lugar, <em>a tu ritmo.</em>
           </h1>
           <p>Pide, sigue tu pedido y paga desde un solo lugar.</p>
         </div>
@@ -500,7 +500,7 @@ export function AuthScreens({
                   setMode(mode === 'entrar' ? 'alta' : 'entrar');
                 }}
               >
-                {mode === 'entrar' ? 'Crear cuenta de alumno' : 'Ya tengo cuenta'}
+                {mode === 'entrar' ? 'Crear cuenta' : 'Ya tengo cuenta'}
               </button>
             </p>
           )}

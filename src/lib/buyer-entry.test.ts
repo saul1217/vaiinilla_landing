@@ -4,7 +4,7 @@ import { rememberPlace } from './last-place';
 import { isGuestExplore } from './guest-explore';
 
 describe('buyerEntryPath', () => {
-  it('va al picker si no hay cafetería recordada', () => {
+  it('va al picker si no hay establecimiento recordado', () => {
     localStorage.clear();
     sessionStorage.clear();
     expect(buyerEntryPath()).toBe('/pedir');

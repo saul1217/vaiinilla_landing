@@ -26,7 +26,7 @@ describe('AppShell', () => {
         </AppShell>
       </MemoryRouter>,
     );
-    expect(screen.getByRole('navigation', { name: /navegación de alumno/i })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: /^navegación$/i })).toBeInTheDocument();
     const menu = screen.getByRole('link', { name: /menú/i });
     expect(menu).toHaveAttribute('href', '/e/demo-a');
     expect(menu.querySelector('svg path')?.getAttribute('d') ?? '').toMatch(/12 /);

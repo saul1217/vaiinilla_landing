@@ -124,7 +124,7 @@ describe('AccountPage', () => {
     expect(screen.getByRole('checkbox', { name: /términos/i })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /privacidad/i })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^volver$/i }));
-    expect(screen.getByRole('heading', { name: /tu cafetería, a tu ritmo/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /tu lugar, a tu ritmo/i })).toBeInTheDocument();
   });
 
   it('splash ofrece comprar sin cuenta junto a los logins', async () => {
@@ -133,7 +133,7 @@ describe('AccountPage', () => {
         <AccountPage />
       </MemoryRouter>,
     );
-    expect(await screen.findByRole('heading', { name: /tu cafetería, a tu ritmo/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /tu lugar, a tu ritmo/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /crear cuenta/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /continuar con google/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /iniciar sesión/i })).toBeInTheDocument();

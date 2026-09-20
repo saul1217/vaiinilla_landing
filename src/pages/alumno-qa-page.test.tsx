@@ -73,10 +73,10 @@ describe('AlumnoQaFilledCartPage', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Tu pedido' })).toBeInTheDocument();
-    expect(screen.getByText('fruti Lupis')).toBeInTheDocument();
+    expect(screen.getAllByText('fruti Lupis').length).toBeGreaterThan(0);
     expect(screen.getByText('$22 c/u')).toBeInTheDocument();
     expect(screen.getByText('$44')).toBeInTheDocument();
-    expect(screen.getByText('Quiere keke')).toBeInTheDocument();
+    expect(screen.getAllByText('Quiere keke').length).toBeGreaterThan(0);
     expect(screen.getByText('$73.70 c/u')).toBeInTheDocument();
     expect(screen.getByText('Total $117.70')).toBeInTheDocument();
     expect(document.querySelector('.alumno-cart-layout__pay .alumno-cart-layout__total')).toHaveTextContent(
@@ -88,6 +88,7 @@ describe('AlumnoQaFilledCartPage', () => {
     expect(lineThumbs.map((node) => node.getAttribute('src'))).toEqual([QA_PHOTO_POZOLE, QA_PHOTO_TACOS]);
     expect(document.querySelectorAll('.alumno-line__thumb--vaini')).toHaveLength(0);
     expect(screen.getByRole('button', { name: /^pagar$/i })).toBeEnabled();
+    expect(screen.getByRole('heading', { name: /del menú/i })).toBeInTheDocument();
   });
 });
 
@@ -257,5 +258,6 @@ describe('AlumnoQaOrderDetailPage', () => {
 
     expect(document.querySelector('img.alumno-track-card__thumb')).toHaveAttribute('src', QA_PHOTO_TACOS);
     expect(document.querySelectorAll('.alumno-track-card__thumb--vaini')).toHaveLength(0);
+    expect(screen.queryByText(/MXN/)).not.toBeInTheDocument();
   });
 });

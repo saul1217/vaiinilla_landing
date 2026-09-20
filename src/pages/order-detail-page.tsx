@@ -12,7 +12,7 @@ import { api } from '../lib/api';
 import { lastPlaceSlug } from '../lib/last-place';
 import { errorMessage } from '../lib/api-error';
 import { forgetIdempotencyKey, idempotencyKeyFor } from '../lib/idempotency';
-import { formatAmount, formatMoney } from '../lib/money';
+import { formatAmount } from '../lib/money';
 import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
 import { usePickupQrToken } from '../lib/use-pickup-qr';
 import {
@@ -76,7 +76,7 @@ export function OrderDetailPage() {
           session = await openClientSession(user, place);
         }
         if (!session) {
-          setError('Abre una sesión de cafetería para consultar este pedido.');
+          setError('Abre una sesión en un establecimiento para consultar este pedido.');
           return;
         }
         setAccessToken(session.access_token);
@@ -324,7 +324,7 @@ export function OrderTicketView({
             <span>
               {item.cantidad} × {item.nombre_producto}
             </span>
-            <strong>{formatMoney(item.subtotal)}</strong>
+            <strong>{formatAmount(item.subtotal)}</strong>
           </li>
         ))}
       </ul>

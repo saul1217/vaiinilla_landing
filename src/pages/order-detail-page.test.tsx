@@ -145,7 +145,7 @@ describe('OrderDetailPage', () => {
     expect(screen.getByText(/pagado con saldo/i)).toBeInTheDocument();
     expect(screen.getAllByText(/mesa 4/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/1 × burrito/i)).toBeInTheDocument();
-    expect(screen.getByText('$70.00 MXN')).toBeInTheDocument();
+    expect(screen.getAllByText('$70').length).toBeGreaterThan(0);
     expect(screen.getByText(/sin cebolla/i)).toBeInTheDocument();
   });
 

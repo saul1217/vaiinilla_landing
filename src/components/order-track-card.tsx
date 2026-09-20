@@ -9,6 +9,7 @@ import {
   orderCollapsedStatusHint,
   orderItemHeadline,
   orderMetaLine,
+  orderOperationalHint,
   orderProgressFilled,
   orderTrackSteps,
 } from '../lib/order-labels';
@@ -42,21 +43,33 @@ export function OrderTrackCard({
   const pickupTokenResolved = pickupToken ?? resolvePickupQrToken(order);
   const showPickup = shouldShowPickupSurface(order);
   const collapsedStatusHint = orderCollapsedStatusHint(order.estado);
+  const operationalHint = orderOperationalHint(order);
 
   useLayoutEffect(() => {
     if (!expanded) return;
     const card = cardRef.current;
     if (!card) return;
     const run = () => focusExpandedTrackCard(card);
+    run();
     let inner = 0;
     const outer = window.requestAnimationFrame(() => {
       inner = window.requestAnimationFrame(run);
     });
     const retry = window.setTimeout(run, 480);
+    const images = [...card.querySelectorAll('img')];
+    for (const img of images) {
+      img.addEventListener('load', run);
+    }
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(run) : null;
+    ro?.observe(card);
     return () => {
       window.cancelAnimationFrame(outer);
       window.cancelAnimationFrame(inner);
       window.clearTimeout(retry);
+      for (const img of images) {
+        img.removeEventListener('load', run);
+      }
+      ro?.disconnect();
     };
   }, [expanded]);
 
@@ -107,7 +120,7 @@ export function OrderTrackCard({
       {showPickup && expanded ? null : (
         <p className="alumno-track-card__status">
           <strong>{ORDER_STATUS_LABEL[order.estado]}</strong>
-          {collapsedStatusHint ? ` ${collapsedStatusHint}` : null}
+          {operationalHint ? ` ${operationalHint}` : collapsedStatusHint ? ` ${collapsedStatusHint}` : null}
         </p>
       )}
       {expanded ? (
@@ -128,6 +141,7 @@ export function OrderTrackCard({
               </li>
             ))}
           </ol>
+          {operationalHint ? <p className="alumno-muted">{operationalHint}</p> : null}
           {completeLink ? (
             <Link className="alumno-btn alumno-btn--lime" to={`/cuenta/pedidos/${order.id}`}>
               Ver pedido completo
@@ -169,11 +183,19 @@ function focusExpandedTrackCard(card: HTMLElement) {
   const cta = card.querySelector('.alumno-btn--lime');
   const timeline = card.querySelector('.alumno-timeline');
   const pickup = card.querySelector('.alumno-pickup');
-  const ticketItem = card
-    .closest('.alumno-detail-split')
-    ?.querySelector('.alumno-ticket-items li:last-child');
+  const ticket = card.closest('.alumno-detail-split')?.querySelector('.alumno-card--ticket');
+  const ticketItem = ticket?.querySelector('.alumno-ticket-items li:last-child') ?? null;
+  const ticketBottom =
+    ticket instanceof HTMLElement && ticket.getBoundingClientRect().height > 2
+      ? ticket.getBoundingClientRect().bottom
+      : 0;
+  const itemBottom =
+    ticketItem instanceof HTMLElement && ticketItem.getBoundingClientRect().height > 2
+      ? ticketItem.getBoundingClientRect().bottom
+      : 0;
+  const ticketTarget = itemBottom >= ticketBottom ? ticketItem : ticket;
   const target =
-    (ticketItem instanceof HTMLElement && ticketItem.getBoundingClientRect().height > 2 && ticketItem) ||
+    (ticketTarget instanceof HTMLElement && ticketTarget.getBoundingClientRect().height > 2 && ticketTarget) ||
     (toggle instanceof HTMLElement && toggle.getBoundingClientRect().height > 2 && toggle) ||
     (cta instanceof HTMLElement && cta.getBoundingClientRect().height > 2 && cta) ||
     (timeline instanceof HTMLElement ? timeline : null) ||
@@ -182,16 +204,33 @@ function focusExpandedTrackCard(card: HTMLElement) {
 
   const targetBox = target.getBoundingClientRect();
   if (targetBox.bottom <= floor) return;
-  const delta = targetBox.bottom - floor;
-  const movers = [document.scrollingElement, document.body, document.documentElement];
-  for (const node of movers) {
-    if (!node || typeof node.scrollBy !== 'function') continue;
-    const before = node.scrollTop;
-    node.scrollBy({ top: delta, left: 0, behavior: 'auto' });
-    if (node.scrollTop !== before) return;
-  }
+  scrollPageBy(targetBox.bottom - floor);
+}
+
+function scrollPageBy(delta: number) {
+  if (!delta) return;
+  const instant = { top: delta, left: 0, behavior: 'instant' as ScrollBehavior };
   if (typeof window.scrollBy === 'function') {
-    window.scrollBy({ top: delta, left: 0, behavior: 'auto' });
+    try {
+      window.scrollBy(instant);
+    } catch {
+      window.scrollBy({ top: delta, left: 0, behavior: 'auto' });
+    }
+  }
+  const movers = [document.scrollingElement, document.documentElement, document.body];
+  for (const node of movers) {
+    if (!node) continue;
+    const before = node.scrollTop;
+    if (typeof node.scrollBy === 'function') {
+      try {
+        node.scrollBy(instant);
+      } catch {
+        node.scrollBy({ top: delta, left: 0, behavior: 'auto' });
+      }
+    }
+    if (node.scrollTop !== before) return;
+    node.scrollTop = before + delta;
+    if (node.scrollTop !== before) return;
   }
 }
 

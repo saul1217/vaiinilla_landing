@@ -125,7 +125,8 @@ describe('WalletPage', () => {
     expect(document.querySelector('[data-wallet-menu="book"]')).toBeTruthy();
     expect(document.querySelectorAll('[data-wallet-menu="book"] path')).toHaveLength(1);
     expect(document.querySelectorAll('[data-wallet-menu="book"] rect')).toHaveLength(0);
-    expect(document.querySelector('[data-wallet-menu="book"] path')).toHaveAttribute('fill-rule', 'evenodd');
+    expect(document.querySelector('[data-wallet-menu="book"] path')).not.toHaveAttribute('fill-rule');
+    expect(document.querySelector('[data-wallet-menu="book"] path')?.getAttribute('d') ?? '').toContain('M21 5c-1.11');
     expect(document.querySelector('[data-wallet-menu="book"]')?.innerHTML).not.toContain('menu-book-gap');
     expect(document.querySelector('[data-wallet-menu-chev="arrow"]')).toBeTruthy();
     expect(screen.getByRole('link', { name: /^pagar$/i })).toBeInTheDocument();

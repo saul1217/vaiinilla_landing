@@ -201,6 +201,8 @@ export interface OrderDetail {
   items: OrderItem[];
   qr_token?: string | null;
   pago?: OrderPayment | null;
+  vence_operacion_en?: string | null;
+  motivo_pendiente_operativo?: 'caja_inactiva' | 'cocina_inactiva' | null;
 }
 
 export interface OrderPayment {

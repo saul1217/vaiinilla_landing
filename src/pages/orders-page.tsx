@@ -49,7 +49,7 @@ export function OrdersPage() {
           }
         }
         if (!session) {
-          setError('Entra a una cafetería para ver tus pedidos de ese lugar.');
+          setError('Entra a un establecimiento para ver tus pedidos de ese lugar.');
           setLoading(false);
           return;
         }

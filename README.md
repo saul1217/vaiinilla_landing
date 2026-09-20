@@ -1,6 +1,6 @@
 # Vaiinilla (vaiinilla.app)
 
-Sitio público de Vaiinilla: marketing, soporte y experiencia de **comprador** (alumno) en una sola app **Vite + React**.
+Sitio público de Vaiinilla: marketing, soporte y experiencia de **comprador** en una sola app **Vite + React**.
 
 El panel de establecimiento (admin, POS, cocina, plataforma) vive en [`vaiinilla-web`](https://github.com/saul1217/vaiinilla-web) / `app.vaiinilla.app`. No se mezcla aquí.
 
@@ -12,7 +12,7 @@ cp .env.example .env.local   # opcional; el menú público funciona sin Firebase
 npm run dev
 ```
 
-Sin `VITE_FIREBASE_*` puedes descubrir cafeterías y ver el menú. El alta, checkout, tracking y wallet necesitan Firebase + API.
+Sin `VITE_FIREBASE_*` puedes descubrir establecimientos y ver el menú. El alta, checkout, tracking y wallet necesitan Firebase + API.
 
 ## Validación
 

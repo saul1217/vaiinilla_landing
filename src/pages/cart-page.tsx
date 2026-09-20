@@ -8,7 +8,7 @@ import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
-import { cartTotal, isOperationallyReady, toCreateOrderInput } from '../lib/cart';
+import { canAcceptOrders, cartTotal, toCreateOrderInput } from '../lib/cart';
 import { peekCatalogProducts, productImageUrl } from '../lib/catalog-images';
 import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
 import { formatAmount, formatMoney, linePreview, moneyToCents } from '../lib/money';
@@ -21,7 +21,6 @@ import { isStripeCheckoutEnabled, STRIPE_UNAVAILABLE_COPY } from '../lib/stripe-
 import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '../lib/stripe-session';
 import { isGuestBuy } from '../lib/guest-explore';
 import { GUEST_CHECKOUT_UNAVAILABLE } from '../lib/guest-checkout';
-import { ESTABLISHMENT_CLOSED_MESSAGE } from '../types/api';
 import type { SpaceSession } from '../lib/space-session';
 import type {
   CartLine,
@@ -159,14 +158,13 @@ export function CartPage() {
     context && place && context.contexto.establecimiento_id === place.id,
   );
   const operationalVerificationPending = hasMatchingContext && !status && !operationalError;
-  const operationalReady = isOperationallyReady(status);
   const blocker =
     lines.length === 0
       ? null
       : status
-        ? operationalReady
+        ? canAcceptOrders(status)
           ? null
-          : ESTABLISHMENT_CLOSED_MESSAGE
+          : 'El establecimiento no está recibiendo pedidos en este momento.'
         : operationalError
           ? 'No pudimos verificar si el establecimiento está recibiendo pedidos.'
           : null;
@@ -207,8 +205,8 @@ export function CartPage() {
           : await openClientSession(user, place, storedId);
       const operational = await api.getOperationalStatus(session.access_token);
       setStatus(operational);
-      if (!isOperationallyReady(operational)) {
-        throw new Error(ESTABLISHMENT_CLOSED_MESSAGE);
+      if (!canAcceptOrders(operational)) {
+        throw new Error('El establecimiento no está recibiendo pedidos en este momento.');
       }
       const destination = forHere && space ? 'en_espacio' : 'para_llevar';
       const payload = toCreateOrderInput(
@@ -276,6 +274,8 @@ export function CartPage() {
             notes={notes}
             onNotesChange={setNotes}
             total={total}
+            slug={slug}
+            menuPeek={menuPeek}
             payLabel={
               canCheckout
                 ? operationalVerificationPending
@@ -377,6 +377,8 @@ export function CartFilledView({
   payLabel,
   payDisabled,
   onPay,
+  slug,
+  menuPeek = [],
 }: {
   lines: CartLine[];
   onUpdateQuantity: (productId: number, optionIds: number[], quantity: number) => void;
@@ -393,6 +395,8 @@ export function CartFilledView({
   payLabel: string;
   payDisabled: boolean;
   onPay: () => void;
+  slug?: string;
+  menuPeek?: CatalogProduct[];
 }) {
   return (
     <div className="alumno-cart-layout">
@@ -443,6 +447,7 @@ export function CartFilledView({
             </div>
           );
         })}
+        {slug ? <MenuPeek slug={slug} products={menuPeek} headingId="filled-menu-peek" /> : null}
       </div>
       <aside className="alumno-cart-layout__side">
         <button type="button" className="alumno-card" onClick={onToggleDestination}>

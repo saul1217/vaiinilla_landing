@@ -130,7 +130,7 @@ export function BottomNav({ tab }: { tab: Exclude<AlumnoTab, 'none'> }) {
   ];
 
   return (
-    <nav className="alumno-nav" aria-label="Navegación de alumno">
+    <nav className="alumno-nav" aria-label="Navegación">
       <div className="alumno-nav__brand">
         <AlumnoLockup />
       </div>

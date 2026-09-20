@@ -207,6 +207,8 @@ export function AlumnoQaFilledCartPage() {
           notes=""
           onNotesChange={() => undefined}
           total={total}
+          slug={QA_CATALOG_SLUG}
+          menuPeek={QA_CATALOG}
           payLabel="Pagar"
           payDisabled={false}
           onPay={() => undefined}

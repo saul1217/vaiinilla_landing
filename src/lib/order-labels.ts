@@ -22,6 +22,16 @@ export const ORDER_STATUS_HINT: Record<OrderStatus, string> = {
   expirado: 'Este pedido expiró.',
 };
 
+export function orderOperationalHint(order: Pick<OrderDetail, 'motivo_pendiente_operativo'>): string | null {
+  if (order.motivo_pendiente_operativo === 'caja_inactiva') {
+    return 'Pedido recibido. Caja lo procesará al recuperar la operación.';
+  }
+  if (order.motivo_pendiente_operativo === 'cocina_inactiva') {
+    return 'Pedido recibido. Cocina lo preparará al recuperar la operación.';
+  }
+  return null;
+}
+
 export const PAYMENT_CONFIRMED_HINT = 'Stripe confirmó el pago; Vaiinilla actualizará el pedido.';
 
 export const ORDER_FLOW: OrderStatus[] = ['por_cobrar', 'cobrado', 'preparando', 'listo', 'entregado'];
