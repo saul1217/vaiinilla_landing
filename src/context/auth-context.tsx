@@ -10,7 +10,7 @@ import {
 } from 'react';
 import type { User } from 'firebase/auth';
 import { firebaseConfigured, firebaseSignOut, observeAuth } from '../lib/firebase';
-import { hasBrowserSession } from '../lib/browser-session';
+import { hasBrowserSession, touchBrowserSession } from '../lib/browser-session';
 
 interface AuthContextValue {
   user: User | null;
@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         return;
       }
+      if (nextUser) touchBrowserSession();
       setUser(nextUser);
       setReady(true);
     });

@@ -1,19 +1,108 @@
 import { render, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
+import { firebaseIdToken } from '../lib/firebase';
 import { WalletBoardView, WalletPage } from './wallet-page';
+
+const authState: { user: { email: string; displayName: string } | null } = {
+  user: { email: 'ana@example.test', displayName: 'Ana Pérez' },
+};
+
+const buyerSessionState: {
+  context: { access_token: string; contexto: { establecimiento_id: string } } | null;
+} = {
+  context: {
+    access_token: 'jwt',
+    contexto: { establecimiento_id: 'e1' },
+  },
+};
+
+const cartState = {
+  cart: { slug: 'demo-a', establishmentName: 'Demo A', lines: [] } as {
+    slug: string;
+    establishmentName: string;
+    lines: unknown[];
+  } | null,
+};
+
+const { getEstablishment, getGuestCatalog, getMyWallet, listAccesses, openClientSession } = vi.hoisted(
+  () => ({
+    getEstablishment: vi.fn(),
+    getGuestCatalog: vi.fn(),
+    getMyWallet: vi.fn(),
+    listAccesses: vi.fn(),
+    openClientSession: vi.fn(),
+  }),
+);
 
 vi.mock('../lib/api', () => ({
   api: {
-    getEstablishment: vi.fn().mockResolvedValue({
+    getEstablishment: (...args: unknown[]) => getEstablishment(...args) as Promise<unknown>,
+    getGuestCatalog: (...args: unknown[]) => getGuestCatalog(...args) as Promise<unknown>,
+    getMyWallet: (...args: unknown[]) => getMyWallet(...args) as Promise<unknown>,
+    listAccesses: (...args: unknown[]) => listAccesses(...args) as Promise<unknown>,
+  },
+}));
+
+vi.mock('../lib/firebase', () => ({
+  firebaseIdToken: vi.fn().mockResolvedValue('firebase-token'),
+}));
+
+vi.mock('../context/auth-context', () => ({
+  useAuth: () => ({
+    user: authState.user,
+    ready: true,
+    configured: true,
+    signOut: vi.fn(),
+  }),
+}));
+
+vi.mock('../context/cart-context', () => ({
+  useCart: () => ({ cart: cartState.cart }),
+}));
+
+vi.mock('../context/buyer-session', () => ({
+  useBuyerSession: () => ({
+    context: buyerSessionState.context,
+    opening: false,
+    openClientSession,
+    clearSession: vi.fn(),
+  }),
+}));
+
+function renderWallet() {
+  return render(
+    <MemoryRouter initialEntries={['/cuenta/saldo']}>
+      <ThemeProvider>
+        <Routes>
+          <Route path="/cuenta/saldo" element={<WalletPage />} />
+          <Route path="/cuenta" element={<p>Cuenta splash</p>} />
+        </Routes>
+      </ThemeProvider>
+    </MemoryRouter>,
+  );
+}
+
+describe('WalletPage', () => {
+  beforeEach(() => {
+    vi.mocked(firebaseIdToken).mockResolvedValue('firebase-token');
+    sessionStorage.clear();
+    localStorage.clear();
+    authState.user = { email: 'ana@example.test', displayName: 'Ana Pérez' };
+    buyerSessionState.context = {
+      access_token: 'jwt',
+      contexto: { establecimiento_id: 'e1' },
+    };
+    cartState.cart = { slug: 'demo-a', establishmentName: 'Demo A', lines: [] };
+    getEstablishment.mockResolvedValue({
       id: 'e1',
       nombre: 'Demo A',
       slug: 'demo-a',
       identificador_cliente_etiqueta: 'Cliente',
       identificador_cliente_obligatorio: false,
-    }),
-    getGuestCatalog: vi.fn().mockResolvedValue({
+    });
+    getGuestCatalog.mockResolvedValue({
       categorias: [],
       productos: [
         {
@@ -32,8 +121,8 @@ vi.mock('../lib/api', () => ({
           grupos_opcion: [],
         },
       ],
-    }),
-    getMyWallet: vi.fn().mockResolvedValue({
+    });
+    getMyWallet.mockResolvedValue({
       cliente: { usuario_id: 'u1', nombre: 'Ana Pérez', identificador_cliente: 'A01234' },
       wallet: { id: 'w1', usuario_id: 'u1', establecimiento_id: 'e1', saldo: '125.00', actualizado_en: null },
       movimientos: [
@@ -47,44 +136,27 @@ vi.mock('../lib/api', () => ({
           creado_en: '2026-09-15T00:00:00Z',
         },
       ],
-    }),
-  },
-}));
-
-vi.mock('../context/auth-context', () => ({
-  useAuth: () => ({
-    user: { email: 'ana@example.test', displayName: 'Ana Pérez' },
-    ready: true,
-    configured: true,
-    signOut: vi.fn(),
-  }),
-}));
-
-vi.mock('../context/cart-context', () => ({
-  useCart: () => ({ cart: { slug: 'demo-a', establishmentName: 'Demo A', lines: [] } }),
-}));
-
-vi.mock('../context/buyer-session', () => ({
-  useBuyerSession: () => ({
-    context: {
+    });
+    listAccesses.mockResolvedValue([
+      {
+        membresia_id: 'm1',
+        establecimiento: { id: 'e1', nombre: 'Demo A', slug: 'demo-a' },
+        rol: 'cliente',
+        identificador_cliente: 'A1',
+        estado_establecimiento: 'activo',
+        cierre_operativo_disponible: false,
+      },
+    ]);
+    openClientSession.mockResolvedValue({
       access_token: 'jwt',
       contexto: { establecimiento_id: 'e1' },
-    },
-    opening: false,
-    openClientSession: vi.fn(),
-    clearSession: vi.fn(),
-  }),
-}));
+    });
+    getMyWallet.mockClear();
+    listAccesses.mockClear();
+  });
 
-describe('WalletPage', () => {
   it('muestra saldo grande y atajos de Android', async () => {
-    render(
-      <MemoryRouter>
-        <ThemeProvider>
-          <WalletPage />
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
+    renderWallet();
     expect(await screen.findByText('$125.00')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /cartera/i })).toBeInTheDocument();
     const shortcuts = document.querySelector('.alumno-actions-3');
@@ -106,6 +178,33 @@ describe('WalletPage', () => {
     expect(screen.getByText('Pedido #42')).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: /del menú/i })).toBeInTheDocument();
     expect(screen.getByText('fruti Lupis')).toBeInTheDocument();
+  });
+
+  it('sin last-place abre contexto por GET /sesiones/accesos', async () => {
+    cartState.cart = null;
+    buyerSessionState.context = null;
+    renderWallet();
+    expect(await screen.findByText('$125.00')).toBeInTheDocument();
+    expect(listAccesses).toHaveBeenCalledWith('firebase-token');
+    expect(openClientSession).toHaveBeenCalled();
+    expect(getMyWallet).toHaveBeenCalledWith('jwt');
+  });
+
+  it('invitado no consulta saldo y va al splash', async () => {
+    authState.user = null;
+    renderWallet();
+    expect(await screen.findByText(/cuenta splash/i)).toBeInTheDocument();
+    expect(getMyWallet).not.toHaveBeenCalled();
+    expect(listAccesses).not.toHaveBeenCalled();
+  });
+
+  it('error de saldo no fabrica un board de QA', async () => {
+    getMyWallet.mockRejectedValue(new Error('No pudimos cargar el saldo.'));
+    renderWallet();
+    expect(await screen.findByText('No pudimos cargar el saldo.')).toBeInTheDocument();
+    expect(screen.queryByText('$125.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(document.querySelector('.alumno-wallet-balance')).toBeNull();
   });
 
   it('vacío: clipboard, $0.00, atajos y sin movimientos inventados', () => {

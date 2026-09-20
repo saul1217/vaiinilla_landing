@@ -1,7 +1,7 @@
 import type { User } from 'firebase/auth';
 import { api } from './api';
 import { firebaseIdToken } from './firebase';
-import { lastPlaceSlug, rememberPlace } from './last-place';
+import { forgetPlace, lastPlaceSlug, rememberPlace } from './last-place';
 import type { ClientContextResponse, PublicEstablishment, SessionAccess } from '../types/api';
 
 const STORAGE_KEY = 'vaiinilla.buyer.client-context.v1';
@@ -66,6 +66,20 @@ export function clearStoredClientContext(): void {
   sessionStorage.removeItem(STORAGE_KEY);
 }
 
+export function isFreshClientContext(context: ClientContextResponse | null): boolean {
+  if (!context?.access_token) return false;
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return true;
+    const parsed = JSON.parse(raw) as StoredClientContext;
+    if (parsed?.context?.access_token !== context.access_token) return true;
+    if (typeof parsed.expiresAt === 'number' && Date.now() >= parsed.expiresAt) return false;
+    return true;
+  } catch {
+    return true;
+  }
+}
+
 export async function resolveClientSession(input: {
   user: User;
   context: ClientContextResponse | null;
@@ -78,17 +92,28 @@ export async function resolveClientSession(input: {
 }): Promise<ResolvedClientSession | null> {
   const preferredSlug = input.preferredSlug || lastPlaceSlug();
   if (preferredSlug) {
-    const place = await api.getEstablishment(preferredSlug);
-    if (input.context && input.context.contexto.establecimiento_id === place.id) {
-      rememberPlace(place.slug);
-      return { context: input.context, slug: place.slug, place };
+    let place: PublicEstablishment | null = null;
+    try {
+      place = await api.getEstablishment(preferredSlug);
+    } catch {
+      if (preferredSlug === lastPlaceSlug()) forgetPlace();
     }
-    const context = await input.openClientSession(input.user, place);
-    rememberPlace(place.slug);
-    return { context, slug: place.slug, place };
+    if (place) {
+      if (
+        isFreshClientContext(input.context) &&
+        input.context &&
+        input.context.contexto.establecimiento_id === place.id
+      ) {
+        rememberPlace(place.slug);
+        return { context: input.context, slug: place.slug, place };
+      }
+      const context = await input.openClientSession(input.user, place);
+      rememberPlace(place.slug);
+      return { context, slug: place.slug, place };
+    }
   }
 
-  if (input.context) {
+  if (isFreshClientContext(input.context) && input.context) {
     return { context: input.context, slug: lastPlaceSlug(), place: null };
   }
 

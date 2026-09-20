@@ -20,6 +20,7 @@ vi.mock('./firebase', () => ({
 
 import {
   clearStoredClientContext,
+  isFreshClientContext,
   pickClientAccess,
   readStoredClientContext,
   resolveClientSession,
@@ -167,5 +168,43 @@ describe('resolveClientSession', () => {
       }),
     ).resolves.toBeNull();
     expect(openClientSession).not.toHaveBeenCalled();
+  });
+
+  it('no reusa un JWT de contexto-cliente ya vencido', async () => {
+    writeStoredClientContext(session, 'renasci-bar');
+    const raw = sessionStorage.getItem('vaiinilla.buyer.client-context.v1');
+    const parsed = JSON.parse(raw ?? '{}') as { expiresAt: number };
+    parsed.expiresAt = Date.now() - 1;
+    sessionStorage.setItem('vaiinilla.buyer.client-context.v1', JSON.stringify(parsed));
+    expect(isFreshClientContext(session)).toBe(false);
+
+    const openClientSession = vi.fn().mockResolvedValue({ ...session, access_token: 'jwt-refreshed' });
+    const resolved = await resolveClientSession({
+      user: { uid: 'u1' } as never,
+      context: session,
+      preferredSlug: 'renasci-bar',
+      openClientSession,
+    });
+    expect(openClientSession).toHaveBeenCalledWith({ uid: 'u1' }, place);
+    expect(resolved?.context.access_token).toBe('jwt-refreshed');
+  });
+
+  it('si el last-place 404, cae a GET /sesiones/accesos', async () => {
+    localStorage.setItem('vaiinilla.buyer.last-place.v1', 'dead-place');
+    getEstablishment.mockImplementation((slug: unknown) => {
+      if (slug === 'dead-place') return Promise.reject(new Error('not found'));
+      return Promise.resolve(place);
+    });
+    const openClientSession = vi.fn().mockResolvedValue(session);
+    const resolved = await resolveClientSession({
+      user: { uid: 'u1' } as never,
+      context: null,
+      preferredSlug: null,
+      openClientSession,
+    });
+    expect(listAccesses).toHaveBeenCalledWith('firebase-token');
+    expect(openClientSession).toHaveBeenCalledWith({ uid: 'u1' }, place);
+    expect(resolved?.slug).toBe('renasci-bar');
+    expect(localStorage.getItem('vaiinilla.buyer.last-place.v1')).toBe('renasci-bar');
   });
 });

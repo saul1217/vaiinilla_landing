@@ -54,6 +54,8 @@ export function CartPage() {
   const [submitting, setSubmitting] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [previousOrders, setPreviousOrders] = useState<OrderDetail[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
   const menuPeek = useMemo(() => peekCatalogProducts(catalogProducts), [catalogProducts]);
   const space = readSpace(slug);
@@ -120,11 +122,16 @@ export function CartPage() {
   }, [context, place]);
 
   useEffect(() => {
+    if (!ready) return;
     if (!user) {
       setPreviousOrders([]);
+      setHistoryLoading(false);
+      setHistoryError(null);
       return;
     }
     let active = true;
+    setHistoryLoading(true);
+    setHistoryError(null);
     const run = async () => {
       try {
         const resolved = await resolveClientSession({
@@ -133,7 +140,10 @@ export function CartPage() {
           preferredSlug: slug || lastPlaceSlug(),
           openClientSession: openClientSessionRef.current,
         });
-        if (!resolved) return;
+        if (!resolved) {
+          if (active) setPreviousOrders([]);
+          return;
+        }
         const result = await api.listOrders(resolved.context.access_token);
         if (!active) return;
         const next = result.orders.filter((item) => item.estado === 'entregado').slice(0, 8);
@@ -146,15 +156,21 @@ export function CartPage() {
           }
           return next;
         });
-      } catch {
-        if (active) setPreviousOrders([]);
+        setHistoryError(null);
+      } catch (cause) {
+        if (active) {
+          setPreviousOrders([]);
+          setHistoryError(errorMessage(cause));
+        }
+      } finally {
+        if (active) setHistoryLoading(false);
       }
     };
     void run();
     return () => {
       active = false;
     };
-  }, [context, place, slug, user]);
+  }, [context, place, ready, slug, user]);
 
   const hasMatchingContext = Boolean(
     context && place && context.contexto.establecimiento_id === place.id,
@@ -258,6 +274,8 @@ export function CartPage() {
           <CartEmptyView
             slug={slug}
             previousOrders={previousOrders}
+            historyLoading={Boolean(user) && historyLoading}
+            historyError={historyError}
             menuPeek={menuPeek}
           />
         ) : (
@@ -500,14 +518,19 @@ export function CartEmptyView({
   slug,
   previousOrders,
   menuPeek,
+  historyLoading = false,
+  historyError = null,
 }: {
   slug: string;
   previousOrders: OrderDetail[];
   menuPeek: CatalogProduct[];
+  historyLoading?: boolean;
+  historyError?: string | null;
 }) {
   const showHistory = previousOrders.length > 0;
+  const showHistorySection = historyLoading || Boolean(historyError) || showHistory;
   const showPeek = menuPeek.length > 0 || !showHistory;
-  const showRail = showHistory || showPeek;
+  const showRail = showHistorySection || showPeek;
 
   return (
     <div className="alumno-cart-empty">
@@ -532,25 +555,36 @@ export function CartEmptyView({
       </div>
       {showRail ? (
         <div className="alumno-cart-empty__rail">
-          {showHistory ? (
-            <section className="alumno-history" aria-labelledby="prev-orders">
-              <h2 className="alumno-section-label" id="prev-orders">
-                Pedidos anteriores
-              </h2>
-              <div className="alumno-history-list">
-                {previousOrders.map((order) => (
-                  <Link className="alumno-history-row" key={order.id} to={`/cuenta/pedidos/${order.id}`}>
-                    <span>
-                      <strong>{orderHistoryHeadline(order)}</strong>
-                      <p>#{order.folio} · Entregado</p>
-                    </span>
-                    <span className="alumno-history-row__price">{formatAmount(order.total)}</span>
-                    <span className="alumno-history-row__chev" aria-hidden="true">
-                      {'>'}
-                    </span>
-                  </Link>
-                ))}
-              </div>
+          {showHistorySection ? (
+            <section
+              className="alumno-history"
+              {...(showHistory
+                ? { 'aria-labelledby': 'prev-orders' }
+                : { 'aria-label': 'Pedidos anteriores' })}
+            >
+              {showHistory ? (
+                <h2 className="alumno-section-label" id="prev-orders">
+                  Pedidos anteriores
+                </h2>
+              ) : null}
+              {historyLoading ? <p role="status">Cargando pedidos anteriores…</p> : null}
+              {historyError ? <p className="alumno-error">{historyError}</p> : null}
+              {showHistory ? (
+                <div className="alumno-history-list">
+                  {previousOrders.map((order) => (
+                    <Link className="alumno-history-row" key={order.id} to={`/cuenta/pedidos/${order.id}`}>
+                      <span>
+                        <strong>{orderHistoryHeadline(order)}</strong>
+                        <p>#{order.folio} · Entregado</p>
+                      </span>
+                      <span className="alumno-history-row__price">{formatAmount(order.total)}</span>
+                      <span className="alumno-history-row__chev" aria-hidden="true">
+                        {'>'}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
             </section>
           ) : null}
           {showPeek ? <MenuPeek slug={slug} products={menuPeek} /> : null}

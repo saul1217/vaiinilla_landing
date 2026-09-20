@@ -383,6 +383,47 @@ describe('CartPage', () => {
     expect(await screen.findByRole('button', { name: /^pagar$/i })).toBeEnabled();
   });
 
+  it('logueado sin entregados no fabrica historial ni cards de QA', async () => {
+    buyerSessionState.context = {
+      access_token: 'jwt',
+      contexto: { establecimiento_id: '1' },
+    };
+    listOrders.mockResolvedValue({ orders: [] });
+    renderCart();
+    expect(await screen.findByRole('heading', { name: /qué se te antoja/i })).toBeInTheDocument();
+    await waitFor(() => expect(listOrders).toHaveBeenCalledWith('jwt'));
+    expect(screen.queryByRole('heading', { name: /pedidos anteriores/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/#76/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/fruti lupis/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/cargando pedidos anteriores/i)).not.toBeInTheDocument();
+  });
+
+  it('distingue carga y error del historial sin cards falsas', async () => {
+    buyerSessionState.context = {
+      access_token: 'jwt',
+      contexto: { establecimiento_id: '1' },
+    };
+    let resolveOrders: (value: { orders: unknown[] }) => void;
+    const pending = new Promise<{ orders: unknown[] }>((resolve) => {
+      resolveOrders = resolve;
+    });
+    listOrders.mockImplementation(() => pending);
+    const { unmount } = renderCart();
+    expect(await screen.findByRole('status')).toHaveTextContent(/cargando pedidos anteriores/i);
+    expect(screen.queryByRole('heading', { name: /pedidos anteriores/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/#76/)).not.toBeInTheDocument();
+    resolveOrders!({ orders: [] });
+    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
+    unmount();
+
+    listOrders.mockRejectedValue(new Error('No pudimos cargar tus pedidos anteriores.'));
+    renderCart();
+    expect(await screen.findByText('No pudimos cargar tus pedidos anteriores.')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /pedidos anteriores/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/#76/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/fruti lupis/i)).not.toBeInTheDocument();
+  });
+
   it('en el vacío de invitado no fabrica pedidos anteriores', async () => {
     authState.user = null;
     listOrders.mockResolvedValue({

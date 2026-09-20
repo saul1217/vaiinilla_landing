@@ -5,6 +5,11 @@ export function rememberPlace(slug: string): void {
   sessionStorage.setItem(KEY, slug);
 }
 
+export function forgetPlace(): void {
+  localStorage.removeItem(KEY);
+  sessionStorage.removeItem(KEY);
+}
+
 export function lastPlaceSlug(): string | null {
   return localStorage.getItem(KEY) ?? sessionStorage.getItem(KEY);
 }
