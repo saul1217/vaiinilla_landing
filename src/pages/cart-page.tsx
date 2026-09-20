@@ -539,7 +539,15 @@ export function CartEmptyView({
           <span className="alumno-antojo__deco alumno-antojo__deco--note">
             <NoteIcon />
           </span>
-          <img className="alumno-antojo__hug" src="/vaini/cutout-hug-question.png" alt="" />
+          <img
+            className="alumno-antojo__hug"
+            src="/vaini/cutout-hug-question.png"
+            alt=""
+            width={998}
+            height={998}
+            decoding="async"
+            fetchPriority="high"
+          />
           <span className="alumno-antojo__deco alumno-antojo__deco--cup">
             <CupIcon />
           </span>

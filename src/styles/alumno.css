@@ -834,10 +834,10 @@ html[data-theme='amoled'] .alumno-antojo img {
   display: block;
   position: absolute;
   inset: auto;
-  top: -10%;
-  left: -10%;
-  width: 120%;
-  height: 164%;
+  top: -8%;
+  left: -8%;
+  width: 116%;
+  height: 160%;
   margin: 0;
   object-fit: contain;
   object-position: center 8%;
