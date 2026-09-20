@@ -1069,6 +1069,23 @@ html[data-theme='amoled'] .alumno-antojo__deco {
   background: var(--bg-2);
 }
 
+.alumno-sheet__vaini {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 112px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--lime) 22%, var(--bg-2));
+}
+
+.alumno-sheet__vaini img {
+  width: 128px;
+  height: 128px;
+  object-fit: contain;
+  object-position: center 18%;
+}
+
 .alumno-sheet fieldset {
   border: 0;
   padding: 0;
@@ -2708,6 +2725,49 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   html[data-theme='amoled'] .alumno-cart-layout__checkout .alumno-field textarea {
     background: #000;
   }
+
+  .alumno-sheet:not(.alumno-sheet--pay) {
+    background: rgba(23, 24, 23, 0.46);
+    display: grid;
+    place-items: center;
+    padding: 28px;
+    overflow: auto;
+  }
+
+  .alumno-sheet:not(.alumno-sheet--pay) .alumno-sheet__dialog {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 0;
+    width: min(520px, 100%);
+    max-width: 520px;
+    max-height: min(86vh, 740px);
+    background: var(--bg);
+    border-radius: 24px;
+    overflow: hidden;
+  }
+
+  .alumno-sheet--has-photo:not(.alumno-sheet--pay) .alumno-sheet__dialog {
+    grid-template-columns: minmax(220px, 1fr) minmax(260px, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    width: min(920px, 100%);
+    max-width: 920px;
+  }
+
+  .alumno-sheet--has-photo .alumno-sheet__photo {
+    height: 100%;
+    min-height: 280px;
+    object-fit: cover;
+  }
+
+  .alumno-sheet__vaini {
+    height: 96px;
+  }
+
+  .alumno-sheet__body {
+    min-height: 0;
+    overflow: auto;
+  }
 }
 
 @media (min-width: 768px) and (max-width: 1023.98px) {
@@ -2916,32 +2976,25 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-sheet:not(.alumno-sheet--pay) {
-    background: rgba(23, 24, 23, 0.46);
-    display: grid;
-    place-items: center;
     padding: 32px;
-    overflow: auto;
   }
 
-  .alumno-sheet:not(.alumno-sheet--pay) .alumno-sheet__dialog {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    min-height: 0;
+  .alumno-sheet--has-photo:not(.alumno-sheet--pay) .alumno-sheet__dialog {
+    grid-template-columns: minmax(280px, 1fr) minmax(300px, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    width: min(960px, 100%);
     max-width: 960px;
-    max-height: min(86vh, 740px);
-    background: var(--bg);
-    border-radius: 24px;
-    overflow: hidden;
   }
 
-  .alumno-sheet__photo {
-    height: 100%;
+  .alumno-sheet--has-photo .alumno-sheet__photo {
     min-height: 420px;
-    object-fit: cover;
   }
 
-  .alumno-sheet__body {
-    overflow: auto;
+  .alumno-sheet:not(.alumno-sheet--has-photo):not(.alumno-sheet--pay) .alumno-sheet__dialog {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    width: min(520px, 100%);
+    max-width: 520px;
   }
 
   .alumno-sheet--pay {

@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
+import { api } from '../lib/api';
+import { QA_PHOTO_TACOS } from '../lib/qa-catalog-photos';
 import { MenuPage } from './menu-page';
 
 const addLine = vi.fn();
@@ -85,6 +87,41 @@ describe('MenuPage', () => {
       '/cuenta?next=/e/demo-a',
     );
     expect(screen.getByRole('button', { name: /comprar sin cuenta/i })).toBeInTheDocument();
+    expect(document.querySelector('.alumno-sheet')).not.toHaveClass('alumno-sheet--has-photo');
+    expect(document.querySelector('.alumno-sheet__photo')).toBeNull();
+    expect(document.querySelector('.alumno-sheet__vaini img')).toHaveAttribute(
+      'src',
+      '/vaini/cutout-frente.png',
+    );
+  });
+
+  it('con foto de catálogo abre el rail, no el hueco de Vaini', async () => {
+    vi.mocked(api.getGuestCatalog).mockResolvedValueOnce({
+      categorias: [{ id: 1, nombre: 'Platos', orden: 1 }],
+      productos: [
+        {
+          id: 22,
+          categoria_id: 1,
+          estacion_preparacion: 'cocina',
+          nombre: 'Tacos de Cochinita Pibil',
+          descripcion: null,
+          ingredientes: null,
+          alergenos: null,
+          tiempo_estimado_min: 8,
+          precio_mostrador: '99.00',
+          precio_digital: '99.00',
+          disponible: true,
+          imagen_url: QA_PHOTO_TACOS,
+          grupos_opcion: [],
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    renderMenu();
+    await user.click(await screen.findByRole('button', { name: /tacos de cochinita/i }));
+    expect(document.querySelector('.alumno-sheet')).toHaveClass('alumno-sheet--has-photo');
+    expect(document.querySelector('.alumno-sheet__photo')).toHaveAttribute('src', QA_PHOTO_TACOS);
+    expect(document.querySelector('.alumno-sheet__vaini')).toBeNull();
   });
 
   it('comprar sin cuenta mete el producto al carrito', async () => {

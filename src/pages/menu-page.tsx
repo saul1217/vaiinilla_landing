@@ -195,12 +195,17 @@ export function MenuPage() {
         </div>
       </main>
       {selected ? (
-        <section className="alumno-sheet" aria-labelledby="product-detail">
+        <section
+          className={selectedThumb ? 'alumno-sheet alumno-sheet--has-photo' : 'alumno-sheet'}
+          aria-labelledby="product-detail"
+        >
           <div className="alumno-sheet__dialog">
             {selectedThumb ? (
               <img className="alumno-sheet__photo" src={selectedThumb} alt="" />
             ) : (
-              <img className="alumno-sheet__photo" src="/vaini/cutout-frente.png" alt="" />
+              <span className="alumno-sheet__vaini" aria-hidden="true">
+                <img src="/vaini/cutout-frente.png" alt="" />
+              </span>
             )}
             <div className="alumno-sheet__body">
             <button className="alumno-link" type="button" onClick={() => setSelected(null)}>
