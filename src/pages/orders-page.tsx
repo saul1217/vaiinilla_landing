@@ -7,6 +7,7 @@ import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
+import { resolveClientSession } from '../lib/client-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { errorMessage } from '../lib/api-error';
 import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
@@ -32,29 +33,35 @@ export function OrdersPage() {
   const thumbImages = catalogImageMap(catalogProducts);
 
   useEffect(() => {
-    if (!user) return;
+    if (!ready) return;
+    if (!user) {
+      setOrders([]);
+      setLoading(false);
+      return;
+    }
     let active = true;
-    const slug = cart?.slug ?? lastPlaceSlug();
     const run = async (silent = false) => {
       try {
-        let session = context;
-        if (slug) {
-          const nextPlace = await api.getEstablishment(slug);
-          if (!active) return;
-          setPlace(nextPlace);
-          void api.getGuestCatalog(slug).then((catalog) => {
-            if (active) setCatalogProducts(catalog.productos);
-          }).catch(() => undefined);
-          if (!session || session.contexto.establecimiento_id !== nextPlace.id) {
-            session = await openClientSession(user, nextPlace);
+        const resolved = await resolveClientSession({
+          user,
+          context,
+          preferredSlug: cart?.slug ?? lastPlaceSlug(),
+          openClientSession,
+        });
+        if (!resolved) {
+          if (active && !silent) {
+            setError('Entra a un establecimiento para ver tus pedidos de ese lugar.');
+            setLoading(false);
           }
-        }
-        if (!session) {
-          setError('Entra a un establecimiento para ver tus pedidos de ese lugar.');
-          setLoading(false);
           return;
         }
-        const result = await api.listOrders(session.access_token);
+        if (resolved.place && active) setPlace(resolved.place);
+        if (resolved.slug) {
+          void api.getGuestCatalog(resolved.slug).then((catalog) => {
+            if (active) setCatalogProducts(catalog.productos);
+          }).catch(() => undefined);
+        }
+        const result = await api.listOrders(resolved.context.access_token);
         if (!active) return;
         result.orders.forEach((item) => persistPickupQrFromOrder(item));
         setOrders(result.orders);
@@ -73,7 +80,7 @@ export function OrdersPage() {
       active = false;
       window.clearInterval(timer);
     };
-  }, [cart?.slug, context, openClientSession, user]);
+  }, [cart?.slug, context, openClientSession, ready, user]);
 
   useEffect(() => {
     if (!deskPane) {

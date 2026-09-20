@@ -9,6 +9,7 @@ import { useTheme } from '../context/theme-context';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import { firebaseIdToken } from '../lib/firebase';
+import { resolveClientSession } from '../lib/client-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { THEME_OPTIONS } from '../lib/theme';
 import { walletQrUrl } from '../lib/env';
@@ -58,14 +59,14 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
     let active = true;
     const run = async () => {
       try {
-        let session = context;
-        const slug = cart?.slug ?? lastPlaceSlug();
-        if (!session && slug) {
-          const place = await api.getEstablishment(slug);
-          session = await openClientSession(user, place);
-        }
-        if (!session) return;
-        const next = await api.getMyWallet(session.access_token);
+        const resolved = await resolveClientSession({
+          user,
+          context,
+          preferredSlug: cart?.slug ?? lastPlaceSlug(),
+          openClientSession,
+        });
+        if (!resolved) return;
+        const next = await api.getMyWallet(resolved.context.access_token);
         if (!active) return;
         setWallet(next);
         const userId = next.wallet.usuario_id || next.cliente.usuario_id;

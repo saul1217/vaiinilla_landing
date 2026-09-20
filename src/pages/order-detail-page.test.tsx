@@ -19,7 +19,13 @@ const { getOrder, getOrderQr, retryStripePayment } = vi.hoisted(() => ({
 
 vi.mock('../lib/api', () => ({
   api: {
-    getEstablishment: vi.fn(),
+    getEstablishment: vi.fn().mockResolvedValue({
+      id: 'e1',
+      nombre: 'Demo A',
+      slug: 'demo-a',
+      identificador_cliente_etiqueta: 'Cliente',
+      identificador_cliente_obligatorio: false,
+    }),
     getGuestCatalog: vi.fn().mockResolvedValue({ categorias: [], productos: [] }),
     getOrder: (...args: unknown[]) => getOrder(...args) as Promise<unknown>,
     getOrderQr: (...args: unknown[]) => getOrderQr(...args) as Promise<unknown>,

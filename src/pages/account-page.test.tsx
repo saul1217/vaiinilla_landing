@@ -19,7 +19,13 @@ vi.mock('../lib/api', () => ({
     }),
     listAccesses: vi.fn().mockResolvedValue([]),
     registerIdentity: vi.fn(),
-    getEstablishment: vi.fn(),
+    getEstablishment: vi.fn().mockResolvedValue({
+      id: 'e1',
+      nombre: 'Demo A',
+      slug: 'demo-a',
+      identificador_cliente_etiqueta: 'Cliente',
+      identificador_cliente_obligatorio: false,
+    }),
     getMyWallet: vi.fn().mockResolvedValue({
       cliente: { usuario_id: 'u1', nombre: 'Ana Pérez', identificador_cliente: 'A01234' },
       wallet: { id: 'w1', usuario_id: 'u1', establecimiento_id: 'e1', saldo: '10.00', actualizado_en: null },

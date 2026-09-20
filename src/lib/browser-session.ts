@@ -1,8 +1,10 @@
 const SESSION_COOKIE = 'vaiinilla_buyer_browser_session';
 
+const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
+
 function cookieAttributes(): string {
   const secure = window.location.protocol === 'https:' ? '; Secure' : '';
-  return `Path=/; SameSite=Lax${secure}`;
+  return `Path=/; SameSite=Lax; Max-Age=${SESSION_MAX_AGE}${secure}`;
 }
 
 function readCookie(name: string): string | null {

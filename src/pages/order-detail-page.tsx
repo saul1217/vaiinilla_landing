@@ -9,6 +9,7 @@ import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
+import { resolveClientSession } from '../lib/client-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { errorMessage } from '../lib/api-error';
 import { forgetIdempotencyKey, idempotencyKeyFor } from '../lib/idempotency';
@@ -69,18 +70,18 @@ export function OrderDetailPage() {
     let active = true;
     const run = async (silent = false) => {
       try {
-        let session = context;
-        const slug = cart?.slug ?? lastPlaceSlug();
-        if (!session && slug) {
-          const place = await api.getEstablishment(slug);
-          session = await openClientSession(user, place);
-        }
-        if (!session) {
+        const resolved = await resolveClientSession({
+          user,
+          context,
+          preferredSlug: cart?.slug ?? lastPlaceSlug(),
+          openClientSession,
+        });
+        if (!resolved) {
           setError('Abre una sesión en un establecimiento para consultar este pedido.');
           return;
         }
-        setAccessToken(session.access_token);
-        const next = await api.getOrder(session.access_token, id);
+        setAccessToken(resolved.context.access_token);
+        const next = await api.getOrder(resolved.context.access_token, id);
         if (!active) return;
         setOrder(next);
         setError(null);

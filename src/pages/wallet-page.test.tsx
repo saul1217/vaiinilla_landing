@@ -6,7 +6,13 @@ import { WalletBoardView, WalletPage } from './wallet-page';
 
 vi.mock('../lib/api', () => ({
   api: {
-    getEstablishment: vi.fn(),
+    getEstablishment: vi.fn().mockResolvedValue({
+      id: 'e1',
+      nombre: 'Demo A',
+      slug: 'demo-a',
+      identificador_cliente_etiqueta: 'Cliente',
+      identificador_cliente_obligatorio: false,
+    }),
     getGuestCatalog: vi.fn().mockResolvedValue({
       categorias: [],
       productos: [

@@ -162,6 +162,29 @@ describe('CartPage', () => {
     expect(screen.getByText('Chocolate frío')).toBeInTheDocument();
   });
 
+  it('con sesión Firebase pide historial real aunque el JWT no esté en memoria', async () => {
+    buyerSessionState.context = null;
+    listOrders.mockResolvedValue({
+      orders: [
+        {
+          id: 'ord-80',
+          folio: 80,
+          estado: 'entregado',
+          metodo_pago: 'efectivo',
+          destino: 'para_llevar',
+          total: '16.50',
+          items: [{ id: 1, nombre_producto: 'Chicharrones', cantidad: 1, subtotal: '16.50' }],
+        },
+      ],
+    });
+    renderCart();
+    expect(await screen.findByRole('heading', { name: /pedidos anteriores/i })).toBeInTheDocument();
+    expect(openClientSession).toHaveBeenCalled();
+    expect(listOrders).toHaveBeenCalledWith('jwt');
+    expect(screen.getByText('#80 · Entregado')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /pedidos anteriores/i })).toBeInTheDocument();
+  });
+
   it('lista pedidos anteriores compactos en el carrito vacío', async () => {
     buyerSessionState.context = {
       access_token: 'jwt',

@@ -3,6 +3,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -12,7 +13,14 @@ import type { User } from 'firebase/auth';
 import { api } from '../lib/api';
 import { firebaseIdToken } from '../lib/firebase';
 import { VaiinillaApiError } from '../lib/api-error';
+import {
+  clearStoredClientContext,
+  readStoredClientContext,
+  writeStoredClientContext,
+} from '../lib/client-session';
+import { rememberPlace } from '../lib/last-place';
 import type { ClientContextResponse, PublicEstablishment } from '../types/api';
+import { useAuth } from './auth-context';
 
 interface BuyerSessionValue {
   context: ClientContextResponse | null;
@@ -28,14 +36,23 @@ interface BuyerSessionValue {
 const BuyerSessionContext = createContext<BuyerSessionValue | null>(null);
 
 export function BuyerSessionProvider({ children }: { children: ReactNode }) {
-  const [context, setContext] = useState<ClientContextResponse | null>(null);
+  const { user, ready } = useAuth();
+  const [context, setContext] = useState<ClientContextResponse | null>(
+    () => readStoredClientContext()?.context ?? null,
+  );
   const [opening, setOpening] = useState(false);
-  const tokenRef = useRef<string | null>(null);
+  const tokenRef = useRef<string | null>(context?.access_token ?? null);
 
   const clearSession = useCallback(() => {
     tokenRef.current = null;
+    clearStoredClientContext();
     setContext(null);
   }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    if (!user) clearSession();
+  }, [clearSession, ready, user]);
 
   const openClientSession = useCallback(
     async (user: User, establishment: PublicEstablishment, identificadorCliente?: string) => {
@@ -63,6 +80,8 @@ export function BuyerSessionProvider({ children }: { children: ReactNode }) {
         }
         const next = await api.createClientContext(firebaseToken, establishment.slug, clientId);
         tokenRef.current = next.access_token;
+        writeStoredClientContext(next, establishment.slug);
+        rememberPlace(establishment.slug);
         setContext(next);
         return next;
       } finally {

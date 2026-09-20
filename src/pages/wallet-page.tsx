@@ -8,6 +8,7 @@ import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
+import { resolveClientSession } from '../lib/client-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { errorMessage } from '../lib/api-error';
 import { walletQrUrl } from '../lib/env';
@@ -23,26 +24,37 @@ export function WalletPage() {
   const [menuPeek, setMenuPeek] = useState<CatalogProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const placeSlug = cart?.slug ?? lastPlaceSlug();
+  const [placeSlug, setPlaceSlug] = useState<string | null>(() => cart?.slug ?? lastPlaceSlug());
   const userId = wallet?.wallet.usuario_id || wallet?.cliente.usuario_id;
   const reloadHref = userId ? `/u/${userId}` : '/cuenta';
 
   useEffect(() => {
-    if (!user) return;
+    if (!ready) return;
+    if (!user) {
+      setWallet(null);
+      setLoading(false);
+      return;
+    }
     let active = true;
+    setLoading(true);
     const run = async () => {
       try {
-        let session = context;
-        if (!session && placeSlug) {
-          const place = await api.getEstablishment(placeSlug);
-          session = await openClientSession(user, place);
-        }
-        if (!session) {
-          setError('Entra a un establecimiento para ver el saldo de ese lugar.');
+        const resolved = await resolveClientSession({
+          user,
+          context,
+          preferredSlug: cart?.slug ?? lastPlaceSlug(),
+          openClientSession,
+        });
+        if (!resolved) {
+          if (active) {
+            setError('Entra a un establecimiento para ver el saldo de ese lugar.');
+            setLoading(false);
+          }
           return;
         }
-        const next = await api.getMyWallet(session.access_token);
+        const next = await api.getMyWallet(resolved.context.access_token);
         if (active) {
+          setPlaceSlug(resolved.slug);
           setWallet(next);
           setError(null);
         }
@@ -56,7 +68,7 @@ export function WalletPage() {
     return () => {
       active = false;
     };
-  }, [context, openClientSession, placeSlug, user]);
+  }, [cart?.slug, context, openClientSession, ready, user]);
 
   useEffect(() => {
     if (!placeSlug) {

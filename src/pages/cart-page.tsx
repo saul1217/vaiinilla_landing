@@ -12,6 +12,7 @@ import { canAcceptOrders, cartTotal, toCreateOrderInput } from '../lib/cart';
 import { leftoverPeekProducts, peekCatalogProducts, productImageUrl } from '../lib/catalog-images';
 import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
 import { formatAmount, formatMoney, linePreview, moneyToCents } from '../lib/money';
+import { resolveClientSession } from '../lib/client-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { orderHistoryHeadline } from '../lib/order-labels';
 import { rememberPickupQrToken } from '../lib/pickup-qr';
@@ -126,17 +127,14 @@ export function CartPage() {
     let active = true;
     const run = async () => {
       try {
-        let session = context;
-        const placeSlug = slug || lastPlaceSlug();
-        let establishment = place;
-        if (!establishment && placeSlug) {
-          establishment = await api.getEstablishment(placeSlug);
-        }
-        if (establishment && (!session || session.contexto.establecimiento_id !== establishment.id)) {
-          session = await openClientSessionRef.current(user, establishment);
-        }
-        if (!session) return;
-        const result = await api.listOrders(session.access_token);
+        const resolved = await resolveClientSession({
+          user,
+          context,
+          preferredSlug: slug || lastPlaceSlug(),
+          openClientSession: openClientSessionRef.current,
+        });
+        if (!resolved) return;
+        const result = await api.listOrders(resolved.context.access_token);
         if (!active) return;
         const next = result.orders.filter((item) => item.estado === 'entregado').slice(0, 8);
         setPreviousOrders((current) => {
