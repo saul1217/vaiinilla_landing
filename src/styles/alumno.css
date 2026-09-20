@@ -2944,7 +2944,8 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-orders-desk__detail {
-    display: block;
+    display: flex;
+    flex-direction: column;
     position: sticky;
     top: 28px;
     min-height: 0;
@@ -2952,8 +2953,9 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-orders-desk__detail .alumno-track-card {
-    min-height: 100%;
-    height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
     display: flex;
     flex-direction: column;
     cursor: default;
