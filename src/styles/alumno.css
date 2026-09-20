@@ -197,6 +197,11 @@ html[data-theme='amoled'] .alumno-avatar {
   font: inherit;
 }
 
+.alumno-deskhead {
+  display: flex;
+  flex-direction: column;
+}
+
 .alumno-search-wrap {
   position: relative;
   margin: 8px 0 14px;
@@ -2229,11 +2234,74 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     height: 140px;
   }
 
-  .alumno-radio-list {
-    margin-bottom: 24px;
+  .alumno-deskhead {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(240px, 0.85fr);
+    column-gap: 24px;
+    align-items: end;
+    position: relative;
+    margin-bottom: 16px;
   }
 
-  .alumno-sticky-cafe,
+  .alumno-deskhead .alumno-pagehead {
+    min-width: 0;
+    margin-bottom: 0;
+  }
+
+  .alumno-deskhead .alumno-pagehead h1 {
+    margin-bottom: 0;
+  }
+
+  .alumno-deskhead .alumno-pagehead .alumno-lead {
+    margin-bottom: 0;
+  }
+
+  .alumno-deskhead .alumno-search-wrap {
+    width: 100%;
+    margin: 0 0 2px;
+  }
+
+  .alumno-deskhead:has(.alumno-top__actions) .alumno-search-wrap {
+    padding-top: 52px;
+  }
+
+  .alumno-deskhead .alumno-pagehead__brand {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+
+  .alumno-main--discover .alumno-discovery {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+    min-height: 0;
+  }
+
+  .alumno-main--discover .alumno-discovery:has(.alumno-sticky-cafe) {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
+  }
+
+  .alumno-radio-list {
+    margin-bottom: 0;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+
+  .alumno-picker {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .alumno-sticky-cafe {
+    position: sticky;
+    top: 88px;
+    bottom: auto;
+    align-self: start;
+  }
+
   .alumno-sticky-pay {
     bottom: 16px;
   }
@@ -2748,7 +2816,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 
   .alumno-product > img,
@@ -2756,11 +2824,20 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     height: 160px;
   }
 
+  .alumno-deskhead {
+    grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+    column-gap: 28px;
+  }
+
   .alumno-discovery {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-columns: minmax(0, 1fr);
     gap: 28px;
     align-items: start;
+  }
+
+  .alumno-main--discover .alumno-discovery:has(.alumno-sticky-cafe) {
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
   }
 
   .alumno-sticky-cafe {
@@ -3368,6 +3445,39 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   html[data-theme='amoled'] .alumno-cart-layout__checkout .alumno-field input,
   html[data-theme='amoled'] .alumno-cart-layout__checkout .alumno-field textarea {
     background: #000;
+  }
+}
+
+@media (min-width: 1280px) {
+  .alumno-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .alumno-deskhead {
+    grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+    column-gap: 32px;
+  }
+
+  .alumno-main--discover .alumno-discovery:has(.alumno-sticky-cafe) {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  }
+
+  .alumno-radio-list {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+}
+
+@media (min-width: 1440px) {
+  .alumno-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .alumno-radio-list {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+
+  .alumno-main--discover .alumno-discovery:has(.alumno-sticky-cafe) {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
   }
 }
 

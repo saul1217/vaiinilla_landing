@@ -124,9 +124,9 @@ export function DiscoveryPage() {
   if (step === 'picker' && selected) {
     return (
       <AppShell tab="menu">
-        <main id="main-content" className="alumno-main">
+        <main id="main-content" className="alumno-main alumno-main--picker">
           <AlumnoPageHeader
-            kicker="Sede"
+            kicker="Lugar"
             title={selected.nombre}
             back={{ onClick: () => setStep('list'), label: 'Volver' }}
             lead={
@@ -181,30 +181,32 @@ export function DiscoveryPage() {
 
   return (
     <AppShell tab="menu">
-      <main id="main-content" className="alumno-main">
-        <AlumnoPageHeader
-          kicker="Hoy"
-          title="¿Dónde comes hoy?"
-          lead="Elige tu establecimiento. El menú se puede ver sin iniciar sesión."
-        />
+      <main id="main-content" className="alumno-main alumno-main--discover">
+        <div className="alumno-deskhead">
+          <AlumnoPageHeader
+            kicker="Hoy"
+            title="¿Dónde comes hoy?"
+            lead="Elige tu establecimiento. El menú se puede ver sin iniciar sesión."
+          />
+          <div className="alumno-search-wrap">
+            <SearchIcon />
+            <label className="sr-only" htmlFor="search-places">
+              Buscar establecimiento
+            </label>
+            <input
+              id="search-places"
+              className="alumno-search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Busca por nombre"
+              autoComplete="off"
+            />
+          </div>
+        </div>
+        {error ? <p className="alumno-error">{error}</p> : null}
+        {loading ? <p role="status">Cargando establecimientos…</p> : null}
         <div className="alumno-discovery">
           <div className="alumno-discovery__list">
-            <div className="alumno-search-wrap">
-              <SearchIcon />
-              <label className="sr-only" htmlFor="search-places">
-                Buscar establecimiento
-              </label>
-              <input
-                id="search-places"
-                className="alumno-search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Busca por nombre"
-                autoComplete="off"
-              />
-            </div>
-            {error ? <p className="alumno-error">{error}</p> : null}
-            {loading ? <p role="status">Cargando establecimientos…</p> : null}
             {!loading && items.length === 0 && !error ? (
               <div className="alumno-empty">
                 <img src="/vaini/cutout-frente.png" alt="" />
