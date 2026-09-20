@@ -11,6 +11,7 @@ import { api } from '../lib/api';
 import { lastPlaceSlug } from '../lib/last-place';
 import { errorMessage } from '../lib/api-error';
 import { walletQrUrl } from '../lib/env';
+import { peekCatalogProducts } from '../lib/catalog-images';
 import { formatAmount } from '../lib/money';
 import type { CatalogProduct, WalletData } from '../types/api';
 
@@ -67,7 +68,7 @@ export function WalletPage() {
       .getGuestCatalog(placeSlug)
       .then((catalog) => {
         const products = Array.isArray(catalog?.productos) ? catalog.productos : [];
-        if (active) setMenuPeek(products.filter((item) => item.disponible).slice(0, 4));
+        if (active) setMenuPeek(peekCatalogProducts(products));
       })
       .catch(() => {
         if (active) setMenuPeek([]);
@@ -150,12 +151,12 @@ export function WalletBoardView({
             <span className="alumno-wallet-menu__icon" aria-hidden="true">
               <ShortcutMenu />
             </span>
-            <span>
+            <span className="alumno-wallet-menu__copy">
               <strong>Abrir menú</strong>
               <p>Usa tu saldo en tu siguiente pedido</p>
             </span>
             <span className="alumno-wallet-menu__chev" aria-hidden="true">
-              →
+              <MenuChevron />
             </span>
           </Link>
         </div>
@@ -214,55 +215,102 @@ export function WalletQrPage() {
   );
 }
 
+const shortcutStroke = {
+  fill: 'none' as const,
+  stroke: 'currentColor',
+  strokeWidth: 1.7,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+};
+
 function ShortcutWallet() {
   return (
-    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-      <rect x="5.2" y="6.15" width="13.6" height="13.7" rx="2.2" fill="currentColor" />
-      <rect x="8.15" y="3.05" width="7.7" height="4.9" rx="1.25" fill="currentColor" />
-      <rect x="8.05" y="10.15" width="7.9" height="1.9" rx="0.65" fill="var(--lime)" />
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" data-wallet-orb="clipboard">
+      <rect x="6.2" y="5.15" width="11.6" height="15.1" rx="2.1" {...shortcutStroke} />
+      <rect x="9.15" y="2.85" width="5.7" height="3.35" rx="0.95" {...shortcutStroke} />
+      <path {...shortcutStroke} d="M8.55 10.15h6.9M8.55 13.05h6.9" />
     </svg>
   );
 }
 
 function ShortcutPay() {
+  const mark = {
+    fill: 'none' as const,
+    stroke: 'currentColor',
+    strokeWidth: 2.05,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  };
   return (
-    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M7 18a1.75 1.75 0 1 0 0 3.5A1.75 1.75 0 0 0 7 18Zm10 0a1.75 1.75 0 1 0 0 3.5A1.75 1.75 0 0 0 17 18ZM3.15 4H5.4l.35 2H20a1 1 0 0 1 .98 1.22l-1.5 6.8A2 2 0 0 1 17.52 16H8.28a2 2 0 0 1-1.96-1.58L4.38 6H3.15V4Zm3.5 4 .92 5h9.9l1.1-5H6.65Z"
-      />
+    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" data-wallet-pay="cart">
+      <path {...mark} d="M3.45 5.05h2.5l2.25 8.45h9.15l1.75-6.35H8.05" />
+      <path {...mark} d="M8.05 13.5h9.15" />
+      <circle cx="9.55" cy="18.2" r="1.5" {...mark} />
+      <circle cx="16.95" cy="18.2" r="1.5" {...mark} />
     </svg>
   );
 }
 
 function ShortcutOrders() {
+  const mark = {
+    fill: 'none' as const,
+    stroke: 'currentColor',
+    strokeWidth: 2.05,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  };
   return (
-    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M6.5 3h11A1.5 1.5 0 0 1 19 4.5V21H5V4.5A1.5 1.5 0 0 1 6.5 3ZM7 5v14h10V5H7Zm2 3h6v1.6H9V8Zm0 3.2h6v1.6H9v-1.6Z"
-      />
+    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" data-wallet-orders="list">
+      <rect x="6.35" y="4.15" width="11.3" height="15.7" rx="2.05" {...mark} />
+      <path {...mark} d="M8.75 8.55h6.5M8.75 11.85h6.5M8.75 15.15h6.5" />
     </svg>
   );
 }
 
 function ShortcutReload() {
+  const finder = {
+    fill: 'none' as const,
+    stroke: 'currentColor',
+    strokeWidth: 2.15,
+  };
   return (
-    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M4 4h6v6H4V4Zm2 2v2h2V6H6Zm8-2h6v6h-6V4Zm2 2v2h2V6h-2ZM4 14h6v6H4v-6Zm2 2v2h2v-2H6Zm10-2h2v2h-2v-2Zm4 0h2v2h-2v-2Zm-4 4h2v2h-2v-2Zm4 0h2v6h-2v-2h-2v-2h2v-2Zm-4 4h2v2h-2v-2Z"
-      />
+    <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" data-wallet-reload="qr">
+      <rect x="3.55" y="3.55" width="6.7" height="6.7" rx="1.2" {...finder} />
+      <rect x="5.55" y="5.55" width="2.7" height="2.7" rx="0.35" fill="currentColor" />
+      <rect x="13.75" y="3.55" width="6.7" height="6.7" rx="1.2" {...finder} />
+      <rect x="15.75" y="5.55" width="2.7" height="2.7" rx="0.35" fill="currentColor" />
+      <rect x="3.55" y="13.75" width="6.7" height="6.7" rx="1.2" {...finder} />
+      <rect x="5.55" y="15.75" width="2.7" height="2.7" rx="0.35" fill="currentColor" />
+      <rect x="13.45" y="13.45" width="2.6" height="2.6" rx="0.35" fill="currentColor" />
+      <rect x="16.85" y="13.45" width="2.6" height="2.6" rx="0.35" fill="currentColor" />
+      <rect x="13.45" y="16.85" width="2.6" height="2.6" rx="0.35" fill="currentColor" />
+      <rect x="16.85" y="16.85" width="2.6" height="2.6" rx="0.35" fill="currentColor" />
     </svg>
   );
 }
 
 function ShortcutMenu() {
   return (
-    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" data-wallet-menu="book">
       <path
         fill="currentColor"
-        d="M12 5.1c1.5-.9 3.4-1.4 5.6-1.4.7 0 1.4.06 2 .18V18.2c-.6-.14-1.3-.22-2-.22-1.9 0-3.5.4-4.8 1.2V5.1Zm0 0C10.5 4.2 8.6 3.7 6.4 3.7c-.7 0-1.4.06-2 .18V18.2c.6-.14 1.3-.22 2-.22 1.9 0 3.5.4 4.8 1.2V5.1ZM6.4 5.3c1.8 0 3.3.4 4.4 1.1v9.7c-1.2-.6-2.7-.9-4.4-.9-.5 0-1 .04-1.4.1V5.48c.45-.12.95-.18 1.4-.18Zm11.2 0c.45 0 .95.06 1.4.18V15.3c-.4-.06-.9-.1-1.4-.1-1.7 0-3.2.3-4.4.9V6.4c1.1-.7 2.6-1.1 4.4-1.1Z"
+        fillRule="evenodd"
+        d="M1.45 6.55c0-1.02.83-1.85 1.85-1.85h17.4c1.02 0 1.85.83 1.85 1.85v10.9c0 1.02-.83 1.85-1.85 1.85H3.3c-1.02 0-1.85-.83-1.85-1.85V6.55Zm10.7 1.85h6.95c.58 0 1.05.47 1.05 1.05v6.2c0 .58-.47 1.05-1.05 1.05h-6.95c-.58 0-1.05-.47-1.05-1.05v-6.2c0-.58.47-1.05 1.05-1.05Z"
+      />
+    </svg>
+  );
+}
+
+function MenuChevron() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-wallet-menu-chev="arrow">
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M5.2 12h13.1M13.6 6.4 19.2 12l-5.6 5.6"
       />
     </svg>
   );

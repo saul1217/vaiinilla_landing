@@ -67,23 +67,24 @@ function IconOrders({ filled }: { filled: boolean }) {
 function IconWallet({ filled }: { filled: boolean }) {
   const holeId = `nav-wallet-${useId().replace(/:/g, '')}`;
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
+    <svg viewBox="0 0 24 24" aria-hidden="true" data-nav-wallet="clipboard">
       {filled ? (
         <>
           <mask id={holeId} maskUnits="userSpaceOnUse">
             <rect width="24" height="24" fill="white" />
-            <rect x="8" y="10.25" width="8" height="2.15" rx="0.7" fill="black" />
+            <rect x="8.35" y="10.15" width="7.3" height="1.55" rx="0.55" fill="black" />
+            <rect x="8.35" y="13.15" width="7.3" height="1.55" rx="0.55" fill="black" />
           </mask>
           <g mask={`url(#${holeId})`}>
-            <rect x="5.15" y="6.15" width="13.7" height="13.55" rx="2.2" fill="currentColor" />
-            <rect x="8.1" y="3.1" width="7.8" height="4.85" rx="1.25" fill="currentColor" />
+            <rect x="5.85" y="5.35" width="12.3" height="14.85" rx="2.15" fill="currentColor" />
+            <rect x="8.85" y="2.95" width="6.3" height="3.55" rx="1.05" fill="currentColor" />
           </g>
         </>
       ) : (
         <>
-          <rect x="5.25" y="6.35" width="13.5" height="13.2" rx="2.15" {...stroke} />
-          <rect x="8.15" y="3.2" width="7.7" height="4.6" rx="1.2" {...stroke} />
-          <rect x="8.05" y="10.4" width="7.9" height="2.1" rx="0.65" {...stroke} />
+          <rect x="5.95" y="5.55" width="12.1" height="14.45" rx="2.1" {...stroke} />
+          <rect x="8.95" y="3.05" width="6.1" height="3.4" rx="1" {...stroke} />
+          <path {...stroke} d="M8.55 10.35h6.9M8.55 13.35h6.9" />
         </>
       )}
     </svg>

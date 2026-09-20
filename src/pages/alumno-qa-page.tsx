@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { OrderTrackCard } from '../components/order-track-card';
-import type { CatalogProduct, OrderDetail } from '../types/api';
-import { CartEmptyView } from './cart-page';
+import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
+import { cartPreview, linePreview } from '../lib/money';
+import { QA_CATALOG_SLUG, QA_PHOTO_POZOLE, QA_PHOTO_TACOS } from '../lib/qa-catalog-photos';
+import type { CartLine, CatalogProduct, OrderDetail } from '../types/api';
+import { CartEmptyView, CartFilledView } from './cart-page';
 import { OrderTicketView } from './order-detail-page';
 import { useDeskPane } from './orders-page';
 import { WalletBoardView } from './wallet-page';
@@ -48,9 +51,8 @@ const CASH = qaOrder({});
 const CARD = qaOrder({
   id: 'qa-94',
   folio: 94,
-  estado: 'listo',
+  estado: 'cobrado',
   metodo_pago: 'stripe',
-  qr_token: 'QA94LISTO',
   pago: {
     payment_attempt_id: 'qa-attempt',
     payment_intent_id: 'pi_qa',
@@ -58,11 +60,12 @@ const CARD = qaOrder({
     payment_status: 'confirmado',
   },
 });
-const CARD_AGAIN = qaOrder({
+const CARD_LISTO = qaOrder({
   id: 'qa-93',
   folio: 93,
-  estado: 'cobrado',
+  estado: 'listo',
   metodo_pago: 'stripe',
+  qr_token: 'QA94LISTO',
   pago: {
     payment_attempt_id: 'qa-attempt-2',
     payment_intent_id: 'pi_qa_2',
@@ -99,6 +102,7 @@ function qaProduct(
   nombre: string,
   precio: string,
   estacion: CatalogProduct['estacion_preparacion'],
+  imagenUrl: string | null,
 ): CatalogProduct {
   return {
     id,
@@ -112,13 +116,19 @@ function qaProduct(
     precio_mostrador: precio,
     precio_digital: precio,
     disponible: true,
-    imagen_url: null,
+    imagen_url: imagenUrl,
     grupos_opcion: [],
   };
 }
 
-const PEEK_LUPIS = qaProduct(2, 'fruti Lupis', '22.00', 'caja');
-const PEEK_KEKE = qaProduct(1, 'Quiere keke', '73.70', 'cocina');
+const PEEK_LUPIS = qaProduct(2, 'fruti Lupis', '22.00', 'caja', QA_PHOTO_POZOLE);
+const PEEK_KEKE = qaProduct(1, 'Quiere keke', '73.70', 'cocina', QA_PHOTO_TACOS);
+const QA_CATALOG = [PEEK_LUPIS, PEEK_KEKE];
+const QA_IMAGES = catalogImageMap(QA_CATALOG);
+
+function qaOrderThumb(order: OrderDetail) {
+  return orderThumbUrl(order, QA_IMAGES, QA_CATALOG);
+}
 
 export function AlumnoQaCartPage() {
   if (!import.meta.env.DEV) return <Navigate to="/" replace />;
@@ -127,9 +137,79 @@ export function AlumnoQaCartPage() {
       <main id="main-content" className="alumno-main">
         <AlumnoPageHeader kicker="Revisa y confirma" title="Tu pedido" />
         <CartEmptyView
-          slug="demo-a"
+          slug={QA_CATALOG_SLUG}
           previousOrders={[PAST_LUPIS, PAST_KEKE]}
           menuPeek={[PEEK_LUPIS, PEEK_KEKE]}
+        />
+      </main>
+    </AppShell>
+  );
+}
+
+const FILL_LUPIS: CartLine = {
+  productId: 2,
+  quantity: 2,
+  optionIds: [],
+  productName: 'fruti Lupis',
+  unitPreview: '22.00',
+  imageUrl: QA_PHOTO_POZOLE,
+};
+
+const FILL_KEKE: CartLine = {
+  productId: 1,
+  quantity: 1,
+  optionIds: [],
+  productName: 'Quiere keke',
+  unitPreview: '73.70',
+  imageUrl: QA_PHOTO_TACOS,
+};
+
+export function AlumnoQaFilledCartPage() {
+  const [lines, setLines] = useState<CartLine[]>([FILL_LUPIS, FILL_KEKE]);
+  const total = useMemo(() => {
+    const totals = lines
+      .map((line) => linePreview(line.unitPreview, line.quantity))
+      .filter((value): value is string => Boolean(value));
+    return cartPreview(totals);
+  }, [lines]);
+  if (!import.meta.env.DEV) return <Navigate to="/" replace />;
+  return (
+    <AppShell tab="cart">
+      <main id="main-content" className="alumno-main">
+        <AlumnoPageHeader kicker="Revisa y confirma" title="Tu pedido" />
+        <CartFilledView
+          lines={lines}
+          onUpdateQuantity={(productId, optionIds, quantity) => {
+            setLines((current) =>
+              current
+                .map((line) =>
+                  line.productId === productId && line.optionIds.join(',') === optionIds.join(',')
+                    ? { ...line, quantity }
+                    : line,
+                )
+                .filter((line) => line.quantity > 0),
+            );
+          }}
+          onRemoveLine={(productId, optionIds) => {
+            setLines((current) =>
+              current.filter(
+                (line) =>
+                  !(line.productId === productId && line.optionIds.join(',') === optionIds.join(',')),
+              ),
+            );
+          }}
+          forHere={false}
+          space={null}
+          onToggleDestination={() => undefined}
+          place={null}
+          clientId=""
+          onClientIdChange={() => undefined}
+          notes=""
+          onNotesChange={() => undefined}
+          total={total}
+          payLabel="Pagar"
+          payDisabled={false}
+          onPay={() => undefined}
         />
       </main>
     </AppShell>
@@ -144,7 +224,7 @@ export function AlumnoQaWalletPage() {
         <AlumnoPageHeader title="Cartera" />
         <WalletBoardView
           saldo="0.00"
-          placeSlug="demo-a"
+          placeSlug={QA_CATALOG_SLUG}
           reloadHref="/u/preview"
           movimientos={[]}
           menuPeek={[PEEK_LUPIS, PEEK_KEKE]}
@@ -158,7 +238,7 @@ export function AlumnoQaOrdersPage() {
   const deskPane = useDeskPane();
   const [expandedId, setExpandedId] = useState<string | null>(CARD.id);
   if (!import.meta.env.DEV) return <Navigate to="/" replace />;
-  const live = [CASH, CARD, CARD_AGAIN];
+  const live = [CASH, CARD, CARD_LISTO];
   const selected = live.find((order) => order.id === expandedId) ?? CARD;
   return (
     <AppShell tab="orders">
@@ -179,7 +259,6 @@ export function AlumnoQaOrdersPage() {
                       key={order.id}
                       order={order}
                       expanded={open}
-                      compact={!deskPane && expandedId !== null && expandedId !== order.id}
                       selected={deskPane && expandedId === order.id}
                       onToggle={() => {
                         if (deskPane) {
@@ -188,6 +267,7 @@ export function AlumnoQaOrdersPage() {
                         }
                         setExpandedId((current) => (current === order.id ? null : order.id));
                       }}
+                      imageUrl={qaOrderThumb(order)}
                       pickupToken={open ? order.qr_token ?? null : null}
                     />
                   );
@@ -195,15 +275,18 @@ export function AlumnoQaOrdersPage() {
               </div>
             </section>
           </div>
-          <aside className="alumno-orders-desk__detail">
-            <OrderTrackCard
-              order={selected}
-              expanded
-              toggle={false}
-              onToggle={() => undefined}
-              pickupToken={selected.qr_token ?? null}
-            />
-          </aside>
+          {deskPane ? (
+            <aside className="alumno-orders-desk__detail">
+              <OrderTrackCard
+                order={selected}
+                expanded
+                toggle={false}
+                onToggle={() => undefined}
+                imageUrl={qaOrderThumb(selected)}
+                pickupToken={selected.qr_token ?? null}
+              />
+            </aside>
+          ) : null}
         </div>
       </main>
     </AppShell>
@@ -217,19 +300,20 @@ export function AlumnoQaOrderDetailPage() {
       <main id="main-content" className="alumno-main">
         <AlumnoPageHeader
           kicker="Pedido"
-          title={`#${CARD.folio}`}
+          title={`#${CARD_LISTO.folio}`}
           back={{ to: '/cuenta/pedidos', label: 'Volver' }}
         />
         <div className="alumno-detail-split">
           <OrderTrackCard
-            order={CARD}
+            order={CARD_LISTO}
             expanded
             completeLink={false}
             toggle={false}
             onToggle={() => undefined}
-            pickupToken={CARD.qr_token ?? null}
+            imageUrl={qaOrderThumb(CARD_LISTO)}
+            pickupToken={CARD_LISTO.qr_token ?? null}
           />
-          <OrderTicketView order={CARD} />
+          <OrderTicketView order={CARD_LISTO} />
         </div>
       </main>
     </AppShell>

@@ -9,7 +9,7 @@ import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { cartTotal, isOperationallyReady, toCreateOrderInput } from '../lib/cart';
-import { productImageUrl } from '../lib/catalog-images';
+import { peekCatalogProducts, productImageUrl } from '../lib/catalog-images';
 import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
 import { formatAmount, formatMoney, linePreview, moneyToCents } from '../lib/money';
 import { lastPlaceSlug } from '../lib/last-place';
@@ -22,7 +22,9 @@ import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '..
 import { isGuestBuy } from '../lib/guest-explore';
 import { GUEST_CHECKOUT_UNAVAILABLE } from '../lib/guest-checkout';
 import { ESTABLISHMENT_CLOSED_MESSAGE } from '../types/api';
+import type { SpaceSession } from '../lib/space-session';
 import type {
+  CartLine,
   CatalogProduct,
   OperationalStatus,
   OrderDetail,
@@ -52,7 +54,8 @@ export function CartPage() {
   const [submitting, setSubmitting] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [previousOrders, setPreviousOrders] = useState<OrderDetail[]>([]);
-  const [menuPeek, setMenuPeek] = useState<CatalogProduct[]>([]);
+  const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
+  const menuPeek = useMemo(() => peekCatalogProducts(catalogProducts), [catalogProducts]);
   const space = readSpace(slug);
   const [forHere, setForHere] = useState(Boolean(space));
   const stripeEnabled = isStripeCheckoutEnabled();
@@ -71,8 +74,8 @@ export function CartPage() {
     ])
       .then(([next, catalog]) => {
         const products = Array.isArray(catalog?.productos) ? catalog.productos : [];
-        setMenuPeek(products.filter((item) => item.disponible).slice(0, 4));
         if (!active) return;
+        setCatalogProducts(products);
         setPlace(next);
       })
       .catch((cause: unknown) => {
@@ -252,113 +255,44 @@ export function CartPage() {
           </p>
         ) : null}
         {lines.length === 0 ? (
-          <CartEmptyView slug={slug} previousOrders={previousOrders} menuPeek={menuPeek} />
+          <CartEmptyView
+            slug={slug}
+            previousOrders={previousOrders}
+            menuPeek={menuPeek}
+          />
         ) : (
-          <>
-            <div className="alumno-cart-layout">
-              <div className="alumno-cart-layout__lines">
-            {lines.map((line) => {
-              const thumb = productImageUrl(line.imageUrl);
-              const lineTotal = linePreview(line.unitPreview, line.quantity);
-              return (
-              <div className="alumno-line" key={`${line.productId}-${line.optionIds.join(',')}`}>
-                {thumb ? (
-                  <img className="alumno-line__thumb" src={thumb} alt="" />
-                ) : (
-                  <div className="alumno-line__thumb alumno-line__thumb--vaini" aria-hidden="true">
-                    <img src="/vaini/cutout-frente.png" alt="" />
-                  </div>
-                )}
-                <div className="alumno-line__copy">
-                  <strong>{line.productName}</strong>
-                  <p>{formatAmount(line.unitPreview)} c/u</p>
-                  <div className="alumno-qty">
-                    <button
-                      type="button"
-                      aria-label={`Quitar una ${line.productName}`}
-                      onClick={() => updateQuantity(line.productId, line.optionIds, line.quantity - 1)}
-                    >
-                      −
-                    </button>
-                    <span>{line.quantity}</span>
-                    <button
-                      type="button"
-                      aria-label={`Agregar una ${line.productName}`}
-                      onClick={() => updateQuantity(line.productId, line.optionIds, line.quantity + 1)}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-                <div className="alumno-line__side">
-                  <span className="alumno-line__price">{lineTotal ? formatAmount(lineTotal) : '—'}</span>
-                  <button className="alumno-line__remove" type="button" onClick={() => removeLine(line.productId, line.optionIds)}>
-                    Quitar
-                  </button>
-                </div>
-              </div>
-              );
-            })}
-              </div>
-              <aside className="alumno-cart-layout__side">
-            <button
-              type="button"
-              className="alumno-card"
-              onClick={() => {
-                if (space) setForHere((value) => !value);
-              }}
-            >
-              <h2>{forHere && space ? space.nombre : 'Para llevar'}</h2>
-              <p className="alumno-muted">
-                {forHere && space
-                  ? 'El pedido se entrega en tu mesa. Toca para cambiar a para llevar.'
-                  : space
-                    ? `Toca para pedir en ${space.nombre}.`
-                    : 'Recoges en mostrador cuando esté listo.'}
-              </p>
-            </button>
-            {place?.identificador_cliente_obligatorio ? (
-              <label className="alumno-field">
-                {place.identificador_cliente_etiqueta}
-                <input
-                  value={clientId}
-                  onChange={(event) => setClientId(event.target.value)}
-                  required
-                  autoComplete="off"
-                />
-              </label>
-            ) : null}
-            <label className="alumno-field">
-              Nota para cocina
-              <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} />
-            </label>
-            <p>
-              <strong>Total {total ? formatAmount(total) : '—'}</strong>
-            </p>
-              <div className="alumno-sticky-pay">
-                <button
-                  className="alumno-btn alumno-btn--lime"
-                  type="button"
-                  disabled={
-                    !ready ||
-                    operationalVerificationPending ||
-                    Boolean(blocker) ||
-                    Boolean(pendingStripeOrderId)
-                  }
-                  onClick={() =>
-                    canCheckout ? setSheetOpen(true) : void navigate(`/cuenta?next=/e/${slug}/carrito`)
-                  }
-                >
-                  {canCheckout
-                    ? operationalVerificationPending
-                      ? 'Verificando…'
-                      : 'Pagar'
-                    : 'Entra para pagar'}
-                </button>
-              </div>
-              </aside>
-            </div>
-          </>
+          <CartFilledView
+            lines={lines}
+            onUpdateQuantity={updateQuantity}
+            onRemoveLine={removeLine}
+            forHere={forHere}
+            space={space}
+            onToggleDestination={() => {
+              if (space) setForHere((value) => !value);
+            }}
+            place={place}
+            clientId={clientId}
+            onClientIdChange={setClientId}
+            notes={notes}
+            onNotesChange={setNotes}
+            total={total}
+            payLabel={
+              canCheckout
+                ? operationalVerificationPending
+                  ? 'Verificando…'
+                  : 'Pagar'
+                : 'Entra para pagar'
+            }
+            payDisabled={
+              !ready ||
+              operationalVerificationPending ||
+              Boolean(blocker) ||
+              Boolean(pendingStripeOrderId)
+            }
+            onPay={() =>
+              canCheckout ? setSheetOpen(true) : void navigate(`/cuenta?next=/e/${slug}/carrito`)
+            }
+          />
         )}
       </main>
       {sheetOpen ? (
@@ -427,6 +361,130 @@ export function CartPage() {
   );
 }
 
+export function CartFilledView({
+  lines,
+  onUpdateQuantity,
+  onRemoveLine,
+  forHere,
+  space,
+  onToggleDestination,
+  place,
+  clientId,
+  onClientIdChange,
+  notes,
+  onNotesChange,
+  total,
+  payLabel,
+  payDisabled,
+  onPay,
+}: {
+  lines: CartLine[];
+  onUpdateQuantity: (productId: number, optionIds: number[], quantity: number) => void;
+  onRemoveLine: (productId: number, optionIds: number[]) => void;
+  forHere: boolean;
+  space: SpaceSession | null;
+  onToggleDestination: () => void;
+  place: PublicEstablishment | null;
+  clientId: string;
+  onClientIdChange: (value: string) => void;
+  notes: string;
+  onNotesChange: (value: string) => void;
+  total: string | null;
+  payLabel: string;
+  payDisabled: boolean;
+  onPay: () => void;
+}) {
+  return (
+    <div className="alumno-cart-layout">
+      <div className="alumno-cart-layout__lines">
+        {lines.map((line) => {
+          const thumb = productImageUrl(line.imageUrl);
+          const lineTotal = linePreview(line.unitPreview, line.quantity);
+          return (
+            <div className="alumno-line" key={`${line.productId}-${line.optionIds.join(',')}`}>
+              {thumb ? (
+                <img className="alumno-line__thumb" src={thumb} alt="" />
+              ) : (
+                <div className="alumno-line__thumb alumno-line__thumb--vaini" aria-hidden="true">
+                  <img src="/vaini/cutout-frente.png" alt="" />
+                </div>
+              )}
+              <div className="alumno-line__copy">
+                <strong>{line.productName}</strong>
+                <p>{formatAmount(line.unitPreview)} c/u</p>
+                <div className="alumno-qty">
+                  <button
+                    type="button"
+                    aria-label={`Quitar una ${line.productName}`}
+                    onClick={() => onUpdateQuantity(line.productId, line.optionIds, line.quantity - 1)}
+                  >
+                    −
+                  </button>
+                  <span>{line.quantity}</span>
+                  <button
+                    type="button"
+                    aria-label={`Agregar una ${line.productName}`}
+                    onClick={() => onUpdateQuantity(line.productId, line.optionIds, line.quantity + 1)}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <div className="alumno-line__side">
+                <span className="alumno-line__price">{lineTotal ? formatAmount(lineTotal) : '—'}</span>
+                <button
+                  className="alumno-line__remove"
+                  type="button"
+                  onClick={() => onRemoveLine(line.productId, line.optionIds)}
+                >
+                  Quitar
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <aside className="alumno-cart-layout__side">
+        <button type="button" className="alumno-card" onClick={onToggleDestination}>
+          <h2>{forHere && space ? space.nombre : 'Para llevar'}</h2>
+          <p className="alumno-muted">
+            {forHere && space
+              ? 'El pedido se entrega en tu mesa. Toca para cambiar a para llevar.'
+              : space
+                ? `Toca para pedir en ${space.nombre}.`
+                : 'Recoges en mostrador cuando esté listo.'}
+          </p>
+        </button>
+        {place?.identificador_cliente_obligatorio ? (
+          <label className="alumno-field">
+            {place.identificador_cliente_etiqueta}
+            <input
+              value={clientId}
+              onChange={(event) => onClientIdChange(event.target.value)}
+              required
+              autoComplete="off"
+            />
+          </label>
+        ) : null}
+        <label className="alumno-field">
+          Nota para cocina
+          <textarea value={notes} onChange={(event) => onNotesChange(event.target.value)} rows={3} />
+        </label>
+        <div className="alumno-cart-layout__pay">
+          <p className="alumno-cart-layout__total">
+            <strong>Total {total ? formatAmount(total) : '—'}</strong>
+          </p>
+          <div className="alumno-sticky-pay">
+            <button className="alumno-btn alumno-btn--lime" type="button" disabled={payDisabled} onClick={onPay}>
+              {payLabel}
+            </button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 export function CartEmptyView({
   slug,
   previousOrders,
@@ -447,10 +505,7 @@ export function CartEmptyView({
           <span className="alumno-antojo__deco alumno-antojo__deco--note">
             <NoteIcon />
           </span>
-          <img className="alumno-antojo__vaini" src="/vaini/cutout-frente.png" alt="" />
-          <span className="alumno-antojo__q">
-            <img className="alumno-antojo__q-face" src="/vaini/question-mark.png" alt="" />
-          </span>
+          <img className="alumno-antojo__hug" src="/vaini/cutout-hug-question.png" alt="" />
           <span className="alumno-antojo__deco alumno-antojo__deco--cup">
             <CupIcon />
           </span>

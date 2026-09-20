@@ -21,7 +21,6 @@ export function OrderTrackCard({
   onToggle,
   completeLink = true,
   toggle = true,
-  compact = false,
   selected = false,
   imageUrl = null,
   pickupToken = null,
@@ -31,7 +30,6 @@ export function OrderTrackCard({
   onToggle: () => void;
   completeLink?: boolean;
   toggle?: boolean;
-  compact?: boolean;
   selected?: boolean;
   imageUrl?: string | null;
   pickupToken?: string | null;
@@ -44,28 +42,27 @@ export function OrderTrackCard({
   const pickupTokenResolved = pickupToken ?? resolvePickupQrToken(order);
   const showPickup = shouldShowPickupSurface(order);
   const collapsedStatusHint = orderCollapsedStatusHint(order.estado);
-  const collapsedCompact = compact && !expanded;
 
   useLayoutEffect(() => {
-    if (!expanded || !toggle) return;
+    if (!expanded) return;
     const card = cardRef.current;
     if (!card) return;
+    const run = () => focusExpandedTrackCard(card);
     let inner = 0;
     const outer = window.requestAnimationFrame(() => {
-      inner = window.requestAnimationFrame(() => {
-        focusExpandedTrackCard(card);
-      });
+      inner = window.requestAnimationFrame(run);
     });
+    const retry = window.setTimeout(run, 480);
     return () => {
       window.cancelAnimationFrame(outer);
       window.cancelAnimationFrame(inner);
+      window.clearTimeout(retry);
     };
-  }, [expanded, toggle]);
+  }, [expanded]);
 
   const className = [
     'alumno-track-card',
     expanded ? 'is-open' : null,
-    collapsedCompact ? 'is-compact' : null,
     selected ? 'is-selected' : null,
   ]
     .filter(Boolean)
@@ -156,10 +153,11 @@ export function OrderTrackCard({
 
 function focusExpandedTrackCard(card: HTMLElement) {
   if (typeof card.scrollIntoView !== 'function') return;
+  if (isHiddenDeskClone(card)) return;
   card.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 
   const nav = document.querySelector('.alumno-nav');
-  if (!(nav instanceof HTMLElement) || typeof window.scrollBy !== 'function') return;
+  if (!(nav instanceof HTMLElement)) return;
   const navBox = nav.getBoundingClientRect();
   const bottomNav =
     window.getComputedStyle(nav).position === 'fixed' && navBox.top > window.innerHeight * 0.55;
@@ -171,7 +169,11 @@ function focusExpandedTrackCard(card: HTMLElement) {
   const cta = card.querySelector('.alumno-btn--lime');
   const timeline = card.querySelector('.alumno-timeline');
   const pickup = card.querySelector('.alumno-pickup');
+  const ticketItem = card
+    .closest('.alumno-detail-split')
+    ?.querySelector('.alumno-ticket-items li:last-child');
   const target =
+    (ticketItem instanceof HTMLElement && ticketItem.getBoundingClientRect().height > 2 && ticketItem) ||
     (toggle instanceof HTMLElement && toggle.getBoundingClientRect().height > 2 && toggle) ||
     (cta instanceof HTMLElement && cta.getBoundingClientRect().height > 2 && cta) ||
     (timeline instanceof HTMLElement ? timeline : null) ||
@@ -180,7 +182,24 @@ function focusExpandedTrackCard(card: HTMLElement) {
 
   const targetBox = target.getBoundingClientRect();
   if (targetBox.bottom <= floor) return;
-  window.scrollBy({ top: targetBox.bottom - floor, left: 0, behavior: 'auto' });
+  const delta = targetBox.bottom - floor;
+  const movers = [document.scrollingElement, document.body, document.documentElement];
+  for (const node of movers) {
+    if (!node || typeof node.scrollBy !== 'function') continue;
+    const before = node.scrollTop;
+    node.scrollBy({ top: delta, left: 0, behavior: 'auto' });
+    if (node.scrollTop !== before) return;
+  }
+  if (typeof window.scrollBy === 'function') {
+    window.scrollBy({ top: delta, left: 0, behavior: 'auto' });
+  }
+}
+
+function isHiddenDeskClone(card: HTMLElement): boolean {
+  const pane = card.closest('.alumno-orders-desk__detail');
+  if (!pane) return false;
+  if (window.getComputedStyle(pane).display === 'none') return true;
+  return card.getBoundingClientRect().height < 8;
 }
 
 function CheckIcon() {

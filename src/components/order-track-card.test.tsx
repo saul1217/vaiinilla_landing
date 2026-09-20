@@ -70,6 +70,22 @@ describe('OrderTrackCard pickup', () => {
     vi.stubGlobal('cancelAnimationFrame', () => undefined);
   });
 
+  it('en cobrado expandido es timeline, sin Recógelo ni QR', () => {
+    renderCard(order({ estado: 'cobrado', folio: 94 }));
+    expect(document.querySelector('.alumno-track-card__pill')).toHaveTextContent('Cobrado');
+    expect(document.querySelector('.alumno-pickup')).toBeNull();
+    expect(document.querySelector('.alumno-track-card__status')).toHaveTextContent(
+      /Cobrado\s+Cocina recibió la comanda/i,
+    );
+    expect(document.querySelector('.alumno-timeline li.is-current .alumno-timeline__mark')?.textContent).toBe(
+      '2',
+    );
+    expect(document.querySelectorAll('.alumno-timeline li.is-done svg')).toHaveLength(1);
+    expect(document.querySelector('.alumno-timeline li:nth-child(4)')).toHaveTextContent(/recógelo en la barra/i);
+    expect((document.body.textContent?.match(/Recógelo en la barra/gi) ?? []).length).toBe(1);
+    expect(screen.queryByRole('img', { name: /código qr/i })).not.toBeInTheDocument();
+  });
+
   it('en listo colapsado deja solo Listo; Recógelo vive en el tracking expandido', () => {
     render(
       <MemoryRouter>
@@ -114,15 +130,18 @@ describe('OrderTrackCard pickup', () => {
     expect(document.querySelectorAll('.alumno-timeline li.is-done svg')).toHaveLength(3);
   });
 
-  it('en compacto esconde chrome extra pero sigue tappable', async () => {
+  it('colapsada conserva chrome Android (barra, status y Ver seguimiento)', async () => {
     const onToggle = vi.fn();
     const user = userEvent.setup();
     render(
       <MemoryRouter>
-        <OrderTrackCard order={order({ folio: 95, estado: 'por_cobrar' })} expanded={false} compact onToggle={onToggle} />
+        <OrderTrackCard order={order({ folio: 95, estado: 'por_cobrar' })} expanded={false} onToggle={onToggle} />
       </MemoryRouter>,
     );
-    expect(document.querySelector('.alumno-track-card')).toHaveClass('is-compact');
+    const card = document.querySelector('.alumno-track-card');
+    expect(card).not.toHaveClass('is-compact');
+    expect(card).not.toHaveClass('is-open');
+    expect(document.querySelector('.alumno-track-bar')).toBeTruthy();
     expect(document.querySelector('.alumno-track-card__status')).toHaveTextContent(/por cobrar/i);
     expect(screen.getByRole('button', { name: /ver seguimiento/i })).toBeInTheDocument();
     await user.click(screen.getByText('#95'));
@@ -135,6 +154,52 @@ describe('OrderTrackCard pickup', () => {
       block: 'nearest',
       inline: 'nearest',
     });
+  });
+
+  it('en detalle 390 deja la línea del ticket sobre el nav', () => {
+    const scrollBy = vi.fn();
+    vi.stubGlobal('scrollBy', scrollBy);
+    const nav = document.createElement('nav');
+    nav.className = 'alumno-nav';
+    document.body.appendChild(nav);
+    const style = window.getComputedStyle.bind(window);
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+      if (el instanceof Element && el.classList.contains('alumno-nav')) {
+        return { position: 'fixed' } as CSSStyleDeclaration;
+      }
+      return style(el);
+    });
+    const rects = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function () {
+      if (this.classList.contains('alumno-nav')) {
+        return DOMRect.fromRect({ x: 0, y: 765, width: 390, height: 79 });
+      }
+      if (this.classList.contains('alumno-ticket-items') || this.parentElement?.classList.contains('alumno-ticket-items')) {
+        return DOMRect.fromRect({ x: 16, y: 790, width: 358, height: 40 });
+      }
+      return DOMRect.fromRect({ x: 0, y: 80, width: 390, height: 560 });
+    };
+
+    render(
+      <MemoryRouter>
+        <div className="alumno-detail-split">
+          <OrderTrackCard order={order()} expanded completeLink={false} toggle={false} onToggle={() => undefined} />
+          <section className="alumno-card alumno-card--ticket">
+            <ul className="alumno-ticket-items">
+              <li>
+                <span>1 × Chicharrones</span>
+                <strong>$16.50 MXN</strong>
+              </li>
+            </ul>
+          </section>
+        </div>
+      </MemoryRouter>,
+    );
+    expect(scrollBy).toHaveBeenCalled();
+    expect(scrollBy.mock.calls[0]?.[0]?.top).toBeGreaterThan(40);
+
+    Element.prototype.getBoundingClientRect = rects;
+    nav.remove();
   });
 
   it('si el CTA queda bajo el nav móvil, hace scroll para dejarlo arriba', () => {

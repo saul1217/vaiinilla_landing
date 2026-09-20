@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
-import { WalletPage } from './wallet-page';
+import { WalletBoardView, WalletPage } from './wallet-page';
 
 vi.mock('../lib/api', () => ({
   api: {
@@ -100,5 +100,39 @@ describe('WalletPage', () => {
     expect(screen.getByText('Pedido #42')).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: /del menú/i })).toBeInTheDocument();
     expect(screen.getByText('fruti Lupis')).toBeInTheDocument();
+  });
+
+  it('vacío: clipboard, $0.00, atajos y sin movimientos inventados', () => {
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <WalletBoardView
+            saldo="0.00"
+            placeSlug="demo-a"
+            reloadHref="/u/preview"
+            movimientos={[]}
+            menuPeek={[]}
+          />
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('$0.00')).toBeInTheDocument();
+    expect(screen.getByText('Saldo Vaiinilla')).toBeInTheDocument();
+    expect(document.querySelector('[data-wallet-orb="clipboard"]')).toBeTruthy();
+    expect(document.querySelector('[data-wallet-pay="cart"]')).toBeTruthy();
+    expect(document.querySelector('[data-wallet-orders="list"]')).toBeTruthy();
+    expect(document.querySelector('[data-wallet-reload="qr"]')).toBeTruthy();
+    expect(document.querySelector('[data-wallet-menu="book"]')).toBeTruthy();
+    expect(document.querySelectorAll('[data-wallet-menu="book"] path')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-wallet-menu="book"] rect')).toHaveLength(0);
+    expect(document.querySelector('[data-wallet-menu="book"] path')).toHaveAttribute('fill-rule', 'evenodd');
+    expect(document.querySelector('[data-wallet-menu="book"]')?.innerHTML).not.toContain('menu-book-gap');
+    expect(document.querySelector('[data-wallet-menu-chev="arrow"]')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /^pagar$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^pedidos$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^recargar$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /abrir menú/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /movimientos/i })).not.toBeInTheDocument();
+    expect(document.querySelectorAll('.alumno-moves li')).toHaveLength(0);
   });
 });

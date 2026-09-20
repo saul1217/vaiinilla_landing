@@ -61,17 +61,15 @@ describe('DiscoveryPage', () => {
     expect(screen.getByRole('button', { name: /abrir menú/i })).toBeInTheDocument();
   });
 
-  it('muestra splash Android si no hay sesión ni exploración de invitado', async () => {
+  it('abre el picker de cafeterías sin pedir splash ni cuenta', async () => {
     sessionStorage.clear();
-    const user = userEvent.setup();
     render(
       <MemoryRouter>
         <DiscoveryPage />
       </MemoryRouter>,
     );
-    expect(await screen.findByRole('heading', { name: /tu cafetería, a tu ritmo/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /comprar sin cuenta/i })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /^explorar$/i }));
     expect(await screen.findByRole('heading', { name: /dónde comes hoy/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /tu cafetería, a tu ritmo/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: /navegación de alumno/i })).toBeInTheDocument();
   });
 });

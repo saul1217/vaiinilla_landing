@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
 import { GUEST_CHECKOUT_UNAVAILABLE } from '../lib/guest-checkout';
+import { QA_PHOTO_TACOS } from '../lib/qa-catalog-photos';
 import { CartPage } from './cart-page';
 
 const authState: { user: { email: string; displayName: string } | null } = {
@@ -184,6 +185,55 @@ describe('CartPage', () => {
     expect(screen.getByRole('link', { name: /fruti lupis/i })).toHaveAttribute('href', '/cuenta/pedidos/ord-76');
     expect(screen.getByText('#76 · Entregado')).toBeInTheDocument();
     expect(screen.getByText('$22')).toBeInTheDocument();
+    expect(document.querySelector('.alumno-history-row img')).toBeNull();
+    expect(document.querySelector('.alumno-history-row__thumb')).toBeNull();
+    expect(document.querySelector('.alumno-antojo__hug')).toHaveAttribute('src', '/vaini/cutout-hug-question.png');
+    expect(document.querySelector('.alumno-antojo__q-face')).toBeNull();
+    expect(document.querySelector('.alumno-antojo__vaini')).toBeNull();
+  });
+
+  it('muestra la foto del catálogo en peek, no en pedidos anteriores', async () => {
+    buyerSessionState.context = {
+      access_token: 'jwt',
+      contexto: { establecimiento_id: '1' },
+    };
+    getGuestCatalog.mockResolvedValue({
+      categorias: [],
+      productos: [
+        {
+          id: 22,
+          categoria_id: 1,
+          estacion_preparacion: 'cocina',
+          nombre: 'Tacos de Cochinita Pibil',
+          descripcion: null,
+          ingredientes: null,
+          alergenos: null,
+          tiempo_estimado_min: 4,
+          precio_mostrador: '99.00',
+          precio_digital: '99.00',
+          disponible: true,
+          imagen_url: QA_PHOTO_TACOS,
+          grupos_opcion: [],
+        },
+      ],
+    });
+    listOrders.mockResolvedValue({
+      orders: [
+        {
+          id: 'ord-22',
+          folio: 22,
+          estado: 'entregado',
+          metodo_pago: 'efectivo',
+          destino: 'para_llevar',
+          total: '99.00',
+          items: [{ id: 1, producto_id: 22, nombre_producto: 'Tacos de Cochinita Pibil', cantidad: 1, subtotal: '99.00' }],
+        },
+      ],
+    });
+    renderCart();
+    expect(await screen.findByRole('heading', { name: /pedidos anteriores/i })).toBeInTheDocument();
+    expect(document.querySelector('.alumno-history-row img')).toBeNull();
+    expect(document.querySelector('.alumno-cart-peek__row > img')).toHaveAttribute('src', QA_PHOTO_TACOS);
   });
 
   it('abre el sheet de pago con efectivo, saldo y tarjeta', async () => {

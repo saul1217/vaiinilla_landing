@@ -122,7 +122,6 @@ export function OrdersPage() {
                         key={order.id}
                         order={order}
                         expanded={!deskPane && expandedId === order.id}
-                        compact={!deskPane && expandedId !== null && expandedId !== order.id}
                         selected={deskPane && expandedId === order.id}
                         onToggle={() => toggle(order.id)}
                         imageUrl={orderThumbUrl(order, thumbImages, catalogProducts)}
@@ -143,7 +142,6 @@ export function OrdersPage() {
                         key={order.id}
                         order={order}
                         expanded={!deskPane && expandedId === order.id}
-                        compact={!deskPane && expandedId !== null && expandedId !== order.id}
                         selected={deskPane && expandedId === order.id}
                         onToggle={() => toggle(order.id)}
                         imageUrl={orderThumbUrl(order, thumbImages, catalogProducts)}
@@ -181,8 +179,13 @@ export function OrdersPage() {
   );
 }
 
+function readDeskPane() {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia('(min-width: 1024px)').matches;
+}
+
 export function useDeskPane() {
-  const [wide, setWide] = useState(false);
+  const [wide, setWide] = useState(readDeskPane);
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') return;
     const mq = window.matchMedia('(min-width: 1024px)');

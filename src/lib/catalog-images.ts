@@ -18,6 +18,17 @@ export function catalogImageMap(products: CatalogProduct[]): Map<number, string>
   return map;
 }
 
+export function peekCatalogProducts(products: CatalogProduct[], limit = 4): CatalogProduct[] {
+  const available = products.filter((item) => item.disponible);
+  return [...available]
+    .sort((left, right) => {
+      const leftPhoto = productImageUrl(left.imagen_url) ? 0 : 1;
+      const rightPhoto = productImageUrl(right.imagen_url) ? 0 : 1;
+      return leftPhoto - rightPhoto;
+    })
+    .slice(0, limit);
+}
+
 export function orderThumbUrl(
   order: OrderDetail,
   images: Map<number, string>,

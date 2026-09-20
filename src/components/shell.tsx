@@ -4,12 +4,35 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import { STAFF_APP_URL } from '../types/api';
 import { useAuth } from '../context/auth-context';
 import { useCart } from '../context/cart-context';
+import { buyerEntryPath, markBuyerExplore } from '../lib/buyer-entry';
+import { StoreBadges } from './store-badges';
 
 export function SkipLink() {
   return (
     <a className="skip-link" href="#main-content">
       Saltar al contenido
     </a>
+  );
+}
+
+export function BuyerEntryLink({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  const { cart } = useCart();
+  const [to, setTo] = useState('/pedir');
+
+  useEffect(() => {
+    setTo(buyerEntryPath(cart?.slug));
+  }, [cart?.slug]);
+
+  return (
+    <Link className={className} to={to} onClick={markBuyerExplore}>
+      {children}
+    </Link>
   );
 }
 
@@ -32,16 +55,15 @@ export function SiteNav({ marketing = false }: { marketing?: boolean }) {
   return (
     <header className={scrolled ? 'nav is-scrolled' : 'nav'} data-nav>
       <div className="container nav__inner">
-        <Link className="nav__logo" to={logoHref} aria-label="Vaiinilla — inicio">
+        <Link className="nav__logo" to={logoHref} aria-label="Vaiinilla - inicio">
           <img src="/brand/vaiinilla-mark.webp" alt="" width="42" height="42" />
           <span translate="no">Vaiinilla</span>
         </Link>
         {marketing ? (
           <nav className="nav__links" aria-label="Navegación principal">
-            <a href="#como-funciona">Cómo funciona</a>
-            <a href="#para-cafeterias">Para cafeterías</a>
-            <a href="#ventajas">Qué resuelve</a>
-            <NavLink to="/pedir">Pedir</NavLink>
+            <a href="#como-funciona">Cómo pedir</a>
+            <a href="#apps">Apps</a>
+            <a href="#para-cafeterias">Para campus</a>
           </nav>
         ) : (
           <nav className="nav__links" aria-label="Navegación principal">
@@ -52,20 +74,27 @@ export function SiteNav({ marketing = false }: { marketing?: boolean }) {
         )}
         <div className="nav__actions">
           {count > 0 && cart ? (
-            <Link className="btn btn--ghost nav__cta" to={`/e/${cart.slug}/carrito`}>
+            <Link className="nav__quiet" to={`/e/${cart.slug}/carrito`}>
               Carrito ({count})
             </Link>
           ) : null}
-          <Link className="btn btn--primary nav__cta" to={user ? '/cuenta' : '/cuenta'}>
-            {user ? 'Mi cuenta' : 'Entrar'}
+          {marketing ? <StoreBadges compact className="nav__stores" /> : null}
+          <BuyerEntryLink className="btn btn--primary nav__cta">Pedir</BuyerEntryLink>
+          <Link
+            className="nav__account"
+            to="/cuenta"
+            aria-label={user ? 'Mi cuenta' : 'Ya tengo cuenta'}
+          >
+            <span className="nav__account-full">{user ? 'Mi cuenta' : 'Ya tengo cuenta'}</span>
+            <span className="nav__account-short">Cuenta</span>
           </Link>
           <a
-            className="btn btn--dark nav__cta"
+            className="nav__staff"
             href={STAFF_APP_URL}
             target="_blank"
             rel="noreferrer"
           >
-            Panel <span aria-hidden="true">↗</span>
+            Soy establecimiento <span aria-hidden="true">↗</span>
           </a>
         </div>
       </div>
@@ -77,20 +106,18 @@ export function SiteFooter() {
   return (
     <footer className="footer">
       <div className="container footer__inner">
-        <Link className="footer__logo" to="/" aria-label="Vaiinilla — inicio">
+        <Link className="footer__logo" to="/" aria-label="Vaiinilla - inicio">
           <img src="/brand/vaiinilla-mark.webp" alt="" width="42" height="42" />
           <span translate="no">Vaiinilla</span>
         </Link>
-        <p className="footer__tag">Menú, pedidos y operación para cafeterías escolares.</p>
+        <p className="footer__tag">Menú, pedidos y retiro para cafeterías escolares. Apps nativas, próximamente.</p>
         <nav className="footer__links" aria-label="Pie de página">
-          <Link className="footer__app" to="/pedir">
-            Pedir
-          </Link>
+          <BuyerEntryLink className="footer__app">Pedir</BuyerEntryLink>
           <Link className="footer__app" to="/soporte">
             Soporte
           </Link>
           <a className="footer__app" href={STAFF_APP_URL} target="_blank" rel="noreferrer">
-            Panel del establecimiento ↗
+            Soy establecimiento ↗
           </a>
         </nav>
       </div>

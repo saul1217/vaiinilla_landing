@@ -2,19 +2,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
-import { AuthScreens } from '../components/auth-screens';
 import { useAuth } from '../context/auth-context';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
-import { isGuestExplore, enableGuestExplore } from '../lib/guest-explore';
+import { enableGuestExplore } from '../lib/guest-explore';
 import { lastPlaceSlug, rememberPlace } from '../lib/last-place';
 import { rememberSpace } from '../lib/space-session';
 import type { PublicEstablishment } from '../types/api';
 
 export function DiscoveryPage() {
-  const { user, ready } = useAuth();
+  const { ready } = useAuth();
   const navigate = useNavigate();
-  const [guest, setGuest] = useState(() => (typeof window === 'undefined' ? false : isGuestExplore()));
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<PublicEstablishment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,8 +25,8 @@ export function DiscoveryPage() {
 
   useEffect(() => {
     if (!ready) return;
-    if (user) enableGuestExplore();
-  }, [ready, user]);
+    enableGuestExplore();
+  }, [ready]);
 
   useEffect(() => {
     let active = true;
@@ -119,20 +117,6 @@ export function DiscoveryPage() {
         <main id="main-content" className="alumno-main" role="status">
           Validando sesión…
         </main>
-      </AppShell>
-    );
-  }
-
-  if (!user && !guest) {
-    return (
-      <AppShell tab="none">
-        <AuthScreens
-          allowExplore
-          onExplored={() => {
-            enableGuestExplore();
-            setGuest(true);
-          }}
-        />
       </AppShell>
     );
   }
