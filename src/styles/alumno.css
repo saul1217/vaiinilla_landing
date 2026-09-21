@@ -843,13 +843,13 @@ html[data-theme='amoled'] .alumno-antojo img {
   display: block;
   position: absolute;
   inset: auto;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: -8%;
+  left: -8%;
+  width: 116%;
+  height: 160%;
   margin: 0;
   object-fit: contain;
-  object-position: center;
+  object-position: center 8%;
   z-index: 2;
   pointer-events: none;
   filter: drop-shadow(0 2px 2px rgba(23, 24, 23, 0.07));
@@ -3241,7 +3241,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     flex: 1 1 auto;
     min-height: 0;
     align-self: stretch;
-    justify-content: flex-start;
+    justify-content: flex-end;
   }
 
   .alumno-wallet-fill .alumno-cart-peek .alumno-link,
@@ -3382,6 +3382,15 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     height: 100%;
     min-height: 0;
     gap: 14px;
+    justify-content: flex-start;
+  }
+
+  .alumno-cart-empty__rail .alumno-cart-peek {
+    justify-content: flex-end;
+  }
+
+  .alumno-cart-empty__rail .alumno-cart-peek__sheet {
+    flex: 0 0 auto;
   }
 
   .alumno-cart-empty > .alumno-empty {
@@ -3397,7 +3406,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   .alumno-cart-peek {
     min-height: 0;
     height: auto;
-    justify-content: flex-start;
+    justify-content: flex-end;
     flex: 1 1 auto;
     align-self: stretch;
   }
