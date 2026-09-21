@@ -115,6 +115,17 @@ export function MenuPage() {
 
   const preview = selected ? previewForProduct(selected, optionIds, quantity) : null;
   const cartCount = cart?.slug === slug ? cart.lines.reduce((sum, line) => sum + line.quantity, 0) : 0;
+  const menuActions = () => (
+    <>
+      <Link className="alumno-icon-btn" to={`/e/${slug}/carrito`} aria-label="Carrito">
+        <CartIcon />
+        {cartCount > 0 ? <span className="alumno-badge">{cartCount}</span> : null}
+      </Link>
+      <Link className="alumno-avatar" to="/cuenta" aria-label="Cuenta">
+        {initialsFrom(user?.displayName, user?.email)}
+      </Link>
+    </>
+  );
 
   return (
     <AppShell tab="menu">
@@ -123,31 +134,24 @@ export function MenuPage() {
           <AlumnoPageHeader
             kicker="Menú de hoy"
             title={place?.nombre ?? 'Menú'}
-            actions={
-              <>
-                <Link className="alumno-icon-btn" to={`/e/${slug}/carrito`} aria-label="Carrito">
-                  <CartIcon />
-                  {cartCount > 0 ? <span className="alumno-badge">{cartCount}</span> : null}
-                </Link>
-                <Link className="alumno-avatar" to="/cuenta" aria-label="Cuenta">
-                  {initialsFrom(user?.displayName, user?.email)}
-                </Link>
-              </>
-            }
+            actions={menuActions()}
           />
-          <div className="alumno-search-wrap">
-            <SearchIcon />
-            <label className="sr-only" htmlFor="search-menu">
-              Buscar en el menú
-            </label>
-            <input
-              id="search-menu"
-              className="alumno-search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar"
-              autoComplete="off"
-            />
+          <div className="alumno-deskhead__utility">
+            <div className="alumno-top__actions">{menuActions()}</div>
+            <div className="alumno-search-wrap">
+              <SearchIcon />
+              <label className="sr-only" htmlFor="search-menu">
+                Buscar en el menú
+              </label>
+              <input
+                id="search-menu"
+                className="alumno-search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar"
+                autoComplete="off"
+              />
+            </div>
           </div>
         </div>
         {error && !selected ? <p className="alumno-error">{error}</p> : null}

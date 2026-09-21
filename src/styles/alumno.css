@@ -202,6 +202,10 @@ html[data-theme='amoled'] .alumno-avatar {
   flex-direction: column;
 }
 
+.alumno-deskhead__utility {
+  display: none;
+}
+
 .alumno-search-wrap {
   position: relative;
   margin: 8px 0 14px;
@@ -839,13 +843,13 @@ html[data-theme='amoled'] .alumno-antojo img {
   display: block;
   position: absolute;
   inset: auto;
-  top: -8%;
-  left: -8%;
-  width: 116%;
-  height: 160%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   margin: 0;
   object-fit: contain;
-  object-position: center 8%;
+  object-position: center;
   z-index: 2;
   pointer-events: none;
   filter: drop-shadow(0 2px 2px rgba(23, 24, 23, 0.07));
@@ -2281,20 +2285,24 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     margin-bottom: 0;
   }
 
-  .alumno-deskhead .alumno-search-wrap {
+  .alumno-deskhead__utility {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    align-self: end;
+  }
+
+  .alumno-deskhead__utility .alumno-top__actions {
+    justify-content: flex-end;
+  }
+
+  .alumno-deskhead__utility .alumno-search-wrap {
     width: 100%;
     margin: 0 0 2px;
   }
 
-  .alumno-deskhead:has(.alumno-top__actions) .alumno-search-wrap {
-    padding-top: 52px;
-  }
-
   .alumno-deskhead .alumno-pagehead__brand {
-    position: absolute;
-    top: 0;
-    right: 0;
-    z-index: 1;
+    display: none;
   }
 
   .alumno-main--discover .alumno-discovery {

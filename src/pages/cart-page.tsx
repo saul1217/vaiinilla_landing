@@ -543,8 +543,8 @@ export function CartEmptyView({
             className="alumno-antojo__hug"
             src="/vaini/cutout-hug-question.png"
             alt=""
-            width={998}
-            height={998}
+            width={511}
+            height={408}
             decoding="async"
             fetchPriority="high"
           />

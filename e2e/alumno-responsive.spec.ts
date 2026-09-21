@@ -11,8 +11,13 @@ async function metrics(page: Page) {
     const sheet = document.querySelector('.alumno-sheet');
     const dialog = document.querySelector('.alumno-sheet__dialog');
     const brand = document.querySelector('.alumno-nav__brand');
+    const utility = document.querySelector('.alumno-deskhead__utility');
+    const utilityActions = document.querySelector('.alumno-deskhead__utility .alumno-top__actions');
+    const utilitySearch = document.querySelector('.alumno-deskhead__utility .alumno-search-wrap');
     const cs = (el: Element | null) => (el ? getComputedStyle(el) : null);
     const navRect = nav?.getBoundingClientRect();
+    const utilityActionsRect = utilityActions?.getBoundingClientRect();
+    const utilitySearchRect = utilitySearch?.getBoundingClientRect();
     const cols = (value: string | undefined) =>
       value ? value.split(' ').filter((part) => part && part !== 'none').length : 0;
     return {
@@ -26,6 +31,9 @@ async function metrics(page: Page) {
       navPos: cs(nav)?.position ?? null,
       navWidthCss: cs(nav)?.width ?? null,
       brandDisplay: brand ? cs(brand)?.display : null,
+      utilityDisplay: utility ? cs(utility)?.display : null,
+      utilityActionSearchGap:
+        utilityActionsRect && utilitySearchRect ? Math.round(utilitySearchRect.top - utilityActionsRect.bottom) : null,
       menuCols: grid ? cols(cs(grid)?.gridTemplateColumns) : 0,
       discoveryCols: discovery ? cols(cs(discovery)?.gridTemplateColumns) : 0,
       cartCols: cart ? cols(cs(cart)?.gridTemplateColumns) : 0,
@@ -184,6 +192,9 @@ test.describe('alumno responsive', () => {
 
       const actions = page.locator('.alumno-top__actions');
       await expect(actions.getByRole('link', { name: 'Carrito' })).toBeVisible();
+      const header = await metrics(page);
+      expect(header.utilityDisplay).toBe('grid');
+      expect(header.utilityActionSearchGap).toBe(8);
       await actions.getByRole('link', { name: 'Carrito' }).click();
       await expect(page).toHaveURL(/\/e\/demo-a\/carrito$/);
 
