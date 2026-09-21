@@ -40,6 +40,7 @@ describe('DiscoveryPage', () => {
           slug: 'demo-a',
           identificador_cliente_etiqueta: 'Matrícula',
           identificador_cliente_obligatorio: true,
+          instagram_url: 'https://instagram.com/cafeteria-demo',
         },
       ],
       cursor: null,
@@ -54,8 +55,9 @@ describe('DiscoveryPage', () => {
     );
     expect(await screen.findByRole('heading', { name: /dónde comes hoy/i })).toBeInTheDocument();
     expect(await screen.findByRole('radio', { name: /cafetería demo a/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /continuar/i })).toBeInTheDocument();
-    await userEvent.setup().click(screen.getByRole('button', { name: /continuar/i }));
+    expect(screen.getByRole('button', { name: /entrar al menú/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Abrir Instagram' })).toHaveAttribute('href', 'https://instagram.com/cafeteria-demo');
+    await userEvent.setup().click(screen.getByRole('button', { name: /entrar al menú/i }));
     expect(await screen.findByRole('heading', { name: /cafetería demo a/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /usar código/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /abrir menú/i })).toBeInTheDocument();
