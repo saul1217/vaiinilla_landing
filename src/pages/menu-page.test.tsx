@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -95,7 +95,7 @@ describe('MenuPage', () => {
     );
   });
 
-  it('con foto de catálogo abre el rail, no el hueco de Vaini', async () => {
+  it('con foto de catálogo abre el rail y conserva un fallback hasta que cargue', async () => {
     vi.mocked(api.getGuestCatalog).mockResolvedValueOnce({
       categorias: [{ id: 1, nombre: 'Platos', orden: 1 }],
       productos: [
@@ -120,7 +120,15 @@ describe('MenuPage', () => {
     renderMenu();
     await user.click(await screen.findByRole('button', { name: /tacos de cochinita/i }));
     expect(document.querySelector('.alumno-sheet')).toHaveClass('alumno-sheet--has-photo');
-    expect(document.querySelector('.alumno-sheet__photo')).toHaveAttribute('src', QA_PHOTO_TACOS);
+    const photo = document.querySelector('.alumno-sheet__photo');
+    expect(photo).toHaveAttribute('src', QA_PHOTO_TACOS);
+    expect(document.querySelector('.alumno-sheet__photo-placeholder img')).toHaveAttribute(
+      'src',
+      '/vaini/cutout-frente.png',
+    );
+    expect(document.querySelector('.alumno-sheet__photo-stage')).not.toHaveClass('is-ready');
+    fireEvent.load(photo!);
+    expect(document.querySelector('.alumno-sheet__photo-stage')).toHaveClass('is-ready');
     expect(document.querySelector('.alumno-sheet__vaini')).toBeNull();
   });
 

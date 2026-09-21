@@ -1086,6 +1086,14 @@ html[data-theme='amoled'] .alumno-antojo__deco {
   object-position: center 18%;
 }
 
+.alumno-sheet__photo-stage {
+  display: contents;
+}
+
+.alumno-sheet__photo-placeholder {
+  display: none;
+}
+
 .alumno-sheet fieldset {
   border: 0;
   padding: 0;
@@ -2755,9 +2763,40 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-sheet--has-photo .alumno-sheet__photo {
+    grid-area: 1 / 1;
+    z-index: 1;
+    width: 100%;
     height: 100%;
     min-height: 280px;
     object-fit: cover;
+  }
+
+  .alumno-sheet__photo-stage {
+    position: relative;
+    display: grid;
+    min-height: 280px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--lime) 18%, var(--bg-2));
+  }
+
+  .alumno-sheet__photo-placeholder {
+    grid-area: 1 / 1;
+    z-index: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+  }
+
+  .alumno-sheet__photo-stage.is-ready .alumno-sheet__photo-placeholder {
+    visibility: hidden;
+  }
+
+  .alumno-sheet__photo-placeholder img {
+    width: 158px;
+    height: 158px;
+    object-fit: contain;
+    object-position: center 18%;
+    filter: drop-shadow(0 2px 2px rgba(23, 24, 23, 0.18));
   }
 
   .alumno-sheet__vaini {
@@ -2987,6 +3026,10 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-sheet--has-photo .alumno-sheet__photo {
+    min-height: 420px;
+  }
+
+  .alumno-sheet__photo-stage {
     min-height: 420px;
   }
 
@@ -3388,6 +3431,8 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   .alumno-detail-split .alumno-card--ticket {
     padding: 28px 24px 24px;
     align-self: start;
+    position: sticky;
+    top: 28px;
   }
 
   .alumno-detail-split .alumno-ticket-head,
@@ -3502,6 +3547,10 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
 }
 
 @media (min-width: 1280px) {
+  .alumno-detail-split {
+    grid-template-columns: minmax(0, 1.25fr) minmax(360px, 0.75fr);
+  }
+
   .alumno-grid {
     grid-template-columns: repeat(4, 1fr);
   }

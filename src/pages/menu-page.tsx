@@ -25,6 +25,7 @@ export function MenuPage() {
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<CatalogProduct | null>(null);
+  const [selectedImageReady, setSelectedImageReady] = useState(false);
   const [optionIds, setOptionIds] = useState<number[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +73,7 @@ export function MenuPage() {
   function openProduct(product: CatalogProduct) {
     if (!product.disponible) return;
     setSelected(product);
+    setSelectedImageReady(false);
     setOptionIds(defaultOptionIds(product));
     setQuantity(1);
     setError(null);
@@ -201,7 +203,24 @@ export function MenuPage() {
         >
           <div className="alumno-sheet__dialog">
             {selectedThumb ? (
-              <img className="alumno-sheet__photo" src={selectedThumb} alt="" />
+              <div
+                className={
+                  selectedImageReady
+                    ? 'alumno-sheet__photo-stage is-ready'
+                    : 'alumno-sheet__photo-stage'
+                }
+                aria-hidden="true"
+              >
+                <span className="alumno-sheet__photo-placeholder">
+                  <img src="/vaini/cutout-frente.png" alt="" />
+                </span>
+                <img
+                  className="alumno-sheet__photo"
+                  src={selectedThumb}
+                  alt=""
+                  onLoad={() => setSelectedImageReady(true)}
+                />
+              </div>
             ) : (
               <span className="alumno-sheet__vaini" aria-hidden="true">
                 <img src="/vaini/cutout-frente.png" alt="" />
