@@ -31,12 +31,20 @@ export function AlumnoLockup({
   );
 }
 
-export function AlumnoLogo({ onDark = false, className }: { onDark?: boolean; className?: string }) {
+export function AlumnoLogo({
+  onDark = false,
+  className,
+  alt = 'Vaiinilla',
+}: {
+  onDark?: boolean;
+  className?: string;
+  alt?: string;
+}) {
   return (
     <img
       className={className ?? 'alumno-logo'}
       src={onDark ? '/brand/vaiinilla-logo-dark.webp' : '/brand/vaiinilla-logo-light.webp'}
-      alt="Vaiinilla"
+      alt={alt}
       width="280"
       height="220"
     />

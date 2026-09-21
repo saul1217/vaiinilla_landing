@@ -12,13 +12,17 @@ async function metrics(page: Page) {
     const dialog = document.querySelector('.alumno-sheet__dialog');
     const brand = document.querySelector('.alumno-nav__brand');
     const cs = (el: Element | null) => (el ? getComputedStyle(el) : null);
+    const navRect = nav?.getBoundingClientRect();
     const cols = (value: string | undefined) =>
       value ? value.split(' ').filter((part) => part && part !== 'none').length : 0;
     return {
       innerWidth: window.innerWidth,
+      clientWidth: document.documentElement.clientWidth,
       alumnoWidth: shell ? Math.round(shell.getBoundingClientRect().width) : 0,
       alumnoMax: cs(shell)?.maxWidth ?? null,
       navWidth: nav ? Math.round(nav.getBoundingClientRect().width) : 0,
+      navInsetLeft: navRect ? Math.round(navRect.left) : 0,
+      navInsetRight: navRect ? Math.round(window.innerWidth - navRect.right) : 0,
       navPos: cs(nav)?.position ?? null,
       navWidthCss: cs(nav)?.width ?? null,
       brandDisplay: brand ? cs(brand)?.display : null,
@@ -35,8 +39,26 @@ async function metrics(page: Page) {
   });
 }
 
+async function authMetrics(page: Page) {
+  return page.evaluate(() => {
+    const auth = document.querySelector('.alumno-auth');
+    const mosaic = document.querySelector('.alumno-auth__mosaic');
+    const panel = document.querySelector('.alumno-auth__panel');
+    const windowLogo = document.querySelector('.alumno-auth__window-logo');
+    const rect = panel?.getBoundingClientRect();
+    return {
+      authWidth: auth ? Math.round(auth.getBoundingClientRect().width) : 0,
+      mosaicDisplay: mosaic ? getComputedStyle(mosaic).display : null,
+      panelWidth: rect ? Math.round(rect.width) : 0,
+      panelOffset: rect ? Math.round(Math.abs(rect.left - (window.innerWidth - rect.width) / 2)) : 0,
+      windowLogoDisplay: windowLogo ? getComputedStyle(windowLogo).display : null,
+      hasHorizontalOverflow: document.documentElement.scrollWidth > window.innerWidth,
+    };
+  });
+}
+
 test.describe('alumno responsive', () => {
-  test('móvil 390: shell y nav a 100%, menú 2 columnas, sin marco de 480', async ({ page }) => {
+  test('móvil 390: shell completo, nav compacta y menú de 2 columnas', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.addInitScript(() => sessionStorage.setItem('vaiinilla.buyer.guest-explore.v1', '1'));
     await page.goto('/pedir');
@@ -45,7 +67,8 @@ test.describe('alumno responsive', () => {
     const discovery = await metrics(page);
     expect(discovery.alumnoMax).toBe('none');
     expect(discovery.alumnoWidth).toBe(390);
-    expect(discovery.navWidth).toBe(390);
+    expect(discovery.navInsetLeft).toBe(14);
+    expect(discovery.navInsetRight).toBe(14);
     expect(discovery.navPos).toBe('fixed');
     expect(discovery.brandDisplay).toBe('none');
     expect(discovery.hasDevice).toBe(false);
@@ -59,7 +82,7 @@ test.describe('alumno responsive', () => {
     await page.getByRole('button', { name: /chocolate frío/i }).click();
     const sheet = await metrics(page);
     expect(sheet.sheetMax).toBe('none');
-    expect(sheet.dialogWidth).toBe(390);
+    expect(sheet.dialogWidth).toBe(menu.clientWidth);
   });
 
   test('tablet 850: top bar full-bleed y menú 3 columnas', async ({ page }) => {
@@ -90,7 +113,7 @@ test.describe('alumno responsive', () => {
       expect(menu.alumnoWidth).toBe(width);
       expect(menu.navWidth).toBe(232);
       expect(menu.navPos).toBe('fixed');
-      expect(menu.menuCols).toBe(4);
+      expect(menu.menuCols).toBe(width >= 1440 ? 5 : 4);
 
       await page.getByRole('button', { name: /chocolate frío/i }).click();
       const sheet = await metrics(page);
@@ -106,8 +129,8 @@ test.describe('alumno responsive', () => {
       timeout: 20_000,
     });
     await page.getByRole('button', { name: /chocolate frío/i }).click();
-    await page.getByRole('button', { name: /agregar/i }).click();
-    await page.goto('/e/demo-a/carrito');
+    await page.getByRole('button', { name: 'Comprar sin cuenta', exact: true }).click();
+    await expect(page).toHaveURL(/\/e\/demo-a\/carrito$/);
     await expect(page.getByRole('heading', { name: /tu pedido/i })).toBeVisible();
     const cart = await metrics(page);
     expect(cart.cartCols).toBe(2);
@@ -152,5 +175,44 @@ test.describe('alumno responsive', () => {
     const support = await metrics(page);
     expect(support.hasAlumnoNav).toBe(false);
     expect(support.hasMarketingNav).toBe(true);
+  });
+
+  test('acciones de cabecera y acceso son utilizables en tablet y escritorio', async ({ page }) => {
+    for (const width of [768, 1024, 1280, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/e/demo-a');
+
+      const actions = page.locator('.alumno-top__actions');
+      await expect(actions.getByRole('link', { name: 'Carrito' })).toBeVisible();
+      await actions.getByRole('link', { name: 'Carrito' }).click();
+      await expect(page).toHaveURL(/\/e\/demo-a\/carrito$/);
+
+      await page.goto('/e/demo-a');
+      await expect(actions.getByRole('link', { name: 'Cuenta' })).toBeVisible();
+      await actions.getByRole('link', { name: 'Cuenta' }).click();
+      await expect(page).toHaveURL(/\/cuenta$/);
+      await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Inicia sesión' })).toBeVisible();
+
+      const auth = await authMetrics(page);
+      expect(auth.authWidth).toBe(width);
+      expect(auth.mosaicDisplay).toBe('none');
+      expect(auth.panelWidth).toBeLessThanOrEqual(520);
+      expect(auth.panelOffset).toBeLessThanOrEqual(1);
+      expect(auth.windowLogoDisplay).toBe('block');
+      expect(auth.hasHorizontalOverflow).toBe(false);
+    }
+  });
+
+  test('móvil 390: el acceso conserva su mosaico y no muestra la ventana de escritorio', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/cuenta');
+    await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Inicia sesión' })).toBeVisible();
+
+    const auth = await authMetrics(page);
+    expect(auth.mosaicDisplay).toBe('grid');
+    expect(auth.windowLogoDisplay).toBe('none');
+    expect(auth.hasHorizontalOverflow).toBe(false);
   });
 });
