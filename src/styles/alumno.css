@@ -285,10 +285,16 @@ html[data-theme='amoled'] .alumno-chip.is-on {
   padding: 0;
   color: inherit;
   font: inherit;
+  /* Buttons center their content; cards in a row stretch to the tallest, so pin to the top. */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }
 
 .alumno-product > img,
 .alumno-product__ph {
+  display: block;
+  flex: 0 0 auto;
   width: 100%;
   height: 112px;
   object-fit: cover;
@@ -476,74 +482,53 @@ html[data-theme='amoled'] .alumno-nav {
   padding: 8px 0;
 }
 
-.alumno-splash__stage {
+/* Android WelcomeMascotStage (compact): 300dp tall, 186dp Vaini on a 204dp disc. */
+.alumno-welcome {
   position: relative;
-  width: min(340px, 88vw, 42dvh);
-  aspect-ratio: 1;
-  margin: 8px auto 4px;
+  height: min(300px, 40dvh);
+  min-height: 240px;
+  margin: 2px 0 4px;
   flex: 0 0 auto;
-  min-height: 200px;
 }
 
-.alumno-splash__vaini {
+.alumno-welcome__bubble {
   position: absolute;
-  inset: 22%;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--lime) 22%, #182218);
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
-}
-
-.alumno-splash__vaini img {
-  width: 86%;
-  height: auto;
-  mix-blend-mode: lighten;
-}
-
-.alumno-splash__orbit {
-  position: absolute;
-  inset: 0;
-  animation: alumno-orbit 48s linear infinite;
-}
-
-.alumno-splash__bubble {
-  position: absolute;
-  width: var(--bubble, 54px);
-  height: var(--bubble, 54px);
-  border-radius: 50%;
-  overflow: hidden;
-  border: 2px solid color-mix(in srgb, var(--cream) 55%, transparent);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
-  animation: alumno-orbit-item 48s linear infinite;
-}
-
-.alumno-splash__bubble img {
-  width: 100%;
-  height: 100%;
   object-fit: cover;
+  transform: translate(-50%, -50%);
+  border: 1px solid color-mix(in srgb, var(--bg) 82%, transparent);
 }
 
-.alumno-splash__bubble.is-cutout {
-  background: color-mix(in srgb, var(--lime) 18%, #1a2418);
+html[data-theme='dark'] .alumno-welcome__bubble,
+html[data-theme='amoled'] .alumno-welcome__bubble {
+  border-color: color-mix(in srgb, var(--bg) 58%, transparent);
 }
 
-.alumno-splash__bubble.is-cutout img {
-  object-fit: contain;
-  mix-blend-mode: lighten;
-  transform: scale(1.08);
+.alumno-welcome__disc,
+.alumno-welcome__vaini {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  translate: -50% 0;
 }
 
-.alumno-splash__bubble.is-1 { --bubble: 58px; top: 6%; left: 18%; }
-.alumno-splash__bubble.is-2 { --bubble: 46px; top: 2%; right: 16%; }
-.alumno-splash__bubble.is-3 { --bubble: 52px; top: 28%; right: 0; }
-.alumno-splash__bubble.is-4 { --bubble: 60px; top: 52%; right: 2%; }
-.alumno-splash__bubble.is-5 { --bubble: 44px; bottom: 8%; right: 22%; }
-.alumno-splash__bubble.is-6 { --bubble: 50px; bottom: 2%; left: 28%; }
-.alumno-splash__bubble.is-7 { --bubble: 42px; bottom: 22%; left: 0; }
-.alumno-splash__bubble.is-8 { --bubble: 48px; top: 36%; left: 2%; }
-.alumno-splash__bubble.is-9 { --bubble: 46px; top: 16%; left: 4%; }
+.alumno-welcome__disc {
+  width: min(204px, 68%);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #34402a;
+}
+
+html[data-theme='dark'] .alumno-welcome__disc,
+html[data-theme='amoled'] .alumno-welcome__disc {
+  background: color-mix(in srgb, var(--lime) 10%, transparent);
+}
+
+.alumno-welcome__vaini {
+  width: min(186px, 62%);
+  bottom: 13px;
+  animation: alumno-arrive 460ms cubic-bezier(0.22, 1, 0.36, 1) 70ms backwards;
+}
 
 .alumno-splash__copy {
   text-align: center;
@@ -583,18 +568,6 @@ html[data-theme='amoled'] .alumno-nav {
 .alumno-guest-buy {
   margin: 12px 0 0;
   text-align: center;
-}
-
-@keyframes alumno-orbit {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes alumno-orbit-item {
-  to {
-    transform: rotate(-360deg);
-  }
 }
 
 html[data-theme='dark'] .alumno-empty img,
@@ -1052,57 +1025,83 @@ html[data-theme='amoled'] .alumno-antojo img {
   margin-bottom: 18px;
 }
 
+/* Android EmptyCartMascotScene: 252dp stage, 216dp mascot bobbing ±4dp, floating glyphs. */
 .alumno-antojo {
   position: relative;
   isolation: isolate;
-  overflow: hidden;
-  height: 224px;
-  margin: 4px auto 8px;
-  width: min(280px, 84vw);
+  height: 252px;
+  margin: 0 auto;
+  width: 100%;
+  display: grid;
+  place-items: center;
 }
 
 .alumno-empty .alumno-antojo__hug,
 .alumno-antojo__hug {
   display: block;
-  position: absolute;
-  inset: auto;
-  top: -8%;
-  left: -8%;
-  width: 116%;
-  height: 160%;
+  width: 216px;
+  height: 216px;
   margin: 0;
   object-fit: contain;
-  object-position: center 8%;
   z-index: 2;
   pointer-events: none;
-  filter: drop-shadow(0 2px 2px rgba(23, 24, 23, 0.07));
+  animation: alumno-bob 3.2s ease-in-out infinite;
 }
 
 .alumno-antojo__deco {
   position: absolute;
-  color: color-mix(in srgb, var(--muted) 70%, var(--lime));
+  color: var(--muted);
   z-index: 4;
+  animation: alumno-float 7s ease-in-out infinite;
 }
 
-html[data-theme='dark'] .alumno-antojo__deco,
-html[data-theme='amoled'] .alumno-antojo__deco {
-  color: color-mix(in srgb, #c8cbb8 72%, var(--lime));
+.alumno-antojo__deco svg {
+  width: 100%;
+  height: 100%;
 }
 
 .alumno-antojo__deco--note {
-  left: 2%;
-  top: 2px;
+  left: 26px;
+  top: 34px;
+  width: 32px;
+  height: 32px;
+  animation-duration: 7.6s;
 }
 
 .alumno-antojo__deco--cup {
-  right: 2%;
-  top: 10px;
+  right: 22px;
+  top: 48px;
+  width: 28px;
+  height: 28px;
+  animation-duration: 6.8s;
+  animation-delay: -3.7s;
 }
 
 .alumno-antojo__deco--spark {
-  right: 10%;
-  bottom: 22px;
+  right: 40px;
+  bottom: 26px;
+  font-size: 19px;
+  line-height: 1;
   color: var(--lime);
+  animation-duration: 6s;
+  animation-delay: -5.1s;
+}
+
+@keyframes alumno-bob {
+  0%, 100% { transform: translateY(-4px); }
+  50% { transform: translateY(4px); }
+}
+
+@keyframes alumno-float {
+  0%, 100% { transform: translateY(-6px); }
+  50% { transform: translateY(6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alumno-antojo__hug,
+  .alumno-antojo__deco {
+    animation: none;
+  }
 }
 
 .alumno-cart-empty__rail {
@@ -2561,9 +2560,6 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     max-width: none;
   }
 
-  .alumno-splash__stage {
-    width: min(400px, 46vw, 44dvh);
-  }
 
   .alumno-themes {
     grid-template-columns: repeat(4, 1fr);
@@ -2716,10 +2712,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-cart-empty .alumno-antojo {
-    overflow: hidden;
     margin: 0 0 12px;
-    height: 268px;
-    width: min(332px, 100%);
   }
 
   .alumno-cart-peek {
@@ -3223,9 +3216,6 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     padding: 32px 48px 48px;
   }
 
-  .alumno-splash__stage {
-    width: min(400px, 38vw, 46dvh);
-  }
 
   .alumno-splash__copy,
   .alumno-splash__actions,
@@ -3571,7 +3561,6 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     height: 324px;
     width: 400px;
     max-width: none;
-    overflow: hidden;
   }
 
   .alumno-detail-split {
@@ -4273,8 +4262,7 @@ html[data-theme='amoled'] .alumno-lockup img,
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .alumno-splash__orbit,
-  .alumno-splash__bubble,
+  .alumno-welcome__vaini,
   .alumno-charge__spinner,
   .alumno-charge__mark img,
   .alumno-charge__check,

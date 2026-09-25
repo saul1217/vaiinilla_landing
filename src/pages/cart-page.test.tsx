@@ -210,7 +210,7 @@ describe('CartPage', () => {
     expect(screen.getByText('$22')).toBeInTheDocument();
     expect(document.querySelector('.alumno-history-row img')).toBeNull();
     expect(document.querySelector('.alumno-history-row__thumb')).toBeNull();
-    expect(document.querySelector('.alumno-antojo__hug')).toHaveAttribute('src', '/vaini/cutout-hug-question.png');
+    expect(document.querySelector('.alumno-antojo__hug')).toHaveAttribute('src', '/vaini/mascot-question.webp');
     expect(document.querySelector('.alumno-antojo__q-face')).toBeNull();
     expect(document.querySelector('.alumno-antojo__vaini')).toBeNull();
   });

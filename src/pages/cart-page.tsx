@@ -547,10 +547,10 @@ export function CartEmptyView({
           </span>
           <img
             className="alumno-antojo__hug"
-            src="/vaini/cutout-hug-question.png"
+            src="/vaini/mascot-question.webp"
             alt=""
-            width={511}
-            height={408}
+            width={216}
+            height={216}
             decoding="async"
             fetchPriority="high"
           />
