@@ -10,6 +10,7 @@ import { lastPlaceSlug, rememberPlace } from '../lib/last-place';
 import { rememberSpace } from '../lib/space-session';
 import type { PublicEstablishment } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
+import { TableCodeSheet } from '../components/table-code-sheet';
 
 export function DiscoveryPage() {
   const { ready } = useAuth();
@@ -20,9 +21,15 @@ export function DiscoveryPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tableCode, setTableCode] = useState('');
+  const [codeSheetOpen, setCodeSheetOpen] = useState(false);
   const [clientId, setClientId] = useState('');
   const [resolving, setResolving] = useState(false);
   const [step, setStep] = useState<'list' | 'picker'>('list');
+
+  // Switching between the list and the place step is a new screen: start at the top.
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [step]);
   const [location, setLocation] = useState<{ latitud: number; longitud: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
@@ -183,26 +190,22 @@ export function DiscoveryPage() {
             <div className="alumno-card">
               <h2>Mesa</h2>
               <p className="alumno-muted">Si ya estás sentado, usa el código del QR.</p>
-              <label className="alumno-field">
-                Código de mesa
-                <input
-                  value={tableCode}
-                  onChange={(event) => setTableCode(event.target.value)}
-                  placeholder="Usar código"
-                  autoComplete="off"
-                />
-              </label>
-              <button
-                className="alumno-btn alumno-btn--ghost"
-                type="button"
-                disabled={resolving}
-                onClick={() => void resolveTableCode()}
-              >
-                {resolving ? 'Buscando mesa…' : 'Usar código'}
+              <button className="alumno-btn alumno-btn--ghost" type="button" onClick={() => setCodeSheetOpen(true)}>
+                Usar código de mesa
               </button>
             </div>
           </div>
         </main>
+        {codeSheetOpen ? (
+          <TableCodeSheet
+            code={tableCode}
+            resolving={resolving}
+            error={error}
+            onChange={(next) => setTableCode(next.replace(/\D/g, ''))}
+            onConfirm={() => void resolveTableCode()}
+            onClosed={() => setCodeSheetOpen(false)}
+          />
+        ) : null}
       </AppShell>
     );
   }
