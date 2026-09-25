@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { OrderTrackCard } from '../components/order-track-card';
+import { WaitingArcade } from '../components/waiting-arcade';
 import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
@@ -139,6 +140,7 @@ export function OrdersPage() {
                       />
                     ))}
                   </div>
+                  <WaitingArcade />
                 </section>
               ) : null}
               {pastOrders.length > 0 ? (

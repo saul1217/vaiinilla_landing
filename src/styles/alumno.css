@@ -5647,3 +5647,284 @@ html:has(body[data-shell='alumno']),
 body[data-shell='alumno'] {
   overflow-x: clip;
 }
+
+/* Android WaitingArcadeCard: dark panel 22px radius, segmented tabs, 250px well. */
+.alumno-arcade {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 22px;
+  background: #1c1d1b;
+  color: #f5f2e8;
+  animation: alumno-arrive 520ms cubic-bezier(0.16, 1, 0.3, 1) 120ms backwards;
+}
+
+.alumno-arcade__head {
+  display: flex;
+  gap: 8px;
+}
+
+.alumno-arcade__tabs {
+  position: relative;
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 3px;
+  border-radius: 12px;
+  background: #232427;
+}
+
+.alumno-arcade__pill {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  height: 32px;
+  width: var(--w);
+  border-radius: 9px;
+  background: #4a4a4e;
+  transform: translateX(var(--x));
+  transition: transform 460ms cubic-bezier(0.34, 1.36, 0.64, 1), width 460ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.alumno-arcade__tabs button {
+  position: relative;
+  height: 32px;
+  border: 0;
+  background: none;
+  color: #8e8e93;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 240ms ease;
+}
+
+.alumno-arcade__tabs button[aria-selected='true'] {
+  color: #f5f2e8;
+  font-weight: 700;
+}
+
+.alumno-arcade__trophy {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 50%;
+  background: #232427;
+  color: #8e8e93;
+  cursor: pointer;
+  transition: color 240ms ease, transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.alumno-arcade__trophy.is-on {
+  color: var(--lime);
+  transform: rotate(-8deg) scale(1.06);
+}
+
+.alumno-arcade__trophy svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.alumno-arcade__well {
+  position: relative;
+  height: 250px;
+  margin-top: 10px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0a0a0c;
+}
+
+.alumno-arcade__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: manipulation;
+  cursor: pointer;
+  outline: none;
+}
+
+.alumno-arcade__hint {
+  position: absolute;
+  inset: 50% 0 auto;
+  translate: 0 -50%;
+  margin: 0;
+  text-align: center;
+  color: #8e8e93;
+  font-size: 15px;
+  font-weight: 600;
+  pointer-events: none;
+  animation: alumno-arcade-breathe 2.4s ease-in-out infinite;
+}
+
+.alumno-arcade__score {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  color: #f5f2e8;
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  animation: alumno-arcade-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.alumno-arcade__over,
+.alumno-arcade__board {
+  position: absolute;
+  inset: 0;
+  animation: alumno-arcade-in 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.alumno-arcade__over {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 12, 0.86);
+  backdrop-filter: blur(3px);
+}
+
+.alumno-arcade__over strong {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.alumno-arcade__over p {
+  margin: 8px 0 14px;
+  color: #8e8e93;
+  font-size: 14px;
+}
+
+.alumno-arcade__retry {
+  padding: 12px 30px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--lime);
+  color: #171817;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  animation: alumno-arcade-pop 460ms cubic-bezier(0.34, 1.56, 0.64, 1) 80ms backwards;
+}
+
+.alumno-arcade__link {
+  margin-top: 6px;
+  padding: 6px;
+  border: 0;
+  background: none;
+  color: #8e8e93;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.alumno-arcade__board {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  background: #0a0a0c;
+}
+
+.alumno-arcade__board > strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.alumno-arcade__board > p {
+  margin: 2px 0 6px;
+  color: #8e8e93;
+  font-size: 12px;
+}
+
+.alumno-arcade__board ol {
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: auto;
+}
+
+.alumno-arcade__board li {
+  display: flex;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  font-size: 14px;
+  animation: alumno-arrive 380ms cubic-bezier(0.16, 1, 0.3, 1) calc(var(--i) * 40ms) backwards;
+}
+
+.alumno-arcade__board li:last-child {
+  border-bottom: 0;
+}
+
+.alumno-arcade__board li span {
+  width: 18px;
+  color: #8e8e93;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.alumno-arcade__board li b {
+  flex: 1;
+  font-weight: 600;
+}
+
+.alumno-arcade__board li em {
+  font-style: normal;
+  font-weight: 800;
+}
+
+.alumno-arcade__board li.is-me {
+  color: var(--lime);
+}
+
+.alumno-arcade__board .alumno-arcade__link {
+  align-self: center;
+}
+
+.alumno-arcade__foot {
+  margin: 9px 4px 0;
+  text-align: center;
+  color: #8e8e93;
+  font-size: 12px;
+}
+
+@keyframes alumno-arcade-in {
+  from { opacity: 0; filter: blur(8px); transform: scale(1.04); }
+  to { opacity: 1; filter: none; transform: none; }
+}
+
+@keyframes alumno-arcade-pop {
+  from { transform: scale(0.6); opacity: 0.4; }
+  to { transform: none; opacity: 1; }
+}
+
+@keyframes alumno-arcade-breathe {
+  0%, 100% { opacity: 0.65; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alumno-arcade,
+  .alumno-arcade__hint,
+  .alumno-arcade__score,
+  .alumno-arcade__over,
+  .alumno-arcade__board,
+  .alumno-arcade__retry,
+  .alumno-arcade__board li {
+    animation: none;
+  }
+
+  .alumno-arcade__pill {
+    transition: none;
+  }
+}
