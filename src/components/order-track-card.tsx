@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react';
+import { Fragment, useLayoutEffect, useRef, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { formatAmount } from '../lib/money';
 import { resolvePickupQrToken, shouldShowPickupSurface } from '../lib/pickup-qr';
@@ -112,9 +112,25 @@ export function OrderTrackCard({
       </div>
       {showBar ? (
         <div className="alumno-track-bar" aria-hidden="true">
-          {ORDER_FLOW.map((step, index) => (
-            <span key={step} className={index < filled ? 'is-on' : undefined} />
-          ))}
+          {ORDER_FLOW.map((step, index) => {
+            const current = filled - 1;
+            const state = index < current ? 'done' : index === current ? 'current' : 'todo';
+            return (
+              <Fragment key={step}>
+                <span className={`alumno-track-bar__node is-${state}`} style={{ '--i': index } as CSSProperties}>
+                  <svg viewBox="0 0 24 24">
+                    <path d={TRACK_ICONS[index]} />
+                  </svg>
+                </span>
+                {index < ORDER_FLOW.length - 1 ? (
+                  <span
+                    className={index < current ? 'alumno-track-bar__rail is-on' : 'alumno-track-bar__rail'}
+                    style={{ '--i': index } as CSSProperties}
+                  />
+                ) : null}
+              </Fragment>
+            );
+          })}
         </div>
       ) : null}
       {showPickup && expanded ? null : (
@@ -271,3 +287,12 @@ function ArrowIcon() {
     </svg>
   );
 }
+
+// One glyph per tracking state, like Android's trackingIcon: receipt, paid, kitchen, ready bell, delivered seal.
+const TRACK_ICONS = [
+  'M7 3h10v18l-2.5-1.6L12 21l-2.5-1.6L7 21V3Zm3 5h4m-4 4h4',
+  'M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-11.5 0 2.4 2.4 4.6-4.8',
+  'M7 3v8m-2-8v4a2 2 0 0 0 4 0V3M7 11v10M17 21V3c-2 1.2-3 3.4-3 6v4h3',
+  'M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16Zm4 4a2 2 0 0 0 4 0',
+  'M12 3l2.3 1.6 2.8-.1.9 2.6 2.2 1.7-.8 2.7.8 2.7-2.2 1.7-.9 2.6-2.8-.1L12 21l-2.3-1.6-2.8.1-.9-2.6L3.8 15.2l.8-2.7-.8-2.7L6 8.1l.9-2.6 2.8.1L12 3Zm-3 9.2 2 2 4-4.4',
+];
