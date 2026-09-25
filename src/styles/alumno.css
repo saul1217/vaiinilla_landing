@@ -5995,3 +5995,632 @@ body[data-shell='alumno'] {
     transition: none;
   }
 }
+
+/* ---------- Mesero: table board ---------- */
+.mesero {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  padding-bottom: 96px;
+}
+
+.mesero__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mesero__head h1 {
+  margin: 0;
+}
+
+.mesero__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.mesero__live i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--lime);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--lime) 60%, transparent);
+  animation: mesero-live 1.8s ease-out infinite;
+}
+
+.mesero__live.is-off i {
+  background: var(--coral);
+  animation: none;
+}
+
+.mesero__summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.mesero__summary span {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: background 320ms ease, color 320ms ease, border-color 320ms ease;
+}
+
+.mesero__summary b {
+  color: var(--text);
+  font-size: 1.5rem;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.mesero__summary .is-call {
+  background: color-mix(in srgb, var(--coral) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--coral) 45%, transparent);
+  color: var(--coral);
+}
+
+.mesero__summary .is-ready {
+  background: color-mix(in srgb, var(--lime) 22%, var(--surface));
+  border-color: color-mix(in srgb, var(--lime) 60%, transparent);
+}
+
+.mesero__filter {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--bg-2, var(--surface));
+  border: 1px solid var(--line);
+}
+
+.mesero__filter-pill {
+  position: absolute;
+  inset: 4px auto 4px 4px;
+  width: calc(50% - 4px);
+  border-radius: 10px;
+  background: var(--text);
+  transform: translateX(calc(var(--i) * 100%));
+  transition: transform 420ms cubic-bezier(0.34, 1.36, 0.64, 1);
+}
+
+.mesero__filter button {
+  position: relative;
+  height: 36px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 240ms ease;
+}
+
+.mesero__filter button[aria-selected='true'] {
+  color: var(--bg);
+}
+
+.mesero__notice {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--yolk) 22%, var(--surface));
+  color: var(--text);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.mesero__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (min-width: 720px) {
+  .mesero__grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
+
+.mesero__tile {
+  position: relative;
+  display: grid;
+  align-content: space-between;
+  gap: 6px;
+  min-height: 108px;
+  padding: 12px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 320ms ease, border-color 320ms ease, opacity 320ms ease, transform 160ms ease;
+}
+
+.mesero__tile:active {
+  transform: scale(0.96);
+}
+
+.mesero__tile b {
+  font-size: 1.9rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.mesero__tile small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.mesero__tile.is-free {
+  opacity: 0.5;
+  background: transparent;
+}
+
+.mesero__tile.is-ready {
+  background: color-mix(in srgb, var(--lime) 28%, var(--surface));
+  border-color: color-mix(in srgb, var(--lime) 70%, transparent);
+}
+
+.mesero__tile.is-ready small {
+  color: var(--text);
+}
+
+.mesero__tile.is-call {
+  background: var(--coral);
+  border-color: var(--coral);
+  color: #fff;
+  animation: mesero-call 1.2s ease-in-out infinite;
+}
+
+.mesero__tile.is-call small {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.mesero__tile.is-call.is-going {
+  background: color-mix(in srgb, var(--coral) 18%, var(--surface));
+  border-color: var(--coral);
+  color: var(--text);
+  animation: none;
+}
+
+.mesero__tile.is-call.is-going small {
+  color: var(--coral);
+}
+
+.mesero__tile.is-skeleton {
+  cursor: default;
+  animation: alumno-skeleton-breathe 1.4s ease-in-out infinite;
+}
+
+.mesero__empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 24px 0;
+}
+
+.mesero__signout {
+  justify-self: center;
+}
+
+.mesero__toast {
+  position: fixed;
+  z-index: 70;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 24px);
+  translate: -50% 0;
+  max-width: calc(100vw - 32px);
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.9rem;
+  font-weight: 700;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+  animation: alumno-update-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.mesero-qa-ring {
+  display: block;
+  margin: -80px auto 40px;
+}
+
+@keyframes mesero-call {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--coral) 55%, transparent); }
+  50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--coral) 0%, transparent); }
+}
+
+@keyframes mesero-live {
+  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--lime) 60%, transparent); }
+  to { box-shadow: 0 0 0 8px transparent; }
+}
+
+/* Table sheet */
+.mesero-call {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--coral) 14%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--coral) 40%, transparent);
+  animation: alumno-arrive 420ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.mesero-call > div {
+  flex: 1;
+}
+
+.mesero-call strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.mesero-call p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.mesero-call .alumno-btn,
+.mesero-orders .alumno-btn {
+  width: auto;
+  min-height: 44px;
+  padding-inline: 20px;
+}
+
+.mesero-orders {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.mesero-orders li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  animation: alumno-arrive 380ms cubic-bezier(0.16, 1, 0.3, 1) calc(var(--i) * 50ms) backwards;
+}
+
+.mesero-orders li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.mesero-orders p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.mesero-status {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-2, var(--bg));
+  color: var(--text-soft);
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mesero-status.is-preparando {
+  background: color-mix(in srgb, var(--yolk) 30%, var(--surface));
+  color: var(--text);
+}
+
+/* Deliver: scanner */
+.mesero-scan {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 8px;
+}
+
+.mesero-scan video {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 22px;
+  background: #0a0a0c;
+}
+
+.mesero-scan__frame {
+  position: absolute;
+  inset: 18% 18% auto;
+  aspect-ratio: 1;
+  border: 3px solid var(--lime);
+  border-radius: 24px;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.18);
+  animation: mesero-scan 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.mesero-scan p {
+  margin: 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@keyframes mesero-scan {
+  50% { transform: scale(0.94); }
+}
+
+.mesero-type {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.mesero-type label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.mesero-type input {
+  height: 52px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+
+.mesero-done {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px 0;
+}
+
+.mesero-done svg {
+  width: 72px;
+  height: 72px;
+  fill: none;
+  stroke: var(--lime);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mesero-done circle {
+  stroke-dasharray: 151;
+  stroke-dashoffset: 151;
+  animation: mesero-draw 520ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.mesero-done path {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: mesero-draw 360ms cubic-bezier(0.16, 1, 0.3, 1) 360ms forwards;
+}
+
+.mesero-done strong {
+  font-size: 1.2rem;
+  animation: alumno-arrive 380ms cubic-bezier(0.16, 1, 0.3, 1) 500ms backwards;
+}
+
+@keyframes mesero-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Mesero gate and venue picker */
+.mesero-gate {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.mesero-places {
+  display: grid;
+  gap: 10px;
+}
+
+.mesero-places button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.mesero-places span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+/* ---------- Buyer: call the waiter ---------- */
+.alumno-callwaiter {
+  margin: 4px 0 12px;
+  color: var(--text);
+}
+
+.alumno-callwaiter__cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 160ms ease, background 240ms ease;
+}
+
+.alumno-callwaiter__cta:active {
+  transform: scale(0.97);
+}
+
+.alumno-callwaiter__cta:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.alumno-callwaiter__reasons {
+  display: grid;
+  gap: 8px;
+}
+
+.alumno-callwaiter__reasons p {
+  margin: 0 0 2px;
+  font-weight: 800;
+}
+
+.alumno-callwaiter__reasons button {
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 200ms ease;
+}
+
+.alumno-callwaiter__reasons button:active {
+  transform: scale(0.98);
+  border-color: var(--lime);
+}
+
+.alumno-callwaiter__reasons .alumno-callwaiter__back {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  text-align: center;
+  min-height: 40px;
+}
+
+.alumno-callwaiter__live {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--coral) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--coral) 40%, transparent);
+  transition: background 420ms ease, border-color 420ms ease;
+}
+
+.alumno-callwaiter.is-going .alumno-callwaiter__live {
+  background: color-mix(in srgb, var(--lime) 22%, var(--surface));
+  border-color: color-mix(in srgb, var(--lime) 60%, transparent);
+}
+
+.alumno-callwaiter__bell {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--coral);
+  color: #fff;
+  animation: callwaiter-ring 1.4s ease-in-out infinite;
+}
+
+.alumno-callwaiter.is-going .alumno-callwaiter__bell {
+  background: var(--lime);
+  color: #171817;
+  animation: none;
+}
+
+.alumno-callwaiter__copy {
+  flex: 1;
+  display: grid;
+  animation: alumno-arrive 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.alumno-callwaiter__copy span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.alumno-callwaiter__cancel {
+  border: 0;
+  background: none;
+  color: var(--text-soft);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.alumno-callwaiter__note {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@keyframes callwaiter-ring {
+  0%, 60%, 100% { transform: rotate(0); }
+  10%, 30% { transform: rotate(-14deg); }
+  20%, 40% { transform: rotate(14deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mesero__live i,
+  .mesero__tile.is-call,
+  .mesero__tile.is-skeleton,
+  .mesero-scan__frame,
+  .alumno-callwaiter__bell,
+  .mesero-call,
+  .mesero-orders li,
+  .alumno-callwaiter__copy {
+    animation: none;
+  }
+
+  .mesero__filter-pill {
+    transition: none;
+  }
+}

@@ -15,7 +15,9 @@ import {
 } from '../lib/order-labels';
 import type { OrderDetail } from '../types/api';
 import { useHeightMorph } from '../lib/use-height-morph';
+import { CallWaiter } from './call-waiter';
 import { OrderPickupPanel } from './order-pickup-panel';
+import type { BuyerCallClient } from '../lib/mesero-api';
 
 export function OrderTrackCard({
   order,
@@ -26,6 +28,7 @@ export function OrderTrackCard({
   selected = false,
   imageUrl = null,
   pickupToken = null,
+  callClient,
 }: {
   order: OrderDetail;
   expanded: boolean;
@@ -35,6 +38,8 @@ export function OrderTrackCard({
   selected?: boolean;
   imageUrl?: string | null;
   pickupToken?: string | null;
+  /** Injected in QA; otherwise built from the stored client context. */
+  callClient?: BuyerCallClient;
 }) {
   const filled = orderProgressFilled(order);
   const steps = orderTrackSteps(order);
@@ -148,6 +153,7 @@ export function OrderTrackCard({
             token={pickupTokenResolved}
             stripeOrder={order.metodo_pago === 'stripe'}
           />
+          <CallWaiter order={order} client={callClient} />
           <ol className="alumno-timeline">
             {steps.map((step, index) => (
               <li key={step.key} className={`is-${step.state}`}>
