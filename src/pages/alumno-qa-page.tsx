@@ -3,7 +3,7 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { OrderTrackCard } from '../components/order-track-card';
-import { WaitingArcade } from '../components/waiting-arcade';
+import { WaitingArcade } from '../arcade/waiting-arcade';
 import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
 import { cartPreview, linePreview } from '../lib/money';
 import { QA_CATALOG_SLUG, QA_PHOTO_POZOLE, QA_PHOTO_TACOS } from '../lib/qa-catalog-photos';

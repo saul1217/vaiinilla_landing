@@ -1,7 +1,7 @@
 // Port of Android WaitingArcadeCard.kt: four one-tap games played while an order
 // is on its way. Units are CSS px (Android dp), physics values copied 1:1.
 
-export type ArcadeKind = 'flappy' | 'brinca' | 'apila' | 'gravedad';
+export type ArcadeKind = 'flappy' | 'brinca' | 'apila' | 'gravedad' | 'skate';
 export type ArcadeStatus = 'idle' | 'play' | 'dead';
 
 export const ARCADE_KINDS: { kind: ArcadeKind; label: string; hint: string }[] = [
@@ -9,11 +9,22 @@ export const ARCADE_KINDS: { kind: ArcadeKind; label: string; hint: string }[] =
   { kind: 'brinca', label: 'Brinca', hint: 'Toca para brincar' },
   { kind: 'apila', label: 'Apila', hint: 'Toca para soltar' },
   { kind: 'gravedad', label: 'Gravedad', hint: 'Toca para cambiar la gravedad' },
+  { kind: 'skate', label: 'Skate', hint: 'Toca para empezar' },
 ];
+
+/** Things that just happened; the card turns them into sound, particles and shake. */
+export interface ArcadeEvent {
+  type: 'jump' | 'flap' | 'land' | 'score' | 'perfect' | 'drop' | 'gravity';
+  x: number;
+  y: number;
+  /** Apila: the piece sliced off the block. */
+  cut?: { x: number; w: number };
+}
 
 export interface ArcadeGame {
   readonly kind: ArcadeKind;
   score: number;
+  events: ArcadeEvent[];
   reset(width: number, height: number): void;
   tap(): void;
   /** Advances physics; true when the run ended on this step. */
@@ -25,6 +36,7 @@ type Random = () => number;
 export class BrincaGame implements ArcadeGame {
   readonly kind = 'brinca';
   score = 0;
+  events: ArcadeEvent[] = [];
   y = 0;
   vy = 0;
   speed = 175;
@@ -40,6 +52,7 @@ export class BrincaGame implements ArcadeGame {
   }
 
   reset(_width: number, height: number) {
+    this.events = [];
     this.score = 0;
     this.y = this.floorY(height);
     this.vy = 0;
@@ -54,12 +67,16 @@ export class BrincaGame implements ArcadeGame {
 
   step(dt: number, width: number, height: number) {
     this.floor = this.floorY(height);
-    if (this.pendingJump && this.y >= this.floor - 0.5) this.vy = -575;
+    if (this.pendingJump && this.y >= this.floor - 0.5) {
+      this.vy = -575;
+      this.events.push({ type: 'jump', x: 64, y: this.floor });
+    }
     this.pendingJump = false;
     this.speed = Math.min(310, this.speed + 2.5 * dt);
     this.vy += 1750 * dt;
     this.y += this.vy * dt;
     if (this.y > this.floor) {
+      if (this.vy > 200) this.events.push({ type: 'land', x: 64, y: this.floor });
       this.y = this.floor;
       this.vy = 0;
     }
@@ -75,7 +92,9 @@ export class BrincaGame implements ArcadeGame {
       if (mx + r > o.x && mx - r < o.x + o.w && this.y + r * 0.4 > this.floor - o.h) return true;
     }
     this.obstacles = this.obstacles.filter((o) => o.x >= -30);
+    const before = Math.floor(this.score / 10);
     this.score += dt * 10;
+    if (Math.floor(this.score / 10) > before) this.events.push({ type: 'score', x: 64, y: this.y - 40 });
     return false;
   }
 }
@@ -83,6 +102,7 @@ export class BrincaGame implements ArcadeGame {
 export class FlappyGame implements ArcadeGame {
   readonly kind = 'flappy';
   score = 0;
+  events: ArcadeEvent[] = [];
   y = 0;
   vy = 0;
   speed = 150;
@@ -92,6 +112,7 @@ export class FlappyGame implements ArcadeGame {
   constructor(private random: Random = Math.random) {}
 
   reset(_width: number, height: number) {
+    this.events = [];
     this.score = 0;
     this.y = height * 0.45;
     this.vy = 0;
@@ -102,6 +123,7 @@ export class FlappyGame implements ArcadeGame {
 
   tap() {
     this.vy = -430;
+    this.events.push({ type: 'flap', x: 70, y: this.y });
   }
 
   step(dt: number, width: number, height: number) {
@@ -120,6 +142,7 @@ export class FlappyGame implements ArcadeGame {
       if (!c.passed && c.x + 46 < mx - r) {
         c.passed = true;
         this.score += 1;
+        this.events.push({ type: 'score', x: 70, y: this.y });
       }
       if (mx + r > c.x && mx - r < c.x + 46 && (this.y - r < c.gapTop || this.y + r > c.gapTop + c.gap)) return true;
     }
@@ -131,6 +154,7 @@ export class FlappyGame implements ArcadeGame {
 export class ApilaGame implements ArcadeGame {
   readonly kind = 'apila';
   score = 0;
+  events: ArcadeEvent[] = [];
   stack: { x: number; w: number }[] = [];
   pos = 0;
   dir = 1;
@@ -149,6 +173,7 @@ export class ApilaGame implements ArcadeGame {
   }
 
   reset(width: number) {
+    this.events = [];
     this.score = 0;
     this.stack = [{ x: width / 2 - 75, w: 150 }];
     this.pos = 0;
@@ -173,6 +198,12 @@ export class ApilaGame implements ArcadeGame {
       return true;
     }
     const snap = Math.abs(this.pos - top.x) < 4;
+    const y = this.topY(height) - this.blockH;
+    if (snap) this.events.push({ type: 'perfect', x: top.x + top.w / 2, y });
+    else {
+      const cutX = this.pos < top.x ? this.pos : r;
+      this.events.push({ type: 'drop', x: l + w / 2, y, cut: { x: cutX, w: top.w - w } });
+    }
     this.stack.push({ x: snap ? top.x : l, w: snap ? top.w : w });
     this.score += 1;
     const odd = this.score % 2 === 1;
@@ -210,6 +241,7 @@ export class ApilaGame implements ArcadeGame {
 export class GravedadGame implements ArcadeGame {
   readonly kind = 'gravedad';
   score = 0;
+  events: ArcadeEvent[] = [];
   gdir = 1;
   y = 0;
   vy = 0;
@@ -228,6 +260,7 @@ export class GravedadGame implements ArcadeGame {
   }
 
   reset(_width: number, height: number) {
+    this.events = [];
     this.score = 0;
     this.gdir = 1;
     this.y = this.floorY(height);
@@ -239,6 +272,7 @@ export class GravedadGame implements ArcadeGame {
 
   tap() {
     this.gdir *= -1;
+    this.events.push({ type: 'gravity', x: 64, y: this.y });
   }
 
   step(dt: number, width: number, height: number) {
@@ -247,6 +281,7 @@ export class GravedadGame implements ArcadeGame {
     this.y += this.vy * dt;
     const target = this.gdir > 0 ? this.floorY(height) : this.ceilY();
     if ((this.gdir > 0 && this.y > target) || (this.gdir < 0 && this.y < target)) {
+      if (Math.abs(this.vy) > 200) this.events.push({ type: 'land', x: 64, y: target });
       this.y = target;
       this.vy = 0;
     }
@@ -262,6 +297,7 @@ export class GravedadGame implements ArcadeGame {
       if (!o.passed && o.x + o.w < mx - r) {
         o.passed = true;
         this.score += 1;
+        this.events.push({ type: 'score', x: 64, y: this.y });
       }
       if (mx + r > o.x && mx - r < o.x + o.w) {
         const surface = o.side > 0 ? this.floorY(height) : this.ceilY();
@@ -309,6 +345,7 @@ const SEEDS: Record<ArcadeKind, [string, number][]> = {
   brinca: [['LA COCINA', 32], ['DOÑA V', 24], ['MESERO', 18]],
   apila: [['DOÑA V', 14], ['LA COCINA', 11], ['MESERO', 8]],
   gravedad: [['MESERO', 15], ['DOÑA V', 12], ['LA COCINA', 9]],
+  skate: [['LA COCINA', 4200], ['DOÑA V', 2600], ['MESERO', 1500]],
 };
 
 export interface ArcadeBoardRow {

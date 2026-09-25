@@ -5667,7 +5667,7 @@ body[data-shell='alumno'] {
   position: relative;
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   padding: 3px;
   border-radius: 12px;
   background: #232427;
@@ -5692,8 +5692,10 @@ body[data-shell='alumno'] {
   background: none;
   color: #8e8e93;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
   cursor: pointer;
   transition: color 240ms ease;
 }
@@ -5703,35 +5705,6 @@ body[data-shell='alumno'] {
   font-weight: 700;
 }
 
-.alumno-arcade__trophy {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  flex: 0 0 auto;
-  border: 0;
-  border-radius: 50%;
-  background: #232427;
-  color: #8e8e93;
-  cursor: pointer;
-  transition: color 240ms ease, transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.alumno-arcade__trophy.is-on {
-  color: var(--lime);
-  transform: rotate(-8deg) scale(1.06);
-}
-
-.alumno-arcade__trophy svg {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 .alumno-arcade__well {
   position: relative;
   height: 250px;
@@ -5739,6 +5712,91 @@ body[data-shell='alumno'] {
   border-radius: 16px;
   overflow: hidden;
   background: #0a0a0c;
+  transition: height 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Skate is a 16:9 pixel game: the well morphs to its shape. */
+.alumno-arcade__well.is-skate {
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+.alumno-arcade__well.is-skate .alumno-arcade__canvas {
+  image-rendering: pixelated;
+}
+
+.alumno-arcade__tools {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.alumno-arcade__tools button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: #232427;
+  color: #8e8e93;
+  cursor: pointer;
+  transition: color 240ms ease, transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1), background 240ms ease;
+}
+
+.alumno-arcade__tools button:active {
+  transform: scale(0.88);
+}
+
+.alumno-arcade__tools button.is-on {
+  color: var(--lime);
+  transform: rotate(-8deg) scale(1.06);
+}
+
+.alumno-arcade__tools svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.alumno-arcade__badge {
+  margin-bottom: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--lime);
+  color: #171817;
+  font-size: 12px;
+  font-weight: 800;
+  animation: alumno-arcade-pop 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Full screen takeover: the card fills the viewport (iOS-safe, no Fullscreen API). */
+.alumno-arcade.is-full {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0;
+  padding: calc(env(safe-area-inset-top) + 12px) calc(env(safe-area-inset-right) + 12px) calc(env(safe-area-inset-bottom) + 12px) calc(env(safe-area-inset-left) + 12px);
+  animation: alumno-arcade-in 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.alumno-arcade.is-full .alumno-arcade__well {
+  flex: 1;
+  height: auto;
+}
+
+.alumno-arcade.is-full .alumno-arcade__well.is-skate {
+  flex: 0 0 auto;
+  width: 100%;
+  max-height: 100%;
+  margin-block: auto;
 }
 
 .alumno-arcade__canvas {
@@ -5892,10 +5950,18 @@ body[data-shell='alumno'] {
 }
 
 .alumno-arcade__foot {
-  margin: 9px 4px 0;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 2px 0;
+}
+
+.alumno-arcade__foot p {
+  flex: 1;
+  margin: 0;
   color: #8e8e93;
   font-size: 12px;
+  line-height: 1.3;
 }
 
 @keyframes alumno-arcade-in {
@@ -5924,7 +5990,8 @@ body[data-shell='alumno'] {
     animation: none;
   }
 
-  .alumno-arcade__pill {
+  .alumno-arcade__pill,
+  .alumno-arcade__well {
     transition: none;
   }
 }
