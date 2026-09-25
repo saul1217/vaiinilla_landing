@@ -4897,3 +4897,31 @@ html[data-theme='light'] .alumno-psheet__qty button {
     animation: none;
   }
 }
+
+/* Rolling digits: each digit is a 0-9 strip that springs to its value, left to right. */
+.alumno-roll {
+  display: inline-flex;
+  font-variant-numeric: tabular-nums;
+}
+
+.alumno-roll__col {
+  display: inline-block;
+  height: 1.1em;
+  line-height: 1.1em;
+  overflow: hidden;
+}
+
+.alumno-roll__strip {
+  display: flex;
+  flex-direction: column;
+  word-break: break-all;
+  width: 1ch;
+  transition: transform 900ms cubic-bezier(.22, 1.25, .36, 1);
+  transition-delay: calc(var(--order) * 45ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alumno-roll__strip {
+    transition: none;
+  }
+}

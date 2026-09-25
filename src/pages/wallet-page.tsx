@@ -16,6 +16,7 @@ import { peekCatalogProducts } from '../lib/catalog-images';
 import { formatAmount } from '../lib/money';
 import type { CatalogProduct, WalletData } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
+import { RollingNumber } from '../components/rolling-number';
 
 export function WalletPage() {
   const { user, ready } = useAuth();
@@ -133,7 +134,9 @@ export function WalletBoardView({
           <div className="alumno-wallet-orb" aria-hidden="true">
             <ShortcutWallet />
           </div>
-          <p className="alumno-wallet-balance">{formatAmount(saldo, 'always')}</p>
+          <p className="alumno-wallet-balance">
+            <RollingNumber value={formatAmount(saldo, 'always')} />
+          </p>
           <p className="alumno-muted">Saldo Vaiinilla</p>
         </section>
         <div className="alumno-wallet-shortcuts">
