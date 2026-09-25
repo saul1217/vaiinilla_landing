@@ -1301,45 +1301,6 @@ html[data-theme='amoled'] .alumno-antojo__deco {
   font-size: 0.95rem;
 }
 
-.alumno-sheet--pay {
-  background: rgba(23, 24, 23, 0.46);
-  display: flex;
-  align-items: flex-end;
-}
-
-.alumno-sheet--pay .alumno-sheet__panel {
-  width: 100%;
-  background: var(--bg);
-  border-radius: 28px 28px 0 0;
-  padding: 18px 20px calc(20px + env(safe-area-inset-bottom, 0px));
-}
-
-.alumno-pay-row {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  width: 100%;
-  text-align: left;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 14px 16px;
-  margin-bottom: 10px;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-
-.alumno-pay-row.is-on {
-  box-shadow: 0 0 0 2px var(--lime);
-  border-color: var(--ink);
-}
-
-.alumno-pay-row:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .alumno-qty {
   display: inline-flex;
   align-items: center;
@@ -3248,18 +3209,9 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
 
   
 
-  .alumno-sheet--pay {
-    align-items: center;
-    justify-content: center;
-  }
+  
 
-  .alumno-sheet--pay .alumno-sheet__panel {
-    width: min(560px, calc(100% - 48px));
-    max-width: 560px;
-    border-radius: 24px;
-    margin: 24px;
-    padding: 24px;
-  }
+  
 
   .alumno-splash {
     display: flex;
@@ -5434,4 +5386,174 @@ html[data-theme='light'] .alumno-codesheet__slots > span.is-filled {
     font-weight: 900;
     overflow: hidden;
   }
+}
+
+/* ---------- Pay sheet (Android PaymentMethodOverlay parity); reuses the code-sheet shell ---------- */
+.alumno-paysheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.alumno-paysheet__head h2 {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 900;
+}
+
+.alumno-paysheet__close {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bg-2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.alumno-paysheet__close svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.alumno-paysheet__total {
+  margin: 4px 0 14px;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.alumno-payopt {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--bg-2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 200ms ease, background-color 200ms ease, transform 420ms cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.alumno-payopt.is-on {
+  border: 2px solid var(--lime);
+  padding: 13px;
+}
+
+.alumno-payopt:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.alumno-payopt__icon {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--text);
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.alumno-payopt.is-on .alumno-payopt__icon {
+  background: var(--lime);
+  color: #1d250c;
+}
+
+.alumno-payopt__icon svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.alumno-payopt__copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.alumno-payopt__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+}
+
+.alumno-payopt__badge {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.alumno-payopt.is-on .alumno-payopt__badge {
+  background: color-mix(in srgb, var(--lime) 22%, transparent);
+  color: var(--text);
+}
+
+.alumno-payopt__sub {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.alumno-payopt__radio {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--line);
+  border-radius: 50%;
+  color: #1d250c;
+  transition: background-color 200ms ease, border-color 200ms ease;
+}
+
+.alumno-payopt__radio svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform: scale(0);
+  transition: transform 380ms cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.alumno-payopt.is-on .alumno-payopt__radio {
+  border-color: var(--lime);
+  background: var(--lime);
+}
+
+.alumno-payopt.is-on .alumno-payopt__radio svg {
+  transform: scale(1);
+}
+
+.alumno-paysheet__cta {
+  width: 100%;
+  height: 52px;
+  margin-top: 6px;
+  border-radius: 26px;
 }
