@@ -1,5 +1,5 @@
-.nav { position: fixed; inset: 0 0 auto; z-index: 50; padding: 14px 0; transition: background 220ms ease, box-shadow 220ms ease, padding 220ms ease; }
-.nav.is-scrolled { padding: 8px 0; background: rgba(244, 241, 231, 0.88); backdrop-filter: blur(16px) saturate(150%); box-shadow: 0 1px 0 var(--line); }
+.nav { position: fixed; inset: 0 0 auto; z-index: 50; padding: calc(14px + env(safe-area-inset-top, 0px)) 0 14px; transition: background 220ms ease, box-shadow 220ms ease, padding 220ms ease; }
+.nav.is-scrolled { padding: calc(8px + env(safe-area-inset-top, 0px)) 0 8px; background: rgba(244, 241, 231, 0.88); backdrop-filter: blur(16px) saturate(150%); box-shadow: 0 1px 0 var(--line); }
 .nav__inner { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 52px; }
 .nav__logo { display: inline-flex; align-items: center; gap: 10px; font-size: 1.15rem; font-weight: 800; letter-spacing: -0.03em; }
 .nav__logo img { width: 42px; height: 42px; object-fit: contain; }

@@ -90,9 +90,11 @@ export const api = {
     query = '',
     cursor?: string,
     limit = 50,
+    near?: { latitud: number; longitud: number },
   ): Promise<{ establishments: PublicEstablishment[]; cursor: string | null }> {
+    // The API requires both coordinates together; it then sorts nearest first.
     const response = await request<PublicEstablishment[]>(
-      `/publico/establecimientos${params({ query, cursor, limit })}`,
+      `/publico/establecimientos${params({ query, cursor, limit, latitud: near?.latitud, longitud: near?.longitud })}`,
     );
     return { establishments: response.data, cursor: response.meta.cursor ?? null };
   },

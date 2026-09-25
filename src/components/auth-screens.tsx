@@ -547,7 +547,7 @@ function AuthSplit({
         <AlumnoBack onClick={onBack}>Volver</AlumnoBack>
         <AlumnoLogo className="alumno-auth__window-logo" alt="" />
         <div className="alumno-auth__mark" aria-hidden="true">
-          <img src="/brand/vaiinilla-mark.webp" alt="" />
+          <img src="/brand/vaiinilla-mark.png" alt="" />
         </div>
         <p className="alumno-kicker">{copy.panelKicker}</p>
         <h1>{copy.panelTitle}</h1>

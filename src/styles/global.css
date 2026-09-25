@@ -53,3 +53,23 @@ p { margin: 0; }
 @media (prefers-reduced-motion: reduce) { [data-reveal] { opacity: 1 !important; transform: none !important; transition: none !important; } .btn:hover { transform: none; } }
 
 @media (max-width: 560px) { .container { padding-inline: 18px; } }
+
+/* Touch layer: native-feeling taps on phones and in the installed app. */
+html { -webkit-tap-highlight-color: transparent; }
+a, button, label, summary, [role='button'], input, select, textarea { touch-action: manipulation; }
+:where(button, [role='button'], .btn, nav a) { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+:where(button, [role='button'], a):focus:not(:focus-visible) { outline: none; }
+:where(button:not(:disabled), [role='button'], a[href], label[for], summary) {
+  transition: transform 420ms cubic-bezier(.34, 1.56, .64, 1), opacity 180ms ease;
+}
+:where(button:not(:disabled), [role='button'], a[href], label[for], summary):active {
+  transform: scale(.97);
+  transition-duration: 90ms, 90ms;
+}
+@media (pointer: coarse) {
+  /* iOS zooms into any field under 16px; the app never zooms. */
+  input, select, textarea { font-size: max(16px, 1em) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(button, [role='button'], a[href], label[for], summary):active { transform: none; }
+}

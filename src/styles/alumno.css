@@ -54,6 +54,8 @@ body[data-shell='alumno'] {
   background: var(--bg);
   color: var(--text);
   position: relative;
+  /* Installed on iOS the status bar is translucent and overlays the page. */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .alumno--nav {
@@ -1260,6 +1262,7 @@ html[data-theme='amoled'] .alumno-antojo__deco {
   position: fixed;
   inset: 0;
   z-index: 40;
+  padding-top: env(safe-area-inset-top, 0px);
   background: var(--bg);
   overflow: auto;
   display: flex;

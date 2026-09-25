@@ -13,7 +13,7 @@ export function AlumnoLockup({
   const className = onDark ? 'alumno-lockup alumno-lockup--on-dark' : 'alumno-lockup';
   const content = (
     <>
-      <img src="/brand/vaiinilla-mark.webp" alt="" width="36" height="36" />
+      <img src="/brand/vaiinilla-mark.png" alt="" width="36" height="36" />
       <span translate="no">Vaiinilla.</span>
     </>
   );
@@ -43,7 +43,7 @@ export function AlumnoLogo({
   return (
     <img
       className={className ?? 'alumno-logo'}
-      src={onDark ? '/brand/vaiinilla-logo-dark.webp' : '/brand/vaiinilla-logo-light.webp'}
+      src={onDark ? '/brand/vaiinilla-logo-dark.png' : '/brand/vaiinilla-logo-light.png'}
       alt={alt}
       width="280"
       height="220"

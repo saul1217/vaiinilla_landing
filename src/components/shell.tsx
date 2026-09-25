@@ -56,7 +56,7 @@ export function SiteNav({ marketing = false }: { marketing?: boolean }) {
     <header className={scrolled ? 'nav is-scrolled' : 'nav'} data-nav>
       <div className="container nav__inner">
         <Link className="nav__logo" to={logoHref} aria-label="Vaiinilla - inicio">
-          <img src="/brand/vaiinilla-mark.webp" alt="" width="42" height="42" />
+          <img src="/brand/vaiinilla-mark.png" alt="" width="42" height="42" />
           <span translate="no">Vaiinilla</span>
         </Link>
         {marketing ? (
@@ -107,7 +107,7 @@ export function SiteFooter() {
     <footer className="footer">
       <div className="container footer__inner">
         <Link className="footer__logo" to="/" aria-label="Vaiinilla - inicio">
-          <img src="/brand/vaiinilla-mark.webp" alt="" width="42" height="42" />
+          <img src="/brand/vaiinilla-mark.png" alt="" width="42" height="42" />
           <span translate="no">Vaiinilla</span>
         </Link>
         <p className="footer__tag">Menú, pedidos y retiro para cualquier negocio de comida. Apps nativas, próximamente.</p>
