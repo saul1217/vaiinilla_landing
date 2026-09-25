@@ -87,12 +87,8 @@ describe('MenuPage', () => {
       '/cuenta?next=/e/demo-a',
     );
     expect(screen.getByRole('button', { name: /comprar sin cuenta/i })).toBeInTheDocument();
-    expect(document.querySelector('.alumno-sheet')).not.toHaveClass('alumno-sheet--has-photo');
-    expect(document.querySelector('.alumno-sheet__photo')).toBeNull();
-    expect(document.querySelector('.alumno-sheet__vaini img')).toHaveAttribute(
-      'src',
-      '/vaini/cutout-frente.png',
-    );
+    expect(document.querySelector('.alumno-psheet__photo')).toBeNull();
+    expect(document.querySelector('.alumno-psheet__vaini')).toHaveAttribute('src', '/vaini/cutout-frente.png');
   });
 
   it('con foto de catálogo abre el rail y conserva un fallback hasta que cargue', async () => {
@@ -119,17 +115,13 @@ describe('MenuPage', () => {
     const user = userEvent.setup();
     renderMenu();
     await user.click(await screen.findByRole('button', { name: /tacos de cochinita/i }));
-    expect(document.querySelector('.alumno-sheet')).toHaveClass('alumno-sheet--has-photo');
-    const photo = document.querySelector('.alumno-sheet__photo');
+    const photo = document.querySelector('.alumno-psheet__photo');
     expect(photo).toHaveAttribute('src', QA_PHOTO_TACOS);
-    expect(document.querySelector('.alumno-sheet__photo-placeholder img')).toHaveAttribute(
-      'src',
-      '/vaini/cutout-frente.png',
-    );
-    expect(document.querySelector('.alumno-sheet__photo-stage')).not.toHaveClass('is-ready');
+    expect(photo).not.toHaveClass('is-ready');
+    expect(document.querySelector('.alumno-psheet__vaini')).toHaveAttribute('src', '/vaini/cutout-frente.png');
     fireEvent.load(photo!);
-    expect(document.querySelector('.alumno-sheet__photo-stage')).toHaveClass('is-ready');
-    expect(document.querySelector('.alumno-sheet__vaini')).toBeNull();
+    expect(photo).toHaveClass('is-ready');
+    expect(document.querySelector('.alumno-psheet__vaini')).toBeNull();
   });
 
   it('comprar sin cuenta mete el producto al carrito', async () => {

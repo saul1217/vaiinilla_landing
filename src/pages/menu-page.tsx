@@ -14,7 +14,7 @@ import { rememberPlace } from '../lib/last-place';
 import { formatMoney } from '../lib/money';
 import type { CatalogProduct, CatalogResponse, PublicEstablishment } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
-import { MotionSheet } from '../components/motion-sheet';
+import { ProductSheet } from '../components/product-sheet';
 
 export function MenuPage() {
   const { slug = '' } = useParams();
@@ -27,7 +27,6 @@ export function MenuPage() {
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<CatalogProduct | null>(null);
-  const [selectedImageReady, setSelectedImageReady] = useState(false);
   const [optionIds, setOptionIds] = useState<number[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +74,6 @@ export function MenuPage() {
   function openProduct(product: CatalogProduct) {
     if (!product.disponible) return;
     setSelected(product);
-    setSelectedImageReady(false);
     setOptionIds(defaultOptionIds(product));
     setQuantity(1);
     setError(null);
@@ -91,6 +89,13 @@ export function MenuPage() {
       if (current.includes(optionId)) return current.filter((id) => id !== optionId);
       return [...withoutGroup, optionId];
     });
+  }
+
+  function clearOptionGroup(groupId: number) {
+    const group = selected?.grupos_opcion.find((item) => item.id === groupId);
+    if (!group) return;
+    const groupIds = new Set(group.opciones.map((option) => option.id));
+    setOptionIds((current) => current.filter((id) => !groupIds.has(id)));
   }
 
   // keepOpen lets the sheet animate out itself instead of vanishing on unmount.
@@ -200,109 +205,23 @@ export function MenuPage() {
         </div>
       </main>
       {selected ? (
-        <MotionSheet
-          className={selectedThumb ? 'alumno-sheet alumno-sheet--has-photo' : 'alumno-sheet'}
-          labelledBy="product-detail"
+        <ProductSheet
+          product={selected}
+          placeName={place?.nombre ?? null}
+          photoUrl={selectedThumb}
+          optionIds={optionIds}
+          quantity={quantity}
+          lineTotal={preview?.line ?? null}
+          error={error}
+          canAddToCart={canAddToCart}
+          loginHref={`/cuenta?next=/e/${slug}`}
+          onToggleOption={toggleOption}
+          onClearGroup={clearOptionGroup}
+          onQuantityChange={(delta) => setQuantity((value) => Math.min(20, Math.max(1, value + delta)))}
+          onAdd={() => addCurrentProduct({ keepOpen: true })}
+          onBuyWithoutAccount={buyWithoutAccount}
           onClosed={() => setSelected(null)}
-        >
-          {(closeSheet, dragHandle) => (
-          <div className="alumno-sheet__dialog">
-            <span className="alumno-sheet__grabber" aria-hidden="true" {...dragHandle} />
-            <button className="alumno-sheet__close" type="button" onClick={closeSheet} aria-label="Cerrar">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-              </svg>
-            </button>
-            {selectedThumb ? (
-              <div
-                className={
-                  selectedImageReady
-                    ? 'alumno-sheet__photo-stage is-ready'
-                    : 'alumno-sheet__photo-stage'
-                }
-                aria-hidden="true"
-                {...dragHandle}
-              >
-                <span className="alumno-sheet__photo-placeholder">
-                  <img src="/vaini/cutout-frente.png" alt="" />
-                </span>
-                <img
-                  className="alumno-sheet__photo"
-                  src={selectedThumb}
-                  alt=""
-                  onLoad={() => setSelectedImageReady(true)}
-                />
-              </div>
-            ) : (
-              <span className="alumno-sheet__vaini" aria-hidden="true" {...dragHandle}>
-                <img src="/vaini/cutout-frente.png" alt="" />
-              </span>
-            )}
-            <div className="alumno-sheet__body">
-            <h2 id="product-detail" style={{ fontSize: '1.7rem', margin: '10px 0 8px' }}>
-              {selected.nombre}
-            </h2>
-            <p className="alumno-muted">{selected.tiempo_estimado_min} min</p>
-            {selected.descripcion ? <p className="alumno-lead">{selected.descripcion}</p> : null}
-            {selected.ingredientes ? <p>Ingredientes: {selected.ingredientes}</p> : null}
-            {selected.alergenos ? <p>Alérgenos: {selected.alergenos}</p> : null}
-            {error ? <p className="alumno-error">{error}</p> : null}
-            {selected.grupos_opcion.map((group) => (
-              <fieldset className="options" key={group.id}>
-                <legend>
-                  {group.nombre} ({group.min_selecciones}-{group.max_selecciones})
-                </legend>
-                {group.opciones.map((option) => (
-                  <label key={option.id}>
-                    <input
-                      type={group.max_selecciones === 1 ? 'radio' : 'checkbox'}
-                      name={`group-${group.id}`}
-                      checked={optionIds.includes(option.id)}
-                      onChange={() => toggleOption(group.id, option.id, group.max_selecciones)}
-                    />
-                    {option.nombre}{' '}
-                    {option.precio_extra !== '0.00' ? `+ ${formatMoney(option.precio_extra)}` : ''}
-                  </label>
-                ))}
-              </fieldset>
-            ))}
-            <div className="alumno-qty" style={{ margin: '16px 0' }}>
-              <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Menos">
-                −
-              </button>
-              <span>{quantity}</span>
-              <button type="button" onClick={() => setQuantity((value) => Math.min(20, value + 1))} aria-label="Más">
-                +
-              </button>
-            </div>
-            {canAddToCart ? (
-              <div className="alumno-sheet__buy">
-                <button
-                  className="alumno-btn alumno-btn--lime"
-                  type="button"
-                  onClick={() => {
-                    if (addCurrentProduct({ keepOpen: true })) closeSheet();
-                  }}
-                >
-                  Agregar · {preview ? formatMoney(preview.line) : ''}
-                </button>
-              </div>
-            ) : (
-              <div className="alumno-sheet__buy">
-                <Link className="alumno-btn alumno-btn--lime" to={`/cuenta?next=/e/${slug}`}>
-                  Iniciar sesión para comprar
-                </Link>
-                <p className="alumno-guest-buy">
-                  <button className="alumno-link" type="button" onClick={buyWithoutAccount}>
-                    Comprar sin cuenta
-                  </button>
-                </p>
-              </div>
-            )}
-          </div>
-          </div>
-          )}
-        </MotionSheet>
+        />
       ) : null}
     </AppShell>
   );

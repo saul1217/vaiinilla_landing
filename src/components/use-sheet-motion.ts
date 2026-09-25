@@ -40,6 +40,8 @@ export function useSheetMotion(onClosed: () => void) {
       onClosedRef.current();
       return;
     }
+    const backdrop = el.parentElement?.querySelector('.alumno-motion-backdrop');
+    if (canAnimate(backdrop ?? null)) backdrop!.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' });
     const current = getComputedStyle(el).transform;
     const animation = el.animate(
       [{ transform: current === 'none' ? 'none' : current }, { transform: 'translateY(100%)' }],
