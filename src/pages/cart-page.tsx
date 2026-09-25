@@ -445,7 +445,7 @@ export function CartFilledView({
                   >
                     −
                   </button>
-                  <span>{line.quantity}</span>
+                  <span key={line.quantity} className="alumno-ticker">{line.quantity}</span>
                   <button
                     type="button"
                     aria-label={`Agregar una ${line.productName}`}
@@ -502,7 +502,12 @@ export function CartFilledView({
             </p>
             <div className="alumno-sticky-pay">
               <button className="alumno-btn alumno-btn--lime" type="button" disabled={payDisabled} onClick={onPay}>
-                {payLabel}
+                <span>{payLabel}</span>
+                {total ? (
+                  <span className="alumno-sticky-pay__total" aria-hidden="true">
+                    <span key={total} className="alumno-ticker">{formatAmount(total)}</span>
+                  </span>
+                ) : null}
               </button>
             </div>
           </div>

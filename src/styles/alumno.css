@@ -5355,3 +5355,83 @@ html[data-theme='light'] .alumno-codesheet__slots > span.is-filled {
   display: block;
   margin: 10px auto 0;
 }
+
+/* ---------- Cart lines (Android CartLineRow / QuantityStepper parity), phone layout ---------- */
+@media (max-width: 767px) {
+  .alumno-line {
+    grid-template-columns: 76px minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .alumno-line__thumb {
+    width: 76px;
+    height: 76px;
+    border-radius: 18px;
+  }
+
+  .alumno-line__copy strong {
+    font-size: 1.0625rem;
+    letter-spacing: -0.02em;
+  }
+
+  .alumno-line__copy p {
+    font-size: 0.75rem;
+  }
+
+  .alumno-line__price {
+    font-size: 1.25rem;
+    font-weight: 900;
+  }
+
+  /* One pill with − qty +, instead of two separate boxes. */
+  .alumno-line .alumno-qty {
+    display: inline-flex;
+    align-items: center;
+    height: 44px;
+    padding: 0 4px;
+    border: 1px solid color-mix(in srgb, var(--text) 22%, transparent);
+    border-radius: 22px;
+  }
+
+  .alumno-line .alumno-qty button {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+  }
+
+  .alumno-line .alumno-qty > span {
+    width: 28px;
+    text-align: center;
+    font-size: 0.9375rem;
+    font-weight: 800;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 767px) {
+  .alumno-line__thumb {
+    flex: none;
+    object-fit: cover;
+    aspect-ratio: 1;
+  }
+
+  /* The total rides inside the pay button (Android CheckoutDockButton), so the sticky dock never hides it. */
+  .alumno-cart-layout__total {
+    display: none;
+  }
+
+  .alumno-sticky-pay .alumno-btn {
+    width: 100%;
+    justify-content: space-between;
+    padding-inline: 26px;
+  }
+
+  .alumno-sticky-pay__total {
+    padding-left: 16px;
+    border-left: 1px solid rgba(29, 37, 12, 0.18);
+    font-weight: 900;
+    overflow: hidden;
+  }
+}
