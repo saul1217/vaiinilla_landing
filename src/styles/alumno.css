@@ -5599,3 +5599,51 @@ html[data-theme='light'] .alumno-codesheet__slots > span.is-filled {
   margin-top: 6px;
   border-radius: 26px;
 }
+
+/* New-version toast: drops in above the content, pill like the Android snackbar. */
+.alumno-update {
+  position: fixed;
+  z-index: 60;
+  top: calc(env(safe-area-inset-top) + 10px);
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 16px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.88rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+  animation: alumno-update-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.alumno-update button {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: var(--lime);
+  color: #171817;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@keyframes alumno-update-in {
+  from { opacity: 0; transform: translateY(-16px) scale(0.92); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alumno-update { animation: none; }
+}
+
+/* Stripe's hidden fraud iframe (m-outer) briefly mounts wider than the screen;
+   on Android Chrome that zooms the page out for ~400ms and the nav jumps. */
+html:has(body[data-shell='alumno']),
+body[data-shell='alumno'] {
+  overflow-x: clip;
+}

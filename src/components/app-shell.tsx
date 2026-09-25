@@ -9,6 +9,7 @@ import { canAnimate, createSpring } from '../lib/spring';
 // A touch of overshoot that never leaves the bar (BOUNCY overshoots ~40%).
 const PILL_SPRING = { stiffness: 460, damping: 30 };
 import { AlumnoLockup } from './alumno-brand';
+import { UpdateToast } from './update-toast';
 import { SkipLink } from './shell';
 
 export type AlumnoTab = 'menu' | 'orders' | 'wallet' | 'cart' | 'none';
@@ -235,6 +236,7 @@ export function AppShell({
   return (
     <div className={tab === 'none' ? 'alumno' : 'alumno alumno--nav'}>
       <SkipLink />
+      <UpdateToast />
       {tab === 'none' ? null : <BottomNav tab={tab} />}
       <RouteStage>{children}</RouteStage>
     </div>
