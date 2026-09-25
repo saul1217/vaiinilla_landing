@@ -13,6 +13,8 @@ import { initialsFrom } from '../lib/initials';
 import { rememberPlace } from '../lib/last-place';
 import { formatMoney } from '../lib/money';
 import type { CatalogProduct, CatalogResponse, PublicEstablishment } from '../types/api';
+import { LoadingSkeleton } from '../components/loading-skeleton';
+import { MotionSheet } from '../components/motion-sheet';
 
 export function MenuPage() {
   const { slug = '' } = useParams();
@@ -91,7 +93,8 @@ export function MenuPage() {
     });
   }
 
-  function addCurrentProduct() {
+  // keepOpen lets the sheet animate out itself instead of vanishing on unmount.
+  function addCurrentProduct({ keepOpen = false } = {}) {
     if (!selected || !place) return false;
     const invalid = validateSelections(selected, optionIds);
     if (invalid) {
@@ -99,13 +102,9 @@ export function MenuPage() {
       return false;
     }
     addLine(place.slug, place.nombre, selected, optionIds, quantity);
-    setSelected(null);
+    if (!keepOpen) setSelected(null);
     setError(null);
     return true;
-  }
-
-  function addToCart() {
-    addCurrentProduct();
   }
 
   function buyWithoutAccount() {
@@ -155,7 +154,7 @@ export function MenuPage() {
           </div>
         </div>
         {error && !selected ? <p className="alumno-error">{error}</p> : null}
-        {loading ? <p role="status">Cargando menú…</p> : null}
+        {loading ? <LoadingSkeleton shape="products" label="Cargando menú…" /> : null}
         <div className="alumno-chips">
           <button className={categoryId == null ? 'alumno-chip is-on' : 'alumno-chip'} type="button" onClick={() => setCategoryId(null)}>
             Todo
@@ -174,7 +173,7 @@ export function MenuPage() {
               </button>
             ))}
         </div>
-        <div className="alumno-grid">
+        <div className="alumno-grid alumno-arrive">
             {products.map((product) => {
               const thumb = productImageUrl(product.imagen_url);
               return (
@@ -201,11 +200,19 @@ export function MenuPage() {
         </div>
       </main>
       {selected ? (
-        <section
+        <MotionSheet
           className={selectedThumb ? 'alumno-sheet alumno-sheet--has-photo' : 'alumno-sheet'}
-          aria-labelledby="product-detail"
+          labelledBy="product-detail"
+          onClosed={() => setSelected(null)}
         >
+          {(closeSheet, dragHandle) => (
           <div className="alumno-sheet__dialog">
+            <span className="alumno-sheet__grabber" aria-hidden="true" {...dragHandle} />
+            <button className="alumno-sheet__close" type="button" onClick={closeSheet} aria-label="Cerrar">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+              </svg>
+            </button>
             {selectedThumb ? (
               <div
                 className={
@@ -214,6 +221,7 @@ export function MenuPage() {
                     : 'alumno-sheet__photo-stage'
                 }
                 aria-hidden="true"
+                {...dragHandle}
               >
                 <span className="alumno-sheet__photo-placeholder">
                   <img src="/vaini/cutout-frente.png" alt="" />
@@ -226,14 +234,11 @@ export function MenuPage() {
                 />
               </div>
             ) : (
-              <span className="alumno-sheet__vaini" aria-hidden="true">
+              <span className="alumno-sheet__vaini" aria-hidden="true" {...dragHandle}>
                 <img src="/vaini/cutout-frente.png" alt="" />
               </span>
             )}
             <div className="alumno-sheet__body">
-            <button className="alumno-link" type="button" onClick={() => setSelected(null)}>
-              Cerrar
-            </button>
             <h2 id="product-detail" style={{ fontSize: '1.7rem', margin: '10px 0 8px' }}>
               {selected.nombre}
             </h2>
@@ -272,7 +277,13 @@ export function MenuPage() {
             </div>
             {canAddToCart ? (
               <div className="alumno-sheet__buy">
-                <button className="alumno-btn alumno-btn--lime" type="button" onClick={addToCart}>
+                <button
+                  className="alumno-btn alumno-btn--lime"
+                  type="button"
+                  onClick={() => {
+                    if (addCurrentProduct({ keepOpen: true })) closeSheet();
+                  }}
+                >
                   Agregar · {preview ? formatMoney(preview.line) : ''}
                 </button>
               </div>
@@ -290,7 +301,8 @@ export function MenuPage() {
             )}
           </div>
           </div>
-        </section>
+          )}
+        </MotionSheet>
       ) : null}
     </AppShell>
   );

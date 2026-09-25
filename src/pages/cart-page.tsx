@@ -32,6 +32,7 @@ import type {
   PublicEstablishment,
   WalletData,
 } from '../types/api';
+import { LoadingSkeleton } from '../components/loading-skeleton';
 
 export function CartPage() {
   const { slug = '' } = useParams();
@@ -420,7 +421,7 @@ export function CartFilledView({
 }) {
   return (
     <div className="alumno-cart-layout">
-      <div className="alumno-cart-layout__lines">
+      <div className="alumno-cart-layout__lines alumno-arrive">
         {lines.map((line) => {
           const thumb = productImageUrl(line.imageUrl);
           const lineTotal = linePreview(line.unitPreview, line.quantity);
@@ -575,7 +576,7 @@ export function CartEmptyView({
                   Pedidos anteriores
                 </h2>
               ) : null}
-              {historyLoading ? <p role="status">Cargando pedidos anteriores…</p> : null}
+              {historyLoading ? <LoadingSkeleton shape="rows" label="Cargando pedidos anteriores…" /> : null}
               {historyError ? <p className="alumno-error">{historyError}</p> : null}
               {showHistory ? (
                 <div className="alumno-history-list">

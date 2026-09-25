@@ -379,9 +379,27 @@ html[data-theme='amoled'] .alumno-nav {
   border-radius: 999px;
 }
 
+.alumno-nav__items {
+  position: relative;
+}
+
+.alumno-nav__items a {
+  z-index: 1;
+  transition: color 220ms ease;
+}
+
 .alumno-nav__items a.is-on {
   color: var(--text);
+}
+
+.alumno-nav__pill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc((100% - 6px) / 4);
+  border-radius: 999px;
   background: color-mix(in srgb, var(--text) 8%, var(--nav-bg));
+  will-change: transform;
+  pointer-events: none;
 }
 
 .alumno-nav svg {
@@ -4359,5 +4377,193 @@ html[data-theme='amoled'] .alumno-lockup img,
 
   .alumno-charge__tick {
     stroke-dashoffset: 0;
+  }
+}
+
+/* The sliding pill only fits the phone tab bar; wider layouts keep per-item highlights. */
+@media (min-width: 768px) {
+  .alumno-nav__pill {
+    display: none;
+  }
+
+  .alumno-nav__items a.is-on {
+    background: color-mix(in srgb, var(--text) 8%, var(--nav-bg));
+  }
+}
+
+/* Loading skeletons: same footprint as the real cards, a soft sheen instead of "Cargando…" text. */
+.alumno-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.alumno-skeleton {
+  display: grid;
+  gap: 12px;
+  margin: 8px 0 16px;
+}
+
+.alumno-skeleton--products {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.alumno-skeleton__item {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  grid-template-rows: auto auto;
+  align-content: center;
+  gap: 8px 14px;
+  min-height: 88px;
+  padding: 14px;
+  border-radius: 22px;
+  background: var(--surface);
+  animation: alumno-skeleton-breathe 1.4s ease-in-out infinite;
+}
+
+.alumno-skeleton__media {
+  grid-row: span 2;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+.alumno-skeleton__line {
+  height: 14px;
+  width: 70%;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  align-self: end;
+}
+
+.alumno-skeleton__line--short {
+  width: 42%;
+  align-self: start;
+}
+
+.alumno-skeleton--products .alumno-skeleton__item {
+  grid-template-columns: 1fr;
+  min-height: 0;
+}
+
+.alumno-skeleton--products .alumno-skeleton__media {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  grid-row: auto;
+}
+
+.alumno-skeleton--wallet .alumno-skeleton__item {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  min-height: 220px;
+  background: transparent;
+}
+
+.alumno-skeleton--wallet .alumno-skeleton__media {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  grid-row: auto;
+}
+
+.alumno-skeleton--wallet .alumno-skeleton__line {
+  height: 52px;
+  width: 58%;
+  align-self: center;
+}
+
+@keyframes alumno-skeleton-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+/* Content arrives instead of appearing: blur + short rise, staggered per item. */
+.alumno-arrive > * {
+  animation: alumno-arrive 520ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.alumno-arrive > :nth-child(2) { animation-delay: 38ms; }
+.alumno-arrive > :nth-child(3) { animation-delay: 76ms; }
+.alumno-arrive > :nth-child(4) { animation-delay: 114ms; }
+.alumno-arrive > :nth-child(5) { animation-delay: 152ms; }
+.alumno-arrive > :nth-child(6) { animation-delay: 190ms; }
+.alumno-arrive > :nth-child(7) { animation-delay: 228ms; }
+.alumno-arrive > :nth-child(n + 8) { animation-delay: 266ms; }
+
+@keyframes alumno-arrive {
+  from { opacity: 0; transform: translateY(8px); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alumno-skeleton__item,
+  .alumno-arrive > * {
+    animation: none;
+  }
+}
+
+/* Product sheet chrome: grabber to drag down, round close button over the photo (Android parity). */
+.alumno-sheet__dialog {
+  position: relative;
+}
+
+.alumno-sheet__grabber {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: 0;
+  right: 64px;
+  height: 44px;
+  touch-action: none;
+}
+
+.alumno-sheet__grabber::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: calc(50% + 32px);
+  width: 40px;
+  height: 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 28%, transparent);
+  transform: translateX(-50%);
+}
+
+.alumno-sheet__photo-stage,
+.alumno-sheet__vaini {
+  touch-action: none;
+}
+
+.alumno-sheet__close {
+  position: absolute;
+  z-index: 4;
+  top: 14px;
+  right: 14px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  color: var(--text);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.alumno-sheet__close svg {
+  width: 20px;
+  height: 20px;
+}
+
+@media (min-width: 768px) {
+  .alumno-sheet__grabber {
+    display: none;
   }
 }

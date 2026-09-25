@@ -15,6 +15,7 @@ import { persistPickupQrFromOrder } from '../lib/pickup-qr';
 import { isActiveOrderStatus } from '../lib/order-labels';
 import { usePickupQrToken } from '../lib/use-pickup-qr';
 import type { CatalogProduct, OrderDetail, PublicEstablishment } from '../types/api';
+import { LoadingSkeleton } from '../components/loading-skeleton';
 
 const POLL_MS = 5000;
 
@@ -111,7 +112,7 @@ export function OrdersPage() {
         <AlumnoPageHeader title="Mis pedidos" />
         {place?.nombre ? <p className="alumno-place-name">{place.nombre}</p> : null}
         {error ? <p className="alumno-error">{error}</p> : null}
-        {loading && orders.length === 0 && !error ? <p role="status">Cargando pedidos…</p> : null}
+        {loading && orders.length === 0 && !error ? <LoadingSkeleton shape="orders" label="Cargando pedidos…" /> : null}
         {orders.length === 0 && !error && !loading ? (
           <div className="alumno-empty">
             <img src="/vaini/cutout-frente.png" alt="" />
@@ -125,7 +126,7 @@ export function OrdersPage() {
                   <h2 className="alumno-section-label alumno-section-label--live" id="orders-live">
                     En curso
                   </h2>
-                  <div className="alumno-order-list">
+                  <div className="alumno-order-list alumno-arrive">
                     {activeOrders.map((order) => (
                       <OrderTrackCard
                         key={order.id}
@@ -145,7 +146,7 @@ export function OrdersPage() {
                   <h2 className="alumno-section-label" id="orders-past">
                     Anteriores
                   </h2>
-                  <div className="alumno-order-list">
+                  <div className="alumno-order-list alumno-arrive">
                     {pastOrders.map((order) => (
                       <OrderTrackCard
                         key={order.id}

@@ -9,6 +9,7 @@ import { enableGuestExplore } from '../lib/guest-explore';
 import { lastPlaceSlug, rememberPlace } from '../lib/last-place';
 import { rememberSpace } from '../lib/space-session';
 import type { PublicEstablishment } from '../types/api';
+import { LoadingSkeleton } from '../components/loading-skeleton';
 
 export function DiscoveryPage() {
   const { ready } = useAuth();
@@ -238,7 +239,7 @@ export function DiscoveryPage() {
           </div>
         </div>
         {error ? <p className="alumno-error">{error}</p> : null}
-        {loading ? <p role="status">Cargando establecimientos…</p> : null}
+        {loading && items.length === 0 ? <LoadingSkeleton shape="places" label="Cargando establecimientos…" /> : null}
         <div className="alumno-discovery">
           <div className="alumno-discovery__list">
             {!loading && items.length === 0 && !error ? (
@@ -247,7 +248,7 @@ export function DiscoveryPage() {
                 <p>No hay establecimientos publicados todavía.</p>
               </div>
             ) : (
-              <div className="alumno-radio-list" role="radiogroup" aria-label="Establecimientos">
+              <div className="alumno-radio-list alumno-arrive" role="radiogroup" aria-label="Establecimientos">
                 {items.map((place) => {
                   const isRecommended = recommended?.id === place.id;
                   const access = place.identificador_cliente_obligatorio
