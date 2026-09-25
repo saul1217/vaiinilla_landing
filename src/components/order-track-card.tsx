@@ -14,6 +14,7 @@ import {
   orderTrackSteps,
 } from '../lib/order-labels';
 import type { OrderDetail } from '../types/api';
+import { useHeightMorph } from '../lib/use-height-morph';
 import { OrderPickupPanel } from './order-pickup-panel';
 
 export function OrderTrackCard({
@@ -44,6 +45,7 @@ export function OrderTrackCard({
   const showPickup = shouldShowPickupSurface(order);
   const collapsedStatusHint = orderCollapsedStatusHint(order.estado);
   const operationalHint = orderOperationalHint(order);
+  useHeightMorph(cardRef, expanded);
 
   useLayoutEffect(() => {
     if (!expanded) return;
@@ -140,7 +142,7 @@ export function OrderTrackCard({
         </p>
       )}
       {expanded ? (
-        <div className="alumno-track-card__follow">
+        <div className="alumno-track-card__follow" data-morph-in>
           <OrderPickupPanel
             order={order}
             token={pickupTokenResolved}

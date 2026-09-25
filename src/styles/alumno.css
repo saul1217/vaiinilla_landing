@@ -482,53 +482,86 @@ html[data-theme='amoled'] .alumno-nav {
   padding: 8px 0;
 }
 
-/* Android WelcomeMascotStage (compact): 300dp tall, 186dp Vaini on a 204dp disc. */
-.alumno-welcome {
+.alumno-splash__stage {
   position: relative;
-  height: min(300px, 40dvh);
-  min-height: 240px;
-  margin: 2px 0 4px;
-  flex: 0 0 auto;
-}
-
-.alumno-welcome__bubble {
-  position: absolute;
-  border-radius: 50%;
-  object-fit: cover;
-  transform: translate(-50%, -50%);
-  border: 1px solid color-mix(in srgb, var(--bg) 82%, transparent);
-}
-
-html[data-theme='dark'] .alumno-welcome__bubble,
-html[data-theme='amoled'] .alumno-welcome__bubble {
-  border-color: color-mix(in srgb, var(--bg) 58%, transparent);
-}
-
-.alumno-welcome__disc,
-.alumno-welcome__vaini {
-  position: absolute;
-  left: 50%;
-  bottom: 4px;
-  translate: -50% 0;
-}
-
-.alumno-welcome__disc {
-  width: min(204px, 68%);
+  width: min(340px, 88vw, 42dvh);
   aspect-ratio: 1;
+  margin: 8px auto 4px;
+  flex: 0 0 auto;
+  min-height: 200px;
+}
+
+.alumno-splash__vaini {
+  position: absolute;
+  inset: 22%;
   border-radius: 50%;
-  background: #34402a;
+  background: color-mix(in srgb, var(--lime) 22%, #182218);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
 }
 
-html[data-theme='dark'] .alumno-welcome__disc,
-html[data-theme='amoled'] .alumno-welcome__disc {
-  background: color-mix(in srgb, var(--lime) 10%, transparent);
+.alumno-splash__vaini img {
+  width: 86%;
+  height: auto;
+  mix-blend-mode: lighten;
 }
 
-.alumno-welcome__vaini {
-  width: min(186px, 62%);
-  bottom: 13px;
-  animation: alumno-arrive 460ms cubic-bezier(0.22, 1, 0.36, 1) 70ms backwards;
+.alumno-splash__orbit {
+  position: absolute;
+  inset: 0;
+  animation: alumno-orbit 48s linear infinite;
 }
+
+.alumno-splash__bubble {
+  position: absolute;
+  width: var(--bubble, 54px);
+  height: var(--bubble, 54px);
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid color-mix(in srgb, var(--cream) 55%, transparent);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+  animation: alumno-orbit-item 48s linear infinite;
+}
+
+.alumno-splash__bubble img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.alumno-splash__bubble.is-cutout {
+  background: color-mix(in srgb, var(--lime) 18%, #1a2418);
+}
+
+.alumno-splash__bubble.is-cutout img {
+  object-fit: contain;
+  mix-blend-mode: lighten;
+  transform: scale(1.08);
+}
+
+/* Nine bubbles evenly spaced on one ring (40° apart); the ring turns and each
+   bubble counter-turns so the scenes stay upright. */
+.alumno-splash__bubble {
+  --bubble: 16%;
+  --ring: 41%;
+  width: var(--bubble);
+  height: auto;
+  aspect-ratio: 1;
+  left: calc(50% + cos(var(--angle)) * var(--ring) - var(--bubble) / 2);
+  top: calc(50% + sin(var(--angle)) * var(--ring) - var(--bubble) / 2);
+}
+
+.alumno-splash__bubble.is-1 { --angle: -90deg; }
+.alumno-splash__bubble.is-2 { --angle: -50deg; }
+.alumno-splash__bubble.is-3 { --angle: -10deg; }
+.alumno-splash__bubble.is-4 { --angle: 30deg; }
+.alumno-splash__bubble.is-5 { --angle: 70deg; }
+.alumno-splash__bubble.is-6 { --angle: 110deg; }
+.alumno-splash__bubble.is-7 { --angle: 150deg; }
+.alumno-splash__bubble.is-8 { --angle: 190deg; }
+.alumno-splash__bubble.is-9 { --angle: 230deg; }
 
 .alumno-splash__copy {
   text-align: center;
@@ -568,6 +601,18 @@ html[data-theme='amoled'] .alumno-welcome__disc {
 .alumno-guest-buy {
   margin: 12px 0 0;
   text-align: center;
+}
+
+@keyframes alumno-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes alumno-orbit-item {
+  to {
+    transform: rotate(-360deg);
+  }
 }
 
 html[data-theme='dark'] .alumno-empty img,
@@ -2561,6 +2606,10 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
 
+  .alumno-splash__stage {
+    width: min(400px, 46vw, 44dvh);
+  }
+
   .alumno-themes {
     grid-template-columns: repeat(4, 1fr);
   }
@@ -3216,6 +3265,10 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     padding: 32px 48px 48px;
   }
 
+
+  .alumno-splash__stage {
+    width: min(400px, 38vw, 46dvh);
+  }
 
   .alumno-splash__copy,
   .alumno-splash__actions,
@@ -4262,7 +4315,8 @@ html[data-theme='amoled'] .alumno-lockup img,
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .alumno-welcome__vaini,
+  .alumno-splash__orbit,
+  .alumno-splash__bubble,
   .alumno-charge__spinner,
   .alumno-charge__mark img,
   .alumno-charge__check,

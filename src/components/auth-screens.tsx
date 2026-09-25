@@ -17,9 +17,20 @@ import { unpublishedLegalTestingEnabled } from '../lib/legal';
 import type { LegalVersions } from '../types/api';
 import { AlumnoBack, AlumnoLockup, AlumnoLogo } from './alumno-brand';
 import { SignupSteps } from './signup-steps';
-import { WelcomeStage } from './welcome-stage';
 
 type AuthMode = 'splash' | 'entrar' | 'alta' | 'totp' | 'google-legal';
+
+const SPLASH_BUBBLES = [
+  { src: '/vaini/scene-laptop.png', className: 'is-1' },
+  { src: '/vaini/scene-taller.png', className: 'is-2' },
+  { src: '/assets/vaini-oxxo.jpg', className: 'is-3' },
+  { src: '/vaini/scene-karate.png', className: 'is-4' },
+  { src: '/vaini/scene-bloques.png', className: 'is-5' },
+  { src: '/assets/vaini-tacos.jpg', className: 'is-6' },
+  { src: '/vaini/scene-puente.png', className: 'is-7' },
+  { src: '/assets/vaini-camion.jpg', className: 'is-8' },
+  { src: '/assets/vaini-moto.jpg', className: 'is-9' },
+] as const;
 
 const AUTH_SCENES = [
   { src: '/assets/vaini-oxxo.jpg', className: 'is-oxxo' },
@@ -307,7 +318,18 @@ export function AuthScreens({
             </button>
           ) : null}
         </header>
-        <WelcomeStage />
+        <div className="alumno-splash__stage">
+          <div className="alumno-splash__orbit" aria-hidden="true">
+            {SPLASH_BUBBLES.map((bubble) => (
+              <span key={bubble.className} className={`alumno-splash__bubble ${bubble.className} is-scene`}>
+                <img src={bubble.src} alt="" />
+              </span>
+            ))}
+          </div>
+          <div className="alumno-splash__vaini">
+            <img src="/vaini/cutout-frente.png" alt="Vaini, la mascota de Vaiinilla" />
+          </div>
+        </div>
         <div className="alumno-splash__copy">
           <h1>
             Tu lugar, <em>a tu ritmo.</em>
