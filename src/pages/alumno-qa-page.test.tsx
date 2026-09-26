@@ -47,7 +47,7 @@ describe('AlumnoQaCartPage', () => {
     );
 
     expect(document.querySelectorAll('.alumno-history-row img')).toHaveLength(0);
-    expect(document.querySelector('.alumno-antojo__hug')).toHaveAttribute('src', '/vaini/cutout-hug-question.png');
+    expect(document.querySelector('.alumno-antojo__hug')).toHaveAttribute('src', '/vaini/mascot-question.webp');
     expect(document.querySelector('.alumno-antojo__q-face')).toBeNull();
     expect(document.querySelector('.alumno-antojo__vaini')).toBeNull();
     expect(screen.getByText('1× fruti Lupis')).toBeInTheDocument();

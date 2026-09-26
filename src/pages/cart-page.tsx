@@ -32,6 +32,8 @@ import type {
   PublicEstablishment,
   WalletData,
 } from '../types/api';
+import { LoadingSkeleton } from '../components/loading-skeleton';
+import { MotionSheet } from '../components/motion-sheet';
 
 export function CartPage() {
   const { slug = '' } = useParams();
@@ -316,66 +318,65 @@ export function CartPage() {
         )}
       </main>
       {sheetOpen ? (
-        <div className="alumno-sheet alumno-sheet--pay" role="dialog" aria-labelledby="pay-title">
-          <div className="alumno-sheet__panel">
-            <h2 id="pay-title">¿Cómo quieres pagar?</h2>
-            <p className="alumno-muted" style={{ margin: '6px 0 14px' }}>
-              Total {total ? formatMoney(total) : '—'}
-            </p>
-            <button
-              type="button"
-              className={payment === 'efectivo' ? 'alumno-pay-row is-on' : 'alumno-pay-row'}
-              onClick={() => setPayment('efectivo')}
-            >
-              <span>
-                <strong>Efectivo al recoger</strong>
-                <p className="alumno-muted">Pagas en caja cuando el pedido esté listo.</p>
-              </span>
-            </button>
-            {user ? (
+        <MotionSheet className="alumno-sheet alumno-codesheet alumno-paysheet" labelledBy="pay-title" onClosed={() => setSheetOpen(false)}>
+          {(close, dragHandle) => (
+            <div className="alumno-codesheet__panel">
+              <div className="alumno-codesheet__grab" {...dragHandle}>
+                <span aria-hidden="true" />
+              </div>
+              <div className="alumno-paysheet__head">
+                <h2 id="pay-title">¿Cómo quieres pagar?</h2>
+                <button type="button" className="alumno-paysheet__close" onClick={close} aria-label="Cerrar">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                </button>
+              </div>
+              <p className="alumno-paysheet__total">Total {total ? formatMoney(total) : '—'}</p>
+              <PayOption
+                selected={payment === 'efectivo'}
+                icon="cash"
+                title="Pago en caja"
+                badge="Efectivo"
+                subtitle="Pagas en caja cuando el pedido esté listo."
+                onSelect={() => setPayment('efectivo')}
+              />
+              {user ? (
+                <PayOption
+                  selected={payment === 'saldo'}
+                  icon="wallet"
+                  title="Saldo Vaiinilla"
+                  badge="Saldo"
+                  subtitle={
+                    insufficientBalance && wallet
+                      ? `Saldo insuficiente · Disponible: ${formatMoney(wallet.wallet.saldo)}`
+                      : wallet
+                        ? `Disponible: ${formatMoney(wallet.wallet.saldo)}`
+                        : 'Entra a tu cuenta para ver el saldo.'
+                  }
+                  onSelect={() => setPayment('saldo')}
+                />
+              ) : null}
+              <PayOption
+                selected={payment === 'stripe'}
+                icon="card"
+                title="Pago con Stripe"
+                badge="Stripe"
+                subtitle={stripeEnabled ? 'Tarjeta de débito o crédito · Pago seguro con Stripe.' : STRIPE_UNAVAILABLE_COPY}
+                disabled={!stripeEnabled}
+                onSelect={() => stripeEnabled && setPayment('stripe')}
+              />
+              {error ? <p className="alumno-error">{error}</p> : null}
+              {insufficientBalance ? <p className="alumno-error">No tienes saldo suficiente para este pedido.</p> : null}
               <button
+                className="alumno-btn alumno-btn--lime alumno-paysheet__cta"
                 type="button"
-                className={payment === 'saldo' ? 'alumno-pay-row is-on' : 'alumno-pay-row'}
-                onClick={() => setPayment('saldo')}
+                disabled={submitting || Boolean(insufficientBalance) || Boolean(pendingStripeOrderId)}
+                onClick={() => void confirm()}
               >
-                <span>
-                  <strong>Saldo</strong>
-                  <p className="alumno-muted">
-                    {wallet ? `Disponible: ${formatMoney(wallet.wallet.saldo)}` : 'Entra a tu cuenta para ver el saldo.'}
-                  </p>
-                </span>
+                {submitting ? 'Confirmando…' : `Continuar con ${PAY_LABEL[payment]}`}
               </button>
-            ) : null}
-            <button
-              type="button"
-              className={payment === 'stripe' ? 'alumno-pay-row is-on' : 'alumno-pay-row'}
-              disabled={!stripeEnabled}
-              onClick={() => stripeEnabled && setPayment('stripe')}
-            >
-              <span>
-                <strong>Tarjeta</strong>
-                <p className="alumno-muted">
-                  {stripeEnabled
-                    ? 'Pagas con Stripe. El total final lo calcula Vaiinilla al crear el pedido antes de abrir Stripe.'
-                    : STRIPE_UNAVAILABLE_COPY}
-                </p>
-              </span>
-            </button>
-            {error ? <p className="alumno-error">{error}</p> : null}
-            {insufficientBalance ? <p className="alumno-error">No tienes saldo suficiente para este pedido.</p> : null}
-            <button
-              className="alumno-btn alumno-btn--lime"
-              type="button"
-              disabled={submitting || Boolean(insufficientBalance) || Boolean(pendingStripeOrderId)}
-              onClick={() => void confirm()}
-            >
-              {submitting ? 'Confirmando…' : 'Confirmar'}
-            </button>
-            <button className="alumno-btn alumno-btn--ghost" type="button" onClick={() => setSheetOpen(false)}>
-              Cerrar
-            </button>
-          </div>
-        </div>
+            </div>
+          )}
+        </MotionSheet>
       ) : null}
     </AppShell>
   );
@@ -420,7 +421,7 @@ export function CartFilledView({
 }) {
   return (
     <div className="alumno-cart-layout">
-      <div className="alumno-cart-layout__lines">
+      <div className="alumno-cart-layout__lines alumno-arrive">
         {lines.map((line) => {
           const thumb = productImageUrl(line.imageUrl);
           const lineTotal = linePreview(line.unitPreview, line.quantity);
@@ -444,7 +445,7 @@ export function CartFilledView({
                   >
                     −
                   </button>
-                  <span>{line.quantity}</span>
+                  <span key={line.quantity} className="alumno-ticker">{line.quantity}</span>
                   <button
                     type="button"
                     aria-label={`Agregar una ${line.productName}`}
@@ -501,7 +502,12 @@ export function CartFilledView({
             </p>
             <div className="alumno-sticky-pay">
               <button className="alumno-btn alumno-btn--lime" type="button" disabled={payDisabled} onClick={onPay}>
-                {payLabel}
+                <span>{payLabel}</span>
+                {total ? (
+                  <span className="alumno-sticky-pay__total" aria-hidden="true">
+                    <span key={total} className="alumno-ticker">{formatAmount(total)}</span>
+                  </span>
+                ) : null}
               </button>
             </div>
           </div>
@@ -541,10 +547,10 @@ export function CartEmptyView({
           </span>
           <img
             className="alumno-antojo__hug"
-            src="/vaini/cutout-hug-question.png"
+            src="/vaini/mascot-question.webp"
             alt=""
-            width={511}
-            height={408}
+            width={216}
+            height={216}
             decoding="async"
             fetchPriority="high"
           />
@@ -575,7 +581,7 @@ export function CartEmptyView({
                   Pedidos anteriores
                 </h2>
               ) : null}
-              {historyLoading ? <p role="status">Cargando pedidos anteriores…</p> : null}
+              {historyLoading ? <LoadingSkeleton shape="rows" label="Cargando pedidos anteriores…" /> : null}
               {historyError ? <p className="alumno-error">{historyError}</p> : null}
               {showHistory ? (
                 <div className="alumno-history-list">
@@ -621,5 +627,57 @@ function CupIcon() {
         d="M4 10h13v4.5A4.5 4.5 0 0 1 12.5 19h-4A4.5 4.5 0 0 1 4 14.5V10Zm13 1.2h1.6A2.4 2.4 0 0 1 21 13.6 2.4 2.4 0 0 1 18.6 16H17v-1.6h1.6a.8.8 0 0 0 .8-.8.8.8 0 0 0-.8-.8H17V11.2ZM7 4.5c.6.7 1 1.6 1 2.6S7.6 8.7 7 9.4c-.6-.7-1-1.6-1-2.3s.4-1.9 1-2.6Zm3.2 0c.6.7 1 1.6 1 2.6s-.4 1.6-1 2.3c-.6-.7-1-1.6-1-2.3s.4-1.9 1-2.6Z"
       />
     </svg>
+  );
+}
+
+const PAY_LABEL: Record<string, string> = { efectivo: 'pago en caja', saldo: 'saldo', stripe: 'Stripe' };
+
+const PAY_ICONS = {
+  cash: 'M3 7h18v10H3zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM6 10v4m12-4v4',
+  wallet: 'M4 7h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4zM4 7l11-3v3m1 6h2',
+  card: 'M3 6h18v12H3zM3 10h18M7 15h4',
+} as const;
+
+// Android PaymentMethodCardOption: icon tile, title + badge, subtitle and a radio mark.
+function PayOption({
+  selected,
+  icon,
+  title,
+  badge,
+  subtitle,
+  disabled = false,
+  onSelect,
+}: {
+  selected: boolean;
+  icon: keyof typeof PAY_ICONS;
+  title: string;
+  badge: string;
+  subtitle: string;
+  disabled?: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      className={selected ? 'alumno-payopt is-on' : 'alumno-payopt'}
+      disabled={disabled}
+      onClick={onSelect}
+    >
+      <span className="alumno-payopt__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d={PAY_ICONS[icon]} /></svg>
+      </span>
+      <span className="alumno-payopt__copy">
+        <span className="alumno-payopt__title">
+          <strong>{title}</strong>
+          <span className="alumno-payopt__badge">{badge}</span>
+        </span>
+        <span className="alumno-payopt__sub">{subtitle}</span>
+      </span>
+      <span className="alumno-payopt__radio" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="m6 12.5 4 4 8-9" /></svg>
+      </span>
+    </button>
   );
 }

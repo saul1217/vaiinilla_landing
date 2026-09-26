@@ -16,6 +16,7 @@ import { enableGuestBuy, enableGuestExplore } from '../lib/guest-explore';
 import { unpublishedLegalTestingEnabled } from '../lib/legal';
 import type { LegalVersions } from '../types/api';
 import { AlumnoBack, AlumnoLockup, AlumnoLogo } from './alumno-brand';
+import { SignupSteps } from './signup-steps';
 
 type AuthMode = 'splash' | 'entrar' | 'alta' | 'totp' | 'google-legal';
 
@@ -363,6 +364,33 @@ export function AuthScreens({
     );
   }
 
+  if (mode === 'alta') {
+    return (
+      <SignupSteps
+        email={email}
+        password={password}
+        nombre={nombre}
+        acceptedTerms={acceptedTerms}
+        acceptedPrivacy={acceptedPrivacy}
+        legal={legal}
+        busy={busy}
+        configured={configured}
+        error={error}
+        onEmail={setEmail}
+        onPassword={setPassword}
+        onNombre={setNombre}
+        onTerms={setAcceptedTerms}
+        onPrivacy={setAcceptedPrivacy}
+        onSubmit={(event) => void onPassword(event)}
+        onExit={goBack}
+        onLogin={() => {
+          setError(null);
+          setMode('entrar');
+        }}
+      />
+    );
+  }
+
   const copy = AUTH_COPY[mode];
 
   return (
@@ -401,12 +429,6 @@ export function AuthScreens({
         >
           {error ? <p className="alumno-error">{error}</p> : null}
           {notice ? <p className="alumno-ok">{notice}</p> : null}
-          {mode === 'alta' ? (
-            <label className="alumno-field">
-              Nombre
-              <input value={nombre} onChange={(event) => setNombre(event.target.value)} required autoComplete="name" />
-            </label>
-          ) : null}
           {mode !== 'google-legal' ? (
             <>
               <label className="alumno-field">
@@ -419,7 +441,7 @@ export function AuthScreens({
                   autoComplete="email"
                 />
               </label>
-              {mode === 'entrar' || mode === 'alta' ? (
+              {mode === 'entrar' ? (
                 <label className="alumno-field">
                   Contraseña
                   <input
@@ -428,7 +450,7 @@ export function AuthScreens({
                     onChange={(event) => setPassword(event.target.value)}
                     required
                     minLength={8}
-                    autoComplete={mode === 'alta' ? 'new-password' : 'current-password'}
+                    autoComplete="current-password"
                   />
                 </label>
               ) : null}
@@ -443,7 +465,7 @@ export function AuthScreens({
               </button>
             </p>
           ) : null}
-          {mode === 'alta' || mode === 'google-legal' ? (
+          {mode === 'google-legal' ? (
             <>
               <label className="alumno-check">
                 <input
@@ -547,7 +569,7 @@ function AuthSplit({
         <AlumnoBack onClick={onBack}>Volver</AlumnoBack>
         <AlumnoLogo className="alumno-auth__window-logo" alt="" />
         <div className="alumno-auth__mark" aria-hidden="true">
-          <img src="/brand/vaiinilla-mark.webp" alt="" />
+          <img src="/brand/vaiinilla-mark.png" alt="" />
         </div>
         <p className="alumno-kicker">{copy.panelKicker}</p>
         <h1>{copy.panelTitle}</h1>

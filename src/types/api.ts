@@ -50,6 +50,18 @@ export interface PublicEstablishment {
   slug: string;
   identificador_cliente_etiqueta: string;
   identificador_cliente_obligatorio: boolean;
+  // Public profile (backend migrations 39–40); null until the business fills it in.
+  descripcion?: string | null;
+  imagen_url?: string | null;
+  direccion?: string | null;
+  horario?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
+  instagram_url?: string | null;
+  facebook_url?: string | null;
+  tiktok_url?: string | null;
+  whatsapp_url?: string | null;
+  sitio_web_url?: string | null;
 }
 
 export interface CatalogCategory {

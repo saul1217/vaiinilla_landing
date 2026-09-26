@@ -3,6 +3,7 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { OrderTrackCard } from '../components/order-track-card';
+import { WaitingArcade } from '../arcade/waiting-arcade';
 import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
 import { cartPreview, linePreview } from '../lib/money';
 import { QA_CATALOG_SLUG, QA_PHOTO_POZOLE, QA_PHOTO_TACOS } from '../lib/qa-catalog-photos';
@@ -10,6 +11,8 @@ import type { CartLine, CatalogProduct, OrderDetail } from '../types/api';
 import { CartEmptyView, CartFilledView } from './cart-page';
 import { OrderTicketView } from './order-detail-page';
 import { useDeskPane } from './orders-page';
+import { WaiterBoard } from '../components/waiter-board';
+import { createMockBuyerCallClient, createMockWaiterClient } from '../lib/mesero-mock';
 import { WalletBoardView } from './wallet-page';
 
 function qaOrder(overrides: Partial<OrderDetail>): OrderDetail {
@@ -48,6 +51,15 @@ function qaOrder(overrides: Partial<OrderDetail>): OrderDetail {
 }
 
 const CASH = qaOrder({});
+const MESA = qaOrder({
+  id: 'qa-96',
+  folio: 96,
+  estado: 'preparando',
+  metodo_pago: 'stripe',
+  destino: 'en_espacio',
+  espacio: { id: 4, nombre: 'Mesa 4', tipo: 'mesa' },
+});
+const qaCallClient = createMockBuyerCallClient();
 const CARD = qaOrder({
   id: 'qa-94',
   folio: 94,
@@ -273,6 +285,7 @@ export function AlumnoQaOrdersPage() {
                   );
                 })}
               </div>
+              <WaitingArcade />
             </section>
           </div>
           {deskPane ? (
@@ -330,6 +343,36 @@ export function AlumnoQaOrderDetailPage() {
             pickupToken={CARD_LISTO.qr_token ?? null}
           />
           <OrderTicketView order={CARD_LISTO} />
+        </div>
+      </main>
+    </AppShell>
+  );
+}
+
+const qaWaiter = createMockWaiterClient();
+
+export function AlumnoQaWaiterPage() {
+  if (!import.meta.env.DEV) return <Navigate to="/" replace />;
+  return (
+    <AppShell>
+      <WaiterBoard client={qaWaiter} placeName="Venecia" />
+      <button className="alumno-link mesero-qa-ring" type="button" onClick={() => qaWaiter.ring(1 + Math.floor(Math.random() * 12))}>
+        Simular llamada
+      </button>
+    </AppShell>
+  );
+}
+
+export function AlumnoQaTableOrderPage() {
+  const [open, setOpen] = useState(true);
+  if (!import.meta.env.DEV) return <Navigate to="/" replace />;
+  return (
+    <AppShell tab="orders">
+      <main id="main-content" className="alumno-main">
+        <AlumnoPageHeader title="Mis pedidos" />
+        <p className="alumno-place-name">Venecia · Mesa 4</p>
+        <div className="alumno-order-list">
+          <OrderTrackCard order={MESA} expanded={open} onToggle={() => setOpen((v) => !v)} imageUrl={qaOrderThumb(MESA)} callClient={qaCallClient} />
         </div>
       </main>
     </AppShell>

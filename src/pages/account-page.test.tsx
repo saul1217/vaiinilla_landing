@@ -115,7 +115,7 @@ describe('AccountPage', () => {
     expect(screen.getByRole('button', { name: /eliminar cuenta/i })).toBeInTheDocument();
   });
 
-  it('alta usa split con volver, logo y legales separados', async () => {
+  it('alta pide un dato por pantalla y solo avanza con datos válidos', async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
@@ -124,12 +124,32 @@ describe('AccountPage', () => {
     );
 
     await user.click(screen.getByRole('button', { name: /crear cuenta/i }));
-    expect(screen.getByRole('button', { name: /^volver$/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /^crear cuenta$/i })).toBeInTheDocument();
-    expect(screen.getByAltText(/^vaiinilla$/i)).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: /términos/i })).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: /privacidad/i })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /^volver$/i }));
+    expect(screen.getByRole('heading', { name: /cuál es tu correo/i })).toBeInTheDocument();
+    const next = () => screen.getByRole('button', { name: /^continuar$/i });
+    expect(next()).toBeDisabled();
+    await user.type(screen.getByLabelText('Correo'), 'ana@escuela');
+    expect(next()).toBeDisabled();
+    await user.type(screen.getByLabelText('Correo'), '.mx');
+    await user.click(next());
+
+    expect(screen.getByRole('heading', { name: /crea una contraseña/i })).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Contraseña'), 'corta');
+    expect(next()).toBeDisabled();
+    await user.type(screen.getByLabelText('Contraseña'), '1234');
+    await user.click(next());
+
+    expect(screen.getByRole('heading', { name: /cómo te llamas/i })).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Nombre'), 'Ana');
+    await user.click(next());
+
+    expect(screen.getByRole('heading', { name: /último paso/i })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: /términos/i })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: /privacidad/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^crear cuenta$/i })).toBeDisabled();
+
+    for (let i = 0; i < 4; i += 1) {
+      await user.click(screen.getByRole('button', { name: /^(atrás|cerrar)$/i }));
+    }
     expect(screen.getByRole('heading', { name: /tu lugar, a tu ritmo/i })).toBeInTheDocument();
   });
 

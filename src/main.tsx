@@ -10,6 +10,9 @@ import './styles/marketing.css';
 import './styles/app.css';
 import './styles/alumno.css';
 
+// iOS Safari only applies :active (our press feedback) when a touch listener exists.
+document.addEventListener('touchstart', () => undefined, { passive: true });
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>

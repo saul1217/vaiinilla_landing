@@ -1,13 +1,23 @@
-import { useEffect, useId, type ReactNode } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { Link, NavigationType, useLocation, useNavigationType } from 'react-router-dom';
 import { applyAlumnoTheme, useTheme } from '../context/theme-context';
 import { useAuth } from '../context/auth-context';
 import { useCart } from '../context/cart-context';
 import { lastPlaceSlug } from '../lib/last-place';
+import { canAnimate, createSpring } from '../lib/spring';
+
+// A touch of overshoot that never leaves the bar (BOUNCY overshoots ~40%).
+const PILL_SPRING = { stiffness: 460, damping: 30 };
 import { AlumnoLockup } from './alumno-brand';
+import { UpdateToast } from './update-toast';
 import { SkipLink } from './shell';
 
 export type AlumnoTab = 'menu' | 'orders' | 'wallet' | 'cart' | 'none';
+
+// Every page mounts its own shell, so the nav remounts on each navigation.
+// These survive the remount and let the pill and the page slide from where they were.
+let lastActiveTab: number | null = null;
+let lastPathDepth: number | null = null;
 
 const stroke = {
   fill: 'none' as const,
@@ -129,12 +139,15 @@ export function BottomNav({ tab }: { tab: Exclude<AlumnoTab, 'none'> }) {
     { id: 'cart' as const, href: cartHref, label: 'Carrito', Icon: IconCart, badge: count, active: tab === 'cart' },
   ];
 
+  const activeIndex = items.findIndex((item) => item.active);
+
   return (
     <nav className="alumno-nav" aria-label="Navegación">
       <div className="alumno-nav__brand">
         <AlumnoLockup />
       </div>
       <div className="alumno-nav__items">
+        <NavPill index={activeIndex} />
         {items.map((item) => (
           <Link
             key={item.id}
@@ -152,6 +165,63 @@ export function BottomNav({ tab }: { tab: Exclude<AlumnoTab, 'none'> }) {
   );
 }
 
+/** One highlight shared by all tabs; it springs from the previous tab to the active one. */
+function NavPill({ index }: { index: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  // Read once at mount (effects run twice under StrictMode).
+  const [from] = useState(() => lastActiveTab ?? index);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || index < 0) return;
+    lastActiveTab = index;
+    const x = createSpring(from, PILL_SPRING);
+    const unsubscribe = x.subscribe((value, velocity) => {
+      const stretch = Math.min(0.28, Math.abs(velocity) / 26);
+      el.style.transform = `translateX(calc(${value} * (100% + 2px))) scaleX(${1 + stretch}) scaleY(${1 - stretch * 0.4})`;
+    });
+    x.set(index);
+    return () => {
+      unsubscribe();
+      x.stop();
+    };
+  }, [from, index]);
+
+  if (index < 0) return null;
+  return <span ref={ref} className="alumno-nav__pill" aria-hidden="true" />;
+}
+
+/** Enters the page like a native stack: deeper routes slide in, going back slides out the other way. */
+function RouteStage({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const { pathname } = useLocation();
+  const navigationType = useNavigationType();
+  const [previous] = useState(() => lastPathDepth);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const depth = pathname.split('/').filter(Boolean).length;
+    lastPathDepth = depth;
+    if (!canAnimate(el) || previous === null || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const direction = navigationType === NavigationType.Pop || depth < previous ? -1 : depth > previous ? 1 : 0;
+    const from = direction === 0 ? 'translate3d(0, 10px, 0)' : `translate3d(${direction * 28}px, 0, 0)`;
+    const animation = el.animate(
+      [
+        { opacity: 0, transform: from, filter: 'blur(6px)' },
+        { opacity: 1, transform: 'none', filter: 'none' },
+      ],
+      { duration: 380, easing: 'cubic-bezier(.16, 1, .3, 1)' },
+    );
+    return () => animation.cancel();
+  }, [pathname, navigationType, previous]);
+
+  return (
+    <div ref={ref} className="alumno-stage">
+      {children}
+    </div>
+  );
+}
+
 export function AppShell({
   children,
   tab = 'none',
@@ -166,8 +236,9 @@ export function AppShell({
   return (
     <div className={tab === 'none' ? 'alumno' : 'alumno alumno--nav'}>
       <SkipLink />
+      <UpdateToast />
       {tab === 'none' ? null : <BottomNav tab={tab} />}
-      {children}
+      <RouteStage>{children}</RouteStage>
     </div>
   );
 }
