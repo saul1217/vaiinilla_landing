@@ -11,8 +11,7 @@ import type { CartLine, CatalogProduct, OrderDetail } from '../types/api';
 import { CartEmptyView, CartFilledView } from './cart-page';
 import { OrderTicketView } from './order-detail-page';
 import { useDeskPane } from './orders-page';
-import { WaiterBoard } from '../components/waiter-board';
-import { createMockBuyerCallClient, createMockWaiterClient } from '../lib/mesero-mock';
+import { createMockBuyerCallClient } from '../lib/mesero-mock';
 import { WalletBoardView } from './wallet-page';
 
 function qaOrder(overrides: Partial<OrderDetail>): OrderDetail {
@@ -345,20 +344,6 @@ export function AlumnoQaOrderDetailPage() {
           <OrderTicketView order={CARD_LISTO} />
         </div>
       </main>
-    </AppShell>
-  );
-}
-
-const qaWaiter = createMockWaiterClient();
-
-export function AlumnoQaWaiterPage() {
-  if (!import.meta.env.DEV) return <Navigate to="/" replace />;
-  return (
-    <AppShell>
-      <WaiterBoard client={qaWaiter} placeName="Venecia" />
-      <button className="alumno-link mesero-qa-ring" type="button" onClick={() => qaWaiter.ring(1 + Math.floor(Math.random() * 12))}>
-        Simular llamada
-      </button>
     </AppShell>
   );
 }

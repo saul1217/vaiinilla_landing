@@ -16,10 +16,8 @@ import {
   AlumnoQaOrderDetailPage,
   AlumnoQaOrdersPage,
   AlumnoQaTableOrderPage,
-  AlumnoQaWaiterPage,
   AlumnoQaWalletPage,
 } from '../pages/alumno-qa-page';
-import { WaiterPage } from '../pages/waiter-page';
 
 export function AppRouter() {
   return (
@@ -37,7 +35,6 @@ export function AppRouter() {
         <Route path="/cuenta/pedidos/:id" element={<OrderDetailPage />} />
         <Route path="/cuenta/saldo" element={<WalletPage />} />
         <Route path="/u/:id" element={<WalletQrPage />} />
-        <Route path="/mesero" element={<WaiterPage />} />
         {import.meta.env.DEV ? (
           <>
             <Route path="/__qa/carrito" element={<AlumnoQaCartPage />} />
@@ -45,7 +42,6 @@ export function AppRouter() {
             <Route path="/__qa/cartera" element={<AlumnoQaWalletPage />} />
             <Route path="/__qa/pedidos" element={<AlumnoQaOrdersPage />} />
             <Route path="/__qa/pedido" element={<AlumnoQaOrderDetailPage />} />
-            <Route path="/__qa/mesero" element={<AlumnoQaWaiterPage />} />
             <Route path="/__qa/pedido-mesa" element={<AlumnoQaTableOrderPage />} />
           </>
         ) : null}
