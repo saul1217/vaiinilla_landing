@@ -3,6 +3,7 @@ import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-
 import { loadStripe } from '@stripe/stripe-js';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
+import type { AppEnvironment } from '../lib/env';
 import { formatMoney } from '../lib/money';
 import { resolveStripePublishableKey, stripePublishableKey } from '../lib/stripe-public';
 import { STRIPE_TOTAL_LABEL } from '../lib/stripe-status';
@@ -11,7 +12,8 @@ import type { OrderDetail, StripePaymentSession } from '../types/api';
 interface StripePaymentPanelProps {
   order: OrderDetail;
   session: StripePaymentSession;
-  hostname?: string;
+  /** Defaults to VITE_APP_ENV; tests pass it explicitly. */
+  environment?: AppEnvironment;
   onConfirmed: () => void;
   onCanceled: () => void;
   onProcessing?: () => void;
@@ -33,7 +35,7 @@ export function StripeOrderTotal({ order }: { order: OrderDetail }) {
 export function StripePaymentPanel({
   order,
   session,
-  hostname = typeof window === 'undefined' ? '' : window.location.hostname,
+  environment,
   onConfirmed,
   onCanceled,
   onProcessing,
@@ -45,7 +47,7 @@ export function StripePaymentPanel({
         key: resolveStripePublishableKey({
           received: session.publishable_key,
           envKey: stripePublishableKey(),
-          hostname,
+          environment,
           apiUrl: api.apiUrl,
         }),
         error: null as string | null,
@@ -53,7 +55,7 @@ export function StripePaymentPanel({
     } catch (cause) {
       return { key: null as string | null, error: errorMessage(cause) };
     }
-  }, [hostname, session.publishable_key]);
+  }, [environment, session.publishable_key]);
 
   const stripePromise = useMemo(() => {
     if (!resolved.key) return null;

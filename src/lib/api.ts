@@ -20,8 +20,7 @@ import type {
 import { parseStripePaymentSession } from './stripe-session';
 import { normalizeResolvedSpace, type ResolvedTableSpace } from './resolved-space';
 
-const hostname = typeof window === 'undefined' ? '' : window.location.hostname;
-const apiUrl = resolveApiUrl(import.meta.env.VITE_API_URL, hostname);
+const apiUrl = resolveApiUrl(import.meta.env.VITE_API_URL);
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {
   token?: string;
