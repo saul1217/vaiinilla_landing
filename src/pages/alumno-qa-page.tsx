@@ -1,46 +1,50 @@
-import { useMemo, useState } from 'react';
-import { Navigate, useSearchParams } from 'react-router-dom';
-import { AlumnoPageHeader } from '../components/alumno-brand';
-import { AppShell } from '../components/app-shell';
-import { OrderTrackCard } from '../components/order-track-card';
-import { WaitingArcade } from '../arcade/waiting-arcade';
-import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
-import { cartPreview, linePreview } from '../lib/money';
-import { QA_CATALOG_SLUG, QA_PHOTO_POZOLE, QA_PHOTO_TACOS } from '../lib/qa-catalog-photos';
-import type { CartLine, CatalogProduct, OrderDetail } from '../types/api';
-import { CartEmptyView, CartFilledView } from './cart-page';
-import { OrderTicketView } from './order-detail-page';
-import { useDeskPane } from './orders-page';
-import { createMockBuyerCallClient } from '../lib/mesero-mock';
-import { WalletBoardView } from './wallet-page';
+import { useMemo, useState } from "react";
+import { Navigate, useSearchParams } from "react-router-dom";
+import { AlumnoPageHeader } from "../components/alumno-brand";
+import { AppShell } from "../components/app-shell";
+import { OrderTrackCard } from "../components/order-track-card";
+import { WaitingArcade } from "../arcade/waiting-arcade";
+import { catalogImageMap, orderThumbUrl } from "../lib/catalog-images";
+import { cartPreview, linePreview } from "../lib/money";
+import {
+  QA_CATALOG_SLUG,
+  QA_PHOTO_POZOLE,
+  QA_PHOTO_TACOS,
+} from "../lib/qa-catalog-photos";
+import type { CartLine, CatalogProduct, OrderDetail } from "../types/api";
+import { CartEmptyView, CartFilledView } from "./cart-page";
+import { OrderTicketView } from "./order-detail-page";
+import { useDeskPane } from "../lib/use-desk-pane";
+import { createMockBuyerCallClient } from "../lib/mesero-mock";
+import { WalletBoardView } from "./wallet-page";
 
 function qaOrder(overrides: Partial<OrderDetail>): OrderDetail {
   return {
-    id: 'qa-95',
+    id: "qa-95",
     folio: 95,
-    fecha_operativa: '2026-09-17',
-    estado: 'por_cobrar',
-    metodo_pago: 'efectivo',
-    destino: 'para_llevar',
+    fecha_operativa: "2026-09-17",
+    estado: "por_cobrar",
+    metodo_pago: "efectivo",
+    destino: "para_llevar",
     espacio: null,
-    subtotal: '73.70',
-    ahorro_combinado: '0.00',
-    cashback_otorgado: '0.00',
-    total: '73.70',
+    subtotal: "73.70",
+    ahorro_combinado: "0.00",
+    cashback_otorgado: "0.00",
+    total: "73.70",
     version: 1,
-    creado_en: '2026-09-17T12:00:00Z',
-    actualizado_en: '2026-09-17T12:00:00Z',
+    creado_en: "2026-09-17T12:00:00Z",
+    actualizado_en: "2026-09-17T12:00:00Z",
     notas_cocina: null,
-    usuario: { nombre: 'Ana', matricula: null },
+    usuario: { nombre: "Ana", matricula: null },
     items: [
       {
         id: 1,
         producto_id: 1,
-        nombre_producto: 'Quiere keke',
-        estacion_preparacion: 'cocina',
+        nombre_producto: "Quiere keke",
+        estacion_preparacion: "cocina",
         cantidad: 1,
-        precio_digital_unitario: '73.70',
-        subtotal: '73.70',
+        precio_digital_unitario: "73.70",
+        subtotal: "73.70",
         opciones: [],
       },
     ],
@@ -51,68 +55,68 @@ function qaOrder(overrides: Partial<OrderDetail>): OrderDetail {
 
 const CASH = qaOrder({});
 const MESA = qaOrder({
-  id: 'qa-96',
+  id: "qa-96",
   folio: 96,
-  estado: 'preparando',
-  metodo_pago: 'stripe',
-  destino: 'en_espacio',
-  espacio: { id: 4, nombre: 'Mesa 4', tipo: 'mesa' },
+  estado: "preparando",
+  metodo_pago: "stripe",
+  destino: "en_espacio",
+  espacio: { id: 4, nombre: "Mesa 4", tipo: "mesa" },
 });
 const qaCallClient = createMockBuyerCallClient();
 const CARD = qaOrder({
-  id: 'qa-94',
+  id: "qa-94",
   folio: 94,
-  estado: 'cobrado',
-  metodo_pago: 'stripe',
+  estado: "cobrado",
+  metodo_pago: "stripe",
   pago: {
-    payment_attempt_id: 'qa-attempt',
-    payment_intent_id: 'pi_qa',
-    stripe_account_id: 'acct_qa',
-    payment_status: 'confirmado',
+    payment_attempt_id: "qa-attempt",
+    payment_intent_id: "pi_qa",
+    stripe_account_id: "acct_qa",
+    payment_status: "confirmado",
   },
 });
 const CARD_LISTO = qaOrder({
-  id: 'qa-93',
+  id: "qa-93",
   folio: 93,
-  estado: 'listo',
-  metodo_pago: 'stripe',
-  qr_token: 'QA94LISTO',
+  estado: "listo",
+  metodo_pago: "stripe",
+  qr_token: "QA94LISTO",
   pago: {
-    payment_attempt_id: 'qa-attempt-2',
-    payment_intent_id: 'pi_qa_2',
-    stripe_account_id: 'acct_qa',
-    payment_status: 'confirmado',
+    payment_attempt_id: "qa-attempt-2",
+    payment_intent_id: "pi_qa_2",
+    stripe_account_id: "acct_qa",
+    payment_status: "confirmado",
   },
 });
 const PAST_LUPIS = qaOrder({
-  id: 'qa-76',
+  id: "qa-76",
   folio: 76,
-  estado: 'entregado',
-  total: '22.00',
+  estado: "entregado",
+  total: "22.00",
   items: [
     {
       id: 1,
       producto_id: 2,
-      nombre_producto: 'fruti Lupis',
-      estacion_preparacion: 'caja',
+      nombre_producto: "fruti Lupis",
+      estacion_preparacion: "caja",
       cantidad: 1,
-      precio_digital_unitario: '22.00',
-      subtotal: '22.00',
+      precio_digital_unitario: "22.00",
+      subtotal: "22.00",
       opciones: [],
     },
   ],
 });
 const PAST_KEKE = qaOrder({
-  id: 'qa-68',
+  id: "qa-68",
   folio: 68,
-  estado: 'entregado',
+  estado: "entregado",
 });
 
 function qaProduct(
   id: number,
   nombre: string,
   precio: string,
-  estacion: CatalogProduct['estacion_preparacion'],
+  estacion: CatalogProduct["estacion_preparacion"],
   imagenUrl: string | null,
 ): CatalogProduct {
   return {
@@ -132,8 +136,20 @@ function qaProduct(
   };
 }
 
-const PEEK_LUPIS = qaProduct(2, 'fruti Lupis', '22.00', 'caja', QA_PHOTO_POZOLE);
-const PEEK_KEKE = qaProduct(1, 'Quiere keke', '73.70', 'cocina', QA_PHOTO_TACOS);
+const PEEK_LUPIS = qaProduct(
+  2,
+  "fruti Lupis",
+  "22.00",
+  "caja",
+  QA_PHOTO_POZOLE,
+);
+const PEEK_KEKE = qaProduct(
+  1,
+  "Quiere keke",
+  "73.70",
+  "cocina",
+  QA_PHOTO_TACOS,
+);
 const QA_CATALOG = [PEEK_LUPIS, PEEK_KEKE];
 const QA_IMAGES = catalogImageMap(QA_CATALOG);
 
@@ -161,8 +177,8 @@ const FILL_LUPIS: CartLine = {
   productId: 2,
   quantity: 2,
   optionIds: [],
-  productName: 'fruti Lupis',
-  unitPreview: '22.00',
+  productName: "fruti Lupis",
+  unitPreview: "22.00",
   imageUrl: QA_PHOTO_POZOLE,
 };
 
@@ -170,14 +186,14 @@ const FILL_KEKE: CartLine = {
   productId: 1,
   quantity: 1,
   optionIds: [],
-  productName: 'Quiere keke',
-  unitPreview: '73.70',
+  productName: "Quiere keke",
+  unitPreview: "73.70",
   imageUrl: QA_PHOTO_TACOS,
 };
 
 export function AlumnoQaFilledCartPage() {
   const [params] = useSearchParams();
-  const leftoverEmpty = params.get('leftover') === '0';
+  const leftoverEmpty = params.get("leftover") === "0";
   const [lines, setLines] = useState<CartLine[]>([FILL_LUPIS, FILL_KEKE]);
   const total = useMemo(() => {
     const totals = lines
@@ -196,7 +212,8 @@ export function AlumnoQaFilledCartPage() {
             setLines((current) =>
               current
                 .map((line) =>
-                  line.productId === productId && line.optionIds.join(',') === optionIds.join(',')
+                  line.productId === productId &&
+                  line.optionIds.join(",") === optionIds.join(",")
                     ? { ...line, quantity }
                     : line,
                 )
@@ -207,7 +224,10 @@ export function AlumnoQaFilledCartPage() {
             setLines((current) =>
               current.filter(
                 (line) =>
-                  !(line.productId === productId && line.optionIds.join(',') === optionIds.join(',')),
+                  !(
+                    line.productId === productId &&
+                    line.optionIds.join(",") === optionIds.join(",")
+                  ),
               ),
             );
           }}
@@ -263,7 +283,10 @@ export function AlumnoQaOrdersPage() {
         <div className="alumno-orders-desk">
           <div className="alumno-orders-desk__list">
             <section aria-labelledby="qa-orders-live">
-              <h2 className="alumno-section-label alumno-section-label--live" id="qa-orders-live">
+              <h2
+                className="alumno-section-label alumno-section-label--live"
+                id="qa-orders-live"
+              >
                 En curso
               </h2>
               <div className="alumno-order-list">
@@ -276,10 +299,12 @@ export function AlumnoQaOrdersPage() {
                       expanded={open}
                       selected={deskPane && expandedId === order.id}
                       onToggle={() => {
-                        setExpandedId((current) => (current === order.id ? null : order.id));
+                        setExpandedId((current) =>
+                          current === order.id ? null : order.id,
+                        );
                       }}
                       imageUrl={qaOrderThumb(order)}
-                      pickupToken={open ? order.qr_token ?? null : null}
+                      pickupToken={open ? (order.qr_token ?? null) : null}
                     />
                   );
                 })}
@@ -329,7 +354,7 @@ export function AlumnoQaOrderDetailPage() {
         <AlumnoPageHeader
           kicker="Pedido"
           title={`#${CARD_LISTO.folio}`}
-          back={{ to: '/cuenta/pedidos', label: 'Volver' }}
+          back={{ to: "/cuenta/pedidos", label: "Volver" }}
         />
         <div className="alumno-detail-split">
           <OrderTrackCard
@@ -357,7 +382,13 @@ export function AlumnoQaTableOrderPage() {
         <AlumnoPageHeader title="Mis pedidos" />
         <p className="alumno-place-name">Venecia · Mesa 4</p>
         <div className="alumno-order-list">
-          <OrderTrackCard order={MESA} expanded={open} onToggle={() => setOpen((v) => !v)} imageUrl={qaOrderThumb(MESA)} callClient={qaCallClient} />
+          <OrderTrackCard
+            order={MESA}
+            expanded={open}
+            onToggle={() => setOpen((v) => !v)}
+            imageUrl={qaOrderThumb(MESA)}
+            callClient={qaCallClient}
+          />
         </div>
       </main>
     </AppShell>

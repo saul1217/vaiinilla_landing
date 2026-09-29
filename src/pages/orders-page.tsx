@@ -1,22 +1,27 @@
-import { useEffect, useRef, useState } from 'react';
-import { Navigate } from 'react-router-dom';
-import { AlumnoPageHeader } from '../components/alumno-brand';
-import { AppShell } from '../components/app-shell';
-import { OrderTrackCard } from '../components/order-track-card';
-import { WaitingArcade } from '../arcade/waiting-arcade';
-import { useAuth } from '../context/auth-context';
-import { useBuyerSession } from '../context/buyer-session';
-import { useCart } from '../context/cart-context';
-import { api } from '../lib/api';
-import { resolveClientSession } from '../lib/client-session';
-import { lastPlaceSlug } from '../lib/last-place';
-import { errorMessage } from '../lib/api-error';
-import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
-import { persistPickupQrFromOrder } from '../lib/pickup-qr';
-import { isActiveOrderStatus } from '../lib/order-labels';
-import { usePickupQrToken } from '../lib/use-pickup-qr';
-import type { CatalogProduct, OrderDetail, PublicEstablishment } from '../types/api';
-import { LoadingSkeleton } from '../components/loading-skeleton';
+import { useEffect, useRef, useState } from "react";
+import { Navigate } from "react-router-dom";
+import { AlumnoPageHeader } from "../components/alumno-brand";
+import { AppShell } from "../components/app-shell";
+import { OrderTrackCard } from "../components/order-track-card";
+import { WaitingArcade } from "../arcade/waiting-arcade";
+import { useAuth } from "../context/auth-context";
+import { useBuyerSession } from "../context/buyer-session";
+import { useCart } from "../context/cart-context";
+import { api } from "../lib/api";
+import { resolveClientSession } from "../lib/client-session";
+import { lastPlaceSlug } from "../lib/last-place";
+import { errorMessage } from "../lib/api-error";
+import { catalogImageMap, orderThumbUrl } from "../lib/catalog-images";
+import { persistPickupQrFromOrder } from "../lib/pickup-qr";
+import { isActiveOrderStatus } from "../lib/order-labels";
+import { usePickupQrToken } from "../lib/use-pickup-qr";
+import { useDeskPane } from "../lib/use-desk-pane";
+import type {
+  CatalogProduct,
+  OrderDetail,
+  PublicEstablishment,
+} from "../types/api";
+import { LoadingSkeleton } from "../components/loading-skeleton";
 
 const POLL_MS = 5000;
 
@@ -52,16 +57,21 @@ export function OrdersPage() {
         });
         if (!resolved) {
           if (active && !silent) {
-            setError('Entra a un establecimiento para ver tus pedidos de ese lugar.');
+            setError(
+              "Entra a un establecimiento para ver tus pedidos de ese lugar.",
+            );
             setLoading(false);
           }
           return;
         }
         if (resolved.place && active) setPlace(resolved.place);
         if (resolved.slug) {
-          void api.getGuestCatalog(resolved.slug).then((catalog) => {
-            if (active) setCatalogProducts(catalog.productos);
-          }).catch(() => undefined);
+          void api
+            .getGuestCatalog(resolved.slug)
+            .then((catalog) => {
+              if (active) setCatalogProducts(catalog.productos);
+            })
+            .catch(() => undefined);
         }
         const result = await api.listOrders(resolved.context.access_token);
         if (!active) return;
@@ -98,10 +108,15 @@ export function OrdersPage() {
   const selected = orders.find((order) => order.id === expandedId) ?? null;
   const pickupToken = usePickupQrToken(selected, context?.access_token ?? null);
 
-  if (ready && !user) return <Navigate to="/cuenta?next=/cuenta/pedidos" replace />;
+  if (ready && !user)
+    return <Navigate to="/cuenta?next=/cuenta/pedidos" replace />;
 
-  const activeOrders = orders.filter((order) => isActiveOrderStatus(order.estado));
-  const pastOrders = orders.filter((order) => !isActiveOrderStatus(order.estado));
+  const activeOrders = orders.filter((order) =>
+    isActiveOrderStatus(order.estado),
+  );
+  const pastOrders = orders.filter(
+    (order) => !isActiveOrderStatus(order.estado),
+  );
 
   function toggle(id: string) {
     setExpandedId((current) => (current === id ? null : id));
@@ -111,9 +126,13 @@ export function OrdersPage() {
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
         <AlumnoPageHeader title="Mis pedidos" />
-        {place?.nombre ? <p className="alumno-place-name">{place.nombre}</p> : null}
+        {place?.nombre ? (
+          <p className="alumno-place-name">{place.nombre}</p>
+        ) : null}
         {error ? <p className="alumno-error">{error}</p> : null}
-        {loading && orders.length === 0 && !error ? <LoadingSkeleton shape="orders" label="Cargando pedidos…" /> : null}
+        {loading && orders.length === 0 && !error ? (
+          <LoadingSkeleton shape="orders" label="Cargando pedidos…" />
+        ) : null}
         {orders.length === 0 && !error && !loading ? (
           <div className="alumno-empty">
             <img src="/vaini/cutout-frente.png" alt="" />
@@ -124,7 +143,10 @@ export function OrdersPage() {
             <div className="alumno-orders-desk__list">
               {activeOrders.length > 0 ? (
                 <section aria-labelledby="orders-live">
-                  <h2 className="alumno-section-label alumno-section-label--live" id="orders-live">
+                  <h2
+                    className="alumno-section-label alumno-section-label--live"
+                    id="orders-live"
+                  >
                     En curso
                   </h2>
                   <div className="alumno-order-list alumno-arrive">
@@ -135,8 +157,16 @@ export function OrdersPage() {
                         expanded={!deskPane && expandedId === order.id}
                         selected={deskPane && expandedId === order.id}
                         onToggle={() => toggle(order.id)}
-                        imageUrl={orderThumbUrl(order, thumbImages, catalogProducts)}
-                        pickupToken={!deskPane && expandedId === order.id ? pickupToken : null}
+                        imageUrl={orderThumbUrl(
+                          order,
+                          thumbImages,
+                          catalogProducts,
+                        )}
+                        pickupToken={
+                          !deskPane && expandedId === order.id
+                            ? pickupToken
+                            : null
+                        }
                       />
                     ))}
                   </div>
@@ -156,8 +186,16 @@ export function OrdersPage() {
                         expanded={!deskPane && expandedId === order.id}
                         selected={deskPane && expandedId === order.id}
                         onToggle={() => toggle(order.id)}
-                        imageUrl={orderThumbUrl(order, thumbImages, catalogProducts)}
-                        pickupToken={!deskPane && expandedId === order.id ? pickupToken : null}
+                        imageUrl={orderThumbUrl(
+                          order,
+                          thumbImages,
+                          catalogProducts,
+                        )}
+                        pickupToken={
+                          !deskPane && expandedId === order.id
+                            ? pickupToken
+                            : null
+                        }
                       />
                     ))}
                   </div>
@@ -181,7 +219,11 @@ export function OrdersPage() {
                       completeLink
                       toggle={false}
                       onToggle={() => undefined}
-                      imageUrl={orderThumbUrl(selected, thumbImages, catalogProducts)}
+                      imageUrl={orderThumbUrl(
+                        selected,
+                        thumbImages,
+                        catalogProducts,
+                      )}
                       pickupToken={pickupToken}
                     />
                   </>
@@ -198,22 +240,4 @@ export function OrdersPage() {
       </main>
     </AppShell>
   );
-}
-
-function readDeskPane() {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
-  return window.matchMedia('(min-width: 1024px)').matches;
-}
-
-export function useDeskPane() {
-  const [wide, setWide] = useState(readDeskPane);
-  useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return;
-    const mq = window.matchMedia('(min-width: 1024px)');
-    const onChange = () => setWide(mq.matches);
-    onChange();
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-  return wide;
 }
