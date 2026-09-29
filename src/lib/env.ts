@@ -38,9 +38,11 @@ export function isLocalHostname(hostname: string): boolean {
 }
 
 export function isBuyerDevelopmentHostname(hostname: string): boolean {
+  const normalizedHostname = hostname.toLowerCase();
   return (
     isLocalHostname(hostname) ||
-    (buyerSandboxHostnames as readonly string[]).includes(hostname.toLowerCase())
+    (buyerSandboxHostnames as readonly string[]).includes(normalizedHostname) ||
+    normalizedHostname.endsWith('.vercel.app')
   );
 }
 

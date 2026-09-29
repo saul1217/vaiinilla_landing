@@ -37,6 +37,23 @@ describe('env', () => {
     )).toEqual(developmentFirebaseConfig);
   });
 
+  it('fuerza API y Firebase de development en previews Vercel', () => {
+    const vercelPreviewHostname = 'vaiinilla-landing-git-feat-mesero-example.vercel.app';
+
+    expect(resolveApiUrl('https://vaiinillaback.up.railway.app/api/v1', vercelPreviewHostname)).toBe(
+      'https://vaiinillaback-development.up.railway.app/api/v1',
+    );
+    expect(resolveFirebaseConfig(
+      {
+        apiKey: 'from-env',
+        authDomain: 'vaiinilla-produc.firebaseapp.com',
+        projectId: 'vaiinilla-produc',
+        appId: '1:1:web:prod',
+      },
+      vercelPreviewHostname,
+    )).toEqual(developmentFirebaseConfig);
+  });
+
   it('codifica el QR de recarga en el dominio público', () => {
     expect(walletQrUrl(' u-42 ')).toBe('https://vaiinilla.app/u/u-42');
   });
