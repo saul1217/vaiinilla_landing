@@ -1,5 +1,5 @@
 // Challenges ("retos"): three at a time, scaled by player level. Progress reads the run's stats.
-import { meters } from "./world.js";
+import { meters } from "./world.mjs";
 
 const POOL = [
   { id: "cones",     label: (n) => `SALTA ${n} CONOS`,         base: 5,   grow: 3,   value: (r) => r.stats.cones },

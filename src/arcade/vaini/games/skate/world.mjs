@@ -1,5 +1,5 @@
 // Game rules for Vaini Skate: physics, obstacles, tricks and scoring. No drawing, no DOM.
-import { mulberry } from "./raster.js";
+import { mulberry } from "../../raster.mjs";
 
 export const GROUND = 226;          // feet line on the street
 export const PLAYER_X = 120;        // Vaini's fixed screen x

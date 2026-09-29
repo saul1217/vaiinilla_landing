@@ -1,5 +1,5 @@
 // Effects shared by every scene. All motion is periodic in the 10 s loop.
-import { W, H, px, rect, disc, stroke, mulberry, TAU, clamp01, rgb } from "./raster.js";
+import { W, H, px, rect, disc, stroke, mulberry, TAU, clamp01, rgb } from "./raster.mjs";
 
 export const DURATION = 10;
 

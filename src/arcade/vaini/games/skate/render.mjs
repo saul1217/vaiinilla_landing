@@ -1,9 +1,10 @@
 // Draws a run of Vaini Skate into the 480×270 pixel buffer. Reads game state; never changes rules.
-import { W, H, px, rect, disc, ellipse, stroke, poly, rgb, clamp01, lerp, TAU } from "./raster.js";
-import { drawVaini } from "./vaini.js";
-import { hash, gradient, glow, text, textWidth } from "./lib.js";
-import { GROUND, PLAYER_X, KINDS, screenX, FLIP_TIME, meters } from "./world.js";
-import { progress } from "./missions.js";
+import { W, H, px, rect, disc, ellipse, stroke, poly, rgb, clamp01, lerp, TAU, mulberry } from "../../raster.mjs";
+import { drawVaini } from "../../vaini.mjs";
+import { hash, gradient, glow, text, textWidth } from "../../lib.mjs";
+import { GROUND, PLAYER_X, KINDS, screenX, FLIP_TIME, meters } from "./world.mjs";
+import { progress } from "./missions.mjs";
+import { cornerToast } from "../../kit.mjs";
 
 const hex = (c) => "#" + c.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
 const mix = (a, b, t) => hex(rgb(a).map((v, i) => lerp(v, rgb(b)[i], t)));
@@ -127,13 +128,13 @@ function player(cv, run) {
 }
 
 // ---------- particles fed by game events ----------
-export function createFx() { return { parts: [], popups: [] }; }
+export function createFx() { return { parts: [], popups: [], rand: mulberry(7) }; }
 
 export function absorbEvents(fx, run) {
   for (const e of run.events) {
     if (e.type === "star") for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; fx.parts.push({ x: e.x, y: e.y, vx: Math.cos(a) * 50, vy: Math.sin(a) * 50, life: 0.4, col: "#ffe45c" }); }
-    if (e.type === "land") for (let i = 0; i < 6; i++) fx.parts.push({ x: PLAYER_X - 12 + i * 5, y: run.player.y, vx: (i - 2.5) * 12, vy: -20 - Math.random() * 20, life: 0.3, col: "#ffe8d0" });
-    if (e.type === "grindSpark") fx.parts.push({ x: PLAYER_X - 8, y: run.player.y + 2, vx: -60 - Math.random() * 60, vy: -40 - Math.random() * 60, life: 0.25, col: Math.random() > 0.5 ? "#ffe45c" : "#ffffff" });
+    if (e.type === "land") for (let i = 0; i < 6; i++) fx.parts.push({ x: PLAYER_X - 12 + i * 5, y: run.player.y, vx: (i - 2.5) * 12, vy: -20 - fx.rand() * 20, life: 0.3, col: "#ffe8d0" });
+    if (e.type === "grindSpark") fx.parts.push({ x: PLAYER_X - 8, y: run.player.y + 2, vx: -60 - fx.rand() * 60, vy: -40 - fx.rand() * 60, life: 0.25, col: fx.rand() > 0.5 ? "#ffe45c" : "#ffffff" });
     if (e.type === "hit") for (let i = 0; i < 5; i++) fx.parts.push({ x: PLAYER_X, y: run.player.y - 40, vx: (i - 2) * 30, vy: -60, life: 0.6, col: "#ffd36e", star: true });
     if (e.text) fx.popups.push({ text: e.text, life: 1.1 });
   }
@@ -223,8 +224,5 @@ export function drawWorld(cv, run, fx, dt, missionToast) {
   for (const s of run.stars) star(cv, screenX(run, s.x), s.y, run.time);
   player(cv, run);
   drawFx(cv, fx, dt);
-  if (missionToast) {
-    const w = textWidth(missionToast.text, 2) + 16, x = W / 2 - w / 2, a = Math.min(1, missionToast.life * 2);
-    rect(cv, x, 60, w, 20, "#2a7a4a", 0.85 * a); text(cv, missionToast.text, x + 8, 65, "#ffffff", a, 2);
-  }
+  if (missionToast) cornerToast(cv, missionToast.text, 2 - missionToast.life, "#7fff9a", 44);
 }

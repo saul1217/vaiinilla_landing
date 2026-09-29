@@ -1,7 +1,7 @@
 // Vaini as a pixel sprite, from refs/vaiini5 (front): a cream sheet of paper, torn top with
 // four soft teeth on the left two thirds, lime corner folded forward, two lime text lines,
 // tall black oval eyes low on the face, chunky arms out and down, two stubby legs.
-import { px, rect, stroke, disc, ellipse } from "./raster.js";
+import { px, rect, stroke, disc, ellipse } from "./raster.mjs";
 
 const C = {
   cream: "#f5eede", creamHi: "#fffaf0", creamShade: "#e2d6bb", outline: "#b8a784",
