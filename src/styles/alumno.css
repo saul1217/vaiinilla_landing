@@ -4358,3 +4358,154 @@ html[data-theme='amoled'] .alumno-lockup img,
     stroke-dashoffset: 0;
   }
 }
+
+/* ---------- Buyer: call the waiter ---------- */
+.alumno-callwaiter {
+  margin: 4px 0 12px;
+  color: var(--text);
+}
+
+.alumno-callwaiter__cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 160ms ease, background 240ms ease;
+}
+
+.alumno-callwaiter__cta:active {
+  transform: scale(0.97);
+}
+
+.alumno-callwaiter__cta:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.alumno-callwaiter__reasons {
+  display: grid;
+  gap: 8px;
+}
+
+.alumno-callwaiter__reasons p {
+  margin: 0 0 2px;
+  font-weight: 800;
+}
+
+.alumno-callwaiter__reasons button {
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 200ms ease;
+}
+
+.alumno-callwaiter__reasons button:active {
+  transform: scale(0.98);
+  border-color: var(--lime);
+}
+
+.alumno-callwaiter__reasons .alumno-callwaiter__back {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  text-align: center;
+  min-height: 40px;
+}
+
+.alumno-callwaiter__live {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--coral) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--coral) 40%, transparent);
+  transition: background 420ms ease, border-color 420ms ease;
+}
+
+.alumno-callwaiter.is-going .alumno-callwaiter__live {
+  background: color-mix(in srgb, var(--lime) 22%, var(--surface));
+  border-color: color-mix(in srgb, var(--lime) 60%, transparent);
+}
+
+.alumno-callwaiter__bell {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--coral);
+  color: #fff;
+  animation: callwaiter-ring 1.4s ease-in-out infinite;
+}
+
+.alumno-callwaiter.is-going .alumno-callwaiter__bell {
+  background: var(--lime);
+  color: #171817;
+  animation: none;
+}
+
+.alumno-callwaiter__copy {
+  flex: 1;
+  display: grid;
+  animation: callwaiter-in 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.alumno-callwaiter__copy span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.alumno-callwaiter__cancel {
+  border: 0;
+  background: none;
+  color: var(--text-soft);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.alumno-callwaiter__note {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@keyframes callwaiter-ring {
+  0%, 60%, 100% { transform: rotate(0); }
+  10%, 30% { transform: rotate(-14deg); }
+  20%, 40% { transform: rotate(14deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alumno-callwaiter__bell,
+  .alumno-callwaiter__copy {
+    animation: none;
+  }
+}
+
+@keyframes callwaiter-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}

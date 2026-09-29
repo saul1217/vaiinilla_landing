@@ -10,6 +10,7 @@ import type { CartLine, CatalogProduct, OrderDetail } from '../types/api';
 import { CartEmptyView, CartFilledView } from './cart-page';
 import { OrderTicketView } from './order-detail-page';
 import { useDeskPane } from './orders-page';
+import { createMockBuyerCallClient } from '../lib/mesero-mock';
 import { WalletBoardView } from './wallet-page';
 
 function qaOrder(overrides: Partial<OrderDetail>): OrderDetail {
@@ -48,6 +49,15 @@ function qaOrder(overrides: Partial<OrderDetail>): OrderDetail {
 }
 
 const CASH = qaOrder({});
+const MESA = qaOrder({
+  id: 'qa-96',
+  folio: 96,
+  estado: 'preparando',
+  metodo_pago: 'stripe',
+  destino: 'en_espacio',
+  espacio: { id: 4, nombre: 'Mesa 4', tipo: 'mesa' },
+});
+const qaCallClient = createMockBuyerCallClient();
 const CARD = qaOrder({
   id: 'qa-94',
   folio: 94,
@@ -330,6 +340,28 @@ export function AlumnoQaOrderDetailPage() {
             pickupToken={CARD_LISTO.qr_token ?? null}
           />
           <OrderTicketView order={CARD_LISTO} />
+        </div>
+      </main>
+    </AppShell>
+  );
+}
+
+export function AlumnoQaTableOrderPage() {
+  const [open, setOpen] = useState(true);
+  if (!import.meta.env.DEV) return <Navigate to="/" replace />;
+  return (
+    <AppShell tab="orders">
+      <main id="main-content" className="alumno-main">
+        <AlumnoPageHeader title="Mis pedidos" />
+        <p className="alumno-place-name">Venecia · Mesa 4</p>
+        <div className="alumno-order-list">
+          <OrderTrackCard
+            order={MESA}
+            expanded={open}
+            onToggle={() => setOpen((v) => !v)}
+            imageUrl={qaOrderThumb(MESA)}
+            callClient={qaCallClient}
+          />
         </div>
       </main>
     </AppShell>

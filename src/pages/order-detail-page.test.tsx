@@ -48,6 +48,7 @@ vi.mock('../context/cart-context', () => ({
 }));
 
 vi.mock('../context/buyer-session', () => ({
+  useBuyerSessionToken: () => null,
   useBuyerSession: () => ({
     context: { access_token: 'jwt', contexto: { establecimiento_id: 'e1' } },
     opening: false,
