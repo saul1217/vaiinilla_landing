@@ -60,6 +60,7 @@ vi.mock('../context/auth-context', () => ({
 }));
 
 vi.mock('../context/buyer-session', () => ({
+  useBuyerSessionToken: () => null,
   useBuyerSession: () => ({
     context: buyerSessionState.context,
     opening: false,

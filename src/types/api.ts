@@ -50,6 +50,7 @@ export interface PublicEstablishment {
   slug: string;
   identificador_cliente_etiqueta: string;
   identificador_cliente_obligatorio: boolean;
+  tipo?: 'cafeteria' | 'restaurante' | 'padel';
   // Public profile (backend migrations 39–40); null until the business fills it in.
   descripcion?: string | null;
   imagen_url?: string | null;

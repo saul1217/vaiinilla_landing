@@ -50,7 +50,7 @@ describe('StripePaymentPanel', () => {
 
   it('abre Payment Element con la cuenta conectada y sin copy de caja', () => {
     render(
-      <StripePaymentPanel order={order} session={session} hostname="localhost" onConfirmed={() => undefined} onCanceled={() => undefined} />,
+      <StripePaymentPanel order={order} session={session} environment="development" onConfirmed={() => undefined} onCanceled={() => undefined} />,
     );
     expect(screen.getByTestId('stripe-payment-element')).toBeInTheDocument();
     expect(screen.queryByText(/pasa a caja/i)).not.toBeInTheDocument();

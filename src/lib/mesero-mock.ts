@@ -1,5 +1,5 @@
 // In-memory buyer backend for /__qa screens and tests: follows the contract in
-// docs/mesero-backend.md.
+// vaiinilla_back docs/llamadas-mesa.md.
 import type { BuyerCallClient, CallReason, TableCall } from './mesero-api';
 
 const ago = (s: number) => new Date(Date.now() - s * 1000).toISOString();

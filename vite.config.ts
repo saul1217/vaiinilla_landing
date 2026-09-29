@@ -76,6 +76,7 @@ export default defineConfig({
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     css: true,
     env: {
+      VITE_APP_ENV: 'development',
       VITE_API_URL: 'https://vaiinillaback-development.up.railway.app/api/v1',
     },
   },

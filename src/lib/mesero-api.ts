@@ -1,17 +1,17 @@
-// Buyer side of "Llamar al mesero". Contract: docs/mesero-backend.md.
+// Buyer side of "Llamar al mesero". Contract: vaiinilla_back docs/llamadas-mesa.md.
 // The waiter (staff) side of this feature moved to vaiinilla-web.
 import { api } from './api';
 import { VaiinillaApiError } from './api-error';
 import { createIdempotencyKey } from './idempotency';
-import type { ApiEnvelope, ApiErrorEnvelope } from '../types/api';
+import type { ApiEnvelope, ApiErrorEnvelope, OrderDetail } from '../types/api';
 
 export type CallReason = 'atencion' | 'utensilios' | 'problema';
 export type CallStatus = 'pendiente' | 'en_camino' | 'atendida' | 'cancelada' | 'expirada';
 
-export const CALL_REASONS: { value: CallReason; label: string; staff: string }[] = [
-  { value: 'atencion', label: 'Necesito algo', staff: 'Necesita atención' },
-  { value: 'utensilios', label: 'Cubiertos o servilletas', staff: 'Pide cubiertos o servilletas' },
-  { value: 'problema', label: 'Algo está mal con mi pedido', staff: 'Algo está mal con su pedido' },
+export const CALL_REASONS: { value: CallReason; label: string }[] = [
+  { value: 'atencion', label: 'Necesito algo' },
+  { value: 'utensilios', label: 'Cubiertos o servilletas' },
+  { value: 'problema', label: 'Algo está mal con mi pedido' },
 ];
 
 export interface TableSpace {
@@ -35,6 +35,13 @@ export interface TableCall {
 }
 
 export const OPEN_CALL: CallStatus[] = ['pendiente', 'en_camino'];
+
+// The backend only accepts calls from table orders still in progress (or delivered < 2 h).
+const CLOSED_ORDER_STATES = new Set(['cancelado', 'no_recogido', 'expirado']);
+
+export function canCallWaiter(order: OrderDetail) {
+  return order.destino === 'en_espacio' && Boolean(order.espacio) && !CLOSED_ORDER_STATES.has(order.estado);
+}
 
 async function request<T>(path: string, init: { token: string; method?: string; body?: unknown; idempotent?: boolean }): Promise<T> {
   const headers = new Headers({ Accept: 'application/json', Authorization: `Bearer ${init.token}` });

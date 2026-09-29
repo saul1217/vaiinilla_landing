@@ -74,6 +74,7 @@ vi.mock("../context/cart-context", () => ({
 }));
 
 vi.mock("../context/buyer-session", () => ({
+  useBuyerSessionToken: () => null,
   useBuyerSession: () => ({
     context: buyerSessionState.context,
     opening: false,

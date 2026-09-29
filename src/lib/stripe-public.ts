@@ -1,4 +1,4 @@
-import { isBuyerDevelopmentHostname } from './env';
+import { appEnvironment, type AppEnvironment } from './env';
 
 export type StripeKeyMode = 'test' | 'live';
 
@@ -16,8 +16,8 @@ export function stripePublishableKey(): string | undefined {
   return key ? key : undefined;
 }
 
-export function expectedStripeKeyMode(hostname: string): StripeKeyMode {
-  return isBuyerDevelopmentHostname(hostname) ? 'test' : 'live';
+export function expectedStripeKeyMode(environment: AppEnvironment): StripeKeyMode {
+  return environment === 'development' ? 'test' : 'live';
 }
 
 export function stripeKeyMode(key: string): StripeKeyMode | null {
@@ -54,7 +54,7 @@ export function assertStripeKeyMatchesApi(key: string, apiUrl: string): void {
 export function resolveStripePublishableKey(options: {
   received?: string | null;
   envKey?: string | null;
-  hostname: string;
+  environment?: AppEnvironment;
   apiUrl?: string;
 }): string {
   const received = options.received?.trim() ?? '';
@@ -67,7 +67,7 @@ export function resolveStripePublishableKey(options: {
     throw new StripeKeyMismatchError('La clave de Stripe no es pública.');
   }
   const mode = stripeKeyMode(key);
-  const expected = expectedStripeKeyMode(options.hostname);
+  const expected = expectedStripeKeyMode(options.environment ?? appEnvironment);
   if (mode !== expected) {
     throw new StripeKeyMismatchError(
       expected === 'test'
@@ -79,11 +79,9 @@ export function resolveStripePublishableKey(options: {
   return key;
 }
 
-export function isStripeCheckoutEnabled(
-  hostname = typeof window === 'undefined' ? '' : window.location.hostname,
-): boolean {
+export function isStripeCheckoutEnabled(environment: AppEnvironment = appEnvironment): boolean {
   const envKey = stripePublishableKey();
   if (!envKey) return true;
   if (isSecretStripeMaterial(envKey)) return false;
-  return stripeKeyMode(envKey) === expectedStripeKeyMode(hostname);
+  return stripeKeyMode(envKey) === expectedStripeKeyMode(environment);
 }

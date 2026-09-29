@@ -2,7 +2,7 @@
 // reasons; the button then morphs into a live status (calling → on the way) that
 // polls every 5 s. Backend contract: docs/mesero-backend.md.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { errorMessage } from "../lib/api-error";
+import { errorMessage, VaiinillaApiError } from "../lib/api-error";
 import { readStoredClientContext } from "../lib/client-session";
 import {
   CALL_REASONS,
@@ -95,7 +95,11 @@ export function CallWaiter({
       navigator.vibrate?.(20);
     } catch (cause) {
       if (cause instanceof CallsUnavailableError) setView("unavailable");
-      else setError(errorMessage(cause));
+      else if (cause instanceof VaiinillaApiError && cause.status === 429) {
+        // Called from this table less than a minute ago: wait what the backend says.
+        setView("idle");
+        setCooldown(cause.retryAfter ?? COOLDOWN_S);
+      } else setError(errorMessage(cause));
     } finally {
       setBusy(false);
     }

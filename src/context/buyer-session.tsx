@@ -99,6 +99,14 @@ export function BuyerSessionProvider({ children }: { children: ReactNode }) {
   return <BuyerSessionContext.Provider value={value}>{children}</BuyerSessionContext.Provider>;
 }
 
+/**
+ * Token of the current client context, or null. Unlike useBuyerSession it does not
+ * require the provider, for components that also render outside it (QA, tests).
+ */
+export function useBuyerSessionToken(): string | null {
+  return useContext(BuyerSessionContext)?.context?.access_token ?? null;
+}
+
 export function useBuyerSession(): BuyerSessionValue {
   const context = useContext(BuyerSessionContext);
   if (!context) throw new Error('useBuyerSession debe usarse dentro de BuyerSessionProvider.');
