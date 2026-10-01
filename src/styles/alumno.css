@@ -6645,6 +6645,8 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 }
 
 .alumno-res__summary {
+  /* Keep the button clear of the fixed bottom navigation when scrolled into view. */
+  scroll-margin-bottom: 112px;
   display: grid;
   gap: 4px;
   padding: 20px;
