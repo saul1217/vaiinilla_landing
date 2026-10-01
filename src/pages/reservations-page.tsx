@@ -483,10 +483,14 @@ function Summary({
   const date = localDate(start, day.timeZone);
   const ref = useRef<HTMLElement>(null);
   // En el teléfono el resumen aparece bajo el pliegue y la barra de navegación tapa el botón:
-  // al aparecer, se trae a la vista (con margen para esa barra).
+  // al aparecer, se trae a la vista (con margen para esa barra). Se espera a que termine de crecer
+  // el contenedor (su altura se anima ~520 ms); si no, el destino se calcula con la altura vieja.
   useEffect(() => {
-    const el = ref.current;
-    if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const timer = window.setTimeout(() => {
+      const el = ref.current;
+      if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, SCROLL_AFTER_MORPH_MS);
+    return () => window.clearTimeout(timer);
   }, []);
   return (
     <section ref={ref} className="alumno-res__summary alumno-arrive" aria-label="Resumen de tu renta">
@@ -521,6 +525,9 @@ function Summary({
     </section>
   );
 }
+
+/** Un poco más que lo que tarda en crecer el contenedor (useHeightMorph: 520 ms). */
+const SCROLL_AFTER_MORPH_MS = 600;
 
 const PAY_OPTIONS: Array<{
   method: ReservationPaymentMethod;
