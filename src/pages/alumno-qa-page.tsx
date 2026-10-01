@@ -20,6 +20,8 @@ import { WalletBoardView } from "./wallet-page";
 import { isActiveOrder, openTab } from "../lib/order-labels";
 import { formatAmount } from "../lib/money";
 import type { ArrivalClient } from "../lib/arrival-api";
+import { createMockReservationsClient } from "../lib/reservations-mock";
+import { ReservationsScreen } from "./reservations-page";
 
 function qaOrder(overrides: Partial<OrderDetail>): OrderDetail {
   return {
@@ -499,6 +501,24 @@ export function AlumnoQaNewOrdersPage() {
               />
             ))}
         </div>
+      </main>
+    </AppShell>
+  );
+}
+
+export function AlumnoQaCourtsPage() {
+  const client = useMemo(() => createMockReservationsClient({ photoUrl: QA_PHOTO_TACOS }), []);
+  if (!import.meta.env.DEV) return <Navigate to="/" replace />;
+  return (
+    <AppShell tab="menu">
+      <main id="main-content" className="alumno-main">
+        <AlumnoPageHeader
+          kicker="Canchas"
+          title="Renta tu cancha"
+          back={{ to: "/pedir", label: "Volver" }}
+        />
+        <p className="alumno-place-name">Padel prueba · se paga al apartar</p>
+        <ReservationsScreen client={client} slug="padel" />
       </main>
     </AppShell>
   );

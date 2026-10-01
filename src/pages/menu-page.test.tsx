@@ -21,6 +21,7 @@ vi.mock("../lib/api", () => ({
       identificador_cliente_etiqueta: "Matrícula",
       identificador_cliente_obligatorio: false,
     }),
+    getPublicSpaces: vi.fn().mockResolvedValue([]),
     getGuestCatalog: vi.fn().mockResolvedValue({
       categorias: [{ id: 1, nombre: "Bebidas", orden: 1 }],
       productos: [
@@ -156,5 +157,25 @@ describe("MenuPage", () => {
     expect(addLine).toHaveBeenCalledTimes(1);
     expect(sessionStorage.getItem("vaiinilla.buyer.guest-buy.v1")).toBe("1");
     expect(await screen.findByText("Carrito")).toBeInTheDocument();
+  });
+
+  it("ofrece Rentar cancha solo si hay una cancha con precio por hora", async () => {
+    vi.mocked(api).getPublicSpaces.mockResolvedValueOnce([
+      { espacio: { tipo: "mesa" }, precio_hora: null },
+      { espacio: { tipo: "cancha" }, precio_hora: "300.00" },
+    ]);
+    renderMenu();
+    const link = await screen.findByRole("link", { name: /rentar una cancha/i });
+    expect(link).toHaveAttribute("href", "/e/demo-a/canchas");
+  });
+
+  it("no ofrece Rentar cancha si las canchas no tienen precio o no hay canchas", async () => {
+    vi.mocked(api).getPublicSpaces.mockResolvedValueOnce([
+      { espacio: { tipo: "cancha" }, precio_hora: null },
+      { espacio: { tipo: "mesa" }, precio_hora: "10.00" },
+    ]);
+    renderMenu();
+    await screen.findByText(/chocolate/i);
+    expect(screen.queryByRole("link", { name: /rentar una cancha/i })).not.toBeInTheDocument();
   });
 });

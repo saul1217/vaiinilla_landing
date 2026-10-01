@@ -19,6 +19,16 @@ import type {
 } from '../types/api';
 import { parseStripePaymentSession } from './stripe-session';
 import { normalizeResolvedSpace, type ResolvedTableSpace } from './resolved-space';
+import {
+  parseCourtDay,
+  parseReservation,
+  parseReservationPayment,
+  parseReservations,
+  type CourtDay,
+  type Reservation,
+  type ReservationPayment,
+  type ReservationPaymentMethod,
+} from './reservations';
 
 const apiUrl = resolveApiUrl(import.meta.env.VITE_API_URL);
 
@@ -197,6 +207,70 @@ export const api = {
       body: { token, establecimiento_slug: slug ?? null },
     });
     return normalizeResolvedSpace(response.data, slug);
+  },
+
+  /** Espacios del negocio con su precio por hora (sin sesión): decide si se ofrece "Rentar cancha". */
+  async getPublicSpaces(slug: string): Promise<Array<{ espacio?: { tipo?: string }; precio_hora?: string | null }>> {
+    return (
+      await request<Array<{ espacio?: { tipo?: string }; precio_hora?: string | null }>>(
+        `/publico/establecimientos/${slug}/disponibilidad`,
+      )
+    ).data;
+  },
+
+  async getCourtDay(token: string, date?: string): Promise<CourtDay> {
+    const response = await request<unknown>(`/reservas/disponibilidad${params({ fecha: date })}`, {
+      token,
+      cache: 'no-store',
+    });
+    return parseCourtDay(response.data);
+  },
+
+  async listReservations(token: string): Promise<Reservation[]> {
+    const response = await request<unknown>('/reservas', { token, cache: 'no-store' });
+    return parseReservations(response.data);
+  },
+
+  async createReservation(
+    token: string,
+    input: { courtId: number; start: number | null; durationMinutes: number },
+    idempotencyKey: string,
+  ): Promise<Reservation> {
+    const response = await request<unknown>('/reservas', {
+      method: 'POST',
+      token,
+      idempotencyKey,
+      body: {
+        espacio_id: input.courtId,
+        ...(input.start === null ? {} : { inicio: new Date(input.start).toISOString() }),
+        duracion_min: input.durationMinutes,
+      },
+    });
+    return parseReservation(response.data);
+  },
+
+  async payReservation(
+    token: string,
+    id: string,
+    method: ReservationPaymentMethod,
+    idempotencyKey: string,
+  ): Promise<ReservationPayment> {
+    const response = await request<unknown>(`/reservas/${id}/pago`, {
+      method: 'POST',
+      token,
+      idempotencyKey,
+      body: { metodo_pago: method },
+    });
+    return parseReservationPayment(response.data);
+  },
+
+  async cancelReservation(token: string, id: string, idempotencyKey: string): Promise<Reservation> {
+    const response = await request<unknown>(`/reservas/${id}/cancelacion`, {
+      method: 'POST',
+      token,
+      idempotencyKey,
+    });
+    return parseReservation(response.data);
   },
 
   async deleteIdentity(firebaseToken: string): Promise<void> {
