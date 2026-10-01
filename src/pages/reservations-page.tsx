@@ -481,8 +481,15 @@ function Summary({
   const price =
     minutes !== null && court.customerPricePerHour ? amountFor(court.customerPricePerHour.cashOrBalance, minutes) : null;
   const date = localDate(start, day.timeZone);
+  const ref = useRef<HTMLElement>(null);
+  // En el teléfono el resumen aparece bajo el pliegue y la barra de navegación tapa el botón:
+  // al aparecer, se trae a la vista (con margen para esa barra).
+  useEffect(() => {
+    const el = ref.current;
+    if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, []);
   return (
-    <section className="alumno-res__summary alumno-arrive" aria-label="Resumen de tu renta">
+    <section ref={ref} className="alumno-res__summary alumno-arrive" aria-label="Resumen de tu renta">
       <p className="alumno-res__summary-kicker">
         {court.name} · {dayLongLabel(date, day.today)}
       </p>

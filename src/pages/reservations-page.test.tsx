@@ -127,6 +127,22 @@ describe('ReservationsScreen', () => {
     expect(await screen.findByText('Pedido de renta')).toBeInTheDocument();
   });
 
+  it('al aparecer el resumen lo trae a la vista (en el teléfono queda bajo la barra de navegación)', async () => {
+    const user = userEvent.setup();
+    const scroll = vi.fn();
+    window.HTMLElement.prototype.scrollIntoView = scroll;
+    renderScreen(makeClient());
+    await user.click(await screen.findByRole('radio', { name: '09:00' }));
+    await screen.findByLabelText('Resumen de tu renta');
+    const toSummary = () =>
+      scroll.mock.contexts.filter((el) => (el as HTMLElement).getAttribute('aria-label') === 'Resumen de tu renta');
+    expect(toSummary()).toHaveLength(1);
+    // Cambiar de hora no vuelve a mover la pantalla hacia el resumen.
+    await user.click(screen.getByRole('radio', { name: '09:30' }));
+    expect(toSummary()).toHaveLength(1);
+    delete (window.HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+
   it('"Rentar ahora" aparta sin hora de inicio', async () => {
     const user = userEvent.setup();
     const client = makeClient();
