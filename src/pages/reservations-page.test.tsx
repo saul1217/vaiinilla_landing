@@ -136,7 +136,9 @@ describe('ReservationsScreen', () => {
     await screen.findByLabelText('Resumen de tu renta');
     const toSummary = () =>
       scroll.mock.contexts.filter((el) => (el as HTMLElement).getAttribute('aria-label') === 'Resumen de tu renta');
-    expect(toSummary()).toHaveLength(1);
+    // Espera a que termine de crecer el contenedor antes de moverse.
+    expect(toSummary()).toHaveLength(0);
+    await waitFor(() => expect(toSummary()).toHaveLength(1), { timeout: 2000 });
     // Cambiar de hora no vuelve a mover la pantalla hacia el resumen.
     await user.click(screen.getByRole('radio', { name: '09:30' }));
     expect(toSummary()).toHaveLength(1);
