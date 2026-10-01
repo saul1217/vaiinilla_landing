@@ -31,6 +31,22 @@ export function MenuPage() {
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [rentsCourts, setRentsCourts] = useState(false);
+
+  // "Rentar cancha" solo se ofrece si el negocio tiene al menos una cancha con precio por hora.
+  useEffect(() => {
+    let active = true;
+    setRentsCourts(false);
+    void api
+      .getPublicSpaces(slug)
+      .then((spaces) => {
+        if (active) setRentsCourts(spaces.some((item) => item.espacio?.tipo === 'cancha' && Boolean(item.precio_hora)));
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [slug]);
 
   useEffect(() => {
     let active = true;
@@ -159,6 +175,17 @@ export function MenuPage() {
           </div>
         </div>
         {error && !selected ? <p className="alumno-error">{error}</p> : null}
+        {rentsCourts ? (
+          <Link className="alumno-courts-entry" to={`/e/${slug}/canchas`}>
+            <span>
+              <strong>Rentar una cancha</strong>
+              <small>Elige día y hora. Se paga al apartar.</small>
+            </span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14m-5-5 5 5-5 5" />
+            </svg>
+          </Link>
+        ) : null}
         {loading ? <LoadingSkeleton shape="products" label="Cargando menú…" /> : null}
         <div className="alumno-chips">
           <button className={categoryId == null ? 'alumno-chip is-on' : 'alumno-chip'} type="button" onClick={() => setCategoryId(null)}>

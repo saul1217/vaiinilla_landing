@@ -559,4 +559,87 @@ describe('CartPage', () => {
     expect(screen.queryByText(/cuenta login/i)).not.toBeInTheDocument();
     expect(createOrder).not.toHaveBeenCalled();
   });
+
+  describe('pagar al final', () => {
+    const line = {
+      productId: 1,
+      quantity: 1,
+      optionIds: [],
+      productName: 'Agua',
+      unitPreview: '30.00',
+      imageUrl: null,
+    };
+
+    function setup({ permite, enEspacio }: { permite: boolean; enEspacio: boolean }) {
+      buyerSessionState.context = { access_token: 'jwt', contexto: { establecimiento_id: '1' } };
+      getOperationalStatus.mockResolvedValue({
+        recibiendo_pedidos: true,
+        sesion_caja_abierta: true,
+        caja_en_linea: true,
+        cocina_en_linea: true,
+        permite_pago_al_final: permite,
+      });
+      if (enEspacio) {
+        sessionStorage.setItem(
+          'vaiinilla.buyer.space.v1',
+          JSON.stringify({ slug: 'demo-a', espacioId: 12, nombre: 'Cancha 2', tipo: 'cancha' }),
+        );
+      }
+      cartState.cart = { slug: 'demo-a', establishmentName: 'Cafetería Demo A', lines: [line] };
+    }
+
+    it('lo ofrece en un lugar si el negocio lo permite y crea el pedido a la cuenta', async () => {
+      setup({ permite: true, enEspacio: true });
+      createOrder.mockResolvedValue({ id: 'p9', metodo_pago: 'efectivo', qr_token: null });
+      const user = userEvent.setup();
+      renderCart();
+      expect(await screen.findByText(/en tu cancha/i)).toBeInTheDocument();
+      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      const option = await screen.findByRole('radio', { name: /pagar al final/i });
+      expect(screen.getByText(/paga todo junto al irte de tu cancha/i)).toBeInTheDocument();
+      await user.click(option);
+      expect(option).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getByRole('radio', { name: /pago en caja/i })).toHaveAttribute('aria-checked', 'false');
+      await user.click(screen.getByRole('button', { name: /continuar con pagar al final/i }));
+      await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1));
+      const payload = createOrder.mock.calls[0]?.[1] as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        metodo_pago: 'efectivo',
+        destino: 'en_espacio',
+        espacio_id: 12,
+        pago_diferido: true,
+      });
+    });
+
+    it('elegir otra forma de pago quita la cuenta', async () => {
+      setup({ permite: true, enEspacio: true });
+      createOrder.mockResolvedValue({ id: 'p9', metodo_pago: 'efectivo', qr_token: null });
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      await user.click(await screen.findByRole('radio', { name: /pagar al final/i }));
+      await user.click(screen.getByRole('radio', { name: /pago en caja/i }));
+      await user.click(screen.getByRole('button', { name: /continuar con pago en caja/i }));
+      await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1));
+      expect(createOrder.mock.calls[0]?.[1]).not.toHaveProperty('pago_diferido');
+    });
+
+    it('no se ofrece si el negocio no lo permite', async () => {
+      setup({ permite: false, enEspacio: true });
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      await screen.findByRole('heading', { name: /cómo quieres pagar/i });
+      expect(screen.queryByRole('radio', { name: /pagar al final/i })).not.toBeInTheDocument();
+    });
+
+    it('no se ofrece en un pedido para llevar', async () => {
+      setup({ permite: true, enEspacio: false });
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      await screen.findByRole('heading', { name: /cómo quieres pagar/i });
+      expect(screen.queryByRole('radio', { name: /pagar al final/i })).not.toBeInTheDocument();
+    });
+  });
 });

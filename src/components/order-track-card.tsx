@@ -4,17 +4,20 @@ import { formatAmount } from '../lib/money';
 import { resolvePickupQrToken, shouldShowPickupSurface } from '../lib/pickup-qr';
 import {
   ORDER_FLOW,
-  ORDER_STATUS_LABEL,
-  isActiveOrderStatus,
-  orderCollapsedStatusHint,
+  isActiveOrder,
+  orderCollapsedHint,
   orderItemHeadline,
   orderMetaLine,
   orderOperationalHint,
   orderProgressFilled,
+  orderStatusLabel,
   orderTrackSteps,
 } from '../lib/order-labels';
+import { RENTAL_STEPS, rentalStep } from '../lib/rental-tracking';
 import type { OrderDetail } from '../types/api';
 import { useHeightMorph } from '../lib/use-height-morph';
+import { ArrivalButton } from './arrival-button';
+import type { ArrivalClient } from '../lib/arrival-api';
 import { CallWaiter } from './call-waiter';
 import { OrderPickupPanel } from './order-pickup-panel';
 import type { BuyerCallClient } from '../lib/mesero-api';
@@ -29,6 +32,7 @@ export function OrderTrackCard({
   imageUrl = null,
   pickupToken = null,
   callClient,
+  arrivalClient,
 }: {
   order: OrderDetail;
   expanded: boolean;
@@ -40,15 +44,23 @@ export function OrderTrackCard({
   pickupToken?: string | null;
   /** Injected in QA; otherwise built from the stored client context. */
   callClient?: BuyerCallClient;
+  arrivalClient?: ArrivalClient;
 }) {
-  const filled = orderProgressFilled(order);
+  const rental = Boolean(order.reserva);
+  const rentalCurrent = rental ? rentalStep(order) : null;
+  const barIcons = rental ? RENTAL_ICONS : TRACK_ICONS;
+  const filled = rental
+    ? RENTAL_STEPS.findIndex((item) => item.key === rentalCurrent) + 1
+    : orderProgressFilled(order);
   const steps = orderTrackSteps(order);
-  const inFlow = ORDER_FLOW.includes(order.estado);
+  const inFlow = rental ? rentalCurrent !== null : ORDER_FLOW.includes(order.estado);
+  const active = isActiveOrder(order);
+  const statusLabel = orderStatusLabel(order);
   const showBar = inFlow;
   const cardRef = useRef<HTMLElement>(null);
   const pickupTokenResolved = pickupToken ?? resolvePickupQrToken(order);
   const showPickup = shouldShowPickupSurface(order);
-  const collapsedStatusHint = orderCollapsedStatusHint(order.estado);
+  const collapsedStatusHint = orderCollapsedHint(order);
   const operationalHint = orderOperationalHint(order);
   useHeightMorph(cardRef, expanded);
 
@@ -101,7 +113,7 @@ export function OrderTrackCard({
     >
       <header className="alumno-track-card__top">
         <span className="alumno-track-card__folio">#{order.folio}</span>
-        <span className="alumno-track-card__pill">{ORDER_STATUS_LABEL[order.estado]}</span>
+        <span className="alumno-track-card__pill">{statusLabel}</span>
       </header>
       <div className="alumno-track-card__body">
         {imageUrl ? (
@@ -119,17 +131,17 @@ export function OrderTrackCard({
       </div>
       {showBar ? (
         <div className="alumno-track-bar" aria-hidden="true">
-          {ORDER_FLOW.map((step, index) => {
+          {barIcons.map((icon, index) => {
             const current = filled - 1;
             const state = index < current ? 'done' : index === current ? 'current' : 'todo';
             return (
-              <Fragment key={step}>
+              <Fragment key={index}>
                 <span className={`alumno-track-bar__node is-${state}`} style={{ '--i': index } as CSSProperties}>
                   <svg viewBox="0 0 24 24">
-                    <path d={TRACK_ICONS[index]} />
+                    <path d={icon} />
                   </svg>
                 </span>
-                {index < ORDER_FLOW.length - 1 ? (
+                {index < barIcons.length - 1 ? (
                   <span
                     className={index < current ? 'alumno-track-bar__rail is-on' : 'alumno-track-bar__rail'}
                     style={{ '--i': index } as CSSProperties}
@@ -142,7 +154,7 @@ export function OrderTrackCard({
       ) : null}
       {showPickup && expanded ? null : (
         <p className="alumno-track-card__status">
-          <strong>{ORDER_STATUS_LABEL[order.estado]}</strong>
+          <strong>{statusLabel}</strong>
           {operationalHint ? ` ${operationalHint}` : collapsedStatusHint ? ` ${collapsedStatusHint}` : null}
         </p>
       )}
@@ -153,6 +165,7 @@ export function OrderTrackCard({
             token={pickupTokenResolved}
             stripeOrder={order.metodo_pago === 'stripe'}
           />
+          <ArrivalButton order={order} client={arrivalClient} />
           <CallWaiter order={order} client={callClient} />
           <ol className="alumno-timeline">
             {steps.map((step, index) => (
@@ -172,14 +185,14 @@ export function OrderTrackCard({
               <ArrowIcon />
             </Link>
           ) : null}
-          {toggle && (isActiveOrderStatus(order.estado) || inFlow) ? (
+          {toggle && (active || inFlow) ? (
             <button className="alumno-track-card__toggle" type="button" onClick={onToggle} aria-expanded={expanded}>
               Ocultar seguimiento
               <ChevronIcon up />
             </button>
           ) : null}
         </div>
-      ) : toggle && (isActiveOrderStatus(order.estado) || inFlow) ? (
+      ) : toggle && (active || inFlow) ? (
         <button className="alumno-track-card__toggle" type="button" onClick={onToggle} aria-expanded={expanded}>
           Ver seguimiento
           <ChevronIcon />
@@ -304,3 +317,6 @@ const TRACK_ICONS = [
   'M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16Zm4 4a2 2 0 0 0 4 0',
   'M12 3l2.3 1.6 2.8-.1.9 2.6 2.2 1.7-.8 2.7.8 2.7-2.2 1.7-.9 2.6-2.8-.1L12 21l-2.3-1.6-2.8.1-.9-2.6L3.8 15.2l.8-2.7-.8-2.7L6 8.1l.9-2.6 2.8.1L12 3Zm-3 9.2 2 2 4-4.4',
 ];
+
+// Rental steps reuse the receipt and paid-check glyphs, then play (en juego) and flag (terminada).
+const RENTAL_ICONS = [TRACK_ICONS[0], TRACK_ICONS[1], 'M8 5v14l11-7L8 5Z', 'M6 21V4m0 0h12l-2.5 4L18 12H6'];

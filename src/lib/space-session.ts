@@ -4,6 +4,8 @@ export interface SpaceSession {
   slug: string;
   espacioId: number;
   nombre: string;
+  /** mesa, cancha, asiento… Ausente en sesiones guardadas antes de este campo. */
+  tipo?: string;
 }
 
 export function readSpace(slug: string): SpaceSession | null {

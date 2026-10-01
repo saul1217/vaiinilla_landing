@@ -1,6 +1,7 @@
 export interface ResolvedTableSpace {
   espacio_id: number;
   espacio_nombre: string;
+  espacio_tipo: string | null;
   establecimiento_slug: string;
   establecimiento_nombre: string | null;
 }
@@ -41,6 +42,7 @@ export function normalizeResolvedSpace(
   return {
     espacio_id: espacioId,
     espacio_nombre: nombre,
+    espacio_tipo: asString(espacio.tipo) ?? asString(root.espacio_tipo) ?? asString(root.tipo),
     establecimiento_slug: slug,
     establecimiento_nombre: asString(establecimiento.nombre) ?? asString(root.establecimiento_nombre),
   };

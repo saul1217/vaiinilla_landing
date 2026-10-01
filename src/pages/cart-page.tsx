@@ -8,7 +8,7 @@ import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
-import { canAcceptOrders, cartTotal, toCreateOrderInput } from '../lib/cart';
+import { canAcceptOrders, canPayAtEnd, cartTotal, toCreateOrderInput } from '../lib/cart';
 import { leftoverPeekProducts, peekCatalogProducts, productImageUrl } from '../lib/catalog-images';
 import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
 import { formatAmount, formatMoney, linePreview, moneyToCents } from '../lib/money';
@@ -17,6 +17,7 @@ import { lastPlaceSlug } from '../lib/last-place';
 import { orderHistoryHeadline } from '../lib/order-labels';
 import { rememberPickupQrToken } from '../lib/pickup-qr';
 import { clearSpace, readSpace } from '../lib/space-session';
+import { deliveredAtLabel, spaceNoun } from '../lib/space-words';
 import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
 import { isStripeCheckoutEnabled, STRIPE_UNAVAILABLE_COPY } from '../lib/stripe-public';
 import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '../lib/stripe-session';
@@ -48,6 +49,7 @@ export function CartPage() {
   const [operationalError, setOperationalError] = useState<string | null>(null);
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [payment, setPayment] = useState<PaymentMethod>('efectivo');
+  const [payAtEnd, setPayAtEnd] = useState(false);
   const [notes, setNotes] = useState('');
   const [clientId, setClientId] = useState(
     () => sessionStorage.getItem(`vaiinilla.buyer.client-id.${slug}`) ?? '',
@@ -62,6 +64,8 @@ export function CartPage() {
   const menuPeek = useMemo(() => peekCatalogProducts(catalogProducts), [catalogProducts]);
   const space = readSpace(slug);
   const [forHere, setForHere] = useState(Boolean(space));
+  const tabAllowed = canPayAtEnd(status, forHere && Boolean(space));
+  const useTab = payAtEnd && tabAllowed && payment === 'efectivo';
   const stripeEnabled = isStripeCheckoutEnabled();
   const pendingStripeOrderId = readPendingStripeOrderId();
   const guestBuy = isGuestBuy();
@@ -229,12 +233,16 @@ export function CartPage() {
         throw new Error('El establecimiento no está recibiendo pedidos en este momento.');
       }
       const destination = forHere && space ? 'en_espacio' : 'para_llevar';
+      if (useTab && !canPayAtEnd(operational, destination === 'en_espacio')) {
+        throw new Error('Este negocio ya no permite pagar al final. Elige otra forma de pago.');
+      }
       const payload = toCreateOrderInput(
         lines,
         payment,
         notes,
         destination,
         destination === 'en_espacio' && space ? space.espacioId : null,
+        useTab,
       );
       const fingerprint = orderFingerprint(payload);
       const key = idempotencyKeyFor(fingerprint);
@@ -331,13 +339,29 @@ export function CartPage() {
                 </button>
               </div>
               <p className="alumno-paysheet__total">Total {total ? formatMoney(total) : '—'}</p>
+              {tabAllowed && space ? (
+                <PayOption
+                  selected={useTab}
+                  icon="tab"
+                  title="Pagar al final"
+                  badge="Cuenta"
+                  subtitle={`Pide ahora y paga todo junto al irte de tu ${spaceNoun(space.tipo)}.`}
+                  onSelect={() => {
+                    setPayment('efectivo');
+                    setPayAtEnd(true);
+                  }}
+                />
+              ) : null}
               <PayOption
-                selected={payment === 'efectivo'}
+                selected={payment === 'efectivo' && !useTab}
                 icon="cash"
                 title="Pago en caja"
                 badge="Efectivo"
                 subtitle="Pagas en caja cuando el pedido esté listo."
-                onSelect={() => setPayment('efectivo')}
+                onSelect={() => {
+                  setPayment('efectivo');
+                  setPayAtEnd(false);
+                }}
               />
               {user ? (
                 <PayOption
@@ -352,7 +376,10 @@ export function CartPage() {
                         ? `Disponible: ${formatMoney(wallet.wallet.saldo)}`
                         : 'Entra a tu cuenta para ver el saldo.'
                   }
-                  onSelect={() => setPayment('saldo')}
+                  onSelect={() => {
+                    setPayment('saldo');
+                    setPayAtEnd(false);
+                  }}
                 />
               ) : null}
               <PayOption
@@ -362,7 +389,11 @@ export function CartPage() {
                 badge="Stripe"
                 subtitle={stripeEnabled ? 'Tarjeta de débito o crédito · Pago seguro con Stripe.' : STRIPE_UNAVAILABLE_COPY}
                 disabled={!stripeEnabled}
-                onSelect={() => stripeEnabled && setPayment('stripe')}
+                onSelect={() => {
+                  if (!stripeEnabled) return;
+                  setPayment('stripe');
+                  setPayAtEnd(false);
+                }}
               />
               {error ? <p className="alumno-error">{error}</p> : null}
               {insufficientBalance ? <p className="alumno-error">No tienes saldo suficiente para este pedido.</p> : null}
@@ -372,7 +403,7 @@ export function CartPage() {
                 disabled={submitting || Boolean(insufficientBalance) || Boolean(pendingStripeOrderId)}
                 onClick={() => void confirm()}
               >
-                {submitting ? 'Confirmando…' : `Continuar con ${PAY_LABEL[payment]}`}
+                {submitting ? 'Confirmando…' : `Continuar con ${useTab ? 'pagar al final' : PAY_LABEL[payment]}`}
               </button>
             </div>
           )}
@@ -475,7 +506,7 @@ export function CartFilledView({
             <h2>{forHere && space ? space.nombre : 'Para llevar'}</h2>
             <p className="alumno-muted">
               {forHere && space
-                ? 'El pedido se entrega en tu mesa. Toca para cambiar a para llevar.'
+                ? `${deliveredAtLabel(space?.tipo)}. Toca para cambiar a para llevar.`
                 : space
                   ? `Toca para pedir en ${space.nombre}.`
                   : 'Recoges en mostrador cuando esté listo.'}
@@ -636,6 +667,7 @@ const PAY_ICONS = {
   cash: 'M3 7h18v10H3zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM6 10v4m12-4v4',
   wallet: 'M4 7h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4zM4 7l11-3v3m1 6h2',
   card: 'M3 6h18v12H3zM3 10h18M7 15h4',
+  tab: 'M6 3h12v18l-3-2-3 2-3-2-3 2V3Zm3 5h6m-6 4h6',
 } as const;
 
 // Android PaymentMethodCardOption: icon tile, title + badge, subtitle and a radio mark.

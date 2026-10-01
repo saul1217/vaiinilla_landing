@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AccountPage } from '../pages/account-page';
 import { CartPage } from '../pages/cart-page';
+import { ReservationsPage } from '../pages/reservations-page';
 import { DiscoveryPage } from '../pages/discovery-page';
 import { HomePage } from '../pages/home-page';
 import { MenuPage } from '../pages/menu-page';
@@ -16,6 +17,8 @@ import {
   AlumnoQaOrderDetailPage,
   AlumnoQaOrdersPage,
   AlumnoQaTableOrderPage,
+  AlumnoQaNewOrdersPage,
+  AlumnoQaCourtsPage,
   AlumnoQaWalletPage,
 } from '../pages/alumno-qa-page';
 
@@ -28,6 +31,7 @@ export function AppRouter() {
         <Route path="/pedir" element={<DiscoveryPage />} />
         <Route path="/e/:slug" element={<MenuPage />} />
         <Route path="/e/:slug/carrito" element={<CartPage />} />
+        <Route path="/e/:slug/canchas" element={<ReservationsPage />} />
         <Route path="/e/:slug/m/:token" element={<TableJoinPage />} />
         <Route path="/:slug/m/:token" element={<TableJoinPage />} />
         <Route path="/cuenta" element={<AccountPage />} />
@@ -43,6 +47,8 @@ export function AppRouter() {
             <Route path="/__qa/pedidos" element={<AlumnoQaOrdersPage />} />
             <Route path="/__qa/pedido" element={<AlumnoQaOrderDetailPage />} />
             <Route path="/__qa/pedido-mesa" element={<AlumnoQaTableOrderPage />} />
+            <Route path="/__qa/pedidos-nuevos" element={<AlumnoQaNewOrdersPage />} />
+            <Route path="/__qa/canchas" element={<AlumnoQaCourtsPage />} />
           </>
         ) : null}
         <Route path="/cafeterias" element={<Navigate to="/pedir" replace />} />
