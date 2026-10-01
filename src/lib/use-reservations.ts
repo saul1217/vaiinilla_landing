@@ -203,7 +203,14 @@ export function useReservations(
         },
         createIdempotencyKey(),
       );
-      patch({ working: false, pending: reservation, selectedStart: null, rentNow: false });
+      setState((now) => ({
+        ...now,
+        working: false,
+        pending: reservation,
+        selectedStart: null,
+        rentNow: false,
+        mine: [reservation, ...now.mine.filter((r) => r.id !== reservation.id)],
+      }));
     } catch (cause) {
       patch({ working: false, error: errorMessage(cause) });
     }
@@ -226,7 +233,13 @@ export function useReservations(
       patch({ working: true, error: null });
       try {
         const payment = await clientRef.current.pay(reservation.id, method, createIdempotencyKey());
-        patch({ working: false, pending: null, notice: PAID_NOTICE[method] });
+        setState((now) => ({
+          ...now,
+          working: false,
+          pending: null,
+          notice: PAID_NOTICE[method],
+          mine: now.mine.map((r) => (r.id === payment.reservation.id ? payment.reservation : r)),
+        }));
         onPaidRef.current(payment, method);
       } catch (cause) {
         patch({ working: false, error: errorMessage(cause) });
@@ -240,8 +253,15 @@ export function useReservations(
     async (reservation: Reservation) => {
       patch({ working: true, error: null });
       try {
-        await clientRef.current.cancel(reservation.id, createIdempotencyKey());
-        patch({ working: false, pending: null, notice: 'Reserva cancelada.' });
+        const cancelled = await clientRef.current.cancel(reservation.id, createIdempotencyKey());
+        // Sin esperar al siguiente refresco: la tarjeta deja de verse como activa al instante.
+        setState((now) => ({
+          ...now,
+          working: false,
+          pending: null,
+          notice: 'Reserva cancelada.',
+          mine: now.mine.map((r) => (r.id === cancelled.id ? cancelled : r)),
+        }));
       } catch (cause) {
         patch({ working: false, error: errorMessage(cause) });
       }

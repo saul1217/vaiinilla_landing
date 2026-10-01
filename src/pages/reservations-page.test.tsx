@@ -173,6 +173,21 @@ describe('ReservationsScreen', () => {
     expect(await screen.findByText(/reserva cancelada/i)).toBeInTheDocument();
   });
 
+  it('al cancelar la tarjeta deja de verse al instante, sin esperar otro refresco', async () => {
+    const user = userEvent.setup();
+    const pending = reservation();
+    let calls = 0;
+    const client = makeClient({
+      // La primera lectura trae la reserva; el refresco que sigue a cancelar tarda (backend lento).
+      list: vi.fn(() => (calls++ === 0 ? Promise.resolve([pending]) : new Promise<Reservation[]>(() => undefined))),
+    });
+    renderScreen(client);
+    await user.click(await screen.findByRole('button', { name: /^cancelar$/i }));
+    await user.click(await screen.findByRole('button', { name: /sí, cancelar/i }));
+    await screen.findByText(/reserva cancelada/i);
+    expect(screen.queryByRole('heading', { name: /mis reservas/i })).not.toBeInTheDocument();
+  });
+
   it('una reserva pagada avisa que lo pagado no se devuelve al cancelar', async () => {
     const user = userEvent.setup();
     const paid = reservation({ state: 'confirmada', holdExpiresAt: null, start: Date.now() + 5 * 60 * MIN });
