@@ -165,7 +165,9 @@ export function CallWaiter({
       ) : view === "reasons" ? (
         <div className="alumno-callwaiter__reasons" data-morph-in>
           <p>¿Qué necesitas?</p>
-          {CALL_REASONS.map((reason) => (
+          {CALL_REASONS.filter(
+            (reason) => reason.value !== "cuenta" || order.pago_diferido,
+          ).map((reason) => (
             <button
               key={reason.value}
               type="button"

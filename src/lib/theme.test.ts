@@ -26,6 +26,7 @@ describe('mesa QR', () => {
     ).toEqual({
       espacio_id: 12,
       espacio_nombre: 'Mesa 4',
+      espacio_tipo: null,
       establecimiento_slug: 'demo-a',
       establecimiento_nombre: 'Cafetería Demo A',
     });

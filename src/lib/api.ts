@@ -182,6 +182,11 @@ export const api = {
     return (await request<{ qr_token: string }>(`/pedidos/${id}/qr`, { token })).data;
   },
 
+  /** "Ya llegué" (drive-thru): sin cuerpo; avisar otra vez conserva la primera hora. */
+  async announceArrival(token: string, id: string): Promise<OrderDetail> {
+    return (await request<OrderDetail>(`/pedidos/${id}/llegada`, { method: 'POST', token })).data;
+  },
+
   async getMyWallet(token: string): Promise<WalletData> {
     return (await request<WalletData>('/wallets/me', { token })).data;
   },

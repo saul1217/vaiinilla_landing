@@ -17,6 +17,9 @@ import { OrderTicketView } from "./order-detail-page";
 import { useDeskPane } from "../lib/use-desk-pane";
 import { createMockBuyerCallClient } from "../lib/mesero-mock";
 import { WalletBoardView } from "./wallet-page";
+import { isActiveOrder, openTab } from "../lib/order-labels";
+import { formatAmount } from "../lib/money";
+import type { ArrivalClient } from "../lib/arrival-api";
 
 function qaOrder(overrides: Partial<OrderDetail>): OrderDetail {
   return {
@@ -389,6 +392,112 @@ export function AlumnoQaTableOrderPage() {
             imageUrl={qaOrderThumb(MESA)}
             callClient={qaCallClient}
           />
+        </div>
+      </main>
+    </AppShell>
+  );
+}
+
+// Pedidos nuevos (30 sep): renta de cancha, cuenta abierta (pagar al final) y "Ya llegué".
+const qaHours = (h: number) => new Date(Date.now() + h * 3600_000).toISOString();
+const QA_RENTA = qaOrder({
+  id: "qa-r1",
+  folio: 31,
+  estado: "entregado",
+  metodo_pago: "saldo",
+  total: "250.00",
+  items: [
+    {
+      id: 1,
+      producto_id: 1,
+      nombre_producto: "Renta Cancha 2 · 60 min",
+      estacion_preparacion: "caja",
+      cantidad: 1,
+      precio_digital_unitario: "250.00",
+      subtotal: "250.00",
+      opciones: [],
+    },
+  ],
+  reserva: {
+    id: "qa-res-1",
+    espacio: { id: 7, nombre: "Cancha 2", tipo: "cancha" },
+    inicio: qaHours(3),
+    fin: qaHours(4),
+    duracion_min: 60,
+    estado: "confirmada",
+  },
+});
+const QA_RENTA_JUGANDO = qaOrder({
+  ...QA_RENTA,
+  id: "qa-r2",
+  folio: 30,
+  reserva: { ...QA_RENTA.reserva!, id: "qa-res-2", inicio: qaHours(-0.5), fin: qaHours(0.5) },
+});
+const QA_CUENTA = qaOrder({
+  id: "qa-c1",
+  folio: 33,
+  estado: "preparando",
+  destino: "en_espacio",
+  espacio: { id: 7, nombre: "Cancha 2", tipo: "cancha" },
+  total: "60.00",
+  pago_diferido: true,
+  pago_pendiente: true,
+});
+const QA_CUENTA_2 = qaOrder({
+  ...QA_CUENTA,
+  id: "qa-c2",
+  folio: 34,
+  estado: "entregado",
+  total: "45.50",
+});
+const QA_DRIVE = qaOrder({
+  id: "qa-d1",
+  folio: 35,
+  estado: "preparando",
+  metodo_pago: "stripe",
+  total: "89.00",
+});
+const qaArrival: ArrivalClient = {
+  isDriveThru: () => Promise.resolve(true),
+  announce: () => Promise.resolve({ ...QA_DRIVE, llegada_en: new Date().toISOString() }),
+};
+
+export function AlumnoQaNewOrdersPage() {
+  const [open, setOpen] = useState<string | null>(QA_RENTA.id);
+  if (!import.meta.env.DEV) return <Navigate to="/" replace />;
+  const all = [QA_RENTA, QA_RENTA_JUGANDO, QA_CUENTA, QA_CUENTA_2, QA_DRIVE];
+  const tab = openTab(all);
+  return (
+    <AppShell tab="orders">
+      <main id="main-content" className="alumno-main">
+        <AlumnoPageHeader title="Mis pedidos" />
+        <p className="alumno-place-name">Padel prueba</p>
+        {tab ? (
+          <section className="alumno-tab" aria-label="Tu cuenta">
+            <div>
+              <strong>Tu cuenta</strong>
+              <span>
+                {tab.count === 1 ? "1 pedido" : `${tab.count} pedidos`} por pagar al final. Pide la cuenta a tu mesero.
+              </span>
+            </div>
+            <span className="alumno-tab__total">{formatAmount(tab.total)}</span>
+          </section>
+        ) : null}
+        <h2 className="alumno-section-label alumno-section-label--live">En curso</h2>
+        <div className="alumno-order-list">
+          {all
+            .filter((order) => isActiveOrder(order))
+            .map((order) => (
+              <OrderTrackCard
+                key={order.id}
+                order={order}
+                expanded={open === order.id}
+                onToggle={() => setOpen((current) => (current === order.id ? null : order.id))}
+                imageUrl={null}
+                callClient={qaCallClient}
+                arrivalClient={qaArrival}
+              />
+            ))}
         </div>
       </main>
     </AppShell>

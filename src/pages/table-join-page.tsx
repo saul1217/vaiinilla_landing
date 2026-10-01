@@ -6,11 +6,13 @@ import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import { rememberPlace } from '../lib/last-place';
 import { rememberSpace } from '../lib/space-session';
+import { openingTitle, spaceNoun } from '../lib/space-words';
 
 export function TableJoinPage() {
   const { slug = '', token = '' } = useParams();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
+  const [kind, setKind] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -23,7 +25,9 @@ export function TableJoinPage() {
           slug: resolved.establecimiento_slug,
           espacioId: resolved.espacio_id,
           nombre: resolved.espacio_nombre,
+          tipo: resolved.espacio_tipo ?? undefined,
         });
+        setKind(resolved.espacio_tipo);
         void navigate(`/e/${resolved.establecimiento_slug}`, { replace: true });
       })
       .catch((cause: unknown) => {
@@ -38,8 +42,8 @@ export function TableJoinPage() {
     <AppShell tab="none">
       <main id="main-content" className="alumno-main">
         <AlumnoPageHeader
-          kicker="Mesa"
-          title="Abriendo tu mesa"
+          kicker={spaceNoun(kind).replace(/^./, (c) => c.toUpperCase())}
+          title={openingTitle(kind)}
           back={error ? { to: '/pedir', label: 'Volver' } : undefined}
         />
         {error ? (

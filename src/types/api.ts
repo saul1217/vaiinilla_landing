@@ -9,6 +9,16 @@ export type OrderStatus =
   | 'expirado';
 
 export type PaymentMethod = 'stripe' | 'efectivo' | 'saldo';
+export type EstablishmentKind =
+  | 'cafeteria'
+  | 'restaurante'
+  | 'padel'
+  | 'bar'
+  | 'food_truck'
+  | 'drive_thru'
+  | 'comedor'
+  | 'evento';
+export type SpaceKind = 'mesa' | 'barra' | 'cancha' | 'drive_thru' | 'asiento';
 export type OrderDestination = 'para_llevar' | 'en_espacio';
 export type OperationalRole = 'cliente' | 'cajero' | 'cocina' | 'admin' | 'mesero';
 
@@ -50,7 +60,7 @@ export interface PublicEstablishment {
   slug: string;
   identificador_cliente_etiqueta: string;
   identificador_cliente_obligatorio: boolean;
-  tipo?: 'cafeteria' | 'restaurante' | 'padel';
+  tipo?: EstablishmentKind;
   // Public profile (backend migrations 39–40); null until the business fills it in.
   descripcion?: string | null;
   imagen_url?: string | null;
@@ -113,6 +123,10 @@ export interface OperationalStatus {
   cocina_en_linea: boolean;
   tiempo_estimado_min: number | null;
   consultado_en: string;
+  /** Pagar al final: las apps lo ofrecen solo si es `true`. Ausente en backends viejos. */
+  permite_pago_al_final?: boolean;
+  /** Lo que el dueño dice que es el negocio; "Ya llegué" solo sale en `drive_thru`. */
+  tipo?: EstablishmentKind;
 }
 
 export interface LegalVersions {
@@ -171,7 +185,27 @@ export interface ClientContextResponse {
 export interface OrderSpace {
   id: number;
   nombre: string;
+  /** Un `SpaceKind`; se deja como texto para no romper con tipos que el backend agregue. */
   tipo: string;
+}
+
+export type ReservationState =
+  | 'pendiente_pago'
+  | 'confirmada'
+  | 'en_curso'
+  | 'terminada'
+  | 'cancelada'
+  | 'expirada'
+  | 'conflicto';
+
+/** La reserva de un pedido de renta de cancha; `null` o ausente en cualquier otro pedido. */
+export interface OrderReservation {
+  id: string;
+  espacio?: OrderSpace | null;
+  inicio: string;
+  fin: string;
+  duracion_min: number;
+  estado: ReservationState;
 }
 
 export interface OrderItemOption {
@@ -216,6 +250,13 @@ export interface OrderDetail {
   pago?: OrderPayment | null;
   vence_operacion_en?: string | null;
   motivo_pendiente_operativo?: 'caja_inactiva' | 'cocina_inactiva' | null;
+  /** Va a la cuenta del espacio (pagar al final). */
+  pago_diferido?: boolean;
+  /** Va a la cuenta y aún no se cobra. */
+  pago_pendiente?: boolean;
+  /** Cuándo avisó "ya llegué" (drive-thru); `null` si no lo ha hecho. */
+  llegada_en?: string | null;
+  reserva?: OrderReservation | null;
 }
 
 export interface OrderPayment {
@@ -247,6 +288,8 @@ export interface CreateOrderInput {
   espacio_id: number | null;
   notas_cocina: string | null;
   items: CreateOrderItemInput[];
+  /** Pagar al final: efectivo y en un espacio, solo si el negocio lo permite. */
+  pago_diferido?: boolean;
 }
 
 export interface StripePaymentSession {

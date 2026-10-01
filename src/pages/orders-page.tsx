@@ -12,8 +12,9 @@ import { resolveClientSession } from "../lib/client-session";
 import { lastPlaceSlug } from "../lib/last-place";
 import { errorMessage } from "../lib/api-error";
 import { catalogImageMap, orderThumbUrl } from "../lib/catalog-images";
+import { formatAmount } from "../lib/money";
 import { persistPickupQrFromOrder } from "../lib/pickup-qr";
-import { isActiveOrderStatus } from "../lib/order-labels";
+import { isActiveOrder, openTab } from "../lib/order-labels";
 import { usePickupQrToken } from "../lib/use-pickup-qr";
 import { useDeskPane } from "../lib/use-desk-pane";
 import type {
@@ -101,7 +102,7 @@ export function OrdersPage() {
     }
     if (deskAutoSelected.current || expandedId || orders.length === 0) return;
     deskAutoSelected.current = true;
-    const firstActive = orders.find((item) => isActiveOrderStatus(item.estado));
+    const firstActive = orders.find((item) => isActiveOrder(item));
     setExpandedId(firstActive?.id ?? orders[0]?.id ?? null);
   }, [deskPane, expandedId, orders]);
 
@@ -111,12 +112,9 @@ export function OrdersPage() {
   if (ready && !user)
     return <Navigate to="/cuenta?next=/cuenta/pedidos" replace />;
 
-  const activeOrders = orders.filter((order) =>
-    isActiveOrderStatus(order.estado),
-  );
-  const pastOrders = orders.filter(
-    (order) => !isActiveOrderStatus(order.estado),
-  );
+  const activeOrders = orders.filter((order) => isActiveOrder(order));
+  const pastOrders = orders.filter((order) => !isActiveOrder(order));
+  const tab = openTab(orders);
 
   function toggle(id: string) {
     setExpandedId((current) => (current === id ? null : id));
@@ -130,6 +128,17 @@ export function OrdersPage() {
           <p className="alumno-place-name">{place.nombre}</p>
         ) : null}
         {error ? <p className="alumno-error">{error}</p> : null}
+        {tab ? (
+          <section className="alumno-tab" aria-label="Tu cuenta">
+            <div>
+              <strong>Tu cuenta</strong>
+              <span>
+                {tab.count === 1 ? "1 pedido" : `${tab.count} pedidos`} por pagar al final. Pide la cuenta a tu mesero.
+              </span>
+            </div>
+            <span className="alumno-tab__total">{formatAmount(tab.total)}</span>
+          </section>
+        ) : null}
         {loading && orders.length === 0 && !error ? (
           <LoadingSkeleton shape="orders" label="Cargando pedidos…" />
         ) : null}

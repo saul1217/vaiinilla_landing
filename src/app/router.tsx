@@ -16,6 +16,7 @@ import {
   AlumnoQaOrderDetailPage,
   AlumnoQaOrdersPage,
   AlumnoQaTableOrderPage,
+  AlumnoQaNewOrdersPage,
   AlumnoQaWalletPage,
 } from '../pages/alumno-qa-page';
 
@@ -43,6 +44,7 @@ export function AppRouter() {
             <Route path="/__qa/pedidos" element={<AlumnoQaOrdersPage />} />
             <Route path="/__qa/pedido" element={<AlumnoQaOrderDetailPage />} />
             <Route path="/__qa/pedido-mesa" element={<AlumnoQaTableOrderPage />} />
+            <Route path="/__qa/pedidos-nuevos" element={<AlumnoQaNewOrdersPage />} />
           </>
         ) : null}
         <Route path="/cafeterias" element={<Navigate to="/pedir" replace />} />

@@ -125,3 +125,21 @@ describe('CallWaiter', () => {
     expect(current).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('CallWaiter: pedir la cuenta', () => {
+  it('"Quiero pagar la cuenta" solo sale en un pedido a la cuenta', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<CallWaiter order={order()} client={client()} />);
+    await user.click(await screen.findByRole('button', { name: /llamar al mesero/i }));
+    expect(screen.queryByRole('button', { name: /pagar la cuenta/i })).not.toBeInTheDocument();
+    unmount();
+
+    const send = vi.fn(() => Promise.resolve(call({ motivo: 'cuenta' })));
+    render(
+      <CallWaiter order={order({ pago_diferido: true, pago_pendiente: true })} client={client({ call: send })} />,
+    );
+    await user.click(await screen.findByRole('button', { name: /llamar al mesero/i }));
+    await user.click(screen.getByRole('button', { name: /quiero pagar la cuenta/i }));
+    expect(send).toHaveBeenCalledWith(4, 'cuenta', 'p1');
+  });
+});

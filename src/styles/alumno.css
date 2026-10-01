@@ -6141,3 +6141,80 @@ body[data-shell='alumno'] {
     animation: none;
   }
 }
+
+/* ---------- Buyer: "Ya llegué" (drive-thru) ---------- */
+.alumno-arrival {
+  margin: 4px 0 12px;
+  color: var(--text);
+}
+
+.alumno-arrival__cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--lime);
+  color: #1a1b19;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 160ms ease, opacity 200ms ease;
+}
+
+.alumno-arrival__cta:active {
+  transform: scale(0.97);
+}
+
+.alumno-arrival__cta:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.alumno-arrival__done {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  font-size: 0.9rem;
+}
+
+.alumno-arrival__done span span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* ---------- Buyer: tu cuenta (pagar al final) ---------- */
+.alumno-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.alumno-tab strong {
+  display: block;
+}
+
+.alumno-tab span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.alumno-tab__total {
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--text);
+}
