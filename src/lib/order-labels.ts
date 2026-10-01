@@ -1,4 +1,14 @@
 import type { OrderDetail, OrderStatus } from '../types/api';
+import { moneyToCents } from './money';
+import {
+  RENTAL_STEPS,
+  isLiveRental,
+  rentalCourtName,
+  rentalScheduleLabel,
+  rentalStateLabel,
+  rentalStep,
+  rentalStepHint,
+} from './rental-tracking';
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   por_cobrar: 'Por cobrar',
@@ -22,7 +32,11 @@ export const ORDER_STATUS_HINT: Record<OrderStatus, string> = {
   expirado: 'Este pedido expiró.',
 };
 
-export function orderOperationalHint(order: Pick<OrderDetail, 'motivo_pendiente_operativo'>): string | null {
+export function orderOperationalHint(
+  order: Pick<OrderDetail, 'motivo_pendiente_operativo'> & Partial<Pick<OrderDetail, 'estado'>>,
+): string | null {
+  // Un pedido ya entregado (una renta pagada se da por entregada) o caído no espera a nadie.
+  if (order.estado && TERMINAL.includes(order.estado)) return null;
   if (order.motivo_pendiente_operativo === 'caja_inactiva') {
     return 'Pedido recibido. Caja lo procesará al recuperar la operación.';
   }
@@ -47,7 +61,15 @@ export function isActiveOrderStatus(status: OrderStatus): boolean {
   return ACTIVE.includes(status);
 }
 
+/** Va a la cuenta del espacio y aún no se cobra (pagar al final). */
+export function isUnpaidTab(order: Pick<OrderDetail, 'pago_diferido' | 'pago_pendiente'>): boolean {
+  return Boolean(order.pago_diferido && order.pago_pendiente);
+}
+
 export function orderPayLabel(order: OrderDetail): string {
+  if (order.reserva && order.metodo_pago === 'efectivo') return 'Efectivo en caja';
+  if (isUnpaidTab(order)) return 'Se paga al final';
+  if (order.pago_diferido) return 'Cuenta pagada';
   if (order.metodo_pago === 'saldo') return 'Pagado con saldo';
   if (order.metodo_pago === 'stripe') {
     return order.pago?.payment_status === 'confirmado' ? 'Pagado con tarjeta' : 'Tarjeta';
@@ -56,17 +78,24 @@ export function orderPayLabel(order: OrderDetail): string {
 }
 
 export function orderCompactPayLabel(order: OrderDetail): string {
+  if (isUnpaidTab(order)) return 'Al final';
   if (order.metodo_pago === 'saldo') return 'Saldo';
   if (order.metodo_pago === 'stripe') return 'Tarjeta';
   return 'Efectivo';
 }
 
 export function orderDestinationLabel(order: OrderDetail): string {
+  if (order.reserva) return rentalCourtName(order) ?? 'Renta de cancha';
   if (order.destino === 'en_espacio') return order.espacio?.nombre ?? 'En mesa';
   return 'Para llevar';
 }
 
-export function orderMetaLine(order: OrderDetail): string {
+export function orderMetaLine(order: OrderDetail, now: Date = new Date()): string {
+  if (order.reserva) {
+    const court = rentalCourtName(order);
+    const schedule = rentalScheduleLabel(order.reserva, now);
+    return court ? `${court} · ${schedule}` : schedule;
+  }
   return `${orderDestinationLabel(order)} · ${orderCompactPayLabel(order)}`;
 }
 
@@ -81,6 +110,49 @@ export function orderHistoryHeadline(order: OrderDetail): string {
   const first = order.items?.[0];
   if (!first) return `Pedido #${order.folio}`;
   return `${first.cantidad}× ${first.nombre_producto}`;
+}
+
+/** Texto de la píldora: la renta y la cuenta abierta no se leen como una comida cobrada. */
+export function orderStatusLabel(order: OrderDetail, now: Date = new Date()): string {
+  if (order.reserva) return rentalStateLabel(order, now);
+  if (isUnpaidTab(order)) {
+    if (order.estado === 'cobrado') return 'En tu cuenta';
+    if (order.estado === 'entregado') return 'Por pagar';
+  }
+  return ORDER_STATUS_LABEL[order.estado];
+}
+
+/** "En curso" en Mis pedidos: una renta hasta que termina su horario; una cuenta hasta que se paga. */
+export function isActiveOrder(order: OrderDetail, now: Date = new Date()): boolean {
+  if (order.reserva) return isLiveRental(order, now);
+  if (isUnpaidTab(order) && order.estado === 'entregado') return true;
+  return isActiveOrderStatus(order.estado);
+}
+
+/** Pedido para llevar que el cliente puede avisar que ya llegó por él. */
+export function canAnnounceArrival(order: OrderDetail): boolean {
+  return (
+    !order.reserva &&
+    order.destino === 'para_llevar' &&
+    ['por_cobrar', 'cobrado', 'preparando', 'listo'].includes(order.estado)
+  );
+}
+
+/** Lo que se dice bajo la píldora cuando la tarjeta está cerrada. */
+export function orderCollapsedHint(order: OrderDetail, now: Date = new Date()): string {
+  if (order.reserva) {
+    const step = rentalStep(order, now);
+    if (!step) return '';
+    return rentalStepHint(step, order.reserva, order.metodo_pago, paymentFailed(order), now);
+  }
+  if (isUnpaidTab(order) && order.estado === 'cobrado') return 'Cocina recibió tu pedido. Pagas al final.';
+  if (isUnpaidTab(order) && order.estado === 'entregado') return 'Pídele la cuenta a tu mesero para pagar.';
+  return orderCollapsedStatusHint(order.estado);
+}
+
+function paymentFailed(order: OrderDetail): boolean {
+  const status = order.pago?.payment_status;
+  return status === 'fallido' || status === 'cancelado';
 }
 
 export function orderStatusTone(status: OrderStatus): 'ready' | 'warn' | 'danger' | 'muted' | 'default' {
@@ -113,7 +185,9 @@ export function orderCollapsedStatusHint(status: OrderStatus): string {
   return ORDER_STATUS_HINT[status];
 }
 
-export function orderTrackSteps(order: OrderDetail): OrderTrackStep[] {
+export function orderTrackSteps(order: OrderDetail, now: Date = new Date()): OrderTrackStep[] {
+  if (order.reserva) return rentalTrackSteps(order, now);
+  if (order.pago_diferido) return tabTrackSteps(order);
   const stripe = order.metodo_pago === 'stripe';
   const flowIndex = orderFlowIndex(order.estado);
   const delivered = order.estado === 'entregado';
@@ -151,4 +225,55 @@ export function orderTrackSteps(order: OrderDetail): OrderTrackStep[] {
     }
     return { key, label: labels[index] ?? key, hint: hints[index] ?? '', state };
   });
+}
+
+function rentalTrackSteps(order: OrderDetail, now: Date): OrderTrackStep[] {
+  const reserva = order.reserva;
+  const current = rentalStep(order, now);
+  if (!reserva || !current) return [];
+  const index = RENTAL_STEPS.findIndex((item) => item.key === current);
+  return RENTAL_STEPS.map((item, i) => ({
+    key: item.key,
+    label: item.label,
+    hint:
+      i === index
+        ? rentalStepHint(item.key, reserva, order.metodo_pago, paymentFailed(order), now)
+        : '',
+    state: current === 'terminada' || i < index ? 'done' : i === index ? 'current' : 'todo',
+  }));
+}
+
+/** Pedido a la cuenta: nace cobrado para que Cocina lo prepare, y se paga al final. */
+function tabTrackSteps(order: OrderDetail): OrderTrackStep[] {
+  const flowIndex = orderFlowIndex(order.estado);
+  const delivered = order.estado === 'entregado';
+  const paid = !order.pago_pendiente;
+  const rows: Omit<OrderTrackStep, 'state'>[] = [
+    { key: 'enviado', label: 'Pedido enviado', hint: 'Pagas al final, con toda tu cuenta.' },
+    {
+      key: 'cobrado',
+      label: paid ? 'Cobrado' : 'En tu cuenta',
+      hint: paid ? 'Tu cuenta ya se pagó.' : ORDER_STATUS_HINT.cobrado,
+    },
+    { key: 'preparando', label: 'Preparando', hint: ORDER_STATUS_HINT.preparando },
+    { key: 'listo', label: 'Listo', hint: order.estado === 'listo' ? '' : 'Tu mesero te lo lleva.' },
+    { key: 'entregado', label: 'Entregado', hint: ORDER_STATUS_HINT.entregado },
+  ];
+  return rows.map((row, index) => {
+    let state: OrderTrackStep['state'] = 'todo';
+    if (delivered) state = 'done';
+    else if (flowIndex >= 0 && index < flowIndex) state = 'done';
+    else if (flowIndex >= 0 && index === flowIndex) state = 'current';
+    return { ...row, state };
+  });
+}
+
+/** Lo que el cliente debe en su cuenta abierta (pedidos a la cuenta aún sin cobrar). */
+export function openTab(orders: OrderDetail[]): { count: number; total: string } | null {
+  const pending = orders.filter((order) => isUnpaidTab(order) && order.estado !== 'cancelado');
+  if (pending.length === 0) return null;
+  const cents = pending.reduce((sum, order) => sum + (moneyToCents(order.total) ?? 0n), 0n);
+  const whole = cents / 100n;
+  const rest = (cents % 100n).toString().padStart(2, '0');
+  return { count: pending.length, total: `${whole}.${rest}` };
 }

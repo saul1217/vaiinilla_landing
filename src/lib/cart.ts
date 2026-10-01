@@ -65,6 +65,7 @@ export function toCreateOrderInput(
   kitchenNotes: string,
   destination: OrderDestination = 'para_llevar',
   spaceId: number | null = null,
+  payAtEnd = false,
 ): CreateOrderInput {
   if (lines.length < 1 || lines.length > 50) {
     throw new Error('El pedido debe contener entre 1 y 50 líneas.');
@@ -72,11 +73,15 @@ export function toCreateOrderInput(
   if (destination === 'en_espacio' && spaceId == null) {
     throw new Error('Falta la mesa para pedir en el espacio.');
   }
+  if (payAtEnd && (destination !== 'en_espacio' || paymentMethod !== 'efectivo')) {
+    throw new Error('Pagar al final solo aplica a un pedido en tu lugar, sin pagar antes.');
+  }
   return {
     metodo_pago: paymentMethod,
     destino: destination,
     espacio_id: destination === 'en_espacio' ? spaceId : null,
     notas_cocina: kitchenNotes.trim() || null,
+    ...(payAtEnd ? { pago_diferido: true } : {}),
     items: lines.map((line) => {
       if (line.quantity < 1 || line.quantity > 20) {
         throw new Error('Cada producto admite entre 1 y 20 piezas.');
@@ -107,6 +112,14 @@ export function isOperationallyReady(status: {
 
 /** La política del establecimiento decide si recibe pedidos; las estaciones
  * pueden recuperarse después y no deben bloquear el checkout. */
+/** "Pagar al final" se ofrece solo en un lugar (mesa, cancha, asiento) y si el negocio lo permite. */
+export function canPayAtEnd(
+  status: { permite_pago_al_final?: boolean } | null,
+  forHere: boolean,
+): boolean {
+  return forHere && status?.permite_pago_al_final === true;
+}
+
 export function canAcceptOrders(status: { recibiendo_pedidos: boolean } | null): boolean {
   return Boolean(status?.recibiendo_pedidos);
 }
