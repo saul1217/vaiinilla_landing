@@ -6,6 +6,8 @@ import {
   openTab,
   orderCollapsedHint,
   orderCompactPayLabel,
+  orderDestinationLabel,
+  orderOperationalHint,
   orderMetaLine,
   orderPayLabel,
   orderStatusLabel,
@@ -135,6 +137,20 @@ describe('renta en Mis pedidos', () => {
       .concat(orderTrackSteps(r, NOW).flatMap((s) => [s.label, s.hint]))
       .join(' ');
     expect(text).not.toMatch(/cocina|comanda|llevar|preparando|recógelo/i);
+  });
+
+  it('el ticket dice la cancha y que se paga en caja, no "al recoger" ni "para llevar"', () => {
+    const r = rental({ estado: 'por_cobrar', metodo_pago: 'efectivo' });
+    expect(orderPayLabel(r)).toBe('Efectivo en caja');
+    expect(orderDestinationLabel(r)).toBe('Cancha 2');
+    expect(orderPayLabel(rental({ metodo_pago: 'saldo' }))).toBe('Pagado con saldo');
+  });
+
+  it('una renta ya pagada no dice que Caja la procesará (aunque el backend marque caja inactiva)', () => {
+    const paid = rental({ motivo_pendiente_operativo: 'caja_inactiva' });
+    expect(orderOperationalHint(paid)).toBeNull();
+    const unpaid = rental({ estado: 'por_cobrar', metodo_pago: 'efectivo', motivo_pendiente_operativo: 'caja_inactiva' });
+    expect(orderOperationalHint(unpaid)).toMatch(/Caja lo procesará/);
   });
 
   it('una renta no es un pedido para avisar que llegaste', () => {

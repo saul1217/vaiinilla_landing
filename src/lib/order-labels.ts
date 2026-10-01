@@ -32,7 +32,11 @@ export const ORDER_STATUS_HINT: Record<OrderStatus, string> = {
   expirado: 'Este pedido expiró.',
 };
 
-export function orderOperationalHint(order: Pick<OrderDetail, 'motivo_pendiente_operativo'>): string | null {
+export function orderOperationalHint(
+  order: Pick<OrderDetail, 'motivo_pendiente_operativo'> & Partial<Pick<OrderDetail, 'estado'>>,
+): string | null {
+  // Un pedido ya entregado (una renta pagada se da por entregada) o caído no espera a nadie.
+  if (order.estado && TERMINAL.includes(order.estado)) return null;
   if (order.motivo_pendiente_operativo === 'caja_inactiva') {
     return 'Pedido recibido. Caja lo procesará al recuperar la operación.';
   }
@@ -63,6 +67,7 @@ export function isUnpaidTab(order: Pick<OrderDetail, 'pago_diferido' | 'pago_pen
 }
 
 export function orderPayLabel(order: OrderDetail): string {
+  if (order.reserva && order.metodo_pago === 'efectivo') return 'Efectivo en caja';
   if (isUnpaidTab(order)) return 'Se paga al final';
   if (order.pago_diferido) return 'Cuenta pagada';
   if (order.metodo_pago === 'saldo') return 'Pagado con saldo';
@@ -80,6 +85,7 @@ export function orderCompactPayLabel(order: OrderDetail): string {
 }
 
 export function orderDestinationLabel(order: OrderDetail): string {
+  if (order.reserva) return rentalCourtName(order) ?? 'Renta de cancha';
   if (order.destino === 'en_espacio') return order.espacio?.nombre ?? 'En mesa';
   return 'Para llevar';
 }
