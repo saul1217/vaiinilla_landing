@@ -26,6 +26,7 @@ export function TableJoinPage() {
           espacioId: resolved.espacio_id,
           nombre: resolved.espacio_nombre,
           tipo: resolved.espacio_tipo ?? undefined,
+          qrToken: token,
         });
         setKind(resolved.espacio_tipo);
         void navigate(`/e/${resolved.establecimiento_slug}`, { replace: true });

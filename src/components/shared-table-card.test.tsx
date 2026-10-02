@@ -1,0 +1,105 @@
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SharedTable } from '../types/api';
+import { SharedTableCard, orderedGroups } from './shared-table-card';
+
+const apiMock = vi.hoisted(() => ({ currentTable: vi.fn(), joinTable: vi.fn(), leaveTable: vi.fn() }));
+vi.mock('../lib/api', () => ({ api: apiMock }));
+
+const ZERO = { total: '0.00', pagado: '0.00', pendiente: '0.00' };
+
+function table(overrides: Partial<SharedTable> = {}): SharedTable {
+  return {
+    espacio: { id: 3, nombre: 'Mesa 3', tipo: 'mesa' },
+    mi_alias: 'Ana',
+    cuenta_abierta: true,
+    participantes: [
+      { alias: 'Luis', soy_yo: false, unido_en: null },
+      { alias: 'Ana', soy_yo: true, unido_en: null },
+    ],
+    grupos: [
+      {
+        alias: 'Luis',
+        soy_yo: false,
+        total: '20.20',
+        pagado: '20.20',
+        pendiente: '0.00',
+        pedidos: [{ id: null, folio: 7, estado: 'listo', items_resumen: '1× Torta', total: '20.20', pendiente_cobro: false, creado_en: 'a' }],
+      },
+      {
+        alias: 'Ana',
+        soy_yo: true,
+        total: '10.10',
+        pagado: '0.00',
+        pendiente: '10.10',
+        pedidos: [{ id: 'p1', folio: 8, estado: 'preparando', items_resumen: '1× Taco', total: '10.10', pendiente_cobro: true, creado_en: 'b' }],
+      },
+    ],
+    totales: { total: '30.30', pagado: '20.20', pendiente: '10.10' },
+    mi_parte: { total: '10.10', pagado: '0.00', pendiente: '10.10' },
+    ...overrides,
+  };
+}
+
+describe('mesa compartida', () => {
+  beforeEach(() => {
+    apiMock.currentTable.mockReset();
+    apiMock.joinTable.mockReset();
+    apiMock.leaveTable.mockReset();
+  });
+
+  it('tus pedidos van primero', () => {
+    expect(orderedGroups(table()).map((g) => g.alias)).toEqual(['Ana', 'Luis']);
+  });
+
+  it('sin mesa, quien llegó por el QR se une con un alias', async () => {
+    apiMock.currentTable.mockResolvedValue(null);
+    apiMock.joinTable.mockResolvedValue(table());
+    const user = userEvent.setup();
+    render(<SharedTableCard accessToken="jwt" qrToken="qr-1" />);
+
+    await user.type(await screen.findByRole('textbox', { name: /tu nombre en la mesa/i }), '  Ana ');
+    await user.click(screen.getByRole('button', { name: /unirme a la mesa/i }));
+
+    expect(apiMock.joinTable).toHaveBeenCalledWith('jwt', 'qr-1', 'Ana');
+    expect(await screen.findByRole('heading', { name: 'Mesa 3' })).toBeInTheDocument();
+  });
+
+  it('sin QR y sin mesa no muestra nada', async () => {
+    apiMock.currentTable.mockResolvedValue(null);
+    const { container } = render(<SharedTableCard accessToken="jwt" qrToken={null} />);
+    await waitFor(() => expect(apiMock.currentTable).toHaveBeenCalled());
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('muestra quién está, los pedidos por persona y tu parte', async () => {
+    apiMock.currentTable.mockResolvedValue(table());
+    render(<SharedTableCard accessToken="jwt" qrToken={null} />);
+
+    expect(await screen.findByText('2 personas en la mesa')).toBeInTheDocument();
+    expect(screen.getByText('Ana (tú)')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /tus pedidos/i })).toBeInTheDocument();
+    expect(screen.getByText('1× Torta')).toBeInTheDocument();
+    expect(screen.getByText(/listo · pagado/i)).toBeInTheDocument();
+    expect(screen.getByText('Tu parte por pagar').nextElementSibling).toHaveTextContent('$10.10');
+  });
+
+  it('sin pedidos en la cuenta lo dice', async () => {
+    apiMock.currentTable.mockResolvedValue(table({ cuenta_abierta: false, grupos: [], totales: ZERO, mi_parte: ZERO }));
+    render(<SharedTableCard accessToken="jwt" qrToken={null} />);
+    expect(await screen.findByText(/aún no hay pedidos en la cuenta de la mesa/i)).toBeInTheDocument();
+  });
+
+  it('salir de la mesa', async () => {
+    apiMock.currentTable.mockResolvedValue(table());
+    apiMock.leaveTable.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<SharedTableCard accessToken="jwt" qrToken={null} />);
+
+    await user.click(await screen.findByRole('button', { name: /salir de la mesa/i }));
+
+    expect(apiMock.leaveTable).toHaveBeenCalledWith('jwt');
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Mesa 3' })).not.toBeInTheDocument());
+  });
+});
