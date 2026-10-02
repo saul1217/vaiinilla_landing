@@ -59,6 +59,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         optionIds,
         productName: product.nombre,
         unitPreview: preview.unit,
+        unitCounter: preview.counterUnit,
         imageUrl: product.imagen_url,
       };
       setCart((current) => {
