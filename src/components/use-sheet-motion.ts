@@ -60,6 +60,9 @@ export function useSheetMotion(onClosed: () => void) {
 
   const onPointerDown = useCallback((event: PointerEvent<HTMLElement>) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
+    // Sobre un control no se arrastra: capturar el puntero mandaría el clic del ratón al
+    // encabezado y el botón (la X) nunca recibiría su click.
+    if ((event.target as HTMLElement).closest('button, a, input, select, textarea, [role="button"]')) return;
     drag.current = { y: event.clientY, t: event.timeStamp, dy: 0, v: 0 };
     event.currentTarget.setPointerCapture(event.pointerId);
   }, []);

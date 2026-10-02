@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -341,5 +341,46 @@ describe("OrderTrackCard pickup", () => {
       </MemoryRouter>,
     );
     expect(screen.queryByRole("button", { name: /llamar al mesero/i })).not.toBeInTheDocument();
+  });
+});
+
+describe('OrderTrackCard: foto del producto', () => {
+  it('muestra la foto y, si no carga, vuelve a la mascota', () => {
+    render(
+      <MemoryRouter>
+        <OrderTrackCard order={order({})} expanded={false} onToggle={() => undefined} imageUrl="https://cdn/rota.jpg" />
+      </MemoryRouter>,
+    );
+    const photo = document.querySelector('img.alumno-track-card__thumb') as HTMLImageElement;
+    expect(photo).toHaveAttribute('src', 'https://cdn/rota.jpg');
+    fireEvent.error(photo);
+    expect(document.querySelector('img.alumno-track-card__thumb')).toBeNull();
+    expect(document.querySelector('.alumno-track-card__thumb--vaini img')).toHaveAttribute('src', '/vaini/cutout-frente.png');
+  });
+});
+
+describe('OrderTrackCard: la barra coincide con la lista', () => {
+  const nodes = () => [...document.querySelectorAll('.alumno-track-bar__node')].map((n) => n.className.replace(/.*is-/, ''));
+
+  it('entregado: todos los iconos hechos, ninguno "actual"', () => {
+    render(
+      <MemoryRouter>
+        <OrderTrackCard
+          order={{ ...order({ estado: 'entregado' }), items: order().items.map((item) => ({ ...item, estacion_preparacion: 'cocina' as const })) }}
+          expanded={false}
+          onToggle={() => undefined}
+        />
+      </MemoryRouter>,
+    );
+    expect(nodes()).toEqual(['done', 'done', 'done', 'done', 'done']);
+  });
+
+  it('sin cocina: el icono de Preparando sale omitido, igual que en la lista', () => {
+    render(
+      <MemoryRouter>
+        <OrderTrackCard order={order({ estado: 'listo' })} expanded={false} onToggle={() => undefined} />
+      </MemoryRouter>,
+    );
+    expect(nodes()).toEqual(['done', 'done', 'skipped', 'current', 'todo']);
   });
 });

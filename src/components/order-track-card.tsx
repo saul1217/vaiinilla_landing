@@ -1,4 +1,4 @@
-import { Fragment, useLayoutEffect, useRef, type CSSProperties } from 'react';
+import { Fragment, useLayoutEffect, useRef, type CSSProperties, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatAmount } from '../lib/money';
 import { resolvePickupQrToken, shouldShowPickupSurface } from '../lib/pickup-qr';
@@ -60,6 +60,8 @@ export function OrderTrackCard({
   const statusLabel = orderStatusLabel(order);
   const showBar = inFlow;
   const cardRef = useRef<HTMLElement>(null);
+  // Una foto que no carga vuelve a la mascota en vez de dejar el ícono de imagen rota.
+  const [failedImage, setFailedImage] = useState<string | null>(null);
   const pickupTokenResolved = pickupToken ?? resolvePickupQrToken(order);
   const showPickup = shouldShowPickupSurface(order);
   const collapsedStatusHint = orderCollapsedHint(order);
@@ -118,8 +120,8 @@ export function OrderTrackCard({
         <span className="alumno-track-card__pill">{statusLabel}</span>
       </header>
       <div className="alumno-track-card__body">
-        {imageUrl ? (
-          <img className="alumno-track-card__thumb" src={imageUrl} alt="" />
+        {imageUrl && failedImage !== imageUrl ? (
+          <img className="alumno-track-card__thumb" src={imageUrl} alt="" onError={() => setFailedImage(imageUrl)} />
         ) : (
           <div className="alumno-track-card__thumb alumno-track-card__thumb--vaini" aria-hidden="true">
             <img src="/vaini/cutout-frente.png" alt="" />
@@ -135,7 +137,12 @@ export function OrderTrackCard({
         <div className="alumno-track-bar" aria-hidden="true">
           {barIcons.map((icon, index) => {
             const current = filled - 1;
-            const state = index < current ? 'done' : index === current ? 'current' : 'todo';
+            // Fuera de una renta, la barra usa los mismos pasos que la lista: así no se
+            // contradicen (Preparando omitido, o entregado con todo hecho).
+            const state =
+              !rental && steps[index]
+                ? steps[index]?.state ?? 'todo'
+                : index < current ? 'done' : index === current ? 'current' : 'todo';
             return (
               <Fragment key={index}>
                 <span className={`alumno-track-bar__node is-${state}`} style={{ '--i': index } as CSSProperties}>
@@ -145,7 +152,11 @@ export function OrderTrackCard({
                 </span>
                 {index < barIcons.length - 1 ? (
                   <span
-                    className={index < current ? 'alumno-track-bar__rail is-on' : 'alumno-track-bar__rail'}
+                    className={
+                      (!rental && steps[index + 1] ? steps[index + 1]?.state !== 'todo' : index < current)
+                        ? 'alumno-track-bar__rail is-on'
+                        : 'alumno-track-bar__rail'
+                    }
                     style={{ '--i': index } as CSSProperties}
                   />
                 ) : null}

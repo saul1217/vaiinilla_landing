@@ -1926,6 +1926,12 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
 }
 
 /* Android OrderProgressBar: 22px icon nodes joined by 2px rails that fill in sequence. */
+.alumno-track-bar__node.is-skipped {
+  opacity: 0.35;
+  outline: 1.5px dashed currentColor;
+  outline-offset: -3px;
+}
+
 .alumno-track-bar__node {
   flex: none;
   width: 22px;
@@ -2173,10 +2179,8 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   font-weight: 500;
   line-height: 1.2;
   text-align: right;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  /* Sin tope de renglones: el aviso de Stripe y "No aplica…" se cortaban a la mitad. */
+  overflow-wrap: anywhere;
 }
 
 .alumno-track-card__follow {

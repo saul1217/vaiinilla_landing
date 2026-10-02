@@ -46,6 +46,11 @@ export function orderThumbUrl(
   images: Map<number, string>,
   products: CatalogProduct[] = [],
 ): string | null {
+  // La foto que manda el pedido gana: no depende de que el catálogo ya haya cargado.
+  for (const item of order.items ?? []) {
+    const own = productImageUrl(item.imagen_url);
+    if (own) return own;
+  }
   for (const item of order.items ?? []) {
     const byId = images.get(item.producto_id);
     if (byId) return byId;
