@@ -14,11 +14,21 @@ import {
 } from '../lib/firebase';
 import { enableGuestBuy, enableGuestExplore } from '../lib/guest-explore';
 import { unpublishedLegalTestingEnabled } from '../lib/legal';
-import type { LegalVersions } from '../types/api';
+import { staffAccesses } from '../lib/staff-access';
+import type { LegalVersions, SessionAccess } from '../types/api';
 import { AlumnoBack, AlumnoLockup, AlumnoLogo } from './alumno-brand';
 import { SignupSteps } from './signup-steps';
+import { StaffNotice } from './staff-notice';
 
-type AuthMode = 'splash' | 'entrar' | 'alta' | 'totp' | 'google-legal';
+type AuthMode = 'splash' | 'entrar' | 'alta' | 'totp' | 'google-legal' | 'staff';
+
+interface AuthCopy {
+  kicker: string;
+  headline: ReactNode;
+  lead: string;
+  panelKicker: string;
+  panelTitle: string;
+}
 
 const SPLASH_BUBBLES = [
   { src: '/vaini/scene-laptop.png', className: 'is-1' },
@@ -79,6 +89,19 @@ const AUTH_COPY = {
     panelKicker: 'Registro',
     panelTitle: 'Crear cuenta',
   },
+  staff: {
+    kicker: 'Equipo',
+    headline: (
+      <>
+        Tu lugar de trabajo.
+        <br />
+        <span className="alumno-auth__accent">En su panel.</span>
+      </>
+    ),
+    lead: 'Las cuentas del equipo atienden desde el panel de Vaiinilla.',
+    panelKicker: 'Cuenta del equipo',
+    panelTitle: 'Tu cuenta es del equipo',
+  },
   totp: {
     kicker: 'Acceso seguro',
     headline: (
@@ -92,7 +115,7 @@ const AUTH_COPY = {
     panelKicker: 'Segundo factor',
     panelTitle: 'Verificación',
   },
-} as const;
+} as const satisfies Record<Exclude<AuthMode, 'splash'>, AuthCopy>;
 
 export function AuthScreens({
   next = '/pedir',
@@ -117,6 +140,7 @@ export function AuthScreens({
   const [totpCode, setTotpCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [staff, setStaff] = useState<SessionAccess[]>([]);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -131,12 +155,14 @@ export function AuthScreens({
   const legalReady = Boolean(legal?.terminos_version && legal.privacidad_version);
   const legalesOk = acceptedTerms && acceptedPrivacy && legalReady && Boolean(legal);
 
-  async function enrollIfNeeded(nextUser: User, displayName?: string) {
-    if (!legalReady || !legal) return;
+  /** Devuelve los accesos de la cuenta; si es nueva, la da de alta (sin accesos todavía). */
+  async function enrollIfNeeded(nextUser: User, displayName?: string): Promise<SessionAccess[]> {
     const token = await firebaseIdToken(nextUser);
     try {
-      await api.listAccesses(token);
+      return await api.listAccesses(token);
     } catch (cause) {
+      // Sin documentos legales no se puede dar de alta: se sigue como antes.
+      if (!legalReady || !legal) return [];
       if (!(cause instanceof VaiinillaApiError) || cause.code !== 'IDENTITY_NOT_REGISTERED') {
         throw cause;
       }
@@ -145,14 +171,22 @@ export function AuthScreens({
         terminos_version: legal.terminos_version,
         privacidad_version: legal.privacidad_version,
       });
+      return [];
     }
   }
 
   async function finish(nextUser: User, displayName?: string) {
-    await enrollIfNeeded(nextUser, displayName);
+    const accesses = await enrollIfNeeded(nextUser, displayName);
     setResolver(null);
     setPendingGoogleUser(null);
     setTotpCode('');
+    // Una cuenta del equipo no es un cliente más: se le avisa y se le lleva a su panel.
+    const team = staffAccesses(accesses);
+    if (team.length > 0) {
+      setStaff(team);
+      setMode('staff');
+      return;
+    }
     void navigate(next);
   }
 
@@ -391,11 +425,13 @@ export function AuthScreens({
     );
   }
 
-  const copy = AUTH_COPY[mode];
+  const copy: AuthCopy = AUTH_COPY[mode];
 
   return (
-    <AuthSplit mode={mode} onBack={goBack} copy={copy}>
-      {mode === 'totp' ? (
+    <AuthSplit mode={mode} onBack={mode === 'staff' ? undefined : goBack} copy={copy}>
+      {mode === 'staff' ? (
+        <StaffNotice accesses={staff} onContinueAsClient={() => void navigate(next)} />
+      ) : mode === 'totp' ? (
         <>
           <p className="alumno-lead">Abre Google Authenticator y captura el código de 6 dígitos.</p>
           <form onSubmit={(event) => void verifyTotp(event)}>
@@ -548,8 +584,8 @@ function AuthSplit({
   children,
 }: {
   mode: Exclude<AuthMode, 'splash'>;
-  onBack: () => void;
-  copy: (typeof AUTH_COPY)[Exclude<AuthMode, 'splash'>];
+  onBack?: () => void;
+  copy: AuthCopy;
   children: ReactNode;
 }) {
   return (
@@ -566,7 +602,7 @@ function AuthSplit({
         <p className="alumno-auth__brand-lead">{copy.lead}</p>
       </section>
       <section className="alumno-auth__panel">
-        <AlumnoBack onClick={onBack}>Volver</AlumnoBack>
+        {onBack ? <AlumnoBack onClick={onBack}>Volver</AlumnoBack> : null}
         <AlumnoLogo className="alumno-auth__window-logo" alt="" />
         <div className="alumno-auth__mark" aria-hidden="true">
           <img src="/brand/vaiinilla-mark.png" alt="" />
