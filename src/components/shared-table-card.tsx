@@ -2,26 +2,12 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import { formatAmount } from '../lib/money';
-import { ORDER_STATUS_LABEL } from '../lib/order-labels';
+import { orderedGroups, tableOrderState } from '../lib/shared-table';
 import { spaceNoun } from '../lib/space-words';
 import type { SharedTable } from '../types/api';
 
 const POLL_MS = 5000;
 const ALIAS_MAX = 30;
-
-/**
- * El estado de un pedido de la mesa. A la cuenta, `cobrado` solo quiere decir que
- * Cocina lo recibió: mientras no se pague, se dice que está en la cuenta.
- */
-export function tableOrderState(order: SharedTable['grupos'][number]['pedidos'][number]): string {
-  if (order.pendiente_cobro) return order.estado === 'cobrado' ? 'En la cuenta' : ORDER_STATUS_LABEL[order.estado];
-  return `${ORDER_STATUS_LABEL[order.estado]} · pagado`;
-}
-
-/** Tus pedidos primero; luego el resto en el orden en que se unieron. */
-export function orderedGroups(table: SharedTable): SharedTable['grupos'] {
-  return [...table.grupos].sort((a, b) => Number(b.soy_yo) - Number(a.soy_yo));
-}
 
 /**
  * La mesa compartida: quién está, los pedidos de cada quien y la cuenta de todos.

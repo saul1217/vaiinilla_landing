@@ -2,7 +2,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SharedTable } from '../types/api';
-import { SharedTableCard, orderedGroups, tableOrderState } from './shared-table-card';
+import { SharedTableCard } from './shared-table-card';
+import { orderedGroups, tableOrderState } from '../lib/shared-table';
 
 const apiMock = vi.hoisted(() => ({ currentTable: vi.fn(), joinTable: vi.fn(), leaveTable: vi.fn(), claimTableOrder: vi.fn() }));
 vi.mock('../lib/api', () => ({ api: apiMock }));
