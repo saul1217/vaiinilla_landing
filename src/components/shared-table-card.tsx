@@ -100,12 +100,17 @@ export function SharedTableCard({ accessToken, qrToken }: { accessToken: string 
   if (!table) {
     if (!qrToken) return null;
     return (
-      <form className="alumno-card shared-table shared-table--join alumno-arrive" onSubmit={join}>
-        <h2>¿Compartes la mesa?</h2>
-        <p className="alumno-muted">
-          Únete con un nombre para ver los pedidos de todos y la cuenta de la mesa. Los demás solo ven ese nombre.
-        </p>
-        <label className="shared-table__field">
+      <form className="alumno-track-card shared-table alumno-arrive" onSubmit={join}>
+        <header className="alumno-track-card__top">
+          <span className="alumno-track-card__folio">Mesa compartida</span>
+        </header>
+        <div className="alumno-track-card__copy">
+          <strong>¿Compartes la mesa?</strong>
+          <p className="alumno-track-card__status">
+            Únete con un nombre para ver los pedidos de todos y la cuenta de la mesa. Los demás solo ven ese nombre.
+          </p>
+        </div>
+        <label className="alumno-field shared-table__field">
           <span>Tu nombre en la mesa</span>
           <input
             name="alias"
@@ -125,90 +130,83 @@ export function SharedTableCard({ accessToken, qrToken }: { accessToken: string 
   }
 
   const noun = spaceNoun(table.espacio.tipo);
+  const people = table.participantes.length;
   return (
-    <section className="alumno-card shared-table alumno-arrive" aria-labelledby="shared-table-title">
-      <header className="shared-table__head">
-        <div>
-          <h2 id="shared-table-title">{table.espacio.nombre}</h2>
-          <p className="alumno-muted">
-            {table.participantes.length === 1
-              ? `Solo tú en la ${noun}`
-              : `${table.participantes.length} personas en la ${noun}`}
-          </p>
-        </div>
-        <span className="shared-table__total">{formatAmount(table.totales.total)}</span>
+    <article className="alumno-track-card shared-table alumno-arrive" aria-labelledby="shared-table-title">
+      <header className="alumno-track-card__top">
+        <span className="alumno-track-card__folio" id="shared-table-title">{table.espacio.nombre}</span>
+        <span className="alumno-track-card__pill">{people === 1 ? `Solo tú` : `${people} personas`}</span>
       </header>
 
-      <ul className="shared-table__people" aria-label="Quién está">
+      <div className="alumno-chips shared-table__people" aria-label={`Quién está en la ${noun}`}>
         {table.participantes.map((person, index) => (
-          <li key={`${person.alias}-${index}`} className={person.soy_yo ? 'is-me' : undefined}>
+          <span key={`${person.alias}-${index}`} className={person.soy_yo ? 'alumno-chip is-on' : 'alumno-chip'}>
             {person.soy_yo ? `${person.alias} (tú)` : person.alias}
-          </li>
+          </span>
         ))}
-      </ul>
+      </div>
 
       {!table.cuenta_abierta || table.grupos.every((group) => group.pedidos.length === 0) ? (
-        <p className="alumno-muted">Aún no hay pedidos en la cuenta de la {noun}.</p>
+        <p className="alumno-track-card__status">Aún no hay pedidos en la cuenta de la {noun}.</p>
       ) : (
-        <div className="shared-table__groups">
-          {orderedGroups(table)
-            .filter((group) => group.pedidos.length > 0)
-            .map((group, index) => (
-              <div key={`${group.alias ?? 'otros'}-${index}`} className="shared-table__group" style={{ ['--i' as string]: index }}>
-                <h3>
-                  {group.soy_yo ? 'Tus pedidos' : (group.alias ?? `Otros en la ${noun}`)}
-                  <span>{formatAmount(group.total)}</span>
-                </h3>
-                <ul>
-                  {group.pedidos.map((order) => (
-                    <li key={`${order.folio}-${order.creado_en ?? ''}`}>
-                      <span className="shared-table__items">{order.items_resumen || `Pedido #${order.folio}`}</span>
+        orderedGroups(table)
+          .filter((group) => group.pedidos.length > 0)
+          .map((group, index) => (
+            <section key={`${group.alias ?? 'otros'}-${index}`} className="shared-table__group" style={{ ['--i' as string]: index }}>
+              <h3 className="alumno-section-label">
+                {group.soy_yo ? 'Tus pedidos' : (group.alias ?? `Otros en la ${noun}`)}
+              </h3>
+              <ul className="alumno-ticket-items">
+                {group.pedidos.map((order) => (
+                  <li key={`${order.folio}-${order.creado_en ?? ''}`}>
+                    <span className="alumno-track-card__copy">
+                      <strong>{order.items_resumen || `Pedido #${order.folio}`}</strong>
                       <span className="shared-table__state">{tableOrderState(order)}</span>
-                      <span>{formatAmount(order.total)}</span>
+                    </span>
+                    <span className="shared-table__right">
+                      <span className="alumno-track-card__price">{formatAmount(order.total)}</span>
                       {order.pendiente_cobro ? (
-                        <span className="shared-table__claim">
-                          {order.pagara && !order.lo_pago_yo ? (
-                            <span className="shared-table__payer">Paga {order.pagara}</span>
-                          ) : (
-                            <button
-                              type="button"
-                              className={order.lo_pago_yo ? 'is-on' : undefined}
-                              aria-pressed={order.lo_pago_yo === true}
-                              disabled={busy}
-                              onClick={() => void claim(order.folio, !order.lo_pago_yo)}
-                            >
-                              {order.lo_pago_yo ? 'Lo pago yo ✓' : 'Esto lo pago yo'}
-                            </button>
-                          )}
-                        </span>
+                        order.pagara && !order.lo_pago_yo ? (
+                          <span className="shared-table__state">Paga {order.pagara}</span>
+                        ) : (
+                          <button
+                            type="button"
+                            className={order.lo_pago_yo ? 'alumno-chip is-on' : 'alumno-chip'}
+                            aria-pressed={order.lo_pago_yo === true}
+                            disabled={busy}
+                            onClick={() => void claim(order.folio, !order.lo_pago_yo)}
+                          >
+                            {order.lo_pago_yo ? 'Lo pago yo ✓' : 'Esto lo pago yo'}
+                          </button>
+                        )
                       ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-        </div>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))
       )}
 
-      <dl className="shared-table__sums">
-        <div>
-          <dt>Pagado</dt>
-          <dd>{formatAmount(table.totales.pagado)}</dd>
-        </div>
-        <div>
-          <dt>Por pagar</dt>
-          <dd>{formatAmount(table.totales.pendiente)}</dd>
-        </div>
-        <div className="is-me">
-          <dt>Tu parte por pagar</dt>
-          <dd>{formatAmount(table.mi_parte.pendiente)}</dd>
-        </div>
-      </dl>
+      <ul className="alumno-ticket-items shared-table__sums">
+        <li>
+          <span>Pagado</span>
+          <span>{formatAmount(table.totales.pagado)}</span>
+        </li>
+        <li>
+          <span>Por pagar de la {noun}</span>
+          <span>{formatAmount(table.totales.pendiente)}</span>
+        </li>
+        <li className="shared-table__mine">
+          <strong>Tu parte por pagar</strong>
+          <strong className="alumno-track-card__price">{formatAmount(table.mi_parte.pendiente)}</strong>
+        </li>
+      </ul>
 
       {error ? <p className="alumno-error">{error}</p> : null}
-      <button className="shared-table__leave" type="button" onClick={() => void leave()} disabled={busy}>
+      <button className="alumno-btn alumno-btn--ghost shared-table__leave" type="button" onClick={() => void leave()} disabled={busy}>
         Salir de la {noun}
       </button>
-    </section>
+    </article>
   );
 }
