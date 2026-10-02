@@ -70,11 +70,11 @@ function makeClient(overrides: Partial<ReservationsClient> = {}, courts?: CourtS
   };
 }
 
-function renderScreen(client: ReservationsClient) {
+function renderScreen(client: ReservationsClient, cardOffered = true) {
   return render(
     <MemoryRouter initialEntries={['/e/padel/canchas']}>
       <Routes>
-        <Route path="/e/:slug/canchas" element={<ReservationsScreen client={client} slug="padel" />} />
+        <Route path="/e/:slug/canchas" element={<ReservationsScreen client={client} slug="padel" cardOffered={cardOffered} />} />
         <Route path="/cuenta/pedidos/:id" element={<p>Pedido de renta</p>} />
       </Routes>
     </MemoryRouter>,
@@ -143,6 +143,16 @@ describe('ReservationsScreen', () => {
     await user.click(screen.getByRole('radio', { name: '09:30' }));
     expect(toSummary()).toHaveLength(1);
     delete (window.HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+
+  it('sin la tarjeta activada por el dueño, pagar la renta no ofrece tarjeta', async () => {
+    const user = userEvent.setup();
+    renderScreen(makeClient(), false);
+    await user.click(await screen.findByRole('radio', { name: '09:00' }));
+    await user.click(await screen.findByRole('button', { name: /apartar cancha/i }));
+    const sheet = await screen.findByRole('dialog', { name: /paga tu cancha/i });
+    expect(within(sheet).getByRole('button', { name: /saldo/i })).toBeInTheDocument();
+    expect(within(sheet).queryByRole('button', { name: /tarjeta/i })).not.toBeInTheDocument();
   });
 
   it('"Rentar ahora" aparta sin hora de inicio', async () => {

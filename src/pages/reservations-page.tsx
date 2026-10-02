@@ -48,6 +48,7 @@ import {
   type ReservationPayment,
   type ReservationPaymentMethod,
 } from '../lib/reservations';
+import { offersCardPayment } from '../lib/stripe-public';
 import type { PublicEstablishment } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
 
@@ -89,7 +90,7 @@ export function ReservationsPage() {
       <main id="main-content" className="alumno-main">
         <ReservationsHeader slug={slug} venueName={place?.nombre ?? null} />
         {error ? <p className="alumno-error">{error}</p> : null}
-        {token ? <ReservationsScreen client={createReservationsClient(token)} slug={slug} /> : error ? null : (
+        {token ? <ReservationsScreen client={createReservationsClient(token)} slug={slug} cardOffered={offersCardPayment(place)} /> : error ? null : (
           <LoadingSkeleton shape="rows" label="Abriendo tu sesión…" />
         )}
       </main>
@@ -107,7 +108,16 @@ function ReservationsHeader({ slug, venueName }: { slug: string; venueName: stri
 }
 
 /** La pantalla sin sesión ni encabezado: se prueba y se ve en QA con un cliente simulado. */
-export function ReservationsScreen({ client, slug }: { client: ReservationsClient; slug: string }) {
+export function ReservationsScreen({
+  client,
+  slug,
+  cardOffered = false,
+}: {
+  client: ReservationsClient;
+  slug: string;
+  /** Tarjeta: solo si el dueño la activó en su panel. */
+  cardOffered?: boolean;
+}) {
   const navigate = useNavigate();
   const [confirmCancel, setConfirmCancel] = useState<Reservation | null>(null);
 
@@ -216,6 +226,7 @@ export function ReservationsScreen({ client, slug }: { client: ReservationsClien
           zone={zone}
           working={state.working}
           error={state.error}
+          cardOffered={cardOffered}
           onPay={(method) => void vm.pay(method)}
           onClosed={vm.dismissPayment}
         />
@@ -550,6 +561,7 @@ function PaySheet({
   zone,
   working,
   error,
+  cardOffered,
   onPay,
   onClosed,
 }: {
@@ -557,6 +569,7 @@ function PaySheet({
   zone: string;
   working: boolean;
   error: string | null;
+  cardOffered: boolean;
   onPay: (method: ReservationPaymentMethod) => void;
   onClosed: () => void;
 }) {
@@ -596,7 +609,7 @@ function PaySheet({
             </p>
           ) : null}
           <div className="alumno-res__pay-list alumno-arrive">
-            {PAY_OPTIONS.map((option) => {
+            {PAY_OPTIONS.filter((option) => option.method !== 'stripe' || cardOffered).map((option) => {
               const prices = reservation.customerPrice;
               const amount = prices
                 ? option.price === 'card'

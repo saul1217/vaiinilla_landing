@@ -85,3 +85,11 @@ export function isStripeCheckoutEnabled(environment: AppEnvironment = appEnviron
   if (isSecretStripeMaterial(envKey)) return false;
   return stripeKeyMode(envKey) === expectedStripeKeyMode(environment);
 }
+
+/**
+ * La tarjeta se ofrece solo si el dueño la activó en su panel (`acepta_tarjeta`) y esta
+ * web tiene Stripe configurado. Sin la respuesta del negocio, no se ofrece.
+ */
+export function offersCardPayment(status: { acepta_tarjeta?: boolean } | null | undefined): boolean {
+  return status?.acepta_tarjeta === true && isStripeCheckoutEnabled();
+}
