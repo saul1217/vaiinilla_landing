@@ -148,3 +148,36 @@ describe('rechazo por artículo', () => {
     expect(orderRejectedItemsHint(order({ items: [items[1]!] }))).toBeNull();
   });
 });
+
+describe('pedido sin cocina: Preparando omitido', () => {
+  const drink = {
+    id: 2,
+    producto_id: 9,
+    nombre_producto: 'Refresco',
+    estacion_preparacion: 'caja' as const,
+    cantidad: 1,
+    precio_digital_unitario: '25.00',
+    subtotal: '25.00',
+    opciones: [],
+  };
+
+  it('a la cuenta, una bebida en listo marca Preparando como omitido, no hecho', () => {
+    const steps = orderTrackSteps(order({ estado: 'listo', pago_diferido: true, items: [drink] }));
+    const preparing = steps.find((step) => step.key === 'preparando');
+    expect(preparing?.state).toBe('skipped');
+    expect(preparing?.hint).toMatch(/no aplica/i);
+    expect(steps.find((step) => step.key === 'listo')?.state).toBe('current');
+    expect(steps.find((step) => step.key === 'entregado')?.state).toBe('todo');
+  });
+
+  it('también en un pedido normal sin cocina', () => {
+    const steps = orderTrackSteps(order({ estado: 'listo', items: [drink] }));
+    expect(steps.find((step) => step.key === 'preparando')?.state).toBe('skipped');
+  });
+
+  it('con un artículo de cocina, Preparando sigue normal', () => {
+    const base = order({ estado: 'listo', pago_diferido: true });
+    const steps = orderTrackSteps({ ...base, items: [...base.items, drink] });
+    expect(steps.find((step) => step.key === 'preparando')?.state).toBe('done');
+  });
+});

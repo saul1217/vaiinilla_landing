@@ -192,7 +192,7 @@ export type OrderTrackStep = {
   key: string;
   label: string;
   hint: string;
-  state: 'done' | 'current' | 'todo';
+  state: 'done' | 'current' | 'todo' | 'skipped';
 };
 
 export function orderCollapsedStatusHint(status: OrderStatus): string {
@@ -200,9 +200,29 @@ export function orderCollapsedStatusHint(status: OrderStatus): string {
   return ORDER_STATUS_HINT[status];
 }
 
+/** Sin artículos de cocina, el pedido no se prepara: el backend lo pasa directo a listo. */
+export function skipsKitchen(order: OrderDetail): boolean {
+  const live = order.items.filter((item) => !item.rechazo);
+  return live.length > 0 && live.every((item) => item.estacion_preparacion !== 'cocina');
+}
+
+export const PREPARING_SKIPPED_HINT = 'No aplica: este pedido no pasa por cocina.';
+
+/** "Preparando" queda omitido en un pedido sin cocina, para que no parezca casi terminado. */
+function markSkippedPreparing(order: OrderDetail, steps: OrderTrackStep[]): OrderTrackStep[] {
+  if (!skipsKitchen(order) || order.estado === 'preparando') return steps;
+  return steps.map((step) =>
+    step.key === 'preparando' ? { ...step, state: 'skipped', hint: PREPARING_SKIPPED_HINT } : step,
+  );
+}
+
 export function orderTrackSteps(order: OrderDetail, now: Date = new Date()): OrderTrackStep[] {
   if (order.reserva) return rentalTrackSteps(order, now);
-  if (order.pago_diferido) return tabTrackSteps(order);
+  if (order.pago_diferido) return markSkippedPreparing(order, tabTrackSteps(order));
+  return markSkippedPreparing(order, flowTrackSteps(order));
+}
+
+function flowTrackSteps(order: OrderDetail): OrderTrackStep[] {
   const stripe = order.metodo_pago === 'stripe';
   const flowIndex = orderFlowIndex(order.estado);
   const delivered = order.estado === 'entregado';
