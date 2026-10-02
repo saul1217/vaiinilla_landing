@@ -55,6 +55,8 @@ export interface ApiErrorEnvelope {
 }
 
 export interface PublicEstablishment {
+  /** Tarjeta: solo si el dueño la activó en su panel. Ausente (backend viejo) = no se ofrece. */
+  acepta_tarjeta?: boolean;
   id: string;
   nombre: string;
   slug: string;

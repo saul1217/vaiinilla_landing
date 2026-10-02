@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
 import { GUEST_CHECKOUT_UNAVAILABLE } from '../lib/guest-checkout';
@@ -91,6 +91,11 @@ vi.mock('../context/cart-context', () => ({
   useCart: () => cartState,
 }));
 
+function OrdersLanding() {
+  const { search } = useLocation();
+  return <p>{`Mis pedidos ${search}`}</p>;
+}
+
 function renderCart() {
   return render(
     <MemoryRouter initialEntries={['/e/demo-a/carrito']}>
@@ -99,6 +104,7 @@ function renderCart() {
           <Route path="/e/:slug/carrito" element={<CartPage />} />
           <Route path="/cuenta" element={<p>Cuenta login</p>} />
           <Route path="/cuenta/pedidos/:id" element={<p>Pedido creado</p>} />
+          <Route path="/cuenta/pedidos" element={<OrdersLanding />} />
         </Routes>
       </ThemeProvider>
     </MemoryRouter>,
@@ -111,12 +117,14 @@ describe('CartPage', () => {
     localStorage.clear();
     authState.user = { email: 'ana@example.test', displayName: 'Ana' };
     buyerSessionState.context = null;
+    // Negocio con la tarjeta activada por su dueño; una prueba de abajo la apaga.
     getEstablishment.mockResolvedValue({
       id: '1',
       nombre: 'Cafetería Demo A',
       slug: 'demo-a',
       identificador_cliente_etiqueta: 'Matrícula',
       identificador_cliente_obligatorio: false,
+      acepta_tarjeta: true,
     });
     getOperationalStatus.mockResolvedValue({
       recibiendo_pedidos: true,
@@ -258,6 +266,20 @@ describe('CartPage', () => {
     expect(await screen.findByRole('heading', { name: /pedidos anteriores/i })).toBeInTheDocument();
     expect(document.querySelector('.alumno-history-row img')).toBeNull();
     expect(document.querySelector('.alumno-cart-peek__row > img')).toHaveAttribute('src', QA_PHOTO_TACOS);
+  });
+
+  it('sin la tarjeta activada por el dueño no ofrece pagar con Stripe', async () => {
+    getEstablishment.mockResolvedValue({ id: '1', nombre: 'Cafetería Demo A', slug: 'demo-a', acepta_tarjeta: false });
+    cartState.cart = {
+      slug: 'demo-a',
+      establishmentName: 'Cafetería Demo A',
+      lines: [{ productId: 1, quantity: 1, optionIds: [], productName: 'Chocolate', unitPreview: '120.00', imageUrl: null }],
+    };
+    const user = userEvent.setup();
+    renderCart();
+    await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+    expect(await screen.findByRole('radio', { name: /pago en caja/i })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /pago con stripe/i })).not.toBeInTheDocument();
   });
 
   it('abre el sheet de pago con efectivo, saldo y tarjeta', async () => {
@@ -609,6 +631,8 @@ describe('CartPage', () => {
         espacio_id: 12,
         pago_diferido: true,
       });
+      // Va a Mis pedidos (con el arcade), con el pedido nuevo abierto; no al pedido suelto.
+      expect(await screen.findByText('Mis pedidos ?nuevo=p9')).toBeInTheDocument();
     });
 
     it('elegir otra forma de pago quita la cuenta', async () => {

@@ -29,6 +29,9 @@ import {
   type ReservationPayment,
   type ReservationPaymentMethod,
 } from './reservations';
+import { cachedResource, resourceKeys } from './resource-cache';
+
+const PUBLIC_DATA_MAX_AGE_MS = 60_000;
 
 const apiUrl = resolveApiUrl(import.meta.env.VITE_API_URL);
 
@@ -108,12 +111,16 @@ export const api = {
     return { establishments: response.data, cursor: response.meta.cursor ?? null };
   },
 
+  // El negocio y su catálogo cambian poco: se guardan un minuto para que cambiar de
+  // pestaña en el dock no los vuelva a bajar.
   async getEstablishment(slug: string): Promise<PublicEstablishment> {
-    return (await request<PublicEstablishment>(`/publico/establecimientos/${slug}`)).data;
+    return cachedResource(resourceKeys.establishment(slug), PUBLIC_DATA_MAX_AGE_MS, async () =>
+      (await request<PublicEstablishment>(`/publico/establecimientos/${slug}`)).data);
   },
 
   async getGuestCatalog(slug: string): Promise<CatalogResponse> {
-    return (await request<CatalogResponse>(`/publico/establecimientos/${slug}/catalogo`)).data;
+    return cachedResource(resourceKeys.catalog(slug), PUBLIC_DATA_MAX_AGE_MS, async () =>
+      (await request<CatalogResponse>(`/publico/establecimientos/${slug}/catalogo`)).data);
   },
 
   async getLegalVersions(): Promise<LegalVersions> {

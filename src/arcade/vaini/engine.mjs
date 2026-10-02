@@ -8,6 +8,11 @@ import * as gravedad from "./games/gravedad.rules.mjs";
 import * as galaxia from "./games/galaxia.rules.mjs";
 
 const STEP = 1 / 120;
+// Sin jugar (título o fin de juego) basta con pocos cuadros: el motor pinta cada píxel
+// en JavaScript, y a 60 cuadros por segundo competía con la interfaz y gastaba batería.
+const IDLE_FRAME_MS = 1000 / 12;
+// Después de perder, el estallido sigue fluido este tiempo antes de bajar de ritmo.
+const OVER_SMOOTH_S = 1;
 const KILL_COLORS = { dona: ["#ff9db0", "#ffffff", "#d99a55"], taza: ["#d9714a", "#ffffff", "#5a3a26"], cruasan: ["#e8a040", "#f8c860", "#ffffff"] };
 
 export const ARCADE_GAMES = Object.entries(GAMES).map(([key, g]) => ({ key, label: g.label, tag: g.tag }));
@@ -27,13 +32,15 @@ export function mountArcade(canvas, { game = "flappy" } = {}) {
   let key = GAMES[game] ? game : "flappy";
   let s, fx, screen, screenTime, newBest, frameDt = 1 / 60;
   let visible = true, raf = 0, last = performance.now(), acc = 0, downY = 0;
+  let quiet = false, lastDraw = 0;
+  const idle = () => screen === "title" || (screen === "over" && screenTime > OVER_SMOOTH_S);
 
   function load(k) {
     key = GAMES[k] ? k : key;
     s = GAMES[key].rules.create(seed());
     fx = createFx();
     screen = "title"; screenTime = 0; newBest = false;
-    render();
+    render(); lastDraw = performance.now();
   }
 
   function restart() {
@@ -151,14 +158,18 @@ export function mountArcade(canvas, { game = "flappy" } = {}) {
 
   // ---------- loop (paused while off-screen or in a background tab) ----------
   function frame(now) {
-    const dt = Math.min(0.05, (now - last) / 1000); last = now; frameDt = dt;
+    raf = requestAnimationFrame(frame);
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
     acc += dt;
     while (acc >= STEP) { step(STEP); acc -= STEP; }
+    // La lógica avanza cada cuadro (es barata); sin jugar, el dibujo va a pocos cuadros.
+    if (idle() && now - lastDraw < IDLE_FRAME_MS) return;
+    frameDt = lastDraw ? Math.min(0.1, (now - lastDraw) / 1000) : dt;
     render();
-    raf = requestAnimationFrame(frame);
+    lastDraw = now;
   }
   function run() {
-    if (raf || !visible || document.hidden) return;
+    if (raf || !visible || document.hidden || (quiet && idle())) return;
     last = performance.now(); acc = 0;
     raf = requestAnimationFrame(frame);
   }
@@ -176,6 +187,12 @@ export function mountArcade(canvas, { game = "flappy" } = {}) {
   return {
     load,
     toggleMute: () => sound.toggleMute(),
+    /** Mientras otra animación de la página corre, el arcade sin jugar se detiene. */
+    setQuiet(on) {
+      quiet = on;
+      if (on && idle()) halt();
+      else run();
+    },
     destroy() {
       halt();
       io?.disconnect();

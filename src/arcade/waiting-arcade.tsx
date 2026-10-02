@@ -3,6 +3,7 @@
 // de 480×270 píxeles (src/arcade/vaini); esta tarjeta pone pestañas, sonido y
 // pantalla completa. Shown under the first active order while the buyer waits.
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { onMotionChange } from '../lib/motion-activity';
 import { ARCADE_GAMES, mountArcade, type ArcadeHandle, type ArcadeKey } from './vaini/engine.mjs';
 
 export function WaitingArcade() {
@@ -19,7 +20,9 @@ export function WaitingArcade() {
     // jsdom has no 2D context: the card still renders its chrome.
     if (!canvas || typeof ImageData === 'undefined' || !canvas.getContext?.('2d')) return;
     engine.current = mountArcade(canvas, { game: 'flappy' });
+    const stopListening = onMotionChange((busy) => engine.current?.setQuiet(busy));
     return () => {
+      stopListening();
       engine.current?.destroy();
       engine.current = null;
     };

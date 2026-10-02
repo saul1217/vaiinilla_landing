@@ -318,4 +318,26 @@ describe("OrderTrackCard pickup", () => {
       await screen.findByRole("img", { name: /código qr del pedido/i }),
     ).toHaveAttribute("src", "data:image/png;base64,qr");
   });
+
+  it("muestra Llamar al mesero con la tarjeta cerrada en un pedido en curso en la mesa", async () => {
+    const callClient = { current: vi.fn().mockResolvedValue(null), call: vi.fn(), cancel: vi.fn() };
+    const atTable = order({ estado: "cobrado", destino: "en_espacio", espacio: { id: 3, nombre: "Mesa 1", tipo: "mesa" }, pago: undefined });
+    render(
+      <MemoryRouter>
+        <OrderTrackCard order={atTable} expanded={false} onToggle={() => undefined} callClient={callClient} />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole("button", { name: /llamar al mesero/i })).toBeVisible();
+  });
+
+  it("no ofrece llamar al mesero en un pedido ya entregado", () => {
+    const callClient = { current: vi.fn().mockResolvedValue(null), call: vi.fn(), cancel: vi.fn() };
+    const done = order({ estado: "entregado", destino: "en_espacio", espacio: { id: 3, nombre: "Mesa 1", tipo: "mesa" } });
+    render(
+      <MemoryRouter>
+        <OrderTrackCard order={done} expanded={false} onToggle={() => undefined} callClient={callClient} />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("button", { name: /llamar al mesero/i })).not.toBeInTheDocument();
+  });
 });

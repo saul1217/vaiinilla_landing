@@ -19,7 +19,7 @@ import { rememberPickupQrToken } from '../lib/pickup-qr';
 import { clearSpace, readSpace } from '../lib/space-session';
 import { deliveredAtLabel, spaceNoun } from '../lib/space-words';
 import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
-import { isStripeCheckoutEnabled, STRIPE_UNAVAILABLE_COPY } from '../lib/stripe-public';
+import { isStripeCheckoutEnabled, offersCardPayment, STRIPE_UNAVAILABLE_COPY } from '../lib/stripe-public';
 import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '../lib/stripe-session';
 import { isGuestBuy } from '../lib/guest-explore';
 import { GUEST_CHECKOUT_UNAVAILABLE } from '../lib/guest-checkout';
@@ -67,6 +67,7 @@ export function CartPage() {
   const tabAllowed = canPayAtEnd(status, forHere && Boolean(space));
   const useTab = payAtEnd && tabAllowed && payment === 'efectivo';
   const stripeEnabled = isStripeCheckoutEnabled();
+  const cardOffered = offersCardPayment(place);
   const pendingStripeOrderId = readPendingStripeOrderId();
   const guestBuy = isGuestBuy();
   const canCheckout = Boolean(user) || guestBuy;
@@ -256,7 +257,9 @@ export function CartPage() {
       reset();
       if (destination === 'en_espacio') clearSpace();
       forgetIdempotencyKey(fingerprint);
-      void navigate(`/cuenta/pedidos/${order.id}`);
+      // La tarjeta se cobra en la pantalla del pedido (espera la confirmación de Stripe);
+      // el resto va a Mis pedidos, con el arcade y el pedido nuevo ya abierto.
+      void navigate(payment === 'stripe' ? `/cuenta/pedidos/${order.id}` : `/cuenta/pedidos?nuevo=${order.id}`);
     } catch (cause) {
       if (cause instanceof VaiinillaApiError && cause.code === 'IDENTITY_NOT_REGISTERED') {
         void navigate(`/cuenta?next=/e/${slug}/carrito`);
@@ -382,6 +385,8 @@ export function CartPage() {
                   }}
                 />
               ) : null}
+              {/* Oculta hasta que el dueño active la tarjeta en su panel (el flujo queda intacto). */}
+              {cardOffered ? (
               <PayOption
                 selected={payment === 'stripe'}
                 icon="card"
@@ -395,6 +400,7 @@ export function CartPage() {
                   setPayAtEnd(false);
                 }}
               />
+              ) : null}
               {error ? <p className="alumno-error">{error}</p> : null}
               {insufficientBalance ? <p className="alumno-error">No tienes saldo suficiente para este pedido.</p> : null}
               <button
