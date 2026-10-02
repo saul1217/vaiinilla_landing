@@ -16,7 +16,7 @@ describe('OrderPickupPanel', () => {
   });
 
   it('en mesa: lo lleva el mesero, no dice "barra"', () => {
-    render(<OrderPickupPanel order={{ ...base, destino: 'en_espacio' } as OrderDetail} token={null} />);
+    render(<OrderPickupPanel order={{ ...base, destino: 'en_espacio' }} token={null} />);
     expect(screen.getByText('Código de entrega')).toBeVisible();
     expect(screen.getByText(/mesero te lo lleva/i)).toBeVisible();
     expect(screen.queryByText(/barra/i)).toBeNull();
