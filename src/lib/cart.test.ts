@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogProduct } from '../types/api';
-import { defaultOptionIds, toCreateOrderInput, validateSelections } from './cart';
+import { cartTotal, defaultOptionIds, previewForProduct, toCreateOrderInput, validateSelections } from './cart';
 
 const burrito = {
   id: 103,
@@ -12,7 +12,7 @@ const burrito = {
   alergenos: null,
   tiempo_estimado_min: 10,
   precio_mostrador: '64.00',
-  precio_digital: '70.00',
+  precio_digital: '64.00',
   disponible: true,
   imagen_url: 'fixture://burrito',
   grupos_opcion: [
@@ -99,5 +99,26 @@ describe('cart contract', () => {
     expect(raw).not.toContain('application_fee');
     expect(raw).not.toContain('client_secret');
     expect(raw).not.toContain('stripe_account_id');
+  });
+});
+
+// Regresión: sin pasar la comisión, el menú manda el precio de mostrador y el carrito suma exactamente
+// eso (más los extras). La web no aplica ningún recargo propio.
+describe('el carrito no agrega recargo', () => {
+  it('una línea cuesta el precio del menú más sus extras, por cantidad', () => {
+    expect(previewForProduct(burrito, [311, 314], 1)).toEqual({ unit: '69.00', line: '69.00' });
+    expect(previewForProduct(burrito, [310, 314], 3)).toEqual({ unit: '76.00', line: '228.00' });
+  });
+
+  it('el total es la suma exacta de las líneas', () => {
+    const line = (unit: string, quantity: number) => ({
+      productId: 103, quantity, optionIds: [311, 314], productName: 'Burrito norteño', unitPreview: unit, imageUrl: null,
+    });
+    expect(cartTotal([line('69.00', 2), line('25.00', 1)])).toBe('163.00');
+  });
+
+  it('un producto a precio de mostrador exacto no sube al agregarlo al carrito', () => {
+    const exacto = { ...burrito, grupos_opcion: [], precio_mostrador: '120.00', precio_digital: '120.00' };
+    expect(previewForProduct(exacto, [], 1)?.unit).toBe('120.00');
   });
 });
