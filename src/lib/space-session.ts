@@ -8,6 +8,8 @@ export interface SpaceSession {
   tipo?: string;
   /** El cliente ya eligió pagar al final en esta mesa: la siguiente ronda arranca igual. */
   pagaAlFinal?: boolean;
+  /** Código del QR escaneado: con él el cliente se une a la mesa compartida. */
+  qrToken?: string;
 }
 
 export function readSpace(slug: string): SpaceSession | null {

@@ -345,3 +345,39 @@ export interface CartLine {
 export const STAFF_APP_URL = 'https://app.vaiinilla.app';
 export const ESTABLISHMENT_CLOSED_MESSAGE =
   'El establecimiento no está abierto en este momento. Verifica que esté abierto y desliza hacia abajo para actualizar.';
+
+/** Montos de la mesa compartida: texto con dos decimales ("10.10"). */
+export interface SharedTableAmounts {
+  total: string;
+  pagado: string;
+  pendiente: string;
+}
+
+export interface SharedTableOrder {
+  /** null en los pedidos de otra persona. */
+  id: string | null;
+  folio: number;
+  estado: OrderStatus;
+  items_resumen: string;
+  total: string;
+  pendiente_cobro: boolean;
+  creado_en: string | null;
+}
+
+export interface SharedTableGroup extends SharedTableAmounts {
+  /** null: pedidos de quien no se unió a la mesa. */
+  alias: string | null;
+  soy_yo: boolean;
+  pedidos: SharedTableOrder[];
+}
+
+/** GET /mesas/actual. Contrato: back docs/mesa-compartida.md. */
+export interface SharedTable {
+  espacio: { id: number; nombre: string; tipo: string };
+  mi_alias: string;
+  cuenta_abierta: boolean;
+  participantes: { alias: string; soy_yo: boolean; unido_en: string | null }[];
+  grupos: SharedTableGroup[];
+  totales: SharedTableAmounts;
+  mi_parte: SharedTableAmounts;
+}
