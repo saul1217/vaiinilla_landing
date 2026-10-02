@@ -137,7 +137,12 @@ export function OrderTrackCard({
         <div className="alumno-track-bar" aria-hidden="true">
           {barIcons.map((icon, index) => {
             const current = filled - 1;
-            const state = index < current ? 'done' : index === current ? 'current' : 'todo';
+            // Fuera de una renta, la barra usa los mismos pasos que la lista: así no se
+            // contradicen (Preparando omitido, o entregado con todo hecho).
+            const state =
+              !rental && steps[index]
+                ? steps[index]?.state ?? 'todo'
+                : index < current ? 'done' : index === current ? 'current' : 'todo';
             return (
               <Fragment key={index}>
                 <span className={`alumno-track-bar__node is-${state}`} style={{ '--i': index } as CSSProperties}>
@@ -147,7 +152,11 @@ export function OrderTrackCard({
                 </span>
                 {index < barIcons.length - 1 ? (
                   <span
-                    className={index < current ? 'alumno-track-bar__rail is-on' : 'alumno-track-bar__rail'}
+                    className={
+                      (!rental && steps[index + 1] ? steps[index + 1]?.state !== 'todo' : index < current)
+                        ? 'alumno-track-bar__rail is-on'
+                        : 'alumno-track-bar__rail'
+                    }
                     style={{ '--i': index } as CSSProperties}
                   />
                 ) : null}

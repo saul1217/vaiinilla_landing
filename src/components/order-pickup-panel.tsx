@@ -42,7 +42,11 @@ export function OrderPickupPanel({
 
   const listo = order.estado === 'listo';
   const atCounter = order.estado === 'por_cobrar' && order.metodo_pago !== 'stripe';
-  const hint = listo
+  // En mesa o cancha lo lleva el mesero: el código solo se muestra si te lo pide.
+  const toSpace = order.destino === 'en_espacio';
+  const hint = toSpace
+    ? 'Tu mesero te lo lleva. Si te pide el código, muéstrale este.'
+    : listo
     ? ORDER_STATUS_HINT.listo
     : atCounter
       ? 'Muéstralo en caja o cocina para entregar.'
@@ -59,7 +63,7 @@ export function OrderPickupPanel({
     >
       <div className="alumno-pickup__head">
         <div className="alumno-pickup__copy">
-          <p className="alumno-pickup__kicker">Código de retiro</p>
+          <p className="alumno-pickup__kicker">{toSpace ? 'Código de entrega' : 'Código de retiro'}</p>
           <p className="alumno-pickup__hint">{hint}</p>
         </div>
         <p className="alumno-pickup__folio">#{order.folio}</p>

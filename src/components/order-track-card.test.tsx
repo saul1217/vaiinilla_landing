@@ -358,3 +358,29 @@ describe('OrderTrackCard: foto del producto', () => {
     expect(document.querySelector('.alumno-track-card__thumb--vaini img')).toHaveAttribute('src', '/vaini/cutout-frente.png');
   });
 });
+
+describe('OrderTrackCard: la barra coincide con la lista', () => {
+  const nodes = () => [...document.querySelectorAll('.alumno-track-bar__node')].map((n) => n.className.replace(/.*is-/, ''));
+
+  it('entregado: todos los iconos hechos, ninguno "actual"', () => {
+    render(
+      <MemoryRouter>
+        <OrderTrackCard
+          order={{ ...order({ estado: 'entregado' }), items: order().items.map((item) => ({ ...item, estacion_preparacion: 'cocina' as const })) }}
+          expanded={false}
+          onToggle={() => undefined}
+        />
+      </MemoryRouter>,
+    );
+    expect(nodes()).toEqual(['done', 'done', 'done', 'done', 'done']);
+  });
+
+  it('sin cocina: el icono de Preparando sale omitido, igual que en la lista', () => {
+    render(
+      <MemoryRouter>
+        <OrderTrackCard order={order({ estado: 'listo' })} expanded={false} onToggle={() => undefined} />
+      </MemoryRouter>,
+    );
+    expect(nodes()).toEqual(['done', 'done', 'skipped', 'current', 'todo']);
+  });
+});
