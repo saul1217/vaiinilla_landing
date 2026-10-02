@@ -121,10 +121,17 @@ export function AuthScreens({
   next = '/pedir',
   allowExplore = false,
   onExplored,
+  onFlowChange,
 }: {
   next?: string;
   allowExplore?: boolean;
   onExplored?: () => void;
+  /**
+   * Avisa mientras un inicio de sesión está en curso o el aviso del equipo está a la vista.
+   * Firebase activa la sesión antes de que termine la revisión de accesos: quien muestra esta
+   * pantalla debe mantenerla montada hasta que el flujo termine.
+   */
+  onFlowChange?: (active: boolean) => void;
 }) {
   const { configured } = useAuth();
   const navigate = useNavigate();
@@ -187,7 +194,13 @@ export function AuthScreens({
       setMode('staff');
       return;
     }
+    leave();
+  }
+
+  /** Termina el flujo y lleva a la vista de cliente. */
+  function leave() {
     void navigate(next);
+    onFlowChange?.(false);
   }
 
   async function onPassword(event: FormEvent) {
@@ -203,6 +216,7 @@ export function AuthScreens({
         await finish(await createPasswordAccount(email, password, nombre));
         return;
       }
+      onFlowChange?.(true);
       const result = await passwordSignIn(email.trim().toLowerCase(), password);
       if (result.mfaResolver) {
         setResolver(result.mfaResolver);
@@ -211,6 +225,7 @@ export function AuthScreens({
       }
       if (result.user) await finish(result.user);
     } catch (cause) {
+      onFlowChange?.(false);
       setError(firebaseAuthMessage(cause));
     } finally {
       setBusy(false);
@@ -222,6 +237,7 @@ export function AuthScreens({
     if (!configured) return;
     setBusy(true);
     try {
+      onFlowChange?.(true);
       const result = await googleSignIn();
       if (result.mfaResolver) {
         setResolver(result.mfaResolver);
@@ -243,6 +259,7 @@ export function AuthScreens({
         throw cause;
       }
     } catch (cause) {
+      onFlowChange?.(false);
       setError(firebaseAuthMessage(cause));
     } finally {
       setBusy(false);
@@ -259,8 +276,10 @@ export function AuthScreens({
     setBusy(true);
     setError(null);
     try {
+      onFlowChange?.(true);
       await finish(pendingGoogleUser, pendingGoogleUser.displayName ?? nombre);
     } catch (cause) {
+      onFlowChange?.(false);
       setError(firebaseAuthMessage(cause));
     } finally {
       setBusy(false);
@@ -276,8 +295,10 @@ export function AuthScreens({
     setBusy(true);
     setError(null);
     try {
+      onFlowChange?.(true);
       await finish(await completeTotpSignIn(resolver, totpCode));
     } catch (cause) {
+      onFlowChange?.(false);
       setError(firebaseAuthMessage(cause));
     } finally {
       setBusy(false);
@@ -430,7 +451,7 @@ export function AuthScreens({
   return (
     <AuthSplit mode={mode} onBack={mode === 'staff' ? undefined : goBack} copy={copy}>
       {mode === 'staff' ? (
-        <StaffNotice accesses={staff} onContinueAsClient={() => void navigate(next)} />
+        <StaffNotice accesses={staff} onContinueAsClient={leave} />
       ) : mode === 'totp' ? (
         <>
           <p className="alumno-lead">Abre Google Authenticator y captura el código de 6 dígitos.</p>

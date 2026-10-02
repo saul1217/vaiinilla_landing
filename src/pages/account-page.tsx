@@ -21,6 +21,9 @@ export function AccountPage() {
   const { user, ready, signOut } = useAuth();
   const [params] = useSearchParams();
   const next = params.get('next') || '/pedir';
+  // Firebase activa la sesión a mitad del login; la pantalla de acceso sigue montada hasta que
+  // termine (por ejemplo, mientras la cuenta del equipo ve su aviso).
+  const [signingIn, setSigningIn] = useState(false);
 
   if (!ready) {
     return (
@@ -32,10 +35,10 @@ export function AccountPage() {
     );
   }
 
-  if (!user) {
+  if (!user || signingIn) {
     return (
       <AppShell tab="none">
-        <AuthScreens next={next} allowExplore={next === '/pedir'} />
+        <AuthScreens next={next} allowExplore={next === '/pedir'} onFlowChange={setSigningIn} />
       </AppShell>
     );
   }
