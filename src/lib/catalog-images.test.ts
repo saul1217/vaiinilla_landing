@@ -85,4 +85,12 @@ describe('foto del pedido en el seguimiento', () => {
     expect(orderThumbUrl(order, new Map([[4, 'https://cdn/cat.jpg']]), [])).toBe('https://cdn/cat.jpg');
     expect(orderThumbUrl(order, new Map(), [])).toBeNull();
   });
+
+  it('un pedido de renta de cancha muestra la foto de la cancha', () => {
+    const order = {
+      items: [{ producto_id: 99, nombre_producto: 'Renta Cancha 1', imagen_url: null }],
+      reserva: { espacio: { id: 3, nombre: 'Cancha 1', tipo: 'cancha', imagen_url: 'https://cdn.test/cancha.jpg' } },
+    } as unknown as Parameters<typeof orderThumbUrl>[0];
+    expect(orderThumbUrl(order, new Map())).toBe('https://cdn.test/cancha.jpg');
+  });
 });
