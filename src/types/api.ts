@@ -225,6 +225,8 @@ export interface OrderItem {
   precio_digital_unitario: string;
   subtotal: string;
   opciones: OrderItemOption[];
+  /** Rechazo por artículo: Cocina o Caja lo quitaron y ya no cuenta en el total. */
+  rechazo?: { motivo: string; monto: string } | null;
 }
 
 export interface OrderDetail {

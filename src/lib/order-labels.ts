@@ -106,10 +106,19 @@ export function orderMetaLine(order: OrderDetail, now: Date = new Date()): strin
 }
 
 export function orderItemHeadline(order: OrderDetail): string {
-  const first = order.items?.[0];
+  // Lo que sí se prepara: un artículo quitado no encabeza la tarjeta.
+  const items = (order.items ?? []).filter((item) => !item.rechazo);
+  const first = items[0];
   if (!first) return `Pedido #${order.folio}`;
-  const extra = order.items.length > 1 ? ` +${order.items.length - 1}` : '';
+  const extra = items.length > 1 ? ` +${items.length - 1}` : '';
   return `${first.cantidad} ${first.nombre_producto}${extra}`;
+}
+
+/** "Se quitó Torta: Se terminó el pan." para el cliente, o null si no se quitó nada. */
+export function orderRejectedItemsHint(order: OrderDetail): string | null {
+  const quitados = (order.items ?? []).filter((item) => item.rechazo);
+  if (quitados.length === 0) return null;
+  return quitados.map((item) => `Se quitó ${item.nombre_producto}: ${item.rechazo?.motivo}.`).join(' ');
 }
 
 export function orderHistoryHeadline(order: OrderDetail): string {

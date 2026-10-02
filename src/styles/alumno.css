@@ -7002,3 +7002,19 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   .shared-table__group { animation: none; }
   .shared-table .alumno-chip { transition: none; }
 }
+
+/* Rechazo por artículo: tachado, con el motivo en el coral de la marca. */
+.alumno-ticket-items li.is-rejected del { opacity: 0.55; }
+.alumno-ticket-rejection {
+  display: block;
+  margin-top: 2px;
+  color: var(--coral);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.alumno-track-card__rejected {
+  color: var(--coral);
+  font-weight: 700;
+  animation: alumno-arrive 520ms cubic-bezier(.16, 1, .3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) { .alumno-track-card__rejected { animation: none; } }
