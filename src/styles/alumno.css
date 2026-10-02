@@ -6978,46 +6978,27 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   color: var(--text);
 }
 
-/* ---------- Buyer: mesa compartida ---------- */
-.shared-table { display: grid; gap: 12px; }
-.shared-table__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.shared-table__head h2 { margin: 0; }
-.shared-table__head p { margin: 2px 0 0; }
-.shared-table__total { font-weight: 800; font-size: 1.25rem; font-variant-numeric: tabular-nums; }
-.shared-table__people { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.shared-table__people li {
-  padding: 5px 11px; border-radius: 999px; background: var(--line); font-size: 0.82rem; font-weight: 700;
-  animation: alumno-arrive 460ms cubic-bezier(.16, 1, .3, 1) both;
-}
-.shared-table__people li.is-me { background: var(--lime, #c8f25a); color: #10110d; }
-.shared-table__groups { display: grid; gap: 10px; }
-.shared-table__group {
-  padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--line) 55%, transparent);
-  animation: alumno-arrive 520ms cubic-bezier(.16, 1, .3, 1) both;
-  animation-delay: calc(var(--i, 0) * 45ms);
-}
-.shared-table__group h3 { display: flex; justify-content: space-between; margin: 0 0 6px; font-size: 0.92rem; }
-.shared-table__group ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
-.shared-table__group li { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; font-size: 0.85rem; align-items: baseline; }
-.shared-table__items { overflow-wrap: anywhere; }
-.shared-table__state { color: var(--muted); font-size: 0.78rem; }
-.shared-table__sums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0; }
-.shared-table__sums div { padding: 8px 10px; border-radius: 12px; background: color-mix(in srgb, var(--line) 55%, transparent); }
-.shared-table__sums .is-me { background: var(--lime, #c8f25a); color: #10110d; }
-.shared-table__sums dt { font-size: 0.72rem; opacity: 0.75; }
-.shared-table__sums dd { margin: 0; font-weight: 800; font-variant-numeric: tabular-nums; transition: color 240ms ease; }
-.shared-table__field { display: grid; gap: 6px; font-size: 0.85rem; font-weight: 700; }
-.shared-table__field input {
-  min-height: 46px; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--line);
-  background: transparent; color: inherit; font: inherit; font-weight: 600;
-  transition: border-color 180ms ease, box-shadow 180ms ease;
-}
-.shared-table__field input:focus-visible { outline: none; border-color: var(--text); box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 18%, transparent); }
-.shared-table__leave {
-  justify-self: start; padding: 8px 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: 0.85rem;
-  text-decoration: underline; cursor: pointer; transition: color 160ms ease, transform 160ms cubic-bezier(.16, 1, .3, 1);
-}
-.shared-table__leave:active { transform: scale(0.97); }
+/* ---------- Buyer: mesa compartida ----------
+   Usa la tarjeta de pedido (alumno-track-card), alumno-chip, alumno-section-label y
+   alumno-ticket-items. Aquí solo lo que esas piezas necesitan sobre fondo oscuro. */
+.shared-table { cursor: default; display: grid; gap: 6px; padding-bottom: 18px; }
+.shared-table .alumno-chips { margin-bottom: 6px; padding-bottom: 0; }
+.shared-table .alumno-chip { background: transparent; color: #f4f1e7; border-color: rgba(244, 241, 231, 0.18); min-height: 34px; padding: 6px 12px; }
+.shared-table .alumno-chip.is-on { background: var(--lime); color: var(--ink); border-color: var(--lime); }
+.shared-table .alumno-section-label { margin: 10px 0 0; color: rgba(244, 241, 231, 0.55); }
+.shared-table .alumno-ticket-items { margin: 0; gap: 0; }
+.shared-table .alumno-ticket-items li { border-bottom-color: rgba(244, 241, 231, 0.12); }
+.shared-table .alumno-track-card__copy { display: grid; gap: 2px; }
+.shared-table__state { color: rgba(244, 241, 231, 0.6); font-size: 0.78rem; }
+.shared-table__right { display: grid; justify-items: end; gap: 6px; }
+.shared-table__group { animation: alumno-arrive 520ms cubic-bezier(.16, 1, .3, 1) both; animation-delay: calc(var(--i, 0) * 45ms); }
+.shared-table__sums li:last-child { border-bottom: 0; }
+.shared-table__mine strong:first-child { color: var(--lime); }
+.shared-table .alumno-field span { color: #f4f1e7; }
+.shared-table .alumno-btn--ghost { color: #f4f1e7; border-color: rgba(244, 241, 231, 0.18); min-height: 46px; margin-top: 6px; }
+.shared-table .alumno-chip { transition: background-color 220ms ease, color 220ms ease, border-color 220ms ease, transform 320ms cubic-bezier(.34, 1.56, .64, 1); }
+.shared-table .alumno-chip:active { transform: scale(0.94); }
 @media (prefers-reduced-motion: reduce) {
-  .shared-table__people li, .shared-table__group { animation: none; }
+  .shared-table__group { animation: none; }
+  .shared-table .alumno-chip { transition: none; }
 }

@@ -189,6 +189,13 @@ export const api = {
     return (await request<SharedTable | null>('/mesas/actual', { token })).data;
   },
 
+  /** "Esto lo pago yo" (o ya no) sobre un pedido de la cuenta de la mesa. */
+  async claimTableOrder(token: string, folio: number, payIt: boolean): Promise<SharedTable> {
+    return (
+      await request<SharedTable>('/mesas/actual/reclamos', { token, method: 'POST', body: { folio, pago_yo: payIt } })
+    ).data;
+  },
+
   async leaveTable(token: string): Promise<void> {
     await request<null>('/mesas/actual/salida', { token, method: 'POST' });
   },

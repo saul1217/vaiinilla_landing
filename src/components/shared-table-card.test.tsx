@@ -2,9 +2,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SharedTable } from '../types/api';
-import { SharedTableCard, orderedGroups } from './shared-table-card';
+import { SharedTableCard, orderedGroups, tableOrderState } from './shared-table-card';
 
-const apiMock = vi.hoisted(() => ({ currentTable: vi.fn(), joinTable: vi.fn(), leaveTable: vi.fn() }));
+const apiMock = vi.hoisted(() => ({ currentTable: vi.fn(), joinTable: vi.fn(), leaveTable: vi.fn(), claimTableOrder: vi.fn() }));
 vi.mock('../lib/api', () => ({ api: apiMock }));
 
 const ZERO = { total: '0.00', pagado: '0.00', pendiente: '0.00' };
@@ -49,6 +49,13 @@ describe('mesa compartida', () => {
     apiMock.leaveTable.mockReset();
   });
 
+  it('a la cuenta y sin pagar no dice "Cobrado"', () => {
+    const base = { id: null, folio: 1, items_resumen: '', total: '1.00', creado_en: null };
+    expect(tableOrderState({ ...base, estado: 'cobrado', pendiente_cobro: true })).toBe('En la cuenta');
+    expect(tableOrderState({ ...base, estado: 'listo', pendiente_cobro: true })).toBe('Listo');
+    expect(tableOrderState({ ...base, estado: 'entregado', pendiente_cobro: false })).toBe('Entregado · pagado');
+  });
+
   it('tus pedidos van primero', () => {
     expect(orderedGroups(table()).map((g) => g.alias)).toEqual(['Ana', 'Luis']);
   });
@@ -63,7 +70,7 @@ describe('mesa compartida', () => {
     await user.click(screen.getByRole('button', { name: /unirme a la mesa/i }));
 
     expect(apiMock.joinTable).toHaveBeenCalledWith('jwt', 'qr-1', 'Ana');
-    expect(await screen.findByRole('heading', { name: 'Mesa 3' })).toBeInTheDocument();
+    expect(await screen.findByRole('article', { name: 'Mesa 3' })).toBeInTheDocument();
   });
 
   it('sin QR y sin mesa no muestra nada', async () => {
@@ -77,7 +84,7 @@ describe('mesa compartida', () => {
     apiMock.currentTable.mockResolvedValue(table());
     render(<SharedTableCard accessToken="jwt" qrToken={null} />);
 
-    expect(await screen.findByText('2 personas en la mesa')).toBeInTheDocument();
+    expect(await screen.findByText('2 personas')).toBeInTheDocument();
     expect(screen.getByText('Ana (tú)')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /tus pedidos/i })).toBeInTheDocument();
     expect(screen.getByText('1× Torta')).toBeInTheDocument();
@@ -100,6 +107,46 @@ describe('mesa compartida', () => {
     await user.click(await screen.findByRole('button', { name: /salir de la mesa/i }));
 
     expect(apiMock.leaveTable).toHaveBeenCalledWith('jwt');
-    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Mesa 3' })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('article', { name: 'Mesa 3' })).not.toBeInTheDocument());
+  });
+
+  it('esto lo pago yo: marca un pedido por cobrar de otra persona', async () => {
+    apiMock.currentTable.mockResolvedValue(
+      table({
+        grupos: [
+          { alias: 'Luis', soy_yo: false, total: '20.20', pagado: '0.00', pendiente: '20.20',
+            pedidos: [{ id: null, folio: 7, estado: 'listo', items_resumen: '1× Torta', total: '20.20', pendiente_cobro: true, creado_en: 'a', pagara: null, lo_pago_yo: false }] },
+        ],
+      }),
+    );
+    apiMock.claimTableOrder.mockResolvedValue(
+      table({
+        grupos: [
+          { alias: 'Luis', soy_yo: false, total: '20.20', pagado: '0.00', pendiente: '20.20',
+            pedidos: [{ id: null, folio: 7, estado: 'listo', items_resumen: '1× Torta', total: '20.20', pendiente_cobro: true, creado_en: 'a', pagara: 'Ana', lo_pago_yo: true }] },
+        ],
+      }),
+    );
+    const user = userEvent.setup();
+    render(<SharedTableCard accessToken="jwt" qrToken={null} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Esto lo pago yo' }));
+
+    expect(apiMock.claimTableOrder).toHaveBeenCalledWith('jwt', 7, true);
+    expect(await screen.findByRole('button', { name: /lo pago yo ✓/i })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('si otra persona ya lo paga, solo lo dice', async () => {
+    apiMock.currentTable.mockResolvedValue(
+      table({
+        grupos: [
+          { alias: 'Luis', soy_yo: false, total: '20.20', pagado: '0.00', pendiente: '20.20',
+            pedidos: [{ id: null, folio: 7, estado: 'listo', items_resumen: '1× Torta', total: '20.20', pendiente_cobro: true, creado_en: 'a', pagara: 'Luis', lo_pago_yo: false }] },
+        ],
+      }),
+    );
+    render(<SharedTableCard accessToken="jwt" qrToken={null} />);
+    expect(await screen.findByText('Paga Luis')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Esto lo pago yo' })).not.toBeInTheDocument();
   });
 });
