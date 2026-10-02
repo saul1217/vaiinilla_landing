@@ -16,7 +16,7 @@ import { resolveClientSession } from '../lib/client-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { orderHistoryHeadline } from '../lib/order-labels';
 import { rememberPickupQrToken } from '../lib/pickup-qr';
-import { readSpace, rememberSpace } from '../lib/space-session';
+import { activeRentalSpace, readSpace, rememberSpace } from '../lib/space-session';
 import { deliveredAtLabel, spaceNoun } from '../lib/space-words';
 import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
 import { isStripeCheckoutEnabled, offersCardPayment, STRIPE_UNAVAILABLE_COPY } from '../lib/stripe-public';
@@ -62,8 +62,14 @@ export function CartPage() {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
   const menuPeek = useMemo(() => peekCatalogProducts(catalogProducts), [catalogProducts]);
-  const space = readSpace(slug);
+  const scanned = readSpace(slug);
+  // Sin QR escaneado, una renta en curso en este negocio hace de mesa: la comida va a la cancha.
+  const [rentalSpace, setRentalSpace] = useState<SpaceSession | null>(null);
+  const space = scanned ?? rentalSpace;
   const [forHere, setForHere] = useState(Boolean(space));
+  useEffect(() => {
+    if (rentalSpace && !scanned) setForHere(true);
+  }, [rentalSpace, scanned]);
   const tabAllowed = canPayAtEnd(status, forHere && Boolean(space));
   const useTab = payAtEnd && tabAllowed && payment === 'efectivo';
   const stripeEnabled = isStripeCheckoutEnabled();
@@ -112,9 +118,11 @@ export function CartPage() {
     void Promise.all([
       api.getOperationalStatus(context.access_token),
       api.getMyWallet(context.access_token).catch(() => null),
+      api.listReservations(context.access_token).catch(() => []),
     ])
-      .then(([nextStatus, nextWallet]) => {
+      .then(([nextStatus, nextWallet, rentals]) => {
         if (!active) return;
+        setRentalSpace(activeRentalSpace(slug, rentals, Date.now()));
         setStatus(nextStatus);
         setWallet(nextWallet);
       })
@@ -126,7 +134,7 @@ export function CartPage() {
     return () => {
       active = false;
     };
-  }, [context, place]);
+  }, [context, place, slug]);
 
   useEffect(() => {
     if (!ready) return;
@@ -233,7 +241,16 @@ export function CartPage() {
       if (!canAcceptOrders(operational)) {
         throw new Error('El establecimiento no está recibiendo pedidos en este momento.');
       }
-      const destination = forHere && space ? 'en_espacio' : 'para_llevar';
+      // Si aún no se sabía de la renta (se paga antes de que llegue), se busca aquí.
+      let target = space;
+      let here = forHere;
+      if (!target) {
+        const rentals = await api.listReservations(session.access_token).catch(() => []);
+        target = activeRentalSpace(slug, rentals, Date.now());
+        here = Boolean(target);
+        if (target) setRentalSpace(target);
+      }
+      const destination = here && target ? 'en_espacio' : 'para_llevar';
       if (useTab && !canPayAtEnd(operational, destination === 'en_espacio')) {
         throw new Error('Este negocio ya no permite pagar al final. Elige otra forma de pago.');
       }
@@ -242,7 +259,7 @@ export function CartPage() {
         payment,
         notes,
         destination,
-        destination === 'en_espacio' && space ? space.espacioId : null,
+        destination === 'en_espacio' && target ? target.espacioId : null,
         useTab,
       );
       const fingerprint = orderFingerprint(payload);
@@ -256,7 +273,7 @@ export function CartPage() {
       }
       reset();
       // La mesa se conserva para pedir otra ronda sin volver a escanear.
-      if (destination === 'en_espacio' && space) rememberSpace({ ...space, pagaAlFinal: useTab });
+      if (destination === 'en_espacio' && target) rememberSpace({ ...target, pagaAlFinal: useTab });
       forgetIdempotencyKey(fingerprint);
       // La tarjeta se cobra en la pantalla del pedido (espera la confirmación de Stripe);
       // el resto va a Mis pedidos, con el arcade y el pedido nuevo ya abierto.

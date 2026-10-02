@@ -189,6 +189,8 @@ export interface OrderSpace {
   nombre: string;
   /** Un `SpaceKind`; se deja como texto para no romper con tipos que el backend agregue. */
   tipo: string;
+  /** Foto de la ficha del espacio; solo llega en la reserva de un pedido de renta. */
+  imagen_url?: string | null;
 }
 
 export type ReservationState =
