@@ -7,6 +7,7 @@ import {
   isActiveOrder,
   orderCollapsedHint,
   orderItemHeadline,
+  orderRejectedItemsHint,
   orderMetaLine,
   orderCancelReason,
   orderOperationalHint,
@@ -159,6 +160,9 @@ export function OrderTrackCard({
           {operationalHint ? ` ${operationalHint}` : collapsedStatusHint ? ` ${collapsedStatusHint}` : null}
         </p>
       )}
+      {orderRejectedItemsHint(order) ? (
+        <p className="alumno-track-card__status alumno-track-card__rejected">{orderRejectedItemsHint(order)}</p>
+      ) : null}
       {/* Fuera del seguimiento: se llama al mesero sin abrir la tarjeta, y el botón no
           se vuelve a montar (ni a consultar) cada vez que se abre o se cierra. */}
       {active ? <CallWaiter order={order} client={callClient} /> : null}

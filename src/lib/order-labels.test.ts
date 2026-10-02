@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { OrderDetail } from '../types/api';
 import {
   orderCancelReason,
+  orderRejectedItemsHint,
   orderCollapsedStatusHint,
   orderCompactPayLabel,
   orderHistoryHeadline,
@@ -129,5 +130,21 @@ describe('orderCancelReason', () => {
     expect(orderCancelReason({ estado: 'cancelado', motivo_cancelacion: ' Se acabó la carne ' })).toBe('Motivo: Se acabó la carne');
     expect(orderCancelReason({ estado: 'cancelado', motivo_cancelacion: null })).toBeNull();
     expect(orderCancelReason({ estado: 'preparando', motivo_cancelacion: 'x' })).toBeNull();
+  });
+});
+
+describe('rechazo por artículo', () => {
+  const items = [
+    { id: 1, producto_id: 1, nombre_producto: 'Torta', estacion_preparacion: 'cocina' as const, cantidad: 1, precio_digital_unitario: '50.00', subtotal: '50.00', opciones: [], rechazo: { motivo: 'Se terminó el pan', monto: '50.00' } },
+    { id: 2, producto_id: 2, nombre_producto: 'Tacos', estacion_preparacion: 'cocina' as const, cantidad: 3, precio_digital_unitario: '20.00', subtotal: '60.00', opciones: [], rechazo: null },
+  ];
+
+  it('el título usa lo que sí se prepara', () => {
+    expect(orderItemHeadline(order({ items }))).toBe('3 Tacos');
+  });
+
+  it('avisa qué se quitó y por qué', () => {
+    expect(orderRejectedItemsHint(order({ items }))).toBe('Se quitó Torta: Se terminó el pan.');
+    expect(orderRejectedItemsHint(order({ items: [items[1]!] }))).toBeNull();
   });
 });

@@ -321,11 +321,22 @@ export function OrderTicketView({
       </div>
       <ul className="alumno-ticket-items">
         {order.items.map((item) => (
-          <li key={item.id}>
+          <li key={item.id} className={item.rechazo ? 'is-rejected' : undefined}>
             <span>
-              {item.cantidad} × {item.nombre_producto}
+              {item.rechazo ? (
+                <>
+                  <del>
+                    {item.cantidad} × {item.nombre_producto}
+                  </del>
+                  <small className="alumno-ticket-rejection">Se quitó: {item.rechazo.motivo}</small>
+                </>
+              ) : (
+                <>
+                  {item.cantidad} × {item.nombre_producto}
+                </>
+              )}
             </span>
-            <strong>{formatAmount(item.subtotal)}</strong>
+            <strong>{item.rechazo ? <del>{formatAmount(item.subtotal)}</del> : formatAmount(item.subtotal)}</strong>
           </li>
         ))}
       </ul>
