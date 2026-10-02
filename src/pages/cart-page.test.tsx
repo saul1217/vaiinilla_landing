@@ -117,12 +117,14 @@ describe('CartPage', () => {
     localStorage.clear();
     authState.user = { email: 'ana@example.test', displayName: 'Ana' };
     buyerSessionState.context = null;
+    // Negocio con la tarjeta activada por su dueño; una prueba de abajo la apaga.
     getEstablishment.mockResolvedValue({
       id: '1',
       nombre: 'Cafetería Demo A',
       slug: 'demo-a',
       identificador_cliente_etiqueta: 'Matrícula',
       identificador_cliente_obligatorio: false,
+      acepta_tarjeta: true,
     });
     getOperationalStatus.mockResolvedValue({
       recibiendo_pedidos: true,
@@ -264,6 +266,20 @@ describe('CartPage', () => {
     expect(await screen.findByRole('heading', { name: /pedidos anteriores/i })).toBeInTheDocument();
     expect(document.querySelector('.alumno-history-row img')).toBeNull();
     expect(document.querySelector('.alumno-cart-peek__row > img')).toHaveAttribute('src', QA_PHOTO_TACOS);
+  });
+
+  it('sin la tarjeta activada por el dueño no ofrece pagar con Stripe', async () => {
+    getEstablishment.mockResolvedValue({ id: '1', nombre: 'Cafetería Demo A', slug: 'demo-a', acepta_tarjeta: false });
+    cartState.cart = {
+      slug: 'demo-a',
+      establishmentName: 'Cafetería Demo A',
+      lines: [{ productId: 1, quantity: 1, optionIds: [], productName: 'Chocolate', unitPreview: '120.00', imageUrl: null }],
+    };
+    const user = userEvent.setup();
+    renderCart();
+    await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+    expect(await screen.findByRole('radio', { name: /pago en caja/i })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /pago con stripe/i })).not.toBeInTheDocument();
   });
 
   it('abre el sheet de pago con efectivo, saldo y tarjeta', async () => {
