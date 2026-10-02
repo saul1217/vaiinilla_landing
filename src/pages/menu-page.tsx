@@ -15,6 +15,7 @@ import { formatMoney } from '../lib/money';
 import type { CatalogProduct, CatalogResponse, PublicEstablishment } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
 import { ProductSheet } from '../components/product-sheet';
+import { peekResource, resourceKeys } from '../lib/resource-cache';
 
 export function MenuPage() {
   const { slug = '' } = useParams();
@@ -22,15 +23,16 @@ export function MenuPage() {
   const { user } = useAuth();
   const { addLine, cart } = useCart();
   const canAddToCart = Boolean(user) || isGuestBuy();
-  const [place, setPlace] = useState<PublicEstablishment | null>(null);
-  const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
+  // Lo ya cargado se ve al instante; la carga de abajo lo actualiza en segundo plano.
+  const [place, setPlace] = useState<PublicEstablishment | null>(() => peekResource(resourceKeys.establishment(slug)) ?? null);
+  const [catalog, setCatalog] = useState<CatalogResponse | null>(() => peekResource(resourceKeys.catalog(slug)) ?? null);
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<CatalogProduct | null>(null);
   const [optionIds, setOptionIds] = useState<number[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !peekResource(resourceKeys.catalog(slug)));
   const [rentsCourts, setRentsCourts] = useState(false);
 
   // "Rentar cancha" solo se ofrece si el negocio tiene al menos una cancha con precio por hora.
@@ -50,7 +52,7 @@ export function MenuPage() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
+    if (!peekResource(resourceKeys.catalog(slug))) setLoading(true);
     Promise.all([api.getEstablishment(slug), api.getGuestCatalog(slug)])
       .then(([nextPlace, nextCatalog]) => {
         if (!active) return;

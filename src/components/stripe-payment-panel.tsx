@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
+// `pure` no inserta Stripe.js al importar: su antifraude corría en cada toque de toda la
+// app. Así se carga solo cuando este panel va a cobrar.
+import { loadStripe } from '@stripe/stripe-js/pure';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import type { AppEnvironment } from '../lib/env';

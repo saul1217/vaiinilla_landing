@@ -6,6 +6,8 @@ export interface ArcadeHandle {
   load(key: ArcadeKey): void;
   /** Returns true when sound is now muted. */
   toggleMute(): boolean;
+  /** While another page animation runs, an arcade nobody is playing stops drawing. */
+  setQuiet(on: boolean): void;
   destroy(): void;
 }
 

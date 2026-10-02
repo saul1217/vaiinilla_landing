@@ -17,12 +17,16 @@ import { formatAmount } from '../lib/money';
 import type { CatalogProduct, WalletData } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
 import { RollingNumber } from '../components/rolling-number';
+import { peekResource, resourceKeys, storeResource } from '../lib/resource-cache';
 
 export function WalletPage() {
   const { user, ready } = useAuth();
   const { cart } = useCart();
   const { context, openClientSession } = useBuyerSession();
-  const [wallet, setWallet] = useState<WalletData | null>(null);
+  const walletGuess = cart?.slug ?? lastPlaceSlug();
+  const walletKey = user && walletGuess ? resourceKeys.wallet(user.uid, walletGuess) : null;
+  // Lo último del saldo de esta cuenta se ve al instante; se actualiza en segundo plano.
+  const [wallet, setWallet] = useState<WalletData | null>(() => (walletKey && peekResource<WalletData>(walletKey)) || null);
   const [menuPeek, setMenuPeek] = useState<CatalogProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,7 +42,7 @@ export function WalletPage() {
       return;
     }
     let active = true;
-    setLoading(true);
+    if (!walletKey || !peekResource(walletKey)) setLoading(true);
     const run = async () => {
       try {
         const resolved = await resolveClientSession({
@@ -55,6 +59,7 @@ export function WalletPage() {
           return;
         }
         const next = await api.getMyWallet(resolved.context.access_token);
+        if (resolved.slug) storeResource(resourceKeys.wallet(user.uid, resolved.slug), next);
         if (active) {
           setPlaceSlug(resolved.slug);
           setWallet(next);
@@ -70,7 +75,7 @@ export function WalletPage() {
     return () => {
       active = false;
     };
-  }, [cart?.slug, context, openClientSession, ready, user]);
+  }, [cart?.slug, context, openClientSession, ready, user, walletKey]);
 
   useEffect(() => {
     if (!placeSlug) {

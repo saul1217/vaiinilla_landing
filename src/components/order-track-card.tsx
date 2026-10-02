@@ -107,7 +107,7 @@ export function OrderTrackCard({
       aria-current={selected ? 'true' : undefined}
       onClick={(event) => {
         const target = event.target as HTMLElement;
-        if (target.closest('a, button, .alumno-track-card__follow')) return;
+        if (target.closest('a, button, .alumno-track-card__follow, .alumno-callwaiter')) return;
         onToggle();
       }}
     >
@@ -158,6 +158,9 @@ export function OrderTrackCard({
           {operationalHint ? ` ${operationalHint}` : collapsedStatusHint ? ` ${collapsedStatusHint}` : null}
         </p>
       )}
+      {/* Fuera del seguimiento: se llama al mesero sin abrir la tarjeta, y el botón no
+          se vuelve a montar (ni a consultar) cada vez que se abre o se cierra. */}
+      {active ? <CallWaiter order={order} client={callClient} /> : null}
       {expanded ? (
         <div className="alumno-track-card__follow" data-morph-in>
           <OrderPickupPanel
@@ -166,7 +169,6 @@ export function OrderTrackCard({
             stripeOrder={order.metodo_pago === 'stripe'}
           />
           <ArrivalButton order={order} client={arrivalClient} />
-          <CallWaiter order={order} client={callClient} />
           <ol className="alumno-timeline">
             {steps.map((step, index) => (
               <li key={step.key} className={`is-${step.state}`}>

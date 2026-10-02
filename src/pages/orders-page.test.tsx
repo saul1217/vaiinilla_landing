@@ -102,9 +102,9 @@ const liveOrder = {
   ],
 };
 
-function renderOrders() {
+function renderOrders(entry = "/cuenta/pedidos") {
   return render(
-    <MemoryRouter initialEntries={["/cuenta/pedidos"]}>
+    <MemoryRouter initialEntries={[entry]}>
       <ThemeProvider>
         <Routes>
           <Route path="/cuenta/pedidos" element={<OrdersPage />} />
@@ -260,5 +260,20 @@ describe("OrdersPage", () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByText("#42")).not.toBeInTheDocument();
     expect(document.querySelector(".alumno-track-card")).toBeNull();
+  });
+
+  it("recién pedido: llega con ?nuevo y ese pedido ya está abierto", async () => {
+    renderOrders("/cuenta/pedidos?nuevo=ord-1");
+    expect(await screen.findByRole("button", { name: /ocultar seguimiento/i })).toBeInTheDocument();
+  });
+
+  it("al volver a la pestaña muestra al instante los pedidos ya cargados", async () => {
+    const first = renderOrders();
+    expect(await screen.findByText(/#\d+/)).toBeInTheDocument();
+    first.unmount();
+    listOrders.mockImplementation(() => new Promise(() => undefined));
+    renderOrders();
+    expect(screen.queryByText(/cargando pedidos/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/#\d+/).length).toBeGreaterThan(0);
   });
 });

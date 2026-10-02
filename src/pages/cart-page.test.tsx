@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
 import { GUEST_CHECKOUT_UNAVAILABLE } from '../lib/guest-checkout';
@@ -91,6 +91,11 @@ vi.mock('../context/cart-context', () => ({
   useCart: () => cartState,
 }));
 
+function OrdersLanding() {
+  const { search } = useLocation();
+  return <p>{`Mis pedidos ${search}`}</p>;
+}
+
 function renderCart() {
   return render(
     <MemoryRouter initialEntries={['/e/demo-a/carrito']}>
@@ -99,6 +104,7 @@ function renderCart() {
           <Route path="/e/:slug/carrito" element={<CartPage />} />
           <Route path="/cuenta" element={<p>Cuenta login</p>} />
           <Route path="/cuenta/pedidos/:id" element={<p>Pedido creado</p>} />
+          <Route path="/cuenta/pedidos" element={<OrdersLanding />} />
         </Routes>
       </ThemeProvider>
     </MemoryRouter>,
@@ -609,6 +615,8 @@ describe('CartPage', () => {
         espacio_id: 12,
         pago_diferido: true,
       });
+      // Va a Mis pedidos (con el arcade), con el pedido nuevo abierto; no al pedido suelto.
+      expect(await screen.findByText('Mis pedidos ?nuevo=p9')).toBeInTheDocument();
     });
 
     it('elegir otra forma de pago quita la cuenta', async () => {
