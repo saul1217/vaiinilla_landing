@@ -178,7 +178,7 @@ export function OrderTrackCard({
             {steps.map((step, index) => (
               <li key={step.key} className={`is-${step.state}`}>
                 <span className="alumno-timeline__mark" aria-hidden="true">
-                  {step.state === 'done' ? <CheckIcon /> : index + 1}
+                  {step.state === 'done' ? <CheckIcon /> : step.state === 'skipped' ? '–' : index + 1}
                 </span>
                 <strong>{step.label}</strong>
                 {step.hint ? <span className="alumno-timeline__hint">{step.hint}</span> : null}

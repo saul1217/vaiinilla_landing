@@ -180,9 +180,11 @@ describe("OrderTrackCard pickup", () => {
         ".alumno-timeline li.is-current .alumno-timeline__mark",
       )?.textContent,
     ).toBe("4");
+    // Solo trae artículos de caja: no pasa por cocina, así que Preparando queda omitido.
     expect(
       document.querySelectorAll(".alumno-timeline li.is-done svg"),
-    ).toHaveLength(3);
+    ).toHaveLength(2);
+    expect(document.querySelector(".alumno-timeline li.is-skipped")).toHaveTextContent(/no aplica/i);
   });
 
   it("colapsada conserva chrome Android (barra, status y Ver seguimiento)", async () => {
