@@ -4242,6 +4242,39 @@ html[data-theme='amoled'] .alumno-lockup img,
   margin-top: 14px;
 }
 
+.alumno-staff-notice {
+  display: grid;
+  gap: 10px;
+}
+
+.alumno-staff-notice__panel {
+  text-align: center;
+  text-decoration: none;
+  transition: transform 160ms cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.alumno-staff-notice__panel:active,
+.alumno-staff-notice__client:active {
+  transform: scale(0.97);
+}
+
+.alumno-staff-notice__hint {
+  margin: -2px 0 8px;
+  font-size: 0.8125rem;
+}
+
+.alumno-staff-notice__client {
+  min-height: 48px;
+  transition: transform 160ms cubic-bezier(.34, 1.56, .64, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alumno-staff-notice__panel,
+  .alumno-staff-notice__client {
+    transition: none;
+  }
+}
+
 .alumno-auth__legal {
   margin-top: 16px;
 }
