@@ -8,6 +8,7 @@ import {
   orderCollapsedHint,
   orderItemHeadline,
   orderMetaLine,
+  orderCancelReason,
   orderOperationalHint,
   orderProgressFilled,
   orderStatusLabel,
@@ -61,7 +62,7 @@ export function OrderTrackCard({
   const pickupTokenResolved = pickupToken ?? resolvePickupQrToken(order);
   const showPickup = shouldShowPickupSurface(order);
   const collapsedStatusHint = orderCollapsedHint(order);
-  const operationalHint = orderOperationalHint(order);
+  const operationalHint = orderCancelReason(order) ?? orderOperationalHint(order);
   useHeightMorph(cardRef, expanded);
 
   useLayoutEffect(() => {

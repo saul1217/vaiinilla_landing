@@ -6,6 +6,8 @@ export interface SpaceSession {
   nombre: string;
   /** mesa, cancha, asiento… Ausente en sesiones guardadas antes de este campo. */
   tipo?: string;
+  /** El cliente ya eligió pagar al final en esta mesa: la siguiente ronda arranca igual. */
+  pagaAlFinal?: boolean;
 }
 
 export function readSpace(slug: string): SpaceSession | null {
@@ -22,8 +24,4 @@ export function readSpace(slug: string): SpaceSession | null {
 
 export function rememberSpace(session: SpaceSession): void {
   sessionStorage.setItem(KEY, JSON.stringify(session));
-}
-
-export function clearSpace(): void {
-  sessionStorage.removeItem(KEY);
 }
