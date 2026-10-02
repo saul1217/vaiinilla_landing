@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type { OrderDetail } from '../types/api';
 import {
   orderCancelReason,
-  orderItemHeadline,
   orderRejectedItemsHint,
   orderCollapsedStatusHint,
   orderCompactPayLabel,
