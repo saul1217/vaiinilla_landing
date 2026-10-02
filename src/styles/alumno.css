@@ -2154,6 +2154,17 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   color: #f4f1e7;
 }
 
+.alumno-timeline li.is-skipped .alumno-timeline__mark {
+  background: transparent;
+  color: color-mix(in srgb, currentColor 45%, transparent);
+  border-style: dashed;
+}
+
+.alumno-timeline li.is-skipped strong {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
 .alumno-timeline__hint {
   justify-self: end;
   max-width: 150px;
