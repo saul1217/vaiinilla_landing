@@ -252,6 +252,8 @@ export interface OrderDetail {
   pago?: OrderPayment | null;
   vence_operacion_en?: string | null;
   motivo_pendiente_operativo?: 'caja_inactiva' | 'cocina_inactiva' | null;
+  /** Por qué Cocina o Caja cancelaron el pedido. */
+  motivo_cancelacion?: string | null;
   /** Va a la cuenta del espacio (pagar al final). */
   pago_diferido?: boolean;
   /** Va a la cuenta y aún no se cobra. */

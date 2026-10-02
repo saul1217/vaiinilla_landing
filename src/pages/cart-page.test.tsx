@@ -633,6 +633,11 @@ describe('CartPage', () => {
       });
       // Va a Mis pedidos (con el arcade), con el pedido nuevo abierto; no al pedido suelto.
       expect(await screen.findByText('Mis pedidos ?nuevo=p9')).toBeInTheDocument();
+      // La mesa sigue: la siguiente ronda no exige volver a escanear y sigue a la cuenta.
+      expect(JSON.parse(sessionStorage.getItem('vaiinilla.buyer.space.v1') ?? 'null')).toMatchObject({
+        espacioId: 12,
+        pagaAlFinal: true,
+      });
     });
 
     it('elegir otra forma de pago quita la cuenta', async () => {

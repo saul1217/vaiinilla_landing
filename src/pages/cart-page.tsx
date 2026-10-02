@@ -16,7 +16,7 @@ import { resolveClientSession } from '../lib/client-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { orderHistoryHeadline } from '../lib/order-labels';
 import { rememberPickupQrToken } from '../lib/pickup-qr';
-import { clearSpace, readSpace } from '../lib/space-session';
+import { readSpace, rememberSpace } from '../lib/space-session';
 import { deliveredAtLabel, spaceNoun } from '../lib/space-words';
 import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
 import { isStripeCheckoutEnabled, offersCardPayment, STRIPE_UNAVAILABLE_COPY } from '../lib/stripe-public';
@@ -49,7 +49,7 @@ export function CartPage() {
   const [operationalError, setOperationalError] = useState<string | null>(null);
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [payment, setPayment] = useState<PaymentMethod>('efectivo');
-  const [payAtEnd, setPayAtEnd] = useState(false);
+  const [payAtEnd, setPayAtEnd] = useState(() => readSpace(slug)?.pagaAlFinal === true);
   const [notes, setNotes] = useState('');
   const [clientId, setClientId] = useState(
     () => sessionStorage.getItem(`vaiinilla.buyer.client-id.${slug}`) ?? '',
@@ -255,7 +255,8 @@ export function CartPage() {
         savePendingStripeOrderId(order.id);
       }
       reset();
-      if (destination === 'en_espacio') clearSpace();
+      // La mesa se conserva para pedir otra ronda sin volver a escanear.
+      if (destination === 'en_espacio' && space) rememberSpace({ ...space, pagaAlFinal: useTab });
       forgetIdempotencyKey(fingerprint);
       // La tarjeta se cobra en la pantalla del pedido (espera la confirmación de Stripe);
       // el resto va a Mis pedidos, con el arcade y el pedido nuevo ya abierto.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { OrderDetail } from '../types/api';
 import {
+  orderCancelReason,
   orderCollapsedStatusHint,
   orderCompactPayLabel,
   orderHistoryHeadline,
@@ -120,5 +121,13 @@ describe('order-labels Android tracking', () => {
   it('en fila colapsada LISTO es solo Listo, Recógelo queda al expandir', () => {
     expect(orderCollapsedStatusHint('listo')).toBe('');
     expect(orderCollapsedStatusHint('preparando')).toBe('Tu comida se está preparando.');
+  });
+});
+
+describe('orderCancelReason', () => {
+  it('shows the staff reason only on cancelled orders', () => {
+    expect(orderCancelReason({ estado: 'cancelado', motivo_cancelacion: ' Se acabó la carne ' })).toBe('Motivo: Se acabó la carne');
+    expect(orderCancelReason({ estado: 'cancelado', motivo_cancelacion: null })).toBeNull();
+    expect(orderCancelReason({ estado: 'preparando', motivo_cancelacion: 'x' })).toBeNull();
   });
 });

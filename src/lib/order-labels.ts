@@ -46,6 +46,12 @@ export function orderOperationalHint(
   return null;
 }
 
+/** El motivo que dio el personal al cancelar, para que el cliente sepa por qué. */
+export function orderCancelReason(order: Pick<OrderDetail, 'estado' | 'motivo_cancelacion'>): string | null {
+  const motivo = order.motivo_cancelacion?.trim();
+  return order.estado === 'cancelado' && motivo ? `Motivo: ${motivo}` : null;
+}
+
 export const PAYMENT_CONFIRMED_HINT = 'Stripe confirmó el pago; Vaiinilla actualizará el pedido.';
 
 export const ORDER_FLOW: OrderStatus[] = ['por_cobrar', 'cobrado', 'preparando', 'listo', 'entregado'];
