@@ -82,6 +82,7 @@ const cartState = {
       optionIds: number[];
       productName: string;
       unitPreview: string;
+      unitCounter?: string;
       imageUrl: string | null;
     }>;
   },
@@ -702,5 +703,28 @@ describe('CartPage', () => {
     const payload = createOrder.mock.calls[0]?.[1] as Record<string, unknown>;
     expect(payload.destino).toBe('en_espacio');
     expect(payload.espacio_id).toBe(3);
+  });
+
+  it('saldo de $105 alcanza para un pedido de $100 de mostrador aunque con tarjeta cueste $111', async () => {
+    getMyWallet.mockResolvedValue({
+      wallet: { id: 'w1', usuario_id: 'u1', establecimiento_id: '1', saldo: '105.00', actualizado_en: null },
+      movimientos: [],
+    });
+    cartState.cart = {
+      slug: 'demo-a',
+      establishmentName: 'Cafetería Demo A',
+      lines: [{ productId: 1, quantity: 1, optionIds: [], productName: 'Combo', unitPreview: '111.00', unitCounter: '100.00', imageUrl: null }],
+    };
+    const user = userEvent.setup();
+    renderCart();
+    await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+    await user.click(await screen.findByRole('radio', { name: /saldo vaiinilla/i }));
+
+    expect((await screen.findAllByText(/Total \$100(\.00)?$/)).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/no tienes saldo suficiente/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^continuar con/i })).toBeEnabled();
+
+    await user.click(screen.getByRole('radio', { name: /pago con stripe/i }));
+    expect((await screen.findAllByText(/Total \$111(\.00)?$/)).length).toBeGreaterThan(0);
   });
 });

@@ -344,7 +344,10 @@ export interface CartLine {
   quantity: number;
   optionIds: number[];
   productName: string;
+  /** Precio con tarjeta (con la comisión si el negocio la pasa): lo que muestra el menú. */
   unitPreview: string;
+  /** Precio de mostrador: efectivo, saldo y pagar al final. Ausente en carritos viejos. */
+  unitCounter?: string;
   imageUrl: string | null;
 }
 
