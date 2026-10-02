@@ -70,7 +70,7 @@ describe('mesa compartida', () => {
     await user.click(screen.getByRole('button', { name: /unirme a la mesa/i }));
 
     expect(apiMock.joinTable).toHaveBeenCalledWith('jwt', 'qr-1', 'Ana');
-    expect(await screen.findByRole('heading', { name: 'Mesa 3' })).toBeInTheDocument();
+    expect(await screen.findByRole('article', { name: 'Mesa 3' })).toBeInTheDocument();
   });
 
   it('sin QR y sin mesa no muestra nada', async () => {
@@ -84,7 +84,7 @@ describe('mesa compartida', () => {
     apiMock.currentTable.mockResolvedValue(table());
     render(<SharedTableCard accessToken="jwt" qrToken={null} />);
 
-    expect(await screen.findByText('2 personas en la mesa')).toBeInTheDocument();
+    expect(await screen.findByText('2 personas')).toBeInTheDocument();
     expect(screen.getByText('Ana (tú)')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /tus pedidos/i })).toBeInTheDocument();
     expect(screen.getByText('1× Torta')).toBeInTheDocument();
@@ -107,7 +107,7 @@ describe('mesa compartida', () => {
     await user.click(await screen.findByRole('button', { name: /salir de la mesa/i }));
 
     expect(apiMock.leaveTable).toHaveBeenCalledWith('jwt');
-    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Mesa 3' })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('article', { name: 'Mesa 3' })).not.toBeInTheDocument());
   });
 
   it('esto lo pago yo: marca un pedido por cobrar de otra persona', async () => {
