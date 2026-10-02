@@ -7021,3 +7021,15 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 @media (prefers-reduced-motion: reduce) {
   .shared-table__people li, .shared-table__group { animation: none; }
 }
+
+/* "Esto lo pago yo": una píldora que se enciende con resorte. */
+.shared-table__claim { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+.shared-table__claim button {
+  padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: transparent;
+  color: inherit; font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+  transition: background-color 220ms ease, color 220ms ease, border-color 220ms ease, transform 320ms cubic-bezier(.34, 1.56, .64, 1);
+}
+.shared-table__claim button:active { transform: scale(0.94); }
+.shared-table__claim button.is-on { background: var(--lime, #c8f25a); border-color: transparent; color: #10110d; }
+.shared-table__payer { color: var(--muted); font-size: 0.78rem; font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .shared-table__claim button { transition: none; } }

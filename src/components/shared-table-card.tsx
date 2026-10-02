@@ -60,6 +60,19 @@ export function SharedTableCard({ accessToken, qrToken }: { accessToken: string 
     }
   }
 
+  async function claim(folio: number, payIt: boolean) {
+    if (!accessToken) return;
+    setBusy(true);
+    setError(null);
+    try {
+      setTable(await api.claimTableOrder(accessToken, folio, payIt));
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function leave() {
     if (!accessToken) return;
     setBusy(true);
@@ -146,6 +159,23 @@ export function SharedTableCard({ accessToken, qrToken }: { accessToken: string 
                         {order.pendiente_cobro ? '' : ' · pagado'}
                       </span>
                       <span>{formatAmount(order.total)}</span>
+                      {order.pendiente_cobro ? (
+                        <span className="shared-table__claim">
+                          {order.pagara && !order.lo_pago_yo ? (
+                            <span className="shared-table__payer">Paga {order.pagara}</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className={order.lo_pago_yo ? 'is-on' : undefined}
+                              aria-pressed={order.lo_pago_yo === true}
+                              disabled={busy}
+                              onClick={() => void claim(order.folio, !order.lo_pago_yo)}
+                            >
+                              {order.lo_pago_yo ? 'Lo pago yo ✓' : 'Esto lo pago yo'}
+                            </button>
+                          )}
+                        </span>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

@@ -362,6 +362,9 @@ export interface SharedTableOrder {
   total: string;
   pendiente_cobro: boolean;
   creado_en: string | null;
+  /** "Esto lo pago yo": alias de quien dijo que lo paga. */
+  pagara?: string | null;
+  lo_pago_yo?: boolean;
 }
 
 export interface SharedTableGroup extends SharedTableAmounts {
