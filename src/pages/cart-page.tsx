@@ -8,7 +8,7 @@ import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
-import { canAcceptOrders, canPayAtEnd, cartTotal, toCreateOrderInput } from '../lib/cart';
+import { canAcceptOrders, canPayAtEnd, cartTotal, toCreateOrderInput, unitFor } from '../lib/cart';
 import { leftoverPeekProducts, peekCatalogProducts, productImageUrl } from '../lib/catalog-images';
 import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
 import { formatAmount, formatMoney, linePreview, moneyToCents } from '../lib/money';
@@ -83,7 +83,8 @@ export function CartPage() {
     () => leftoverPeekProducts(catalogProducts, lines.map((line) => line.productId)),
     [catalogProducts, lines],
   );
-  const total = useMemo(() => cartTotal(lines), [lines]);
+  // Solo la tarjeta lleva la comisión: el total y la validación de saldo siguen al método.
+  const total = useMemo(() => cartTotal(lines, payment), [lines, payment]);
 
   useEffect(() => {
     let active = true;
@@ -312,6 +313,7 @@ export function CartPage() {
         ) : (
           <CartFilledView
             lines={lines}
+            payment={payment}
             onUpdateQuantity={updateQuantity}
             onRemoveLine={removeLine}
             forHere={forHere}
@@ -455,8 +457,10 @@ export function CartFilledView({
   onPay,
   slug,
   menuPeek = [],
+  payment,
 }: {
   lines: CartLine[];
+  payment: PaymentMethod;
   onUpdateQuantity: (productId: number, optionIds: number[], quantity: number) => void;
   onRemoveLine: (productId: number, optionIds: number[]) => void;
   forHere: boolean;
@@ -479,7 +483,7 @@ export function CartFilledView({
       <div className="alumno-cart-layout__lines alumno-arrive">
         {lines.map((line) => {
           const thumb = productImageUrl(line.imageUrl);
-          const lineTotal = linePreview(line.unitPreview, line.quantity);
+          const lineTotal = linePreview(unitFor(line, payment), line.quantity);
           return (
             <div className="alumno-line" key={`${line.productId}-${line.optionIds.join(',')}`}>
               {thumb ? (
@@ -491,7 +495,7 @@ export function CartFilledView({
               )}
               <div className="alumno-line__copy">
                 <strong>{line.productName}</strong>
-                <p>{formatAmount(line.unitPreview)} c/u</p>
+                <p>{formatAmount(unitFor(line, payment))} c/u</p>
                 <div className="alumno-qty">
                   <button
                     type="button"

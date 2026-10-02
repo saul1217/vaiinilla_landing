@@ -212,6 +212,7 @@ export function AlumnoQaFilledCartPage() {
       <main id="main-content" className="alumno-main">
         <AlumnoPageHeader kicker="Revisa y confirma" title="Tu pedido" />
         <CartFilledView
+          payment="efectivo"
           lines={lines}
           onUpdateQuantity={(productId, optionIds, quantity) => {
             setLines((current) =>

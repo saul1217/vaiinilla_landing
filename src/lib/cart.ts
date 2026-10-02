@@ -42,17 +42,25 @@ export function cartLineKey(productId: number, optionIds: number[]): string {
 }
 
 export function previewForProduct(product: CatalogProduct, optionIds: number[], quantity: number) {
-  const unit = productUnitPreview(product.precio_digital, optionExtraPrices(product, optionIds));
-  if (!unit) return null;
+  const extras = optionExtraPrices(product, optionIds);
+  const unit = productUnitPreview(product.precio_digital, extras);
+  const counterUnit = productUnitPreview(product.precio_mostrador, extras) ?? unit;
+  if (!unit || !counterUnit) return null;
   const line = linePreview(unit, quantity);
   if (!line) return null;
-  return { unit, line };
+  return { unit, line, counterUnit };
 }
 
-export function cartTotal(lines: CartLine[]): string | null {
+/** El precio unitario que de verdad se cobra: solo la tarjeta lleva la comisión. */
+export function unitFor(line: CartLine, method: PaymentMethod | null): string {
+  return method === 'stripe' ? line.unitPreview : (line.unitCounter ?? line.unitPreview);
+}
+
+/** Total según el método; sin método elegido, el de mostrador (efectivo es el predeterminado). */
+export function cartTotal(lines: CartLine[], method: PaymentMethod | null = null): string | null {
   const totals: string[] = [];
   for (const line of lines) {
-    const total = linePreview(line.unitPreview, line.quantity);
+    const total = linePreview(unitFor(line, method), line.quantity);
     if (!total) return null;
     totals.push(total);
   }

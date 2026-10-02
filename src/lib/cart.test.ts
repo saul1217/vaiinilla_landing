@@ -106,8 +106,8 @@ describe('cart contract', () => {
 // eso (más los extras). La web no aplica ningún recargo propio.
 describe('el carrito no agrega recargo', () => {
   it('una línea cuesta el precio del menú más sus extras, por cantidad', () => {
-    expect(previewForProduct(burrito, [311, 314], 1)).toEqual({ unit: '69.00', line: '69.00' });
-    expect(previewForProduct(burrito, [310, 314], 3)).toEqual({ unit: '76.00', line: '228.00' });
+    expect(previewForProduct(burrito, [311, 314], 1)).toMatchObject({ unit: '69.00', line: '69.00' });
+    expect(previewForProduct(burrito, [310, 314], 3)).toMatchObject({ unit: '76.00', line: '228.00' });
   });
 
   it('el total es la suma exacta de las líneas', () => {
@@ -120,5 +120,27 @@ describe('el carrito no agrega recargo', () => {
   it('un producto a precio de mostrador exacto no sube al agregarlo al carrito', () => {
     const exacto = { ...burrito, grupos_opcion: [], precio_mostrador: '120.00', precio_digital: '120.00' };
     expect(previewForProduct(exacto, [], 1)?.unit).toBe('120.00');
+  });
+});
+
+describe('precio según cómo se paga (comisión pasada al cliente)', () => {
+  // Mostrador $100; con la comisión prendida el menú muestra ~$111 (precio con tarjeta).
+  const product = {
+    id: 1, nombre: 'Combo', precio_mostrador: '100.00', precio_digital: '111.00', imagen_url: null,
+    grupos_opcion: [{ id: 1, nombre: 'Extra', min_selecciones: 0, max_selecciones: 1, opciones: [{ id: 5, nombre: 'Queso', precio_extra: '10.00' }] }],
+  } as unknown as CatalogProduct;
+  const preview = previewForProduct(product, [5], 1)!;
+  const line = { productId: 1, quantity: 2, optionIds: [5], productName: 'Combo', unitPreview: preview.unit, unitCounter: preview.counterUnit, imageUrl: null };
+
+  it('efectivo, saldo y pagar al final usan el precio de mostrador; solo tarjeta el recargado', () => {
+    expect(preview.counterUnit).toBe('110.00');
+    expect(cartTotal([line], 'efectivo')).toBe('220.00');
+    expect(cartTotal([line], 'saldo')).toBe('220.00');
+    expect(cartTotal([line], 'stripe')).toBe('242.00');
+  });
+
+  it('un carrito guardado antes del cambio (sin precio de mostrador) sigue sumando', () => {
+    const old = { ...line, unitCounter: undefined };
+    expect(cartTotal([old], 'saldo')).toBe('242.00');
   });
 });
