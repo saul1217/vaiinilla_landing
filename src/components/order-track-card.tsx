@@ -1,4 +1,4 @@
-import { Fragment, useLayoutEffect, useRef, type CSSProperties } from 'react';
+import { Fragment, useLayoutEffect, useRef, type CSSProperties, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatAmount } from '../lib/money';
 import { resolvePickupQrToken, shouldShowPickupSurface } from '../lib/pickup-qr';
@@ -60,6 +60,8 @@ export function OrderTrackCard({
   const statusLabel = orderStatusLabel(order);
   const showBar = inFlow;
   const cardRef = useRef<HTMLElement>(null);
+  // Una foto que no carga vuelve a la mascota en vez de dejar el ícono de imagen rota.
+  const [failedImage, setFailedImage] = useState<string | null>(null);
   const pickupTokenResolved = pickupToken ?? resolvePickupQrToken(order);
   const showPickup = shouldShowPickupSurface(order);
   const collapsedStatusHint = orderCollapsedHint(order);
@@ -118,8 +120,8 @@ export function OrderTrackCard({
         <span className="alumno-track-card__pill">{statusLabel}</span>
       </header>
       <div className="alumno-track-card__body">
-        {imageUrl ? (
-          <img className="alumno-track-card__thumb" src={imageUrl} alt="" />
+        {imageUrl && failedImage !== imageUrl ? (
+          <img className="alumno-track-card__thumb" src={imageUrl} alt="" onError={() => setFailedImage(imageUrl)} />
         ) : (
           <div className="alumno-track-card__thumb alumno-track-card__thumb--vaini" aria-hidden="true">
             <img src="/vaini/cutout-frente.png" alt="" />

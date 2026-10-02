@@ -220,6 +220,8 @@ export interface OrderItem {
   id: number;
   producto_id: number;
   nombre_producto: string;
+  /** Foto actual del producto; un servidor anterior no la envía. */
+  imagen_url?: string | null;
   estacion_preparacion: 'cocina' | 'caja';
   cantidad: number;
   precio_digital_unitario: string;
