@@ -51,6 +51,9 @@ export function orderThumbUrl(
     const own = productImageUrl(item.imagen_url);
     if (own) return own;
   }
+  // Una renta de cancha: su producto no tiene foto, la cancha sí.
+  const court = productImageUrl(order.reserva?.espacio?.imagen_url ?? null);
+  if (court) return court;
   for (const item of order.items ?? []) {
     const byId = images.get(item.producto_id);
     if (byId) return byId;

@@ -27,3 +27,25 @@ export function readSpace(slug: string): SpaceSession | null {
 export function rememberSpace(session: SpaceSession): void {
   sessionStorage.setItem(KEY, JSON.stringify(session));
 }
+
+/** Lo mínimo de una renta para saber si el cliente está jugando ahora en una cancha. */
+export interface RentalLike {
+  courtId: number;
+  courtName: string | null;
+  start: number;
+  end: number;
+  state: string;
+}
+
+/**
+ * La cancha que el cliente tiene rentada ahora mismo en este negocio, como si hubiera
+ * escaneado su QR: así la comida va a la cancha sin volver a escanear. Rentar no pasa
+ * por el QR, y el espacio escaneado solo vive en la pestaña.
+ */
+export function activeRentalSpace(slug: string, rentals: RentalLike[], now: number): SpaceSession | null {
+  const playing = rentals
+    .filter((r) => (r.state === 'confirmada' || r.state === 'en_curso') && r.start <= now && now < r.end)
+    .sort((a, b) => b.start - a.start)[0];
+  if (!playing) return null;
+  return { slug, espacioId: playing.courtId, nombre: playing.courtName ?? 'Tu cancha', tipo: 'cancha' };
+}

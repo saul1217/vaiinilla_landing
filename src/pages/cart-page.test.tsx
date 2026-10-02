@@ -26,6 +26,7 @@ const {
   retryStripePayment,
   openClientSession,
   listOrders,
+  listReservations,
 } = vi.hoisted(() => ({
   getEstablishment: vi.fn(),
   getOperationalStatus: vi.fn(),
@@ -35,6 +36,7 @@ const {
   retryStripePayment: vi.fn(),
   openClientSession: vi.fn(),
   listOrders: vi.fn(),
+  listReservations: vi.fn(),
 }));
 
 vi.mock('../lib/api', () => ({
@@ -46,6 +48,7 @@ vi.mock('../lib/api', () => ({
     createOrder: (...args: unknown[]) => createOrder(...args) as Promise<unknown>,
     retryStripePayment: (...args: unknown[]) => retryStripePayment(...args) as Promise<unknown>,
     listOrders: (...args: unknown[]) => listOrders(...args) as Promise<unknown>,
+    listReservations: (...args: unknown[]) => listReservations(...args) as Promise<unknown>,
     apiUrl: '/api/v1',
   },
 }));
@@ -133,6 +136,7 @@ describe('CartPage', () => {
       cocina_en_linea: true,
     });
     getMyWallet.mockResolvedValue(null);
+    listReservations.mockResolvedValue([]);
     openClientSession.mockResolvedValue({
       access_token: 'jwt',
       contexto: { establecimiento_id: '1' },
@@ -670,5 +674,33 @@ describe('CartPage', () => {
       await screen.findByRole('heading', { name: /cómo quieres pagar/i });
       expect(screen.queryByRole('radio', { name: /pagar al final/i })).not.toBeInTheDocument();
     });
+  });
+
+  it('con una cancha rentada y en curso, la comida va a la cancha sin escanear el QR', async () => {
+    const now = Date.now();
+    listReservations.mockResolvedValue([
+      { id: 'r1', courtId: 3, courtName: 'Cancha 1', start: now - 20 * 60_000, end: now + 40 * 60_000, state: 'confirmada' },
+    ]);
+    cartState.cart = {
+      slug: 'demo-a',
+      establishmentName: 'Cafetería Demo A',
+      lines: [{ productId: 1, quantity: 1, optionIds: [], productName: 'Chocolate', unitPreview: '120.00', imageUrl: null }],
+    };
+    createOrder.mockResolvedValue({
+      id: 'ord-cancha', folio: 8, estado: 'por_cobrar', metodo_pago: 'efectivo', destino: 'en_espacio',
+      qr_token: 't', espacio: { id: 3, nombre: 'Cancha 1' }, total: '120.00', items: [], pago: null,
+    });
+    const user = userEvent.setup();
+    renderCart();
+
+    await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+    await waitFor(() => expect(listReservations).toHaveBeenCalledWith('jwt'));
+    await user.click(await screen.findByRole('radio', { name: /pago en caja/i }));
+    await user.click(screen.getByRole('button', { name: /^continuar con/i }));
+
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1));
+    const payload = createOrder.mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(payload.destino).toBe('en_espacio');
+    expect(payload.espacio_id).toBe(3);
   });
 });
