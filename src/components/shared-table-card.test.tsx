@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SharedTable } from '../types/api';
-import { SharedTableCard, orderedGroups } from './shared-table-card';
+import { SharedTableCard, orderedGroups, tableOrderState } from './shared-table-card';
 
 const apiMock = vi.hoisted(() => ({ currentTable: vi.fn(), joinTable: vi.fn(), leaveTable: vi.fn(), claimTableOrder: vi.fn() }));
 vi.mock('../lib/api', () => ({ api: apiMock }));
@@ -47,6 +47,13 @@ describe('mesa compartida', () => {
     apiMock.currentTable.mockReset();
     apiMock.joinTable.mockReset();
     apiMock.leaveTable.mockReset();
+  });
+
+  it('a la cuenta y sin pagar no dice "Cobrado"', () => {
+    const base = { id: null, folio: 1, items_resumen: '', total: '1.00', creado_en: null };
+    expect(tableOrderState({ ...base, estado: 'cobrado', pendiente_cobro: true })).toBe('En la cuenta');
+    expect(tableOrderState({ ...base, estado: 'listo', pendiente_cobro: true })).toBe('Listo');
+    expect(tableOrderState({ ...base, estado: 'entregado', pendiente_cobro: false })).toBe('Entregado · pagado');
   });
 
   it('tus pedidos van primero', () => {
