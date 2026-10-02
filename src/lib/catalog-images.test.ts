@@ -62,3 +62,27 @@ describe('catalog-images', () => {
     expect(leftoverPeekProducts(products, [1, 2])).toEqual([]);
   });
 });
+
+describe('foto del pedido en el seguimiento', () => {
+  const item = {
+    id: 1,
+    producto_id: 4,
+    nombre_producto: 'Hamburguesa',
+    estacion_preparacion: 'cocina' as const,
+    cantidad: 1,
+    precio_digital_unitario: '132.00',
+    subtotal: '132.00',
+    opciones: [],
+  };
+
+  it('usa la foto que trae el artículo aunque el catálogo aún no cargue', () => {
+    const order = { items: [{ ...item, imagen_url: 'https://cdn/hamburguesa.jpg' }] } as unknown as OrderDetail;
+    expect(orderThumbUrl(order, new Map(), [])).toBe('https://cdn/hamburguesa.jpg');
+  });
+
+  it('sin foto en el artículo cae al catálogo, y sin nada da null (la mascota)', () => {
+    const order = { items: [item] } as unknown as OrderDetail;
+    expect(orderThumbUrl(order, new Map([[4, 'https://cdn/cat.jpg']]), [])).toBe('https://cdn/cat.jpg');
+    expect(orderThumbUrl(order, new Map(), [])).toBeNull();
+  });
+});
