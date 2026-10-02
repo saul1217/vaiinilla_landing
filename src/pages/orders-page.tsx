@@ -3,6 +3,8 @@ import { Navigate, useSearchParams } from "react-router-dom";
 import { AlumnoPageHeader } from "../components/alumno-brand";
 import { AppShell } from "../components/app-shell";
 import { OrderTrackCard } from "../components/order-track-card";
+import { SharedTableCard } from "../components/shared-table-card";
+import { readSpace } from "../lib/space-session";
 import { WaitingArcade } from "../arcade/waiting-arcade";
 import { useAuth } from "../context/auth-context";
 import { useBuyerSession } from "../context/buyer-session";
@@ -138,6 +140,10 @@ export function OrdersPage() {
           <p className="alumno-place-name">{place.nombre}</p>
         ) : null}
         {error ? <p className="alumno-error">{error}</p> : null}
+        <SharedTableCard
+          accessToken={context?.access_token ?? null}
+          qrToken={readSpace(place?.slug ?? placeGuess ?? "")?.qrToken ?? null}
+        />
         {tab ? (
           <section className="alumno-tab" aria-label="Tu cuenta">
             <div>

@@ -3,6 +3,7 @@ import { createIdempotencyKey } from './idempotency';
 import { resolveApiUrl } from './env';
 import type {
   ApiEnvelope,
+  SharedTable,
   ApiErrorEnvelope,
   CatalogResponse,
   ClientContextResponse,
@@ -176,6 +177,20 @@ export const api = {
         body: input,
       })
     ).data;
+  },
+
+  /** Se une a la mesa del QR con un alias que escribe el cliente. */
+  async joinTable(token: string, qrToken: string, alias: string): Promise<SharedTable> {
+    return (await request<SharedTable>('/mesas/unirse', { token, method: 'POST', body: { token: qrToken, alias } })).data;
+  },
+
+  /** La mesa del cliente, o null si no está en ninguna. */
+  async currentTable(token: string): Promise<SharedTable | null> {
+    return (await request<SharedTable | null>('/mesas/actual', { token })).data;
+  },
+
+  async leaveTable(token: string): Promise<void> {
+    await request<null>('/mesas/actual/salida', { token, method: 'POST' });
   },
 
   async listOrders(
