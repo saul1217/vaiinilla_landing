@@ -9,7 +9,7 @@ vi.mock('../lib/api', () => ({
   api: { apiUrl: '/api/v1' },
 }));
 
-vi.mock('@stripe/stripe-js', () => ({
+vi.mock('@stripe/stripe-js/pure', () => ({
   loadStripe: vi.fn().mockResolvedValue({}),
 }));
 

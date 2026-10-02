@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';
+import { clearResourceCache } from '../lib/resource-cache';
 
 class IntersectionObserverMock {
   observe(): void {}
@@ -30,3 +31,6 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 afterEach(() => cleanup());
+
+// La memoria de datos del dock es global: cada prueba empieza sin datos guardados.
+afterEach(() => clearResourceCache());

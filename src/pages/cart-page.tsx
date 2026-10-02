@@ -256,7 +256,9 @@ export function CartPage() {
       reset();
       if (destination === 'en_espacio') clearSpace();
       forgetIdempotencyKey(fingerprint);
-      void navigate(`/cuenta/pedidos/${order.id}`);
+      // La tarjeta se cobra en la pantalla del pedido (espera la confirmación de Stripe);
+      // el resto va a Mis pedidos, con el arcade y el pedido nuevo ya abierto.
+      void navigate(payment === 'stripe' ? `/cuenta/pedidos/${order.id}` : `/cuenta/pedidos?nuevo=${order.id}`);
     } catch (cause) {
       if (cause instanceof VaiinillaApiError && cause.code === 'IDENTITY_NOT_REGISTERED') {
         void navigate(`/cuenta?next=/e/${slug}/carrito`);

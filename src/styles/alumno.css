@@ -6967,3 +6967,13 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
     transition: none;
   }
 }
+
+/* Llamar al mesero vive ahora en la tarjeta oscura (fuera del seguimiento): el texto
+   que va directo sobre ella toma su color; la vista "llamando" conserva su fondo claro. */
+.alumno-track-card > .alumno-callwaiter {
+  color: inherit;
+}
+
+.alumno-track-card .alumno-callwaiter__live {
+  color: var(--text);
+}

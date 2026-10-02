@@ -2,6 +2,7 @@
 // swap), so the box grows or shrinks instead of snapping. Children marked
 // `data-morph-in` blur in with a small stagger after an expand.
 import { useLayoutEffect, useRef, type RefObject } from 'react';
+import { beginMotion } from './motion-activity';
 import { canAnimate, prefersReducedMotion } from './spring';
 
 const EASE = 'cubic-bezier(.16, 1, .3, 1)';
@@ -18,12 +19,14 @@ export function useHeightMorph<T extends HTMLElement>(ref: RefObject<T | null>, 
     if (from === null || Math.abs(from - to) < 1 || !canAnimate(el) || prefersReducedMotion()) return;
 
     const grow = to > from;
+    const endMotion = beginMotion();
     const box = el.animate([{ height: `${from}px` }, { height: `${to}px` }], {
       duration: grow ? 520 : 420,
       easing: EASE,
     });
     el.style.overflow = 'clip';
     box.onfinish = box.oncancel = () => {
+      endMotion();
       el.style.overflow = '';
       last.current = el.getBoundingClientRect().height;
     };

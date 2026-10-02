@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { AlumnoPageHeader } from "../components/alumno-brand";
 import { AppShell } from "../components/app-shell";
 import { OrderTrackCard } from "../components/order-track-card";
@@ -23,6 +23,7 @@ import type {
   PublicEstablishment,
 } from "../types/api";
 import { LoadingSkeleton } from "../components/loading-skeleton";
+import { peekResource, resourceKeys, storeResource } from "../lib/resource-cache";
 
 const POLL_MS = 5000;
 
@@ -30,11 +31,19 @@ export function OrdersPage() {
   const { user, ready } = useAuth();
   const { cart } = useCart();
   const { context, openClientSession } = useBuyerSession();
-  const [orders, setOrders] = useState<OrderDetail[]>([]);
+  // Al volver a esta pestaña se ven al instante los últimos pedidos de esta cuenta en
+  // este negocio; la consulta de cada 5 s los actualiza en segundo plano.
+  const placeGuess = cart?.slug ?? lastPlaceSlug();
+  const ordersKey = user && placeGuess ? resourceKeys.orders(user.uid, placeGuess) : null;
+  const [orders, setOrders] = useState<OrderDetail[]>(() => (ordersKey && peekResource<OrderDetail[]>(ordersKey)) || []);
   const [error, setError] = useState<string | null>(null);
-  const [place, setPlace] = useState<PublicEstablishment | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [place, setPlace] = useState<PublicEstablishment | null>(
+    () => (placeGuess && peekResource<PublicEstablishment>(resourceKeys.establishment(placeGuess))) || null,
+  );
+  const [loading, setLoading] = useState(() => !(ordersKey && peekResource(ordersKey)));
+  const [searchParams] = useSearchParams();
+  // Recién pedido: el carrito llega con ?nuevo=<id> y ese pedido ya se ve abierto.
+  const [expandedId, setExpandedId] = useState<string | null>(() => searchParams.get("nuevo"));
   const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
   const deskPane = useDeskPane();
   const deskAutoSelected = useRef(false);
@@ -77,6 +86,7 @@ export function OrdersPage() {
         const result = await api.listOrders(resolved.context.access_token);
         if (!active) return;
         result.orders.forEach((item) => persistPickupQrFromOrder(item));
+        if (resolved.slug) storeResource(resourceKeys.orders(user.uid, resolved.slug), result.orders);
         setOrders(result.orders);
         setError(null);
       } catch (cause) {
