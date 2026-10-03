@@ -41,7 +41,7 @@ describe('seguimiento sin cuenta', () => {
     getTracking.mockReset();
   });
 
-  it('avisa claro que el enlace es lo único que tiene, y deja copiarlo', async () => {
+  it('el enlace es respaldo (el pedido vive en Mis pedidos) y deja copiarlo', async () => {
     getTracking.mockResolvedValue(order());
     rememberGuestOrder({ token: TOKEN, slug: 'demo-a', folio: 21, placeName: 'Cafetería Demo A', createdAt: Date.now() });
     const user = userEvent.setup();
@@ -50,7 +50,8 @@ describe('seguimiento sin cuenta', () => {
     renderAt(`/seguimiento/${TOKEN}?nuevo=1`);
 
     expect(screen.getByText('¡Listo! Guarda este enlace')).toBeInTheDocument();
-    expect(screen.getByText(/única forma/)).toBeInTheDocument();
+    expect(screen.getByText(/como respaldo para otro/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ver en Mis pedidos' })).toHaveAttribute('href', '/cuenta/pedidos');
     expect(screen.getByText(`${window.location.origin}/seguimiento/${TOKEN}`)).toBeInTheDocument();
     expect(await screen.findByText('Pedido #21')).toBeInTheDocument();
     expect(screen.getByText('Cafetería Demo A')).toBeInTheDocument();
@@ -61,6 +62,15 @@ describe('seguimiento sin cuenta', () => {
     expect(await screen.findByRole('button', { name: 'Enlace copiado' })).toBeInTheDocument();
     // Crear cuenta es opcional, no bloquea.
     expect(screen.getByRole('link', { name: 'Crea tu cuenta' })).toBeInTheDocument();
+  });
+
+  it('en este dispositivo invita a verlo en Mis pedidos', async () => {
+    getTracking.mockResolvedValue(order());
+    rememberGuestOrder({ token: TOKEN, slug: 'demo-a', folio: 21, placeName: 'Cafetería Demo A', createdAt: Date.now() });
+    renderAt(`/seguimiento/${TOKEN}`);
+
+    expect(await screen.findByText('Pedido #21')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ver en Mis pedidos' })).toHaveAttribute('href', '/cuenta/pedidos');
   });
 
   it('ya pagado muestra el estado con el QR de recogida', async () => {

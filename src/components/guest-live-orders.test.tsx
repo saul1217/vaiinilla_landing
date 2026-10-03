@@ -147,4 +147,30 @@ describe('tus pedidos sin cuenta', () => {
     expect(screen.queryByText('Tu pedido #7')).not.toBeInTheDocument();
     expect(screen.getByText('Tu pedido #6')).toBeInTheDocument();
   });
+
+  it('recién pedido (?nuevo): esa tarjeta ya llega abierta', async () => {
+    localStorage.setItem('vaiinilla.buyer.guest.v1', JSON.stringify({ nombre: 'Lupita', llave: LLAVE }));
+    listGuestOrders.mockResolvedValue([liveOrder()]);
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <GuestLiveOrders orders={[liveOrder()]} initialExpandedToken={TOKEN} />
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('button', { name: /ocultar seguimiento/i })).toBeInTheDocument();
+  });
+
+  it('sin ?nuevo las tarjetas llegan cerradas', async () => {
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <GuestLiveOrders orders={[liveOrder()]} />
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('button', { name: /ver seguimiento$/i })).toBeInTheDocument();
+  });
 });

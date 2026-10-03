@@ -131,9 +131,9 @@ function mesa(over: Partial<SharedTable> = {}): SharedTable {
   };
 }
 
-function renderPage() {
+function renderPage(entry = '/cuenta/pedidos') {
   return render(
-    <MemoryRouter initialEntries={['/cuenta/pedidos']}>
+    <MemoryRouter initialEntries={[entry]}>
       <ThemeProvider>
         <Routes>
           <Route path="/cuenta/pedidos" element={<GuestOrdersPage />} />
@@ -176,6 +176,13 @@ describe('pedidos del invitado', () => {
     expect(link.getAttribute('href')).toBe(`/seguimiento/${TOKEN}`);
     expect(listGuestOrders).toHaveBeenCalledWith('padel', LLAVE);
     expect(screen.getByText(/pides como lupi sin cuenta/i)).toBeInTheDocument();
+  });
+
+  it('recién pedido (?nuevo=token): ese pedido ya llega abierto', async () => {
+    renderPage(`/cuenta/pedidos?nuevo=${TOKEN}`);
+
+    expect(await screen.findByText('Tus pedidos')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /ocultar seguimiento/i })).toBeInTheDocument();
   });
 
   it('quien escaneó el QR se une a la mesa con su alias', async () => {
