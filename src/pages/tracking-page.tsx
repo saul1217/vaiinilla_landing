@@ -1,7 +1,7 @@
-// Seguimiento de un pedido sin cuenta. El enlace es lo único que tiene el invitado: no
-// hay correo ni Mis pedidos. Por eso arriba va, claro, "guarda este enlace", con copiar
-// y compartir. La tarjeta se termina de pagar aquí mismo. Abajo, el pedido completo
-// (estado, artículos, total y método de pago) igual que una cuenta registrada.
+// Seguimiento de un pedido sin cuenta. Es el respaldo del invitado: su pedido vive
+// en este navegador (pestaña Pedidos, igual que una cuenta); el enlace sirve para
+// otro dispositivo o si borra los datos. La tarjeta se termina de pagar aquí mismo.
+// Abajo, el pedido completo (estado, artículos, total y método de pago).
 // Contrato: vaiinilla_back docs/compra-sin-cuenta.md.
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
@@ -100,8 +100,10 @@ export function TrackingPage() {
         <section className="alumno-tracking__keep" role="note" aria-label="Guarda este enlace">
           <strong>{justOrdered ? '¡Listo! Guarda este enlace' : 'Guarda este enlace'}</strong>
           <p>
-            Es la <b>única forma</b> de ver tu pedido y su código para recogerlo: pediste sin cuenta, así que no
-            te llegará por correo.
+            Tu pedido también vive en este navegador, en la pestaña{' '}
+            <Link to="/cuenta/pedidos">Pedidos</Link>. Guarda el enlace como respaldo para otro
+            dispositivo o si borras los datos: pediste sin cuenta, así que no te llegará por
+            correo.
           </p>
           <code className="alumno-tracking__link">{link}</code>
           <div className="alumno-tracking__actions">
@@ -112,6 +114,11 @@ export function TrackingPage() {
               <button type="button" className="alumno-btn" onClick={() => void share()}>
                 Compartir
               </button>
+            ) : null}
+            {saved && !stripePending ? (
+              <Link className="alumno-btn" to="/cuenta/pedidos">
+                Ver en Mis pedidos
+              </Link>
             ) : null}
           </div>
         </section>

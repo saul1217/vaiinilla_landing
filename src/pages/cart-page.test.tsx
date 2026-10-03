@@ -589,7 +589,7 @@ describe('CartPage', () => {
       };
     });
 
-    it('pide solo el nombre, no ofrece saldo y lleva al enlace de seguimiento (efectivo)', async () => {
+    it('pide solo el nombre, no ofrece saldo y abre Mis pedidos (efectivo)', async () => {
       createOrder.mockResolvedValue({ id: 'ord-g', folio: 21, estado: 'por_cobrar', metodo_pago: 'efectivo', destino: 'para_llevar', qr_token: 'qr', espacio: null, total: '240.00', items: [], invitado: true, seguimiento_token: SEGUIMIENTO });
       const user = userEvent.setup();
       renderCart();
@@ -606,10 +606,11 @@ describe('CartPage', () => {
       await user.click(screen.getByRole('radio', { name: /pago en caja/i }));
       await user.click(screen.getByRole('button', { name: /^continuar con/i }));
 
-      expect(await screen.findByText('Seguimiento del pedido')).toBeInTheDocument();
+      // Igual que un registrado: a Mis pedidos, con el pedido nuevo ya abierto por su token.
+      expect(await screen.findByText(`Mis pedidos ?nuevo=${SEGUIMIENTO}`)).toBeInTheDocument();
       expect(createGuest).toHaveBeenCalledWith({ slug: 'demo-a', nombre: 'Lupita', terminosVersion: 't-1', privacidadVersion: 'p-1' });
       expect(createOrder).toHaveBeenCalledWith('guest-jwt', expect.objectContaining({ metodo_pago: 'efectivo' }), expect.any(String));
-      // El enlace y la llave quedan en este navegador.
+      // El enlace y la llave quedan en este navegador como respaldo.
       const saved = JSON.parse(localStorage.getItem('vaiinilla.buyer.guest-orders.v1') ?? '[]') as Array<{ token: string; folio: number }>;
       expect(saved[0]).toMatchObject({ token: SEGUIMIENTO, folio: 21 });
       expect(JSON.parse(localStorage.getItem('vaiinilla.buyer.guest.v1') ?? '{}')).toMatchObject({ nombre: 'Lupita' });
@@ -632,7 +633,7 @@ describe('CartPage', () => {
       await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
       expect(screen.getByLabelText('Tu nombre')).toHaveValue('Lupita');
       await user.click(screen.getByRole('button', { name: /^continuar con/i }));
-      expect(await screen.findByText('Seguimiento del pedido')).toBeInTheDocument();
+      expect(await screen.findByText(`Mis pedidos ?nuevo=${SEGUIMIENTO}`)).toBeInTheDocument();
       expect(renewGuest).toHaveBeenCalledWith('demo-a', 'L'.repeat(43));
       expect(createGuest).not.toHaveBeenCalled();
     });

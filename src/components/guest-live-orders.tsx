@@ -10,11 +10,14 @@ import type { OrderDetail } from '../types/api';
 export function GuestLiveOrders({
   orders,
   imageFor,
+  initialExpandedToken,
 }: {
   orders: OrderDetail[];
   imageFor?: (order: OrderDetail) => string | null;
+  /** Recién pedido (?nuevo=token): esa tarjeta ya llega abierta, como un registrado. */
+  initialExpandedToken?: string | null;
 }) {
-  const [expandedToken, setExpandedToken] = useState<string | null>(null);
+  const [expandedToken, setExpandedToken] = useState<string | null>(initialExpandedToken ?? null);
   if (orders.length === 0) return null;
   return (
     <section className="alumno-guest-live" aria-label="Tus pedidos en curso">
