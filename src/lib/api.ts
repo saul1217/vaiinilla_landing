@@ -3,6 +3,8 @@ import { createIdempotencyKey } from './idempotency';
 import { resolveApiUrl } from './env';
 import type {
   ApiEnvelope,
+  GuestSessionResponse,
+  TrackedOrder,
   SharedTable,
   ApiErrorEnvelope,
   CatalogResponse,
@@ -122,6 +124,41 @@ export const api = {
   async getGuestCatalog(slug: string): Promise<CatalogResponse> {
     return cachedResource(resourceKeys.catalog(slug), PUBLIC_DATA_MAX_AGE_MS, async () =>
       (await request<CatalogResponse>(`/publico/establecimientos/${slug}/catalogo`)).data);
+  },
+
+  /** Compra sin cuenta: alta con solo el nombre. La llave se guarda en el dispositivo. */
+  async createGuest(input: {
+    slug: string;
+    nombre: string;
+    terminosVersion: string;
+    privacidadVersion: string;
+  }): Promise<GuestSessionResponse> {
+    return (
+      await request<GuestSessionResponse>('/publico/invitados', {
+        method: 'POST',
+        body: {
+          establecimiento_slug: input.slug,
+          nombre: input.nombre,
+          terminos_version: input.terminosVersion,
+          privacidad_version: input.privacidadVersion,
+        },
+      })
+    ).data;
+  },
+
+  /** Otra sesión de invitado (15 min) con la llave del dispositivo. */
+  async renewGuest(slug: string, llave: string): Promise<GuestSessionResponse> {
+    return (
+      await request<GuestSessionResponse>('/publico/invitados/sesiones', {
+        method: 'POST',
+        body: { establecimiento_slug: slug, llave },
+      })
+    ).data;
+  },
+
+  /** El pedido de un invitado por su enlace de seguimiento (solo lectura). */
+  async getTracking(token: string): Promise<TrackedOrder> {
+    return (await request<TrackedOrder>(`/publico/seguimiento/${encodeURIComponent(token)}`, { cache: 'no-store' })).data;
   },
 
   async getLegalVersions(): Promise<LegalVersions> {

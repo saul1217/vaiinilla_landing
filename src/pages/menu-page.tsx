@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { GuestOrdersBanner } from '../components/guest-orders-banner';
+import { Link, useParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { useAuth } from '../context/auth-context';
@@ -8,7 +9,6 @@ import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import { defaultOptionIds, previewForProduct, validateSelections } from '../lib/cart';
 import { productImageUrl } from '../lib/catalog-images';
-import { enableGuestBuy, isGuestBuy } from '../lib/guest-explore';
 import { initialsFrom } from '../lib/initials';
 import { rememberPlace } from '../lib/last-place';
 import { formatMoney } from '../lib/money';
@@ -19,12 +19,12 @@ import { peekResource, resourceKeys } from '../lib/resource-cache';
 
 export function MenuPage() {
   const { slug = '' } = useParams();
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { addLine, cart } = useCart();
-  const canAddToCart = Boolean(user) || isGuestBuy();
   // Lo ya cargado se ve al instante; la carga de abajo lo actualiza en segundo plano.
   const [place, setPlace] = useState<PublicEstablishment | null>(() => peekResource(resourceKeys.establishment(slug)) ?? null);
+  // Compra sin cuenta: cualquiera agrega al carrito, salvo donde se pide con matrícula.
+  const canAddToCart = Boolean(user) || place?.identificador_cliente_obligatorio !== true;
   const [catalog, setCatalog] = useState<CatalogResponse | null>(() => peekResource(resourceKeys.catalog(slug)) ?? null);
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
@@ -130,11 +130,6 @@ export function MenuPage() {
     return true;
   }
 
-  function buyWithoutAccount() {
-    enableGuestBuy();
-    if (addCurrentProduct()) void navigate(`/e/${slug}/carrito`);
-  }
-
   const preview = selected ? previewForProduct(selected, optionIds, quantity) : null;
   const cartCount = cart?.slug === slug ? cart.lines.reduce((sum, line) => sum + line.quantity, 0) : 0;
   const menuActions = () => (
@@ -152,6 +147,7 @@ export function MenuPage() {
   return (
     <AppShell tab="menu">
       <main id="main-content" className="alumno-main alumno-main--catalog">
+        <GuestOrdersBanner slug={slug} />
         <div className="alumno-deskhead">
           <AlumnoPageHeader
             kicker="Menú de hoy"
@@ -248,7 +244,6 @@ export function MenuPage() {
           onClearGroup={clearOptionGroup}
           onQuantityChange={(delta) => setQuantity((value) => Math.min(20, Math.max(1, value + delta)))}
           onAdd={() => addCurrentProduct({ keepOpen: true })}
-          onBuyWithoutAccount={buyWithoutAccount}
           onClosed={() => setSelected(null)}
         />
       ) : null}
