@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
+import { useAuth } from '../context/auth-context';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import { rememberPlace } from '../lib/last-place';
@@ -11,10 +12,12 @@ import { openingTitle, spaceNoun } from '../lib/space-words';
 export function TableJoinPage() {
   const { slug = '', token = '' } = useParams();
   const navigate = useNavigate();
+  const { user, ready } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [kind, setKind] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!ready) return;
     let active = true;
     void api
       .resolveSpace(token, slug)
@@ -29,7 +32,8 @@ export function TableJoinPage() {
           qrToken: token,
         });
         setKind(resolved.espacio_tipo);
-        void navigate(`/e/${resolved.establecimiento_slug}`, { replace: true });
+        // El invitado se une a la mesa en su pestaña Pedidos; el registrado sigue al menú.
+        void navigate(user ? `/e/${resolved.establecimiento_slug}` : '/cuenta/pedidos', { replace: true });
       })
       .catch((cause: unknown) => {
         if (active) setError(errorMessage(cause));
@@ -37,7 +41,7 @@ export function TableJoinPage() {
     return () => {
       active = false;
     };
-  }, [navigate, slug, token]);
+  }, [navigate, ready, slug, token, user]);
 
   return (
     <AppShell tab="none">

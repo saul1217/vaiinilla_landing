@@ -150,4 +150,54 @@ describe('mesa compartida', () => {
     expect(await screen.findByText('Paga Luis')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Esto lo pago yo' })).not.toBeInTheDocument();
   });
+
+  it('invitado sin sesión: prellena su nombre y se une con la sesión de su alias', async () => {
+    // Sin token no se consulta; tras unirse el servidor ya devuelve la mesa.
+    apiMock.currentTable.mockResolvedValue(table());
+    apiMock.joinTable.mockResolvedValue(table());
+    const onEnsureToken = vi.fn().mockResolvedValue('guest-jwt');
+    const user = userEvent.setup();
+    render(
+      <SharedTableCard
+        accessToken={null}
+        qrToken="qr-1"
+        defaultAlias="Lupi"
+        legalNote={<p>Aviso legal</p>}
+        onEnsureToken={onEnsureToken}
+      />,
+    );
+
+    expect(await screen.findByRole('textbox', { name: /tu nombre en la mesa/i })).toHaveValue('Lupi');
+    expect(screen.getByText('Aviso legal')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /unirme a la mesa/i }));
+
+    expect(onEnsureToken).toHaveBeenCalledWith('Lupi');
+    expect(apiMock.joinTable).toHaveBeenCalledWith('guest-jwt', 'qr-1', 'Lupi');
+    expect(await screen.findByRole('article', { name: 'Mesa 3' })).toBeInTheDocument();
+  });
+
+  it('sesión vencida avisa para renovarla sin borrar la mesa', async () => {
+    const { VaiinillaApiError } = await import('../lib/api-error');
+    apiMock.currentTable.mockResolvedValue(
+      table({
+        grupos: [
+          { alias: 'Luis', soy_yo: false, total: '20.20', pagado: '0.00', pendiente: '20.20',
+            pedidos: [{ id: null, folio: 7, estado: 'listo', items_resumen: '1× Torta', total: '20.20', pendiente_cobro: true, creado_en: 'a', pagara: null, lo_pago_yo: false }] },
+        ],
+      }),
+    );
+    apiMock.claimTableOrder.mockRejectedValue(
+      new VaiinillaApiError(401, { code: 'UNAUTHENTICATED', message: 'x' }),
+    );
+    const onUnauthorized = vi.fn();
+    const user = userEvent.setup();
+    render(<SharedTableCard accessToken="jwt" qrToken={null} onUnauthorized={onUnauthorized} />);
+
+    expect(await screen.findByRole('article', { name: 'Mesa 3' })).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Esto lo pago yo' }));
+
+    await waitFor(() => expect(onUnauthorized).toHaveBeenCalled());
+    // La mesa que ya se veía no se borra por una operación fallida.
+    expect(screen.getByRole('article', { name: 'Mesa 3' })).toBeInTheDocument();
+  });
 });

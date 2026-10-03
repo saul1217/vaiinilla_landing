@@ -94,6 +94,9 @@ export function DiscoveryPage() {
         slug: resolved.establecimiento_slug,
         espacioId: resolved.espacio_id,
         nombre: resolved.espacio_nombre,
+        tipo: resolved.espacio_tipo ?? undefined,
+        // El código resolvió por igualdad: es el token del espacio y sirve para unirse.
+        qrToken: tableCode.trim(),
       });
       void navigate(`/e/${resolved.establecimiento_slug}`);
     } catch (cause) {

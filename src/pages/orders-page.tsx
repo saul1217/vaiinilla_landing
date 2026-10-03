@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Navigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { AlumnoPageHeader } from "../components/alumno-brand";
 import { AppShell } from "../components/app-shell";
 import { OrderTrackCard } from "../components/order-track-card";
@@ -26,6 +26,7 @@ import type {
 } from "../types/api";
 import { LoadingSkeleton } from "../components/loading-skeleton";
 import { peekResource, resourceKeys, storeResource } from "../lib/resource-cache";
+import { GuestOrdersPage } from "./guest-orders-page";
 
 const POLL_MS = 5000;
 
@@ -121,8 +122,7 @@ export function OrdersPage() {
   const selected = orders.find((order) => order.id === expandedId) ?? null;
   const pickupToken = usePickupQrToken(selected, context?.access_token ?? null);
 
-  if (ready && !user)
-    return <Navigate to="/cuenta?next=/cuenta/pedidos" replace />;
+  if (ready && !user) return <GuestOrdersPage />;
 
   const activeOrders = orders.filter((order) => isActiveOrder(order));
   const pastOrders = orders.filter((order) => !isActiveOrder(order));

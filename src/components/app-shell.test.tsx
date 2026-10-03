@@ -1,10 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShell } from './app-shell';
 
+const authState: { user: null | { email: string } } = {
+  user: { email: 'ana@example.test' },
+};
+
 vi.mock('../context/auth-context', () => ({
-  useAuth: () => ({ user: { email: 'ana@example.test' }, ready: true, configured: true, signOut: vi.fn() }),
+  useAuth: () => ({ user: authState.user, ready: true, configured: true, signOut: vi.fn() }),
 }));
 
 vi.mock('../context/cart-context', () => ({
@@ -18,6 +22,11 @@ vi.mock('../context/cart-context', () => ({
 }));
 
 describe('AppShell', () => {
+  beforeEach(() => {
+    authState.user = { email: 'ana@example.test' };
+    localStorage.clear();
+  });
+
   it('muestra la bottom nav de alumno y no la de marketing', () => {
     render(
       <MemoryRouter>
@@ -34,5 +43,33 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: /cartera/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /carrito/i })).toHaveAttribute('href', '/e/demo-a/carrito');
     expect(screen.queryByRole('link', { name: /abrir el panel/i })).not.toBeInTheDocument();
+  });
+
+  it('invitado con llave: Menú, Pedidos y Carrito, sin Cartera', () => {
+    authState.user = null;
+    localStorage.setItem('vaiinilla.buyer.guest.v1', JSON.stringify({ nombre: 'Lupi', llave: 'K'.repeat(43) }));
+    render(
+      <MemoryRouter>
+        <AppShell tab="orders">
+          <main>contenido</main>
+        </AppShell>
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: /menú/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /pedidos/i })).toHaveAttribute('href', '/cuenta/pedidos');
+    expect(screen.getByRole('link', { name: /carrito/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /cartera/i })).not.toBeInTheDocument();
+  });
+
+  it('sin llave, Pedidos invita a entrar', () => {
+    authState.user = null;
+    render(
+      <MemoryRouter>
+        <AppShell tab="menu">
+          <main>contenido</main>
+        </AppShell>
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: /pedidos/i })).toHaveAttribute('href', '/cuenta?next=/cuenta/pedidos');
   });
 });
