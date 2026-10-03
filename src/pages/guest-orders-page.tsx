@@ -1,0 +1,179 @@
+// Pedidos del invitado: la misma pestaña que un registrado, con su llave.
+// Sus pedidos activos en vivo (formato de /cuenta/pedidos), la mesa compartida del
+// espacio escaneado y sus enlaces guardados. Sin Cartera: el saldo es de cuentas;
+// abajo va la invitación opcional a crearla. Contrato: backend
+// docs/compra-sin-cuenta.md (tercera vuelta).
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { AlumnoPageHeader } from '../components/alumno-brand';
+import { AppShell } from '../components/app-shell';
+import { GuestLiveOrders } from '../components/guest-live-orders';
+import { GuestOrdersBanner } from '../components/guest-orders-banner';
+import { SharedTableCard } from '../components/shared-table-card';
+import { WaitingArcade } from '../arcade/waiting-arcade';
+import { useCart } from '../context/cart-context';
+import { api } from '../lib/api';
+import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
+import { readGuest } from '../lib/guest-session';
+import { lastPlaceSlug } from '../lib/last-place';
+import { formatAmount } from '../lib/money';
+import { openTab } from '../lib/order-labels';
+import { readSpace, rememberSpace } from '../lib/space-session';
+import { useGuestLiveOrders } from '../lib/use-guest-live-orders';
+import { useGuestSpaceToken } from '../lib/use-guest-space-token';
+import type { CatalogProduct, LegalVersions, PublicEstablishment } from '../types/api';
+
+export function GuestOrdersPage() {
+  const { cart } = useCart();
+  const slug = cart?.slug ?? lastPlaceSlug();
+  const [place, setPlace] = useState<PublicEstablishment | null>(null);
+  const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
+  const [legal, setLegal] = useState<LegalVersions | null>(null);
+  const live = useGuestLiveOrders(slug ?? '');
+  const mesa = useGuestSpaceToken(slug);
+  const guestName = readGuest()?.nombre ?? '';
+  const qrToken = slug ? (readSpace(slug)?.qrToken ?? null) : null;
+  const thumbImages = useMemo(() => catalogImageMap(catalogProducts), [catalogProducts]);
+  const liveTokens = useMemo(
+    () =>
+      new Set(
+        live.orders
+          .map((order) => order.seguimiento_token)
+          .filter((token): token is string => typeof token === 'string'),
+      ),
+    [live.orders],
+  );
+  const tab = openTab(live.orders);
+
+  useEffect(() => {
+    if (!slug) return;
+    let active = true;
+    void Promise.all([
+      api.getEstablishment(slug).catch(() => null),
+      api.getGuestCatalog(slug).catch(() => ({ productos: [] as CatalogProduct[] })),
+      api.getLegalVersions().catch(() => null),
+    ]).then(([nextPlace, catalog, nextLegal]) => {
+      if (!active) return;
+      if (nextPlace) setPlace(nextPlace);
+      setCatalogProducts(Array.isArray(catalog?.productos) ? catalog.productos : []);
+      setLegal(nextLegal);
+    });
+    return () => {
+      active = false;
+    };
+  }, [slug]);
+
+  // Al cerrar y reabrir la pestaña, la mesa sigue abierta en el servidor: se
+  // restaura el espacio para que el pedido se ligue igual (el QR ya no está).
+  useEffect(() => {
+    if (!slug || !mesa.token || readSpace(slug)) return;
+    let active = true;
+    void api
+      .currentTable(mesa.token)
+      .then((table) => {
+        if (!active || !table) return;
+        rememberSpace({
+          slug,
+          espacioId: table.espacio.id,
+          nombre: table.espacio.nombre,
+          tipo: table.espacio.tipo,
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [mesa.token, slug]);
+
+  if (!slug) {
+    return (
+      <AppShell tab="orders">
+        <main id="main-content" className="alumno-main">
+          <AlumnoPageHeader title="Pedidos" />
+          <div className="alumno-empty">
+            <img src="/vaini/cutout-frente.png" alt="" />
+            <p>Aún no hay pedidos en esta sesión.</p>
+            <Link className="alumno-btn alumno-btn--lime" to="/pedir">
+              Elegir lugar
+            </Link>
+          </div>
+          <GuestAccountInvite />
+        </main>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell tab="orders">
+      <main id="main-content" className="alumno-main">
+        <AlumnoPageHeader title="Mis pedidos" />
+        {place?.nombre ? <p className="alumno-place-name">{place.nombre}</p> : null}
+        {live.error ? <p className="alumno-error">{live.error}</p> : null}
+        <SharedTableCard
+          accessToken={mesa.token}
+          qrToken={qrToken}
+          defaultAlias={guestName || undefined}
+          legalNote={
+            legal ? (
+              <p className="alumno-muted alumno-guest-checkout__legal">
+                Al unirte aceptas los{' '}
+                <a href={legal.terminos_url} target="_blank" rel="noreferrer">
+                  Términos
+                </a>{' '}
+                y el{' '}
+                <a href={legal.privacidad_url} target="_blank" rel="noreferrer">
+                  Aviso de privacidad
+                </a>
+                .
+              </p>
+            ) : undefined
+          }
+          onEnsureToken={(alias) => mesa.ensure(alias)}
+          onUnauthorized={() => {
+            void mesa.ensure().catch(() => undefined);
+          }}
+        />
+        {tab ? (
+          <section className="alumno-tab" aria-label="Tu cuenta">
+            <div>
+              <strong>Tu cuenta</strong>
+              <span>
+                {tab.count === 1 ? '1 pedido' : `${tab.count} pedidos`} por pagar al final. Pide la
+                cuenta a tu mesero.
+              </span>
+            </div>
+            <span className="alumno-tab__total">{formatAmount(tab.total)}</span>
+          </section>
+        ) : null}
+        {live.orders.length === 0 ? (
+          <div className="alumno-empty">
+            <img src="/vaini/cutout-frente.png" alt="" />
+            <p>Aún no hay pedidos en esta sesión.</p>
+            <Link className="alumno-btn alumno-btn--lime" to={`/e/${slug}`}>
+              Ver menú
+            </Link>
+          </div>
+        ) : (
+          <>
+            <GuestLiveOrders
+              orders={live.orders}
+              imageFor={(order) => orderThumbUrl(order, thumbImages, catalogProducts)}
+            />
+            <WaitingArcade />
+          </>
+        )}
+        <GuestOrdersBanner slug={slug} excludeTokens={liveTokens} />
+        <GuestAccountInvite name={guestName || undefined} />
+      </main>
+    </AppShell>
+  );
+}
+
+function GuestAccountInvite({ name }: { name?: string }) {
+  return (
+    <p className="alumno-muted alumno-tracking__account">
+      {name ? `Pides como ${name} sin cuenta. ` : 'Pides sin cuenta. '}
+      ¿Quieres saldo e historial? <Link to="/cuenta">Crea tu cuenta</Link> (opcional).
+    </p>
+  );
+}

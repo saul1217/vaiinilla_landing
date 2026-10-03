@@ -3,6 +3,7 @@ import { Link, NavigationType, useLocation, useNavigationType } from 'react-rout
 import { applyAlumnoTheme, useTheme } from '../context/theme-context';
 import { useAuth } from '../context/auth-context';
 import { useCart } from '../context/cart-context';
+import { readGuest } from '../lib/guest-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { canAnimate, createSpring } from '../lib/spring';
 
@@ -128,14 +129,19 @@ export function BottomNav({ tab }: { tab: Exclude<AlumnoTab, 'none'> }) {
   const count = cart?.lines.reduce((sum, line) => sum + line.quantity, 0) ?? 0;
   const menuHref = placeSlug ? `/e/${placeSlug}` : '/pedir';
   const cartHref = placeSlug ? `/e/${placeSlug}/carrito` : '/pedir';
-  const ordersHref = user ? '/cuenta/pedidos' : `/cuenta?next=/cuenta/pedidos`;
+  // Con llave de invitado, la misma app que un registrado menos Cartera (el saldo
+  // es personal de cuenta): Menú, Pedidos y Carrito. Sin llave, Pedidos invita a entrar.
+  const guest = !user && readGuest() !== null;
+  const ordersHref = user || guest ? '/cuenta/pedidos' : `/cuenta?next=/cuenta/pedidos`;
   const walletHref = user ? '/cuenta/saldo' : `/cuenta?next=/cuenta/saldo`;
   const menuActive = tab === 'menu' || location.pathname === '/pedir';
 
   const items = [
     { id: 'menu' as const, href: menuHref, label: 'Menú', Icon: IconMenu, active: menuActive && tab !== 'cart' },
     { id: 'orders' as const, href: ordersHref, label: 'Pedidos', Icon: IconOrders, active: tab === 'orders' },
-    { id: 'wallet' as const, href: walletHref, label: 'Cartera', Icon: IconWallet, active: tab === 'wallet' },
+    ...(guest
+      ? []
+      : [{ id: 'wallet' as const, href: walletHref, label: 'Cartera', Icon: IconWallet, active: tab === 'wallet' }]),
     { id: 'cart' as const, href: cartHref, label: 'Carrito', Icon: IconCart, badge: count, active: tab === 'cart' },
   ];
 

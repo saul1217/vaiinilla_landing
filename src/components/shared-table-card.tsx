@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { api } from '../lib/api';
-import { errorMessage } from '../lib/api-error';
+import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { formatAmount } from '../lib/money';
 import { orderedGroups, tableOrderState } from '../lib/shared-table';
 import { spaceNoun } from '../lib/space-words';
@@ -9,46 +9,76 @@ import type { SharedTable } from '../types/api';
 const POLL_MS = 5000;
 const ALIAS_MAX = 30;
 
+function isUnauthorized(cause: unknown): boolean {
+  return cause instanceof VaiinillaApiError && cause.status === 401;
+}
+
 /**
  * La mesa compartida: quién está, los pedidos de cada quien y la cuenta de todos.
  * Sin mesa, invita a unirse con un alias si el cliente llegó por el QR de una mesa.
+ * Con `onEnsureToken`, un invitado sin sesión se une igual: el alias le da la sesión.
  */
-export function SharedTableCard({ accessToken, qrToken }: { accessToken: string | null; qrToken: string | null }) {
+export function SharedTableCard({
+  accessToken,
+  qrToken,
+  defaultAlias,
+  legalNote,
+  onEnsureToken,
+  onUnauthorized,
+}: {
+  accessToken: string | null;
+  qrToken: string | null;
+  defaultAlias?: string;
+  legalNote?: ReactNode;
+  onEnsureToken?: (alias: string) => Promise<string>;
+  onUnauthorized?: () => void;
+}) {
   const [table, setTable] = useState<SharedTable | null>(null);
-  const [loaded, setLoaded] = useState(false);
-  const [alias, setAlias] = useState('');
+  const [alias, setAlias] = useState(defaultAlias ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const refresh = useCallback(async () => {
-    if (!accessToken) return;
-    try {
-      setTable(await api.currentTable(accessToken));
-    } catch {
-      // Una consulta fallida no borra la mesa que ya se ve; la siguiente lo intenta otra vez.
-    } finally {
-      setLoaded(true);
-    }
-  }, [accessToken]);
+  // La sesión que el invitado aseguró al unirse; el padre la confirma con accessToken.
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const token = accessToken ?? sessionToken;
 
   useEffect(() => {
-    if (!accessToken) return;
+    if (!alias && defaultAlias) setAlias(defaultAlias);
+  }, [alias, defaultAlias]);
+
+  const refresh = useCallback(async () => {
+    if (!token) return;
+    try {
+      setTable(await api.currentTable(token));
+    } catch (cause) {
+      // Una consulta fallida no borra la mesa que ya se ve; la siguiente lo intenta otra vez.
+      if (isUnauthorized(cause)) onUnauthorized?.();
+    }
+  }, [onUnauthorized, token]);
+
+  useEffect(() => {
+    if (!token) return;
     void refresh();
     // Solo consulta mientras la pestaña está a la vista.
     const timer = window.setInterval(() => {
       if (document.visibilityState === 'visible') void refresh();
     }, POLL_MS);
     return () => window.clearInterval(timer);
-  }, [accessToken, refresh]);
+  }, [refresh, token]);
 
   async function join(event: FormEvent) {
     event.preventDefault();
-    if (!accessToken || !qrToken) return;
+    if (!qrToken) return;
+    const clean = alias.trim();
+    if (!clean) return;
     setBusy(true);
     setError(null);
     try {
-      setTable(await api.joinTable(accessToken, qrToken, alias.trim()));
+      const next = token ?? (onEnsureToken ? await onEnsureToken(clean) : null);
+      if (!next) return;
+      setSessionToken(next);
+      setTable(await api.joinTable(next, qrToken, clean));
     } catch (cause) {
+      if (isUnauthorized(cause)) onUnauthorized?.();
       setError(errorMessage(cause));
     } finally {
       setBusy(false);
@@ -56,12 +86,13 @@ export function SharedTableCard({ accessToken, qrToken }: { accessToken: string 
   }
 
   async function claim(folio: number, payIt: boolean) {
-    if (!accessToken) return;
+    if (!token) return;
     setBusy(true);
     setError(null);
     try {
-      setTable(await api.claimTableOrder(accessToken, folio, payIt));
+      setTable(await api.claimTableOrder(token, folio, payIt));
     } catch (cause) {
+      if (isUnauthorized(cause)) onUnauthorized?.();
       setError(errorMessage(cause));
     } finally {
       setBusy(false);
@@ -69,22 +100,21 @@ export function SharedTableCard({ accessToken, qrToken }: { accessToken: string 
   }
 
   async function leave() {
-    if (!accessToken) return;
+    if (!token) return;
     setBusy(true);
     try {
-      await api.leaveTable(accessToken);
+      await api.leaveTable(token);
       setTable(null);
     } catch (cause) {
+      if (isUnauthorized(cause)) onUnauthorized?.();
       setError(errorMessage(cause));
     } finally {
       setBusy(false);
     }
   }
 
-  if (!accessToken || !loaded) return null;
-
   if (!table) {
-    if (!qrToken) return null;
+    if (!qrToken || (!token && !onEnsureToken)) return null;
     return (
       <form className="alumno-track-card shared-table alumno-arrive" onSubmit={join}>
         <header className="alumno-track-card__top">
@@ -111,9 +141,12 @@ export function SharedTableCard({ accessToken, qrToken }: { accessToken: string 
         <button className="alumno-btn alumno-btn--lime" type="submit" disabled={busy || !alias.trim()}>
           Unirme a la mesa
         </button>
+        {legalNote}
       </form>
     );
   }
+
+  if (!token) return null;
 
   const noun = spaceNoun(table.espacio.tipo);
   const people = table.participantes.length;
