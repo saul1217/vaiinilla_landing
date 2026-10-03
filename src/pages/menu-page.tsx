@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { GuestLiveOrders } from '../components/guest-live-orders';
 import { GuestOrdersBanner } from '../components/guest-orders-banner';
 import { Link, useParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
@@ -8,10 +9,11 @@ import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import { defaultOptionIds, previewForProduct, validateSelections } from '../lib/cart';
-import { productImageUrl } from '../lib/catalog-images';
+import { catalogImageMap, orderThumbUrl, productImageUrl } from '../lib/catalog-images';
 import { initialsFrom } from '../lib/initials';
 import { rememberPlace } from '../lib/last-place';
 import { formatMoney } from '../lib/money';
+import { useGuestLiveOrders } from '../lib/use-guest-live-orders';
 import type { CatalogProduct, CatalogResponse, PublicEstablishment } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
 import { ProductSheet } from '../components/product-sheet';
@@ -34,6 +36,16 @@ export function MenuPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(() => !peekResource(resourceKeys.catalog(slug)));
   const [rentsCourts, setRentsCourts] = useState(false);
+  // Sin cuenta, los pedidos en vivo de este navegador (sobreviven cerrar la pestaña).
+  const guestLive = useGuestLiveOrders(slug);
+  const guestLiveTokens = useMemo(
+    () =>
+      new Set(
+        guestLive.orders.map((order) => order.seguimiento_token).filter((t): t is string => typeof t === 'string'),
+      ),
+    [guestLive.orders],
+  );
+  const thumbImages = useMemo(() => catalogImageMap(catalog?.productos ?? []), [catalog]);
 
   // "Rentar cancha" solo se ofrece si el negocio tiene al menos una cancha con precio por hora.
   useEffect(() => {
@@ -147,7 +159,11 @@ export function MenuPage() {
   return (
     <AppShell tab="menu">
       <main id="main-content" className="alumno-main alumno-main--catalog">
-        <GuestOrdersBanner slug={slug} />
+        <GuestLiveOrders
+          orders={guestLive.orders}
+          imageFor={(order) => orderThumbUrl(order, thumbImages, catalog?.productos ?? [])}
+        />
+        <GuestOrdersBanner slug={slug} excludeTokens={guestLiveTokens} />
         <div className="alumno-deskhead">
           <AlumnoPageHeader
             kicker="Menú de hoy"

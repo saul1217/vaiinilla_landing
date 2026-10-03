@@ -1,6 +1,7 @@
 // Seguimiento de un pedido sin cuenta. El enlace es lo único que tiene el invitado: no
 // hay correo ni Mis pedidos. Por eso arriba va, claro, "guarda este enlace", con copiar
-// y compartir. La tarjeta se termina de pagar aquí mismo.
+// y compartir. La tarjeta se termina de pagar aquí mismo. Abajo, el pedido completo
+// (estado, artículos, total y método de pago) igual que una cuenta registrada.
 // Contrato: vaiinilla_back docs/compra-sin-cuenta.md.
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
@@ -8,6 +9,7 @@ import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { OrderTrackCard } from '../components/order-track-card';
 import { StripePaymentPanel } from '../components/stripe-payment-panel';
+import { OrderTicketView } from './order-detail-page';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import { readGuestOrders, trackingUrl } from '../lib/guest-orders';
@@ -137,14 +139,17 @@ export function TrackingPage() {
         ) : null}
 
         {order ? (
-          <OrderTrackCard
-            order={order}
-            expanded
-            onToggle={() => undefined}
-            toggle={false}
-            completeLink={false}
-            pickupToken={order.qr_token}
-          />
+          <div className="alumno-detail-split">
+            <OrderTrackCard
+              order={order}
+              expanded
+              onToggle={() => undefined}
+              toggle={false}
+              completeLink={false}
+              pickupToken={order.qr_token}
+            />
+            <OrderTicketView order={order} />
+          </div>
         ) : null}
 
         <p className="alumno-muted alumno-tracking__account">
