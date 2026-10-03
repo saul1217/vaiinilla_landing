@@ -57,6 +57,8 @@ export interface ApiErrorEnvelope {
 export interface PublicEstablishment {
   /** Tarjeta: solo si el dueño la activó en su panel. Ausente (backend viejo) = no se ofrece. */
   acepta_tarjeta?: boolean;
+  /** Permite pagar al final: sin sesión, lo dice la ficha pública. */
+  permite_pago_al_final?: boolean;
   id: string;
   nombre: string;
   slug: string;
@@ -261,6 +263,10 @@ export interface OrderDetail {
   /** Por qué Cocina o Caja cancelaron el pedido. */
   motivo_cancelacion?: string | null;
   /** Va a la cuenta del espacio (pagar al final). */
+  /** Compra sin cuenta: el pedido es de un invitado. */
+  invitado?: boolean;
+  /** Solo al crear un pedido de invitado: el token de su enlace de seguimiento. */
+  seguimiento_token?: string;
   pago_diferido?: boolean;
   /** Va a la cuenta y aún no se cobra. */
   pago_pendiente?: boolean;
@@ -393,3 +399,12 @@ export interface SharedTable {
   totales: SharedTableAmounts;
   mi_parte: SharedTableAmounts;
 }
+
+/** Sesión de invitado (compra sin cuenta): una sesión de cliente más su identidad. */
+export interface GuestSessionResponse extends ClientContextResponse {
+  /** `llave` solo llega en el alta: es lo único que identifica al invitado. */
+  invitado: { nombre: string; llave?: string };
+}
+
+/** Pedido visto por su enlace de seguimiento; `qr_token` llega ya pagado. */
+export type TrackedOrder = OrderDetail & { qr_token: string | null };

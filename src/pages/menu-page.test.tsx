@@ -85,7 +85,27 @@ describe("MenuPage", () => {
     addLine.mockReset();
   });
 
-  it("sin sesión no agrega: pide login o comprar sin cuenta", async () => {
+  it("sin sesión agrega directo: cualquiera puede pedir sin cuenta", async () => {
+    const user = userEvent.setup();
+    renderMenu();
+    await user.click(
+      await screen.findByRole("button", { name: /chocolate frío/i }),
+    );
+    await user.click(screen.getByRole("button", { name: /agregar/i }));
+    expect(addLine).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByRole("link", { name: /crea tu cuenta/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("donde se pide con matrícula, sin sesión pide crear cuenta", async () => {
+    vi.mocked(api).getEstablishment.mockResolvedValueOnce({
+      id: "1",
+      nombre: "Escuela",
+      slug: "demo-a",
+      identificador_cliente_etiqueta: "Matrícula",
+      identificador_cliente_obligatorio: true,
+    });
     const user = userEvent.setup();
     renderMenu();
     await user.click(
@@ -95,16 +115,8 @@ describe("MenuPage", () => {
       screen.queryByRole("button", { name: /agregar/i }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /iniciar sesión para comprar/i }),
+      screen.getByRole("link", { name: /crea tu cuenta para pedir aquí/i }),
     ).toHaveAttribute("href", "/cuenta?next=/e/demo-a");
-    expect(
-      screen.getByRole("button", { name: /comprar sin cuenta/i }),
-    ).toBeInTheDocument();
-    expect(document.querySelector(".alumno-psheet__photo")).toBeNull();
-    expect(document.querySelector(".alumno-psheet__vaini")).toHaveAttribute(
-      "src",
-      "/vaini/cutout-frente.png",
-    );
   });
 
   it("con foto de catálogo abre el rail y conserva un fallback hasta que cargue", async () => {
@@ -143,20 +155,6 @@ describe("MenuPage", () => {
     fireEvent.load(photo!);
     expect(photo).toHaveClass("is-ready");
     expect(document.querySelector(".alumno-psheet__vaini")).toBeNull();
-  });
-
-  it("comprar sin cuenta mete el producto al carrito", async () => {
-    const user = userEvent.setup();
-    renderMenu();
-    await user.click(
-      await screen.findByRole("button", { name: /chocolate frío/i }),
-    );
-    await user.click(
-      screen.getByRole("button", { name: /comprar sin cuenta/i }),
-    );
-    expect(addLine).toHaveBeenCalledTimes(1);
-    expect(sessionStorage.getItem("vaiinilla.buyer.guest-buy.v1")).toBe("1");
-    expect(await screen.findByText("Carrito")).toBeInTheDocument();
   });
 
   it("ofrece Rentar cancha solo si hay una cancha con precio por hora", async () => {

@@ -21,10 +21,11 @@ import { deliveredAtLabel, spaceNoun } from '../lib/space-words';
 import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
 import { isStripeCheckoutEnabled, offersCardPayment, STRIPE_UNAVAILABLE_COPY } from '../lib/stripe-public';
 import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '../lib/stripe-session';
-import { isGuestBuy } from '../lib/guest-explore';
-import { GUEST_CHECKOUT_UNAVAILABLE } from '../lib/guest-checkout';
+import { guestSession, readGuest } from '../lib/guest-session';
+import { rememberGuestOrder, trackingPath } from '../lib/guest-orders';
 import type { SpaceSession } from '../lib/space-session';
 import type {
+  LegalVersions,
   CartLine,
   CatalogProduct,
   OperationalStatus,
@@ -70,13 +71,29 @@ export function CartPage() {
   useEffect(() => {
     if (rentalSpace && !scanned) setForHere(true);
   }, [rentalSpace, scanned]);
-  const tabAllowed = canPayAtEnd(status, forHere && Boolean(space));
+  // Sin cuenta no hay sesión para leer el estado operativo: lo dice la ficha pública.
+  const tabAllowed = user
+    ? canPayAtEnd(status, forHere && Boolean(space))
+    : forHere && Boolean(space) && place?.permite_pago_al_final === true;
   const useTab = payAtEnd && tabAllowed && payment === 'efectivo';
   const stripeEnabled = isStripeCheckoutEnabled();
   const cardOffered = offersCardPayment(place);
   const pendingStripeOrderId = readPendingStripeOrderId();
-  const guestBuy = isGuestBuy();
-  const canCheckout = Boolean(user) || guestBuy;
+  // Compra sin cuenta: quien no entra pide con solo su nombre, salvo donde el negocio
+  // exige un identificador (matrícula), que necesita cuenta.
+  const guest = !user;
+  const guestBlocked = guest && place?.identificador_cliente_obligatorio === true;
+  const canCheckout = !guestBlocked;
+  const [guestName, setGuestName] = useState(() => readGuest()?.nombre ?? '');
+  const guestNameValid = guestName.trim().length >= 2;
+  const [legal, setLegal] = useState<LegalVersions | null>(null);
+  useEffect(() => {
+    if (!guest || legal) return;
+    void Promise.resolve()
+      .then(() => api.getLegalVersions())
+      .then((next) => setLegal(next ?? null))
+      .catch(() => undefined);
+  }, [guest, legal]);
 
   const lines = useMemo(() => (cart?.slug === slug ? cart.lines : []), [cart, slug]);
   const leftoverPeek = useMemo(
@@ -212,13 +229,16 @@ export function CartPage() {
   async function confirm() {
     setError(null);
     if (!place || lines.length === 0 || !total) return;
-    if (!user) {
-      if (!guestBuy) {
-        void navigate(`/cuenta?next=/e/${slug}/carrito`);
-        return;
-      }
-      setSheetOpen(false);
-      setError(GUEST_CHECKOUT_UNAVAILABLE);
+    if (guestBlocked) {
+      void navigate(`/cuenta?next=/e/${slug}/carrito`);
+      return;
+    }
+    if (guest && !guestNameValid) {
+      setError('Escribe tu nombre para que sepan de quién es el pedido.');
+      return;
+    }
+    if (guest && payment === 'saldo') {
+      setError('El saldo Vaiinilla es de tu cuenta: paga en caja o con tarjeta.');
       return;
     }
     if (payment === 'stripe' && !stripeEnabled) {
@@ -233,8 +253,9 @@ export function CartPage() {
     setSubmitting(true);
     try {
       const storedId = clientId || sessionStorage.getItem(`vaiinilla.buyer.client-id.${slug}`) || undefined;
-      const session =
-        context?.contexto.establecimiento_id === place.id
+      const session = !user
+        ? await guestSession(slug, guestName)
+        : context?.contexto.establecimiento_id === place.id
           ? context
           : await openClientSession(user, place, storedId);
       const operational = await api.getOperationalStatus(session.access_token);
@@ -270,7 +291,8 @@ export function CartPage() {
       if (payment === 'stripe') {
         const stripeSession = stripeSessionFromCreatedOrder(order);
         rememberStripeCheckoutSession(order.id, stripeSession);
-        savePendingStripeOrderId(order.id);
+        // Sin cuenta el pago se termina en el enlace de seguimiento, no en Mis pedidos.
+        if (user) savePendingStripeOrderId(order.id);
       }
       reset();
       // La mesa se conserva para pedir otra ronda sin volver a escanear.
@@ -278,6 +300,18 @@ export function CartPage() {
       forgetIdempotencyKey(fingerprint);
       // La tarjeta se cobra en la pantalla del pedido (espera la confirmación de Stripe);
       // el resto va a Mis pedidos, con el arcade y el pedido nuevo ya abierto.
+      if (!user && order.seguimiento_token) {
+        // Sin cuenta, el enlace es lo único que tiene: se guarda aquí y se muestra.
+        rememberGuestOrder({
+          token: order.seguimiento_token,
+          slug,
+          folio: order.folio,
+          placeName: place.nombre,
+          createdAt: Date.now(),
+        });
+        void navigate(`${trackingPath(order.seguimiento_token)}?nuevo=1`);
+        return;
+      }
       void navigate(payment === 'stripe' ? `/cuenta/pedidos/${order.id}` : `/cuenta/pedidos?nuevo=${order.id}`);
     } catch (cause) {
       if (cause instanceof VaiinillaApiError && cause.code === 'IDENTITY_NOT_REGISTERED') {
@@ -334,7 +368,7 @@ export function CartPage() {
                 ? operationalVerificationPending
                   ? 'Verificando…'
                   : 'Pagar'
-                : 'Entra para pagar'
+                : 'Crea tu cuenta para pedir aquí'
             }
             payDisabled={
               !ready ||
@@ -362,6 +396,24 @@ export function CartPage() {
                 </button>
               </div>
               <p className="alumno-paysheet__total">Total {total ? formatMoney(total) : '—'}</p>
+              {guest ? (
+                <div className="alumno-guest-checkout">
+                  <label className="alumno-field">
+                    <span>Tu nombre</span>
+                    <input
+                      value={guestName}
+                      onChange={(event) => setGuestName(event.target.value)}
+                      autoComplete="given-name"
+                      maxLength={60}
+                      placeholder="Para que sepan de quién es el pedido"
+                    />
+                  </label>
+                  <p className="alumno-muted alumno-guest-checkout__note">
+                    Sin cuenta: solo tu nombre. Al confirmar te damos un enlace para seguir tu pedido.{' '}
+                    <Link to={`/cuenta?next=/e/${slug}/carrito`}>¿Tienes cuenta? Entra</Link>
+                  </p>
+                </div>
+              ) : null}
               {tabAllowed && space ? (
                 <PayOption
                   selected={useTab}
@@ -406,7 +458,8 @@ export function CartPage() {
                 />
               ) : null}
               {/* Oculta hasta que el dueño active la tarjeta en su panel (el flujo queda intacto). */}
-              {cardOffered ? (
+              {/* Sin cuenta, por ahora solo caja o pagar al final: la tarjeta aún no termina de cobrar. */}
+              {cardOffered && !guest ? (
               <PayOption
                 selected={payment === 'stripe'}
                 icon="card"
@@ -423,10 +476,22 @@ export function CartPage() {
               ) : null}
               {error ? <p className="alumno-error">{error}</p> : null}
               {insufficientBalance ? <p className="alumno-error">No tienes saldo suficiente para este pedido.</p> : null}
+              {guest ? (
+                <p className="alumno-muted alumno-guest-checkout__legal">
+                  Al pedir aceptas los{' '}
+                  <a href={legal?.terminos_url ?? '/terminos'} target="_blank" rel="noreferrer">Términos</a> y el{' '}
+                  <a href={legal?.privacidad_url ?? '/privacidad'} target="_blank" rel="noreferrer">Aviso de privacidad</a>.
+                </p>
+              ) : null}
               <button
                 className="alumno-btn alumno-btn--lime alumno-paysheet__cta"
                 type="button"
-                disabled={submitting || Boolean(insufficientBalance) || Boolean(pendingStripeOrderId)}
+                disabled={
+                  submitting ||
+                  Boolean(insufficientBalance) ||
+                  Boolean(pendingStripeOrderId) ||
+                  (guest && !guestNameValid)
+                }
                 onClick={() => void confirm()}
               >
                 {submitting ? 'Confirmando…' : `Continuar con ${useTab ? 'pagar al final' : PAY_LABEL[payment]}`}
