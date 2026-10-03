@@ -13,7 +13,7 @@ import { errorMessage } from '../lib/api-error';
 import { readGuestOrders, trackingUrl } from '../lib/guest-orders';
 import { isActiveOrder } from '../lib/order-labels';
 import { isStripePaymentConfirmedByBackend } from '../lib/stripe-status';
-import { takeStripeCheckoutSession } from '../lib/stripe-session';
+import { clearStripeCheckoutSession, peekStripeCheckoutSession } from '../lib/stripe-session';
 import type { StripePaymentSession, TrackedOrder } from '../types/api';
 
 const POLL_MS = 5000;
@@ -40,9 +40,18 @@ export function TrackingPage() {
         if (!active) return;
         setOrder(next);
         setError(null);
-        setStripeSession((current) => current ?? takeStripeCheckoutSession(next.id));
-        if (isStripePaymentConfirmedByBackend(next)) setPaying(false);
-        if (isActiveOrder(next)) timer = window.setTimeout(() => void load(), paying ? POLL_PAYING_MS : POLL_MS);
+        // Se lee sin consumir: React puede montar dos veces y la sesión se perdería.
+        const session = peekStripeCheckoutSession(next.id);
+        if (session) setStripeSession(session);
+        if (isStripePaymentConfirmedByBackend(next)) {
+          setPaying(false);
+          clearStripeCheckoutSession(next.id);
+        }
+        // Con el formulario de tarjeta a la vista no se recarga: lo vaciaría a media captura.
+        const formOpen =
+          next.metodo_pago === 'stripe' && next.estado === 'por_cobrar' && Boolean(session) && !paying;
+        if (isActiveOrder(next) && !formOpen)
+          timer = window.setTimeout(() => void load(), paying ? POLL_PAYING_MS : POLL_MS);
       } catch (cause) {
         if (!active) return;
         setError(errorMessage(cause));
