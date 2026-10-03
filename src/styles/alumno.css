@@ -7065,3 +7065,35 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   animation: alumno-arrive 520ms cubic-bezier(.16, 1, .3, 1) both;
 }
 @media (prefers-reduced-motion: reduce) { .alumno-track-card__rejected { animation: none; } }
+
+/* Compra sin cuenta: checkout, seguimiento y "tu pedido en curso". */
+.alumno-guest-checkout { display: grid; gap: 8px; margin: 4px 0 14px; }
+.alumno-guest-checkout .alumno-field { display: grid; gap: 6px; }
+.alumno-guest-checkout .alumno-field span { font-weight: 600; }
+.alumno-guest-checkout input {
+  width: 100%; border: 1px solid var(--line, rgba(0, 0, 0, 0.14)); border-radius: 14px;
+  padding: 13px 14px; font: inherit; background: var(--surface, #fff); color: inherit;
+}
+.alumno-guest-checkout__note, .alumno-guest-checkout__legal { font-size: 0.8125rem; margin: 0; }
+.alumno-guest-checkout__legal { margin: 10px 0 0; }
+.alumno-guest-checkout__legal a, .alumno-guest-checkout__note a { color: inherit; text-decoration: underline; }
+.alumno-tracking { display: grid; gap: 16px; }
+.alumno-tracking__keep {
+  display: grid; gap: 10px; border-radius: 22px; padding: 18px;
+  background: var(--lime-light, #d7ef8b); color: #1b1b19;
+}
+.alumno-tracking__keep strong { font-size: 1.125rem; }
+.alumno-tracking__keep p { margin: 0; line-height: 1.45; }
+.alumno-tracking__link {
+  display: block; overflow-wrap: anywhere; font-size: 0.8125rem; padding: 10px 12px;
+  border-radius: 12px; background: rgba(255, 255, 255, 0.6);
+}
+.alumno-tracking__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.alumno-tracking__account { font-size: 0.875rem; text-align: center; }
+.alumno-guest-orders { display: grid; gap: 8px; margin: 12px 0; }
+.alumno-guest-orders__item {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  border-radius: 18px; padding: 14px 16px; background: var(--lime-light, #d7ef8b); color: #1b1b19; text-decoration: none;
+}
+.alumno-guest-orders__item span:first-child { display: grid; }
+.alumno-guest-orders__item small { opacity: 0.75; }

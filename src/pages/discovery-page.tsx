@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { GuestOrdersBanner } from '../components/guest-orders-banner';
 import { useNavigate } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
@@ -213,6 +214,7 @@ export function DiscoveryPage() {
   return (
     <AppShell tab="menu">
       <main id="main-content" className="alumno-main alumno-main--discover">
+        <GuestOrdersBanner />
         <div className="alumno-deskhead">
           <AlumnoPageHeader
             kicker="Hoy"

@@ -21,7 +21,6 @@ export interface ProductSheetProps {
   onClearGroup: (groupId: number) => void;
   onQuantityChange: (delta: number) => void;
   onAdd: () => boolean;
-  onBuyWithoutAccount: () => void;
   onClosed: () => void;
 }
 
@@ -144,14 +143,10 @@ export function ProductSheet(props: ProductSheetProps) {
                 Agregar · <span key={price} className="alumno-ticker">{price}</span>
               </button>
             ) : (
-              <>
-                <Link className="alumno-psheet__add" to={props.loginHref}>
-                  Iniciar sesión para comprar
-                </Link>
-                <button className="alumno-link alumno-psheet__guest" type="button" onClick={props.onBuyWithoutAccount}>
-                  Comprar sin cuenta
-                </button>
-              </>
+              // Solo donde se pide con matrícula: ahí sin cuenta no se puede pedir.
+              <Link className="alumno-psheet__add" to={props.loginHref}>
+                Crea tu cuenta para pedir aquí
+              </Link>
             )}
             {error ? <p className="alumno-psheet__error" role="alert">{error}</p> : null}
           </div>

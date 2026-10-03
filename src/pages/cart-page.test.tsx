@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
-import { GUEST_CHECKOUT_UNAVAILABLE } from '../lib/guest-checkout';
 import { QA_PHOTO_TACOS } from '../lib/qa-catalog-photos';
 import { CartPage } from './cart-page';
 
@@ -27,6 +26,9 @@ const {
   openClientSession,
   listOrders,
   listReservations,
+  createGuest,
+  renewGuest,
+  getLegalVersions,
 } = vi.hoisted(() => ({
   getEstablishment: vi.fn(),
   getOperationalStatus: vi.fn(),
@@ -37,6 +39,9 @@ const {
   openClientSession: vi.fn(),
   listOrders: vi.fn(),
   listReservations: vi.fn(),
+  createGuest: vi.fn(),
+  renewGuest: vi.fn(),
+  getLegalVersions: vi.fn(),
 }));
 
 vi.mock('../lib/api', () => ({
@@ -49,6 +54,9 @@ vi.mock('../lib/api', () => ({
     retryStripePayment: (...args: unknown[]) => retryStripePayment(...args) as Promise<unknown>,
     listOrders: (...args: unknown[]) => listOrders(...args) as Promise<unknown>,
     listReservations: (...args: unknown[]) => listReservations(...args) as Promise<unknown>,
+    createGuest: (...args: unknown[]) => createGuest(...args) as Promise<unknown>,
+    renewGuest: (...args: unknown[]) => renewGuest(...args) as Promise<unknown>,
+    getLegalVersions: (...args: unknown[]) => getLegalVersions(...args) as Promise<unknown>,
     apiUrl: '/api/v1',
   },
 }));
@@ -109,6 +117,7 @@ function renderCart() {
           <Route path="/cuenta" element={<p>Cuenta login</p>} />
           <Route path="/cuenta/pedidos/:id" element={<p>Pedido creado</p>} />
           <Route path="/cuenta/pedidos" element={<OrdersLanding />} />
+          <Route path="/seguimiento/:token" element={<p>Seguimiento del pedido</p>} />
         </Routes>
       </ThemeProvider>
     </MemoryRouter>,
@@ -138,6 +147,9 @@ describe('CartPage', () => {
     });
     getMyWallet.mockResolvedValue(null);
     listReservations.mockResolvedValue([]);
+    getLegalVersions.mockResolvedValue({ terminos_version: 't-1', terminos_url: '/terminos', privacidad_version: 'p-1', privacidad_url: '/privacidad' });
+    createGuest.mockReset();
+    renewGuest.mockReset();
     openClientSession.mockResolvedValue({
       access_token: 'jwt',
       contexto: { establecimiento_id: '1' },
@@ -556,35 +568,89 @@ describe('CartPage', () => {
     expect(screen.getByRole('link', { name: /ver todo el menú/i })).toHaveAttribute('href', '/e/demo-a');
   });
 
-  it('invitado con comprar-sin-cuenta no va a /cuenta al pagar', async () => {
-    authState.user = null;
-    sessionStorage.setItem('vaiinilla.buyer.guest-buy.v1', '1');
-    sessionStorage.setItem('vaiinilla.buyer.guest-explore.v1', '1');
-    cartState.cart = {
-      slug: 'demo-a',
-      establishmentName: 'Cafetería Demo A',
-      lines: [
-        {
-          productId: 1,
-          quantity: 1,
-          optionIds: [],
-          productName: 'Chocolate',
-          unitPreview: '120.00',
-          imageUrl: null,
-        },
-      ],
+  describe('compra sin cuenta', () => {
+    const SEGUIMIENTO = 'S'.repeat(43);
+    const guestSessionResponse = {
+      access_token: 'guest-jwt',
+      expires_in: 900,
+      contexto: { establecimiento_id: '1', usuario_id: 'u-inv', membresia_id: 'm-inv', rol: 'cliente' },
+      invitado: { nombre: 'Lupita', llave: 'L'.repeat(43) },
     };
-    const user = userEvent.setup();
-    renderCart();
-    await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
-    expect(screen.queryByText(/cuenta login/i)).not.toBeInTheDocument();
-    expect(await screen.findByRole('heading', { name: /cómo quieres pagar/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /saldo/i })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('radio', { name: /pago con stripe/i }));
-    await user.click(screen.getByRole('button', { name: /^continuar con/i }));
-    expect(await screen.findByText(GUEST_CHECKOUT_UNAVAILABLE)).toBeInTheDocument();
-    expect(screen.queryByText(/cuenta login/i)).not.toBeInTheDocument();
-    expect(createOrder).not.toHaveBeenCalled();
+
+    beforeEach(() => {
+      authState.user = null;
+      localStorage.clear();
+      getLegalVersions.mockResolvedValue({ terminos_version: 't-1', terminos_url: 'https://vaiinilla.app/terminos', privacidad_version: 'p-1', privacidad_url: 'https://vaiinilla.app/privacidad' });
+      createGuest.mockResolvedValue(guestSessionResponse);
+      cartState.cart = {
+        slug: 'demo-a',
+        establishmentName: 'Cafetería Demo A',
+        lines: [{ productId: 1, quantity: 2, optionIds: [], productName: 'Chocolate', unitPreview: '120.00', unitCounter: '120.00', imageUrl: null }],
+      };
+    });
+
+    it('pide solo el nombre, no ofrece saldo y lleva al enlace de seguimiento (efectivo)', async () => {
+      createOrder.mockResolvedValue({ id: 'ord-g', folio: 21, estado: 'por_cobrar', metodo_pago: 'efectivo', destino: 'para_llevar', qr_token: 'qr', espacio: null, total: '240.00', items: [], invitado: true, seguimiento_token: SEGUIMIENTO });
+      const user = userEvent.setup();
+      renderCart();
+
+      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      expect(screen.queryByText(/cuenta login/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole('radio', { name: /saldo vaiinilla/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Términos' })).toHaveAttribute('href', 'https://vaiinilla.app/terminos');
+      expect(screen.getByRole('link', { name: 'Aviso de privacidad' })).toBeInTheDocument();
+      // Sin nombre no continúa.
+      expect(screen.getByRole('button', { name: /^continuar con/i })).toBeDisabled();
+
+      await user.type(screen.getByLabelText('Tu nombre'), 'Lupita');
+      await user.click(screen.getByRole('radio', { name: /pago en caja/i }));
+      await user.click(screen.getByRole('button', { name: /^continuar con/i }));
+
+      expect(await screen.findByText('Seguimiento del pedido')).toBeInTheDocument();
+      expect(createGuest).toHaveBeenCalledWith({ slug: 'demo-a', nombre: 'Lupita', terminosVersion: 't-1', privacidadVersion: 'p-1' });
+      expect(createOrder).toHaveBeenCalledWith('guest-jwt', expect.objectContaining({ metodo_pago: 'efectivo' }), expect.any(String));
+      // El enlace y la llave quedan en este navegador.
+      const saved = JSON.parse(localStorage.getItem('vaiinilla.buyer.guest-orders.v1') ?? '[]') as Array<{ token: string; folio: number }>;
+      expect(saved[0]).toMatchObject({ token: SEGUIMIENTO, folio: 21 });
+      expect(JSON.parse(localStorage.getItem('vaiinilla.buyer.guest.v1') ?? '{}')).toMatchObject({ nombre: 'Lupita' });
+    });
+
+    it('con tarjeta, el cobro se termina en el enlace de seguimiento (no en Mis pedidos)', async () => {
+      createOrder.mockResolvedValue({
+        id: 'ord-gs', folio: 22, estado: 'por_cobrar', metodo_pago: 'stripe', destino: 'para_llevar', qr_token: 'qr', espacio: null, total: '247.20', items: [], invitado: true, seguimiento_token: SEGUIMIENTO,
+        pago: { payment_attempt_id: 'a1', payment_intent_id: 'pi_1', stripe_account_id: 'acct_1', payment_status: 'pendiente_pago', client_secret: 'pi_1_secret_x', publishable_key: 'pk_test_1' },
+      });
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      await user.type(screen.getByLabelText('Tu nombre'), 'Lupita');
+      await user.click(screen.getByRole('radio', { name: /pago con stripe/i }));
+      await user.click(screen.getByRole('button', { name: /^continuar con/i }));
+
+      expect(await screen.findByText('Seguimiento del pedido')).toBeInTheDocument();
+      expect(createOrder).toHaveBeenCalledWith('guest-jwt', expect.objectContaining({ metodo_pago: 'stripe' }), expect.any(String));
+      expect(localStorage.getItem('vaiinilla.buyer.stripe-pending-order.v1')).toBeNull();
+    });
+
+    it('con la llave guardada renueva la sesión en vez de dar de alta otra', async () => {
+      localStorage.setItem('vaiinilla.buyer.guest.v1', JSON.stringify({ nombre: 'Lupita', llave: 'L'.repeat(43) }));
+      renewGuest.mockResolvedValue({ ...guestSessionResponse, invitado: { nombre: 'Lupita' } });
+      createOrder.mockResolvedValue({ id: 'ord-g2', folio: 23, estado: 'por_cobrar', metodo_pago: 'efectivo', destino: 'para_llevar', qr_token: 'qr', espacio: null, total: '240.00', items: [], invitado: true, seguimiento_token: SEGUIMIENTO });
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      expect(screen.getByLabelText('Tu nombre')).toHaveValue('Lupita');
+      await user.click(screen.getByRole('button', { name: /^continuar con/i }));
+      expect(await screen.findByText('Seguimiento del pedido')).toBeInTheDocument();
+      expect(renewGuest).toHaveBeenCalledWith('demo-a', 'L'.repeat(43));
+      expect(createGuest).not.toHaveBeenCalled();
+    });
+
+    it('donde se pide con matrícula, sin cuenta no se puede pedir', async () => {
+      getEstablishment.mockResolvedValue({ id: '1', nombre: 'Escuela', slug: 'demo-a', identificador_cliente_etiqueta: 'Matrícula', identificador_cliente_obligatorio: true, acepta_tarjeta: true });
+      renderCart();
+      expect(await screen.findByRole('button', { name: 'Crea tu cuenta para pedir aquí' })).toBeInTheDocument();
+    });
   });
 
   describe('pagar al final', () => {

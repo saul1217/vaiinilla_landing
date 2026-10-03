@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { TrackingPage } from '../pages/tracking-page';
 import { AccountPage } from '../pages/account-page';
 import { CartPage } from '../pages/cart-page';
 import { ReservationsPage } from '../pages/reservations-page';
@@ -34,6 +35,7 @@ export function AppRouter() {
         <Route path="/e/:slug/canchas" element={<ReservationsPage />} />
         <Route path="/e/:slug/m/:token" element={<TableJoinPage />} />
         <Route path="/:slug/m/:token" element={<TableJoinPage />} />
+        <Route path="/seguimiento/:token" element={<TrackingPage />} />
         <Route path="/cuenta" element={<AccountPage />} />
         <Route path="/cuenta/pedidos" element={<OrdersPage />} />
         <Route path="/cuenta/pedidos/:id" element={<OrderDetailPage />} />
