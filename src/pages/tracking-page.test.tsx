@@ -69,6 +69,33 @@ describe('seguimiento sin cuenta', () => {
     expect(await screen.findByText('Estado listo · QR v1.qr')).toBeInTheDocument();
   });
 
+  it('muestra el pedido completo: artículos, total y método de pago', async () => {
+    getTracking.mockResolvedValue(
+      order({
+        estado: 'preparando',
+        metodo_pago: 'efectivo',
+        total: '120.00',
+        items: [
+          {
+            id: 1,
+            producto_id: 9,
+            nombre_producto: 'Torta',
+            estacion_preparacion: 'cocina',
+            cantidad: 2,
+            precio_digital_unitario: '60.00',
+            subtotal: '120.00',
+            opciones: [],
+          },
+        ],
+      }),
+    );
+    renderAt(`/seguimiento/${TOKEN}`);
+    // Ticket completo, igual que una cuenta registrada: artículos, total y pago.
+    expect(await screen.findByText(/2 × Torta/)).toBeInTheDocument();
+    expect(screen.getAllByText('$120').length).toBeGreaterThan(0);
+    expect(screen.getByText(/Efectivo al recoger/)).toBeInTheDocument();
+  });
+
   it('con tarjeta sin pagar en el dispositivo donde se pidió, muestra el formulario de tarjeta', async () => {
     const { rememberStripeCheckoutSession } = await import('../lib/stripe-session');
     rememberStripeCheckoutSession('o1', { payment_attempt_id: 'a1' } as never);
