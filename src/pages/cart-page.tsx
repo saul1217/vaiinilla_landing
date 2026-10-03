@@ -458,7 +458,8 @@ export function CartPage() {
                 />
               ) : null}
               {/* Oculta hasta que el dueño active la tarjeta en su panel (el flujo queda intacto). */}
-              {cardOffered ? (
+              {/* Sin cuenta, por ahora solo caja o pagar al final: la tarjeta aún no termina de cobrar. */}
+              {cardOffered && !guest ? (
               <PayOption
                 selected={payment === 'stripe'}
                 icon="card"

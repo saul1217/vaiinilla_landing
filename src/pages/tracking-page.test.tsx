@@ -69,6 +69,16 @@ describe('seguimiento sin cuenta', () => {
     expect(await screen.findByText('Estado listo · QR v1.qr')).toBeInTheDocument();
   });
 
+  it('con tarjeta sin pagar en el dispositivo donde se pidió, muestra el formulario de tarjeta', async () => {
+    const { rememberStripeCheckoutSession } = await import('../lib/stripe-session');
+    rememberStripeCheckoutSession('o1', { payment_attempt_id: 'a1' } as never);
+    getTracking.mockResolvedValue(order({ metodo_pago: 'stripe' }));
+    renderAt(`/seguimiento/${TOKEN}`);
+    expect(await screen.findByText('Formulario de tarjeta')).toBeInTheDocument();
+    const { clearStripeCheckoutSession } = await import('../lib/stripe-session');
+    clearStripeCheckoutSession();
+  });
+
   it('con tarjeta sin pagar y sin la sesión de pago en este dispositivo, dice dónde terminarlo', async () => {
     getTracking.mockResolvedValue(order({ metodo_pago: 'stripe' }));
     renderAt(`/seguimiento/${TOKEN}`);

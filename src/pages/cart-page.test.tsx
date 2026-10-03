@@ -615,21 +615,12 @@ describe('CartPage', () => {
       expect(JSON.parse(localStorage.getItem('vaiinilla.buyer.guest.v1') ?? '{}')).toMatchObject({ nombre: 'Lupita' });
     });
 
-    it('con tarjeta, el cobro se termina en el enlace de seguimiento (no en Mis pedidos)', async () => {
-      createOrder.mockResolvedValue({
-        id: 'ord-gs', folio: 22, estado: 'por_cobrar', metodo_pago: 'stripe', destino: 'para_llevar', qr_token: 'qr', espacio: null, total: '247.20', items: [], invitado: true, seguimiento_token: SEGUIMIENTO,
-        pago: { payment_attempt_id: 'a1', payment_intent_id: 'pi_1', stripe_account_id: 'acct_1', payment_status: 'pendiente_pago', client_secret: 'pi_1_secret_x', publishable_key: 'pk_test_1' },
-      });
+    it('sin cuenta no ofrece tarjeta por ahora (solo caja o pagar al final)', async () => {
       const user = userEvent.setup();
       renderCart();
       await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
-      await user.type(screen.getByLabelText('Tu nombre'), 'Lupita');
-      await user.click(screen.getByRole('radio', { name: /pago con stripe/i }));
-      await user.click(screen.getByRole('button', { name: /^continuar con/i }));
-
-      expect(await screen.findByText('Seguimiento del pedido')).toBeInTheDocument();
-      expect(createOrder).toHaveBeenCalledWith('guest-jwt', expect.objectContaining({ metodo_pago: 'stripe' }), expect.any(String));
-      expect(localStorage.getItem('vaiinilla.buyer.stripe-pending-order.v1')).toBeNull();
+      expect(screen.queryByRole('radio', { name: /pago con stripe/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /pago en caja/i })).toBeInTheDocument();
     });
 
     it('con la llave guardada renueva la sesión en vez de dar de alta otra', async () => {
