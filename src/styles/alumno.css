@@ -7097,3 +7097,8 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 }
 .alumno-guest-orders__item span:first-child { display: grid; }
 .alumno-guest-orders__item small { opacity: 0.75; }
+.alumno-guest-live { display: grid; gap: 8px; margin: 12px 0; }
+.alumno-guest-live__item { display: grid; gap: 0; }
+.alumno-guest-live__link {
+  justify-self: end; font-size: 0.875rem; color: inherit; padding: 6px 4px;
+}

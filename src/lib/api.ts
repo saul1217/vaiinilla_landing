@@ -161,6 +161,17 @@ export const api = {
     return (await request<TrackedOrder>(`/publico/seguimiento/${encodeURIComponent(token)}`, { cache: 'no-store' })).data;
   },
 
+  /** "Tus pedidos" sin cuenta: en vivo con la llave del navegador, formato de cuenta. */
+  async listGuestOrders(slug: string, llave: string): Promise<TrackedOrder[]> {
+    return (
+      await request<TrackedOrder[]>('/publico/invitados/pedidos', {
+        method: 'POST',
+        body: { establecimiento_slug: slug, llave },
+        cache: 'no-store',
+      })
+    ).data;
+  },
+
   async getLegalVersions(): Promise<LegalVersions> {
     return (await request<LegalVersions>('/publico/legal/vigente')).data;
   },
