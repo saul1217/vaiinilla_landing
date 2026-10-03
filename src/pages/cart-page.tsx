@@ -301,7 +301,7 @@ export function CartPage() {
       // La tarjeta se cobra en la pantalla del pedido (espera la confirmación de Stripe);
       // el resto va a Mis pedidos, con el arcade y el pedido nuevo ya abierto.
       if (!user && order.seguimiento_token) {
-        // Sin cuenta, el enlace es lo único que tiene: se guarda aquí y se muestra.
+        // Sin cuenta, el enlace se guarda como respaldo; el pedido vive en Mis pedidos.
         rememberGuestOrder({
           token: order.seguimiento_token,
           slug,
@@ -309,7 +309,13 @@ export function CartPage() {
           placeName: place.nombre,
           createdAt: Date.now(),
         });
-        void navigate(`${trackingPath(order.seguimiento_token)}?nuevo=1`);
+        // Solo la tarjeta se termina en el seguimiento; lo demás abre Mis pedidos igual
+        // que un registrado (el pedido se expande por su token).
+        if (payment === 'stripe') {
+          void navigate(`${trackingPath(order.seguimiento_token)}?nuevo=1`);
+          return;
+        }
+        void navigate(`/cuenta/pedidos?nuevo=${order.seguimiento_token}`);
         return;
       }
       void navigate(payment === 'stripe' ? `/cuenta/pedidos/${order.id}` : `/cuenta/pedidos?nuevo=${order.id}`);

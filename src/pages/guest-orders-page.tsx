@@ -4,7 +4,7 @@
 // abajo va la invitación opcional a crearla. Contrato: backend
 // docs/compra-sin-cuenta.md (tercera vuelta).
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { GuestLiveOrders } from '../components/guest-live-orders';
@@ -25,6 +25,9 @@ import type { CatalogProduct, LegalVersions, PublicEstablishment } from '../type
 
 export function GuestOrdersPage() {
   const { cart } = useCart();
+  const [search] = useSearchParams();
+  // Recién pedido: el carrito llega con ?nuevo=<token> y ese pedido ya se ve abierto.
+  const nuevoToken = search.get('nuevo');
   const slug = cart?.slug ?? lastPlaceSlug();
   const [place, setPlace] = useState<PublicEstablishment | null>(null);
   const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
@@ -158,6 +161,7 @@ export function GuestOrdersPage() {
             <GuestLiveOrders
               orders={live.orders}
               imageFor={(order) => orderThumbUrl(order, thumbImages, catalogProducts)}
+              initialExpandedToken={nuevoToken}
             />
             <WaitingArcade />
           </>
