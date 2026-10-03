@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -73,5 +73,32 @@ describe('DiscoveryPage', () => {
     expect(await screen.findByRole('heading', { name: /dónde comes hoy/i })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /tu lugar, a tu ritmo/i })).not.toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: /^navegación$/i })).toBeInTheDocument();
+  });
+
+  it('el código de mesa guarda el token para unirse después', async () => {
+    resolveSpace.mockResolvedValue({
+      establecimiento_slug: 'demo-a',
+      espacio_id: 3,
+      espacio_nombre: 'Mesa 3',
+      espacio_tipo: 'mesa',
+    });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <DiscoveryPage />
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('radio', { name: /cafetería demo a/i }));
+    await user.click(screen.getByRole('button', { name: /entrar al menú/i }));
+    await user.click(screen.getByRole('button', { name: /usar código/i }));
+    for (const digit of ['1', '2', '3', '4', '5', '6', '7', '8']) {
+      await user.click(screen.getByRole('button', { name: digit }));
+    }
+    await user.click(screen.getByRole('button', { name: /listo/i }));
+
+    await waitFor(() => expect(resolveSpace).toHaveBeenCalledWith('12345678', 'demo-a'));
+    const raw = sessionStorage.getItem('vaiinilla.buyer.space.v1');
+    expect(raw).toContain('"qrToken":"12345678"');
+    expect(raw).toContain('"espacioId":3');
   });
 });

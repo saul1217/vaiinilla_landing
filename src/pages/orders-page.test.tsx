@@ -34,6 +34,12 @@ const {
   getGuestCatalog,
   listAccesses,
   openClientSession,
+  listGuestOrders,
+  currentTable,
+  renewGuest,
+  createGuest,
+  getLegalVersions,
+  joinTable,
 } = vi.hoisted(() => ({
   getEstablishment: vi.fn(),
   listOrders: vi.fn(),
@@ -41,6 +47,12 @@ const {
   getGuestCatalog: vi.fn(),
   listAccesses: vi.fn(),
   openClientSession: vi.fn(),
+  listGuestOrders: vi.fn(),
+  currentTable: vi.fn(),
+  renewGuest: vi.fn(),
+  createGuest: vi.fn(),
+  getLegalVersions: vi.fn(),
+  joinTable: vi.fn(),
 }));
 
 vi.mock("../lib/api", () => ({
@@ -53,6 +65,15 @@ vi.mock("../lib/api", () => ({
       getGuestCatalog(...args) as Promise<unknown>,
     listAccesses: (...args: unknown[]) =>
       listAccesses(...args) as Promise<unknown>,
+    listGuestOrders: (...args: unknown[]) =>
+      listGuestOrders(...args) as Promise<unknown>,
+    currentTable: (...args: unknown[]) =>
+      currentTable(...args) as Promise<unknown>,
+    renewGuest: (...args: unknown[]) => renewGuest(...args) as Promise<unknown>,
+    createGuest: (...args: unknown[]) => createGuest(...args) as Promise<unknown>,
+    getLegalVersions: (...args: unknown[]) =>
+      getLegalVersions(...args) as Promise<unknown>,
+    joinTable: (...args: unknown[]) => joinTable(...args) as Promise<unknown>,
   },
 }));
 
@@ -164,8 +185,19 @@ describe("OrdersPage", () => {
       access_token: "jwt",
       contexto: { establecimiento_id: "e1" },
     });
+    getLegalVersions.mockResolvedValue({
+      terminos_version: "t",
+      terminos_url: "https://example.test/terminos",
+      privacidad_version: "p",
+      privacidad_url: "https://example.test/privacidad",
+    });
     listOrders.mockClear();
     listAccesses.mockClear();
+    listGuestOrders.mockReset();
+    currentTable.mockReset();
+    renewGuest.mockReset();
+    createGuest.mockReset();
+    joinTable.mockReset();
   });
 
   afterEach(() => {
@@ -221,10 +253,24 @@ describe("OrdersPage", () => {
     ).toBeTruthy();
   });
 
-  it("invitado nunca llama GET /pedidos", async () => {
+  it("invitado ve sus pedidos sin llamar GET /pedidos", async () => {
     authState.user = null;
+    localStorage.setItem(
+      "vaiinilla.buyer.guest.v1",
+      JSON.stringify({ nombre: "Lupi", llave: "K".repeat(43) }),
+    );
+    renewGuest.mockResolvedValue({
+      access_token: "guest-jwt",
+      token_type: "Bearer",
+      expires_in: 900,
+      contexto: { usuario_id: "u1", membresia_id: "m1", establecimiento_id: "e1", rol: "cliente" },
+      invitado: { nombre: "Lupi" },
+    });
+    listGuestOrders.mockResolvedValue([]);
+    currentTable.mockResolvedValue(null);
     renderOrders();
-    expect(await screen.findByText(/cuenta splash/i)).toBeInTheDocument();
+    expect(await screen.findByText("Mis pedidos")).toBeInTheDocument();
+    expect(screen.getByText(/pides como lupi sin cuenta/i)).toBeInTheDocument();
     expect(listOrders).not.toHaveBeenCalled();
   });
 
