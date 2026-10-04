@@ -15,6 +15,7 @@ import {
 import { enableGuestBuy, enableGuestExplore } from '../lib/guest-explore';
 import { unpublishedLegalTestingEnabled } from '../lib/legal';
 import { staffAccesses } from '../lib/staff-access';
+import { markVerificationSent } from '../lib/verification';
 import type { LegalVersions, SessionAccess } from '../types/api';
 import { AlumnoBack, AlumnoLockup, AlumnoLogo } from './alumno-brand';
 import { SignupSteps } from './signup-steps';
@@ -203,6 +204,14 @@ export function AuthScreens({
     onFlowChange?.(false);
   }
 
+  /** El correo de verificación se dispara al crear la cuenta (una sola vez por alta). */
+  async function sendVerificationEmail(target: User): Promise<void> {
+    if (target.emailVerified) return;
+    const token = await firebaseIdToken(target);
+    await api.sendVerificationEmail(token);
+    markVerificationSent();
+  }
+
   async function onPassword(event: FormEvent) {
     event.preventDefault();
     setError(null);
@@ -213,7 +222,11 @@ export function AuthScreens({
         if (!legalesOk || !legal) {
           throw new Error('Acepta los términos y la privacidad vigentes para crear tu cuenta.');
         }
-        await finish(await createPasswordAccount(email, password, nombre));
+        const created = await createPasswordAccount(email, password, nombre);
+        await finish(created);
+        // Sin verificar no se puede pedir: el correo se manda aquí; si falla,
+        // /cuenta lo reenvía (la cuenta ya quedó creada).
+        await sendVerificationEmail(created).catch(() => undefined);
         return;
       }
       onFlowChange?.(true);
@@ -278,6 +291,7 @@ export function AuthScreens({
     try {
       onFlowChange?.(true);
       await finish(pendingGoogleUser, pendingGoogleUser.displayName ?? nombre);
+      await sendVerificationEmail(pendingGoogleUser).catch(() => undefined);
     } catch (cause) {
       onFlowChange?.(false);
       setError(firebaseAuthMessage(cause));

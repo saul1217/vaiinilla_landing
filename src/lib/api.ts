@@ -176,6 +176,16 @@ export const api = {
     return (await request<LegalVersions>('/publico/legal/vigente')).data;
   },
 
+  /** Correo de verificación: el backend genera el enlace y lo envía (202 aunque sea asíncrono). */
+  async sendVerificationEmail(firebaseToken: string): Promise<{ aceptado: boolean }> {
+    return (
+      await request<{ aceptado: boolean }>('/publico/correos/verificacion', {
+        method: 'POST',
+        token: firebaseToken,
+      })
+    ).data;
+  },
+
   async registerIdentity(
     firebaseToken: string,
     input: IdentityRegistrationInput,

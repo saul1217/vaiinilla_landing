@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,7 +7,15 @@ import { AccountPage } from './account-page';
 
 const passwordSignIn = vi.fn();
 const completeTotpSignIn = vi.fn();
-const authState: { user: { email: string; displayName: string } | null } = { user: null };
+const sendVerificationEmail = vi.fn();
+const authState: {
+  user: {
+    email: string;
+    displayName: string;
+    emailVerified?: boolean;
+    reload?: () => Promise<void>;
+  } | null;
+} = { user: null };
 
 vi.mock('../lib/api', () => ({
   api: {
@@ -32,6 +40,7 @@ vi.mock('../lib/api', () => ({
       movimientos: [],
     }),
     deleteIdentity: vi.fn(),
+    sendVerificationEmail: (...args: unknown[]) => sendVerificationEmail(...args) as Promise<unknown>,
   },
 }));
 
@@ -165,5 +174,81 @@ describe('AccountPage', () => {
     expect(screen.getByRole('button', { name: /continuar con google/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /iniciar sesión/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /comprar sin cuenta/i })).toBeInTheDocument();
+  });
+
+  it('verificado no muestra aviso de correo', async () => {
+    authState.user = { email: 'ana@example.test', displayName: 'Ana', emailVerified: true };
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <AccountPage />
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole('heading', { name: /configuración/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /reenviar correo/i })).not.toBeInTheDocument();
+  });
+
+  it('sin verificar avisa y reenvía el correo', async () => {
+    authState.user = { email: 'nuevo@example.test', displayName: 'Nuevo', emailVerified: false };
+    sendVerificationEmail.mockReset().mockResolvedValue({ aceptado: true });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <AccountPage />
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/tu correo aún no está verificado/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /reenviar correo/i }));
+
+    expect(sendVerificationEmail).toHaveBeenCalledWith('token');
+    expect(await screen.findByText(/listo, revisa tu bandeja/i)).toBeInTheDocument();
+  });
+
+  it('si el correo se mandó al crear la cuenta, lo confirma', async () => {
+    authState.user = { email: 'nuevo@example.test', displayName: 'Nuevo', emailVerified: false };
+    sessionStorage.setItem('vaiinilla.buyer.verification-sent.v1', '1');
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <AccountPage />
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/te enviamos un enlace para verificar tu correo/i)).toBeInTheDocument();
+    sessionStorage.clear();
+  });
+
+  it('ya lo verifiqué esconde el aviso cuando Firebase lo confirma', async () => {
+    const holder: { verified: boolean } = { verified: false };
+    authState.user = {
+      email: 'nuevo@example.test',
+      displayName: 'Nuevo',
+      get emailVerified() {
+        return holder.verified;
+      },
+      reload: () => {
+        holder.verified = true;
+        return Promise.resolve();
+      },
+    };
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <AccountPage />
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('button', { name: /ya lo verifiqué/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /ya lo verifiqué/i }));
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /ya lo verifiqué/i })).not.toBeInTheDocument();
+    });
   });
 });
