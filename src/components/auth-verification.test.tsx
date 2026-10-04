@@ -53,7 +53,7 @@ function renderAuth() {
 }
 
 async function signup(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole('button', { name: /^crear cuenta$/i }));
+  await user.click(screen.getByRole('button', { name: 'Crear cuenta con correo' }));
   await user.type(await screen.findByLabelText('Correo'), 'nuevo@example.test');
   await user.click(screen.getByRole('button', { name: 'Continuar' }));
   await user.type(await screen.findByLabelText('Contraseña'), 'password1');

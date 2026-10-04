@@ -1,13 +1,19 @@
 import { defineConfig } from 'vitest/config';
+import type { ProxyOptions } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 const developmentApiOrigin = 'https://vaiinillaback-development.up.railway.app';
-const apiProxy = {
+const apiProxy: Record<string, ProxyOptions> = {
   '/api': {
     target: developmentApiOrigin,
     changeOrigin: true,
     secure: true,
+    // El navegador manda Origin: localhost en los POST y el CORS de development no lo
+    // permite; para el backend la petición viene del proxy, así que se quita.
+    configure: (proxy) => {
+      proxy.on('proxyReq', (proxyReq) => proxyReq.removeHeader('origin'));
+    },
   },
 };
 
