@@ -14,6 +14,7 @@ const authState: {
     displayName: string;
     emailVerified?: boolean;
     reload?: () => Promise<void>;
+    getIdToken?: (force?: boolean) => Promise<string>;
   } | null;
 } = { user: null };
 
@@ -190,7 +191,12 @@ describe('AccountPage', () => {
   });
 
   it('sin verificar avisa y reenvía el correo', async () => {
-    authState.user = { email: 'nuevo@example.test', displayName: 'Nuevo', emailVerified: false };
+    authState.user = {
+      email: 'nuevo@example.test',
+      displayName: 'Nuevo',
+      emailVerified: false,
+      reload: () => Promise.resolve(),
+    };
     sendVerificationEmail.mockReset().mockResolvedValue({ aceptado: true });
     const user = userEvent.setup();
     render(
@@ -209,7 +215,12 @@ describe('AccountPage', () => {
   });
 
   it('si el correo se mandó al crear la cuenta, lo confirma', async () => {
-    authState.user = { email: 'nuevo@example.test', displayName: 'Nuevo', emailVerified: false };
+    authState.user = {
+      email: 'nuevo@example.test',
+      displayName: 'Nuevo',
+      emailVerified: false,
+      reload: () => Promise.resolve(),
+    };
     sessionStorage.setItem('vaiinilla.buyer.verification-sent.v1', '1');
     render(
       <MemoryRouter>
@@ -223,18 +234,21 @@ describe('AccountPage', () => {
     sessionStorage.clear();
   });
 
-  it('ya lo verifiqué esconde el aviso cuando Firebase lo confirma', async () => {
+  it('al volver verifica solo y esconde el aviso si ya confirmó', async () => {
     const holder: { verified: boolean } = { verified: false };
+    let allowFlip = false;
+    const reload = vi.fn(() => {
+      if (allowFlip) holder.verified = true;
+      return Promise.resolve();
+    });
     authState.user = {
       email: 'nuevo@example.test',
       displayName: 'Nuevo',
       get emailVerified() {
         return holder.verified;
       },
-      reload: () => {
-        holder.verified = true;
-        return Promise.resolve();
-      },
+      reload,
+      getIdToken: () => Promise.resolve('fresh-token'),
     };
     const user = userEvent.setup();
     render(
@@ -246,6 +260,9 @@ describe('AccountPage', () => {
     );
 
     expect(await screen.findByRole('button', { name: /ya lo verifiqué/i })).toBeInTheDocument();
+    // Al entrar pregunta solo (sigue sin verificar) y el aviso se queda.
+    expect(reload).toHaveBeenCalled();
+    allowFlip = true;
     await user.click(screen.getByRole('button', { name: /ya lo verifiqué/i }));
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: /ya lo verifiqué/i })).not.toBeInTheDocument();
