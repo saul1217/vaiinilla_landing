@@ -19,7 +19,7 @@ export function TableCodeSheet({
   onConfirm: () => void;
   onClosed: () => void;
 }) {
-  const slots = Math.min(MAX_DIGITS, Math.max(3, code.length + 1));
+  const slots = Math.min(MAX_DIGITS, Math.max(4, code.length + 1));
   const press = (digit: string) => {
     if (code.length < MAX_DIGITS) onChange(code + digit);
   };
@@ -39,7 +39,7 @@ export function TableCodeSheet({
             <span aria-hidden="true" />
           </div>
           <h2 id="table-code-title">Ingresa el código de mesa</h2>
-          <p className="alumno-codesheet__lead">Escribe los dígitos que aparecen en el tent card de tu mesa.</p>
+          <p className="alumno-codesheet__lead">Escribe los 4 dígitos que aparecen junto al QR de tu mesa.</p>
 
           <div className="alumno-codesheet__slots" role="status" aria-label={code ? `Código ${code.split('').join(' ')}` : 'Código vacío'}>
             {Array.from({ length: slots }, (_, index) => {

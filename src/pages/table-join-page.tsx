@@ -3,11 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { useAuth } from '../context/auth-context';
-import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
-import { readGuest } from '../lib/guest-session';
-import { rememberPlace } from '../lib/last-place';
-import { rememberSpace } from '../lib/space-session';
+import { enterSpace } from '../lib/space-entry';
 import { openingTitle, spaceNoun } from '../lib/space-words';
 
 export function TableJoinPage() {
@@ -20,24 +17,11 @@ export function TableJoinPage() {
   useEffect(() => {
     if (!ready) return;
     let active = true;
-    void api
-      .resolveSpace(token, slug)
-      .then((resolved) => {
+    void enterSpace(token, Boolean(user), slug)
+      .then(({ destination, tipo }) => {
         if (!active) return;
-        rememberPlace(resolved.establecimiento_slug);
-        rememberSpace({
-          slug: resolved.establecimiento_slug,
-          espacioId: resolved.espacio_id,
-          nombre: resolved.espacio_nombre,
-          tipo: resolved.espacio_tipo ?? undefined,
-          qrToken: token,
-        });
-        setKind(resolved.espacio_tipo);
-        // Primero se elige cómo pedir (cuenta, Google o sin cuenta) y luego el menú de la
-        // mesa. Quien ya entró, o ya eligió comprar sin cuenta antes, va directo al menú.
-        const menu = `/e/${resolved.establecimiento_slug}`;
-        const chooseAccess = !user && readGuest() === null;
-        void navigate(chooseAccess ? `/cuenta?next=${encodeURIComponent(menu)}` : menu, { replace: true });
+        setKind(tipo);
+        void navigate(destination, { replace: true });
       })
       .catch((cause: unknown) => {
         if (active) setError(errorMessage(cause));
