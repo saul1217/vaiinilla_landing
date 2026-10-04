@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VaiinillaApiError } from '../lib/api-error';
 import { TableJoinPage } from './table-join-page';
@@ -22,13 +22,18 @@ vi.mock('../context/cart-context', () => ({
   useCart: () => ({ cart: null }),
 }));
 
+function AccessProbe() {
+  const location = useLocation();
+  return <p>Acceso {location.search}</p>;
+}
+
 function renderJoin() {
   return render(
     <MemoryRouter initialEntries={['/demo-a/m/qr-1']}>
       <Routes>
         <Route path="/:slug/m/:token" element={<TableJoinPage />} />
         <Route path="/e/:slug" element={<p>Menú demo-a</p>} />
-        <Route path="/cuenta/pedidos" element={<p>Pedidos invitado</p>} />
+        <Route path="/cuenta" element={<AccessProbe />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -73,7 +78,7 @@ describe('TableJoinPage', () => {
     expect(await screen.findByText(/no está disponible/i)).toBeInTheDocument();
   });
 
-  it('invitado con QR válido entra a su pestaña Pedidos', async () => {
+  it('sin cuenta, el QR primero ofrece entrar o pedir sin cuenta y luego lleva al menú', async () => {
     authState.user = null;
     resolveSpace.mockResolvedValue({
       establecimiento_slug: 'demo-a',
@@ -82,7 +87,21 @@ describe('TableJoinPage', () => {
       espacio_tipo: 'mesa',
     });
     renderJoin();
-    expect(await screen.findByText('Pedidos invitado')).toBeInTheDocument();
+    expect(await screen.findByText('Acceso ?next=%2Fe%2Fdemo-a')).toBeInTheDocument();
+    expect(localStorage.getItem('vaiinilla.buyer.space.v1')).toContain('"espacioId":3');
+  });
+
+  it('quien ya pidió sin cuenta antes no vuelve a elegir: va directo al menú', async () => {
+    authState.user = null;
+    localStorage.setItem('vaiinilla.buyer.guest.v1', JSON.stringify({ nombre: 'Ana', llave: 'llave-1' }));
+    resolveSpace.mockResolvedValue({
+      establecimiento_slug: 'demo-a',
+      espacio_id: 3,
+      espacio_nombre: 'Mesa 3',
+      espacio_tipo: 'mesa',
+    });
+    renderJoin();
+    expect(await screen.findByText('Menú demo-a')).toBeInTheDocument();
   });
 
   it('registrado con QR válido sigue al menú', async () => {

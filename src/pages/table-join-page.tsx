@@ -5,6 +5,7 @@ import { AppShell } from '../components/app-shell';
 import { useAuth } from '../context/auth-context';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
+import { readGuest } from '../lib/guest-session';
 import { rememberPlace } from '../lib/last-place';
 import { rememberSpace } from '../lib/space-session';
 import { openingTitle, spaceNoun } from '../lib/space-words';
@@ -32,8 +33,11 @@ export function TableJoinPage() {
           qrToken: token,
         });
         setKind(resolved.espacio_tipo);
-        // El invitado se une a la mesa en su pestaña Pedidos; el registrado sigue al menú.
-        void navigate(user ? `/e/${resolved.establecimiento_slug}` : '/cuenta/pedidos', { replace: true });
+        // Primero se elige cómo pedir (cuenta, Google o sin cuenta) y luego el menú de la
+        // mesa. Quien ya entró, o ya eligió comprar sin cuenta antes, va directo al menú.
+        const menu = `/e/${resolved.establecimiento_slug}`;
+        const chooseAccess = !user && readGuest() === null;
+        void navigate(chooseAccess ? `/cuenta?next=${encodeURIComponent(menu)}` : menu, { replace: true });
       })
       .catch((cause: unknown) => {
         if (active) setError(errorMessage(cause));
