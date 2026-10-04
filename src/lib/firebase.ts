@@ -150,19 +150,29 @@ export function signsInWithGoogle(user: User): boolean {
   return user.providerData.some((provider) => provider.providerId === 'google.com');
 }
 
+export type DeletionReauthResult = { token: string } | { mfaResolver: MultiFactorResolver };
+
 /**
  * Borrar la cuenta exige un inicio de sesión reciente (el backend acepta 5 minutos):
  * se confirma la identidad otra vez y se devuelve un token nuevo con ese auth_time.
+ * Con segundo factor se devuelve el resolver para pedir el código TOTP.
  */
-export async function reauthenticateForDeletion(user: User, password: string): Promise<string> {
-  if (signsInWithGoogle(user)) {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account', login_hint: user.email ?? '' });
-    await reauthenticateWithPopup(user, provider);
-  } else {
-    await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email ?? '', password));
+export async function reauthenticateForDeletion(user: User, password: string): Promise<DeletionReauthResult> {
+  try {
+    if (signsInWithGoogle(user)) {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account', login_hint: user.email ?? '' });
+      await reauthenticateWithPopup(user, provider);
+    } else {
+      await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email ?? '', password));
+    }
+  } catch (error) {
+    if (error instanceof FirebaseError && error.code === 'auth/multi-factor-auth-required') {
+      return { mfaResolver: getMultiFactorResolver(getConfiguredAuth(), error as MultiFactorError) };
+    }
+    throw error;
   }
-  return user.getIdToken(true);
+  return { token: await user.getIdToken(true) };
 }
 
 export async function sendPasswordReset(email: string): Promise<void> {

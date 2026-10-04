@@ -14,6 +14,7 @@ import {
 } from '../lib/firebase';
 import { enableGuestBuy, enableGuestExplore } from '../lib/guest-explore';
 import { unpublishedLegalTestingEnabled } from '../lib/legal';
+import { entryAfterAccess } from '../lib/space-session';
 import { staffAccesses } from '../lib/staff-access';
 import { markVerificationSent } from '../lib/verification';
 import type { LegalVersions, SessionAccess } from '../types/api';
@@ -203,7 +204,7 @@ export function AuthScreens({
 
   /** Termina el flujo y lleva a la vista de cliente. */
   function leave() {
-    void navigate(next);
+    void navigate(entryAfterAccess(next));
     onFlowChange?.(false);
   }
 
@@ -349,7 +350,7 @@ export function AuthScreens({
   function buyAsGuest() {
     enableGuestBuy();
     onExplored?.();
-    void navigate(next);
+    void navigate(entryAfterAccess(next));
   }
 
   function goBack() {

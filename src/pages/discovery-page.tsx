@@ -8,7 +8,7 @@ import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import { enableGuestExplore } from '../lib/guest-explore';
 import { lastPlaceSlug, rememberPlace } from '../lib/last-place';
-import { rememberSpace } from '../lib/space-session';
+import { rememberSpace, scannedSpace } from '../lib/space-session';
 import type { PublicEstablishment } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
 import { TableCodeSheet } from '../components/table-code-sheet';
@@ -39,6 +39,15 @@ export function DiscoveryPage() {
     if (!ready) return;
     enableGuestExplore();
   }, [ready]);
+
+  // La app instalada arranca en /pedir. Si el teléfono la cerró a medio pedido (por ejemplo
+  // al ir a Google a entrar), quien escaneó una mesa vuelve a su menú en lugar de elegir lugar.
+  // Solo al abrir la app: si llegó aquí navegando (Cambiar tienda) se queda en el selector.
+  useEffect(() => {
+    const openedHere = (window.history.state as { idx?: number } | null)?.idx === 0;
+    const space = scannedSpace();
+    if (openedHere && space) void navigate(`/e/${space.slug}`, { replace: true });
+  }, [navigate]);
 
   useEffect(() => {
     let active = true;

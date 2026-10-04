@@ -1,9 +1,8 @@
 // Buyer side of "Llamar al mesero". Contract: vaiinilla_back docs/llamadas-mesa.md.
 // The waiter (staff) side of this feature moved to vaiinilla-web.
-import { api } from './api';
+import { request as apiRequest } from './api';
 import { VaiinillaApiError } from './api-error';
-import { createIdempotencyKey } from './idempotency';
-import type { ApiEnvelope, ApiErrorEnvelope, OrderDetail } from '../types/api';
+import type { OrderDetail } from '../types/api';
 
 export type CallReason = 'atencion' | 'utensilios' | 'problema' | 'cuenta';
 export type CallStatus = 'pendiente' | 'en_camino' | 'atendida' | 'cancelada' | 'expirada';
@@ -45,25 +44,7 @@ export function canCallWaiter(order: OrderDetail) {
 }
 
 async function request<T>(path: string, init: { token: string; method?: string; body?: unknown; idempotent?: boolean }): Promise<T> {
-  const headers = new Headers({ Accept: 'application/json', Authorization: `Bearer ${init.token}` });
-  if (init.body !== undefined) headers.set('Content-Type', 'application/json');
-  if (init.idempotent) headers.set('Idempotency-Key', createIdempotencyKey());
-  let response: Response;
-  try {
-    response = await fetch(`${api.apiUrl}${path}`, {
-      method: init.method ?? 'GET',
-      headers,
-      body: init.body === undefined ? undefined : JSON.stringify(init.body),
-    });
-  } catch {
-    throw new VaiinillaApiError(0, { code: 'BACKEND_UNAVAILABLE', message: 'Sin conexión con el servidor. Reintentando…' });
-  }
-  const payload = (await response.json().catch(() => null)) as ApiEnvelope<T> | ApiErrorEnvelope | null;
-  if (!response.ok || !payload || payload.error) {
-    const error = payload?.error ?? { code: 'HTTP_ERROR', message: 'El servidor no devolvió una respuesta válida.' };
-    throw new VaiinillaApiError(response.status, error, Number(response.headers.get('Retry-After')) || undefined);
-  }
-  return payload.data;
+  return (await apiRequest<T>(path, init)).data;
 }
 
 const missing = (error: unknown) => error instanceof VaiinillaApiError && (error.status === 404 || error.status === 405 || error.status === 501);

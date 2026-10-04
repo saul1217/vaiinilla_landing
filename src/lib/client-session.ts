@@ -119,7 +119,8 @@ export async function resolveClientSession(input: {
 
   const firebaseToken = await firebaseIdToken(input.user);
   const accesses = await api.listAccesses(firebaseToken);
-  const access = pickClientAccess(accesses);
+  // Si la ficha del lugar falló un momento, se sigue prefiriendo ese lugar: nunca otro al azar.
+  const access = pickClientAccess(accesses, preferredSlug);
   if (!access) return null;
   const place = await api.getEstablishment(access.establecimiento.slug);
   const context = await input.openClientSession(input.user, place);

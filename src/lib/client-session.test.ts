@@ -207,4 +207,27 @@ describe('resolveClientSession', () => {
     expect(resolved?.slug).toBe('renasci-bar');
     expect(localStorage.getItem('vaiinilla.buyer.last-place.v1')).toBe('renasci-bar');
   });
+  it('si la ficha del lugar actual falla un momento, abre ese lugar y no el primero de la cuenta', async () => {
+    const otherAccess: SessionAccess = {
+      ...clientAccess,
+      membresia_id: 'm0',
+      establecimiento: { id: 'e0', nombre: 'Otro', slug: 'otro-lugar' },
+    };
+    listAccesses.mockResolvedValue([otherAccess, clientAccess]);
+    let calls = 0;
+    getEstablishment.mockImplementation((slug: unknown) => {
+      calls += 1;
+      if (slug === 'renasci-bar' && calls === 1) return Promise.reject(new Error('503'));
+      return Promise.resolve(slug === 'renasci-bar' ? place : { ...place, id: 'e0', slug: 'otro-lugar' });
+    });
+    const openClientSession = vi.fn().mockResolvedValue(session);
+    const resolved = await resolveClientSession({
+      user: { uid: 'u1' } as never,
+      context: null,
+      preferredSlug: 'renasci-bar',
+      openClientSession,
+    });
+    expect(resolved?.slug).toBe('renasci-bar');
+    expect(getEstablishment).not.toHaveBeenCalledWith('otro-lugar');
+  });
 });

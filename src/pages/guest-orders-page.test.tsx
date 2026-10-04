@@ -222,7 +222,7 @@ describe('pedidos del invitado', () => {
     expect(await screen.findByRole('article', { name: 'Mesa 5' })).toBeInTheDocument();
     // Y el espacio se restaura para que el pedido se ligue igual.
     await waitFor(() => {
-      const raw = sessionStorage.getItem('vaiinilla.buyer.space.v1');
+      const raw = localStorage.getItem('vaiinilla.buyer.space.v1');
       expect(raw).toContain('"espacioId":5');
     });
   });

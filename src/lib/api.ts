@@ -45,7 +45,8 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
   idempotencyKey?: string;
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<ApiEnvelope<T>> {
+/** Cliente HTTP único del backend: encabezados, Idempotency-Key, sobre `{ data, error }` y errores. */
+export async function request<T>(path: string, options: RequestOptions = {}): Promise<ApiEnvelope<T>> {
   const { token, body, idempotent, idempotencyKey, ...requestOptions } = options;
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');
@@ -97,6 +98,9 @@ function params(values: Record<string, string | number | undefined>): string {
   const query = search.toString();
   return query ? `?${query}` : '';
 }
+
+/** Palabra que el backend exige para borrar la cuenta (DELETE /identidad/cuenta). */
+export const ACCOUNT_DELETION_CONFIRMATION = 'ELIMINAR';
 
 export const api = {
   apiUrl,
@@ -365,7 +369,7 @@ export const api = {
       method: 'DELETE',
       token: firebaseToken,
       idempotent: true,
-      body: { confirmacion: 'ELIMINAR' },
+      body: { confirmacion: ACCOUNT_DELETION_CONFIRMATION },
     });
   },
 

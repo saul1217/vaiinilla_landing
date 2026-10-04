@@ -188,6 +188,7 @@ export function OrdersPage() {
                         expanded={!deskPane && expandedId === order.id}
                         selected={deskPane && expandedId === order.id}
                         onToggle={() => toggle(order.id)}
+                        callWaiter={!(deskPane && expandedId === order.id)}
                         imageUrl={orderThumbUrl(
                           order,
                           thumbImages,
