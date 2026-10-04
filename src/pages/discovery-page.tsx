@@ -12,6 +12,7 @@ import { rememberSpace, scannedSpace } from '../lib/space-session';
 import type { PublicEstablishment } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
 import { TableCodeSheet } from '../components/table-code-sheet';
+import { PlaceEntry } from '../components/place-entry';
 
 export function DiscoveryPage() {
   const { ready } = useAuth();
@@ -231,7 +232,11 @@ export function DiscoveryPage() {
           <AlumnoPageHeader
             kicker="Hoy"
             title="¿Dónde comes hoy?"
-            lead="Elige tu establecimiento. El menú se puede ver sin iniciar sesión."
+            lead={
+              !loading && items.length === 0 && !query
+                ? 'Entra con el QR o el código de tu mesa. El menú se ve sin iniciar sesión.'
+                : 'Elige tu establecimiento. El menú se puede ver sin iniciar sesión.'
+            }
           />
           <div className="alumno-discovery-tools">
             <div className="alumno-search-wrap">
@@ -256,14 +261,17 @@ export function DiscoveryPage() {
           </div>
         </div>
         {error ? <p className="alumno-error">{error}</p> : null}
+        <PlaceEntry prominent={!loading && items.length === 0 && !query} />
         {loading && items.length === 0 ? <LoadingSkeleton shape="places" label="Cargando establecimientos…" /> : null}
         <div className="alumno-discovery">
           <div className="alumno-discovery__list">
             {!loading && items.length === 0 && !error ? (
-              <div className="alumno-empty">
-                <img src="/vaini/cutout-frente.png" alt="" />
-                <p>No hay establecimientos publicados todavía.</p>
-              </div>
+              query ? (
+                <div className="alumno-empty">
+                  <img src="/vaini/cutout-frente.png" alt="" />
+                  <p>No encontramos ese lugar en la lista. Si ya estás ahí, escanea su QR o escribe el código.</p>
+                </div>
+              ) : null
             ) : (
               <div className="alumno-radio-list alumno-arrive" role="radiogroup" aria-label="Establecimientos">
                 {items.map((place) => {
