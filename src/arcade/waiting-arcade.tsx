@@ -2,11 +2,30 @@
 // Gravedad y Galaxia), iguales a los de Android e iOS. El motor dibuja en un canvas
 // de 480×270 píxeles (src/arcade/vaini); esta tarjeta pone pestañas, sonido y
 // pantalla completa. Shown under the first active order while the buyer waits.
+// Cerrado hasta que lo piden: el motor y su canvas solo existen mientras se juega.
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { onMotionChange } from '../lib/motion-activity';
 import { ARCADE_GAMES, mountArcade, type ArcadeHandle, type ArcadeKey } from './vaini/engine.mjs';
 
 export function WaitingArcade() {
+  const [open, setOpen] = useState(false);
+
+  if (!open) {
+    return (
+      <button className="alumno-arcade-launch" type="button" onClick={() => setOpen(true)}>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 9h12a4 4 0 0 1 4 4v1a3 3 0 0 1-5.4 1.8L15 14H9l-1.6 1.8A3 3 0 0 1 2 14v-1a4 4 0 0 1 4-4Z" />
+          <path d="M7 11.5v3M5.5 13h3M15.5 12.5h.01M17.5 14h.01" />
+        </svg>
+        <span>Arcade</span>
+        <small>Juega mientras esperas</small>
+      </button>
+    );
+  }
+  return <ArcadeCard onClose={() => setOpen(false)} />;
+}
+
+function ArcadeCard({ onClose }: { onClose: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
   const engine = useRef<ArcadeHandle | null>(null);
@@ -92,6 +111,11 @@ export function WaitingArcade() {
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M4 9v6h4l5 4V5L8 9H4Z" />
               {muted ? <path d="m17 9 5 6m0-6-5 6" /> : <path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" />}
+            </svg>
+          </button>
+          <button type="button" onClick={onClose} aria-label="Cerrar arcade">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" />
             </svg>
           </button>
           <button type="button" onClick={() => setFull((value) => !value)} aria-label={full ? 'Salir de pantalla completa' : 'Pantalla completa'} aria-pressed={full}>
