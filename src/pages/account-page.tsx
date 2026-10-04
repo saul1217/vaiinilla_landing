@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { AlumnoPageHeader } from '../components/alumno-brand';
@@ -71,6 +71,38 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
     setVerified(user?.emailVerified ?? true);
   }, [user]);
 
+  // Firebase cachea el verificado: al volver a la app (o al entrar) se pregunta
+  // de nuevo sin tocar nada, para que el aviso no persiga a quien ya verificó.
+  const refreshVerification = useCallback(async (): Promise<boolean> => {
+    if (!user) return false;
+    try {
+      await user.reload();
+    } catch {
+      return false;
+    }
+    if (!user.emailVerified) return false;
+    clearVerificationSent();
+    setVerified(true);
+    // El claim del token queda viejo hasta una hora: se fuerza para que el
+    // backend vea el correo verificado en la siguiente llamada.
+    await user.getIdToken(true).catch(() => undefined);
+    return true;
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || verified) return;
+    void refreshVerification();
+    const onFocus = () => {
+      void refreshVerification();
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
+  }, [refreshVerification, user, verified]);
+
   useEffect(() => {
     if (!user) return;
     let active = true;
@@ -117,12 +149,10 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
   async function checkVerified() {
     if (!user) return;
     setVerifyBusy(true);
+    setVerifyError(null);
     try {
-      await user.reload();
-      if (user.emailVerified) {
-        clearVerificationSent();
-        setVerified(true);
-      } else {
+      const ok = await refreshVerification();
+      if (!ok) {
         setVerifyNotice('Aún no lo vemos verificado. Abre el enlace del correo e inténtalo de nuevo.');
       }
     } catch (cause) {

@@ -231,7 +231,7 @@ export function CartPage() {
     wallet &&
     (moneyToCents(wallet.wallet.saldo) ?? 0n) < (moneyToCents(total) ?? 0n);
 
-  async function confirm() {
+  async function confirm(retried = false) {
     setError(null);
     setEmailBlocked(false);
     if (!place || lines.length === 0 || !total) return;
@@ -328,6 +328,18 @@ export function CartPage() {
     } catch (cause) {
       if (cause instanceof VaiinillaApiError && cause.code === 'IDENTITY_NOT_REGISTERED') {
         void navigate(`/cuenta?next=/e/${slug}/carrito`);
+        return;
+      }
+      if (cause instanceof VaiinillaApiError && cause.code === 'EMAIL_NOT_VERIFIED' && user && !retried) {
+        // Acaba de verificar en el correo pero el token trae el claim viejo (vive
+        // hasta una hora): se fuerza uno fresco y se reintenta una vez en silencio.
+        try {
+          await user.getIdToken(true);
+        } catch {
+          // Sigue al reenvío con el error original.
+        }
+        setSubmitting(false);
+        void confirm(true);
         return;
       }
       setEmailBlocked(cause instanceof VaiinillaApiError && cause.code === 'EMAIL_NOT_VERIFIED');
