@@ -55,6 +55,8 @@ vi.mock('../lib/firebase', () => ({
   googleSignIn: vi.fn(),
   sendPasswordReset: vi.fn(),
   firebaseIdToken: vi.fn().mockResolvedValue('token'),
+  signsInWithGoogle: () => false,
+  reauthenticateForDeletion: vi.fn(),
 }));
 
 vi.mock('../context/auth-context', () => ({

@@ -2,10 +2,13 @@ import { FirebaseError, getApp, getApps, initializeApp } from 'firebase/app';
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
+  EmailAuthProvider,
   getAuth,
   getMultiFactorResolver,
   GoogleAuthProvider,
   onAuthStateChanged,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
   sendPasswordResetEmail,
   setPersistence,
   signInWithEmailAndPassword,
@@ -140,6 +143,26 @@ export async function googleSignIn(): Promise<PasswordSignInResult> {
     if (!hadBrowserSession) endBrowserSession();
     throw error;
   }
+}
+
+/** Cuentas que entran con Google confirman en su ventana; las de correo, con su contraseña. */
+export function signsInWithGoogle(user: User): boolean {
+  return user.providerData.some((provider) => provider.providerId === 'google.com');
+}
+
+/**
+ * Borrar la cuenta exige un inicio de sesión reciente (el backend acepta 5 minutos):
+ * se confirma la identidad otra vez y se devuelve un token nuevo con ese auth_time.
+ */
+export async function reauthenticateForDeletion(user: User, password: string): Promise<string> {
+  if (signsInWithGoogle(user)) {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account', login_hint: user.email ?? '' });
+    await reauthenticateWithPopup(user, provider);
+  } else {
+    await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email ?? '', password));
+  }
+  return user.getIdToken(true);
 }
 
 export async function sendPasswordReset(email: string): Promise<void> {

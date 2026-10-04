@@ -263,4 +263,17 @@ describe('buyer API client', () => {
     );
     await expect(api.sendVerificationEmail('firebase-token')).resolves.toEqual({ aceptado: true });
   });
+  it('elimina la cuenta con Idempotency-Key UUID y la confirmación que exige el backend', async () => {
+    server.use(
+      http.delete(`${baseUrl}/identidad/cuenta`, async ({ request }) => {
+        expect(request.headers.get('Authorization')).toBe('Bearer fresh-token');
+        expect(request.headers.get('Idempotency-Key')).toMatch(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+        );
+        await expect(request.json()).resolves.toEqual({ confirmacion: 'ELIMINAR' });
+        return HttpResponse.json({ data: { estado: 'eliminada' }, meta: {}, error: null });
+      }),
+    );
+    await expect(api.deleteIdentity('fresh-token')).resolves.toBeUndefined();
+  });
 });

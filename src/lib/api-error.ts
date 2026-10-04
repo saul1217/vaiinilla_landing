@@ -18,6 +18,7 @@ const friendlyMessages: Record<string, string> = {
   CONTEXT_NOT_ALLOWED: 'Esta cuenta no puede pedir en este establecimiento.',
   RATE_LIMITED: 'Se alcanzó el límite temporal. Espera antes de volver a intentar.',
   VALIDATION_ERROR: 'Revisa los datos capturados e inténtalo nuevamente.',
+  REAUTHENTICATION_REQUIRED: 'Confirma tu acceso otra vez para eliminar la cuenta.',
   INSUFFICIENT_BALANCE: 'No tienes saldo suficiente para este pedido.',
   PRODUCT_NOT_FOUND: 'Un producto del carrito ya no está disponible.',
   ORDER_INVALID_STATE: 'El pedido ya cambió de estado.',
@@ -54,6 +55,7 @@ const firebaseAuthMessages: Record<string, string> = {
   'auth/network-request-failed': 'No fue posible contactar Firebase. Revisa tu conexión.',
   'auth/operation-not-allowed': 'Google no está habilitado en este entorno. Usa correo y contraseña.',
   'auth/popup-closed-by-user': 'Cerraste la ventana de Google antes de terminar.',
+  'auth/user-mismatch': 'Elige la misma cuenta de Google con la que entraste.',
   'auth/popup-blocked': 'El navegador bloqueó la ventana de Google. Permite ventanas emergentes.',
   'auth/account-exists-with-different-credential':
     'Ese correo ya existe con otro método de acceso. Entra con correo y contraseña.',
