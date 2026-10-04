@@ -364,6 +364,8 @@ export const api = {
     await request<unknown>('/identidad/cuenta', {
       method: 'DELETE',
       token: firebaseToken,
+      idempotent: true,
+      body: { confirmacion: 'ELIMINAR' },
     });
   },
 

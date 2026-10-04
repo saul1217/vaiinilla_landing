@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { AuthScreens } from '../components/auth-screens';
+import { DeleteAccountPanel } from '../components/delete-account-panel';
 import { useAuth } from '../context/auth-context';
 import { useTheme } from '../context/theme-context';
 import { api } from '../lib/api';
@@ -96,7 +97,6 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [qr, setQr] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   // Verificación de correo: se avisa hasta que Firebase lo confirma.
   const [verified, setVerified] = useState(() => user?.emailVerified ?? true);
   const [verifyBusy, setVerifyBusy] = useState(false);
@@ -199,22 +199,9 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
     }
   }
 
-  async function deleteAccount() {
-    if (!user) return;
-    const confirmed = window.confirm('¿Eliminar tu cuenta? Esta acción no se puede deshacer.');
-    if (!confirmed) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const token = await firebaseIdToken(user);
-      await api.deleteIdentity(token);
-      await signOut();
-      void navigate('/pedir');
-    } catch (cause) {
-      setError(errorMessage(cause));
-    } finally {
-      setBusy(false);
-    }
+  async function afterDeletion() {
+    await signOut();
+    void navigate('/pedir');
   }
 
   return (
@@ -283,14 +270,7 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
             <button className="alumno-setting" type="button" onClick={onSignOut}>
               Salir
             </button>
-            <button
-              className="alumno-setting alumno-setting--danger"
-              type="button"
-              disabled={busy}
-              onClick={() => void deleteAccount()}
-            >
-              Eliminar cuenta
-            </button>
+            {user ? <DeleteAccountPanel user={user} onDeleted={afterDeletion} /> : null}
             <p style={{ marginTop: 18 }}>
               <Link className="alumno-link" to="/soporte">
                 Soporte
