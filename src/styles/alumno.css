@@ -8,10 +8,14 @@
   --text: var(--ink);
   --text-soft: var(--ink-soft);
   --nav-bg: var(--white);
-  --danger: var(--coral);
+  --danger: #bf2f2a;
+  --danger-fill: #bf2f2a;
+  --lime-text: #4f6c12;
 }
 
 html[data-theme='dark'] {
+  --danger: var(--coral);
+  --lime-text: var(--lime);
   --bg: #171817;
   --bg-2: #1e1f1c;
   --surface: #22231f;
@@ -25,6 +29,8 @@ html[data-theme='dark'] {
 }
 
 html[data-theme='amoled'] {
+  --danger: var(--coral);
+  --lime-text: var(--lime);
   --bg: #000000;
   --bg-2: #070707;
   --surface: #111111;
@@ -186,7 +192,7 @@ html[data-theme='amoled'] .alumno-avatar {
   height: 18px;
   padding: 0 5px;
   border-radius: 999px;
-  background: var(--coral);
+  background: var(--danger-fill);
   color: #fff;
   font-size: 0.65rem;
   font-weight: 800;
@@ -693,7 +699,7 @@ html[data-theme='amoled'] .alumno-antojo img {
 }
 
 .alumno-banner--coral {
-  background: var(--coral);
+  background: var(--danger-fill);
   color: #fff;
   border-radius: 18px;
   margin: 0 0 16px;
@@ -739,14 +745,14 @@ html[data-theme='amoled'] .alumno-antojo img {
 }
 
 .alumno-error {
-  color: var(--coral);
+  color: var(--danger);
   font-weight: 700;
   font-size: 0.88rem;
   margin: 8px 0 12px;
 }
 
 .alumno-ok {
-  color: var(--lime-dark);
+  color: var(--lime-text);
   font-weight: 700;
   font-size: 0.88rem;
   margin: 8px 0 12px;
@@ -790,7 +796,7 @@ html[data-theme='amoled'] .alumno-antojo img {
 .alumno-location-btn:hover,
 .alumno-location-btn.is-on {
   border-color: var(--lime-dark);
-  color: var(--lime-dark);
+  color: var(--lime-text);
 }
 
 .alumno-location-btn:disabled {
@@ -854,7 +860,7 @@ html[data-theme='amoled'] .alumno-antojo img {
 }
 
 .alumno-place-kicker {
-  color: var(--lime-dark) !important;
+  color: var(--lime-text) !important;
   font-size: 0.68rem !important;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -1714,11 +1720,11 @@ html[data-theme='amoled'] .alumno-wallet-menu__icon {
 }
 
 .alumno-setting--danger {
-  color: var(--coral);
+  color: var(--danger);
 }
 
 .alumno-setting--danger::after {
-  color: var(--coral);
+  color: var(--danger);
 }
 
 .alumno-themes {
@@ -1763,7 +1769,7 @@ html[data-theme='amoled'] .alumno-wallet-menu__icon {
 }
 
 .alumno-status--danger {
-  background: var(--coral);
+  background: var(--danger-fill);
   color: #fff;
 }
 
@@ -4176,9 +4182,11 @@ html[data-theme='amoled'] .alumno-lockup img,
   --surface: #ffffff;
   --text: #171817;
   --text-soft: #3f413b;
-  --muted: #77796f;
+  --muted: #62645a;
   --white: #fbf9f2;
   --line: rgba(23, 24, 23, 0.12);
+  --danger: #bf2f2a;
+  --lime-text: #4f6c12;
   grid-area: panel;
   background: #f4f1e7;
   color: #171817;
@@ -5349,7 +5357,7 @@ html[data-theme='light'] .alumno-codesheet__slots > span.is-filled {
 
 .alumno-codesheet__error {
   margin: 8px 4px 0;
-  color: var(--coral, #f15b55);
+  color: var(--danger);
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -6135,7 +6143,7 @@ body[data-shell='alumno'] {
   height: 38px;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: var(--coral);
+  background: var(--danger-fill);
   color: #fff;
   animation: callwaiter-ring 1.4s ease-in-out infinite;
 }
@@ -6771,7 +6779,7 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 }
 
 .alumno-res__hold.is-low {
-  color: var(--coral);
+  color: var(--danger);
 }
 
 .alumno-res__pay-list {
@@ -7055,12 +7063,12 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 .alumno-ticket-rejection {
   display: block;
   margin-top: 2px;
-  color: var(--coral);
+  color: var(--danger);
   font-size: 0.78rem;
   font-weight: 700;
 }
 .alumno-track-card__rejected {
-  color: var(--coral);
+  color: var(--danger);
   font-weight: 700;
   animation: alumno-arrive 520ms cubic-bezier(.16, 1, .3, 1) both;
 }
