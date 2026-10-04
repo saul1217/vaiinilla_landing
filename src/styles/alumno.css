@@ -5801,6 +5801,66 @@ body[data-shell='alumno'] {
 }
 
 /* Android WaitingArcadeCard: dark panel 22px radius, segmented tabs, 250px well. */
+/* El arcade arranca cerrado: un botón que, al tocarlo, monta los juegos. */
+.alumno-arcade-launch {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  align-items: center;
+  width: 100%;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 22px;
+  background: #1c1d1b;
+  color: #f5f2e8;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  animation: alumno-arrive 520ms cubic-bezier(0.16, 1, 0.3, 1) 120ms backwards;
+  transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1), background 200ms ease;
+}
+
+.alumno-arcade-launch:hover {
+  background: #232427;
+}
+
+.alumno-arcade-launch:active {
+  transform: scale(0.97);
+  transition-duration: 90ms;
+}
+
+.alumno-arcade-launch svg {
+  grid-row: span 2;
+  width: 36px;
+  height: 36px;
+  padding: 7px;
+  border-radius: 12px;
+  background: var(--lime);
+  fill: none;
+  stroke: #1c1d1b;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.alumno-arcade-launch span {
+  font-weight: 800;
+}
+
+.alumno-arcade-launch small {
+  color: #8e8e93;
+  font-size: 0.82rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alumno-arcade-launch {
+    animation: none;
+    transition: none;
+  }
+}
+
 .alumno-arcade {
   margin-top: 16px;
   padding: 12px;
