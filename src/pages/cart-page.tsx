@@ -4,6 +4,8 @@ import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { MenuPeek } from '../components/menu-peek';
 import { useAuth } from '../context/auth-context';
+import { firebaseIdToken } from '../lib/firebase';
+import { markVerificationSent } from '../lib/verification';
 import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
@@ -56,6 +58,9 @@ export function CartPage() {
     () => sessionStorage.getItem(`vaiinilla.buyer.client-id.${slug}`) ?? '',
   );
   const [error, setError] = useState<string | null>(null);
+  const [emailBlocked, setEmailBlocked] = useState(false);
+  const [verifyBusy, setVerifyBusy] = useState(false);
+  const [verifyNotice, setVerifyNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [previousOrders, setPreviousOrders] = useState<OrderDetail[]>([]);
@@ -228,6 +233,7 @@ export function CartPage() {
 
   async function confirm() {
     setError(null);
+    setEmailBlocked(false);
     if (!place || lines.length === 0 || !total) return;
     if (guestBlocked) {
       void navigate(`/cuenta?next=/e/${slug}/carrito`);
@@ -324,9 +330,25 @@ export function CartPage() {
         void navigate(`/cuenta?next=/e/${slug}/carrito`);
         return;
       }
+      setEmailBlocked(cause instanceof VaiinillaApiError && cause.code === 'EMAIL_NOT_VERIFIED');
       setError(errorMessage(cause));
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function resendVerification() {
+    if (!user || verifyBusy) return;
+    setVerifyBusy(true);
+    setVerifyNotice(null);
+    try {
+      await api.sendVerificationEmail(await firebaseIdToken(user));
+      markVerificationSent();
+      setVerifyNotice('Listo, revisa tu bandeja (y el spam). Después vuelve a continuar.');
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setVerifyBusy(false);
     }
   }
 
@@ -335,6 +357,20 @@ export function CartPage() {
       <main id="main-content" className="alumno-main">
         <AlumnoPageHeader kicker="Revisa y confirma" title="Tu pedido" />
         {error ? <p className="alumno-error">{error}</p> : null}
+        {emailBlocked && user ? (
+          <p className="alumno-banner">
+            Sin verificar no puedes pedir.{' '}
+            <button
+              className="alumno-link"
+              type="button"
+              disabled={verifyBusy}
+              onClick={() => void resendVerification()}
+            >
+              {verifyBusy ? 'Enviando…' : 'Reenviar correo de verificación'}
+            </button>
+            {verifyNotice ? <> {verifyNotice}</> : null}
+          </p>
+        ) : null}
         {blocker ? <p className="alumno-banner alumno-banner--coral">{blocker}</p> : null}
         {pendingStripeOrderId ? (
           <p className="alumno-banner">

@@ -253,4 +253,14 @@ describe('buyer API client', () => {
       establecimiento_slug: 'cafeteria-centro',
     });
   });
+
+  it('pide el correo de verificación con el ID token de Firebase', async () => {
+    server.use(
+      http.post(`${baseUrl}/publico/correos/verificacion`, ({ request }) => {
+        expect(request.headers.get('Authorization')).toBe('Bearer firebase-token');
+        return HttpResponse.json({ data: { aceptado: true }, meta: {}, error: null }, { status: 202 });
+      }),
+    );
+    await expect(api.sendVerificationEmail('firebase-token')).resolves.toEqual({ aceptado: true });
+  });
 });

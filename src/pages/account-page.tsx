@@ -10,6 +10,11 @@ import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import { firebaseIdToken } from '../lib/firebase';
 import { resolveClientSession } from '../lib/client-session';
+import {
+  clearVerificationSent,
+  markVerificationSent,
+  verificationWasSent,
+} from '../lib/verification';
 import { lastPlaceSlug } from '../lib/last-place';
 import { THEME_OPTIONS } from '../lib/theme';
 import { walletQrUrl } from '../lib/env';
@@ -56,6 +61,15 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
   const [qr, setQr] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Verificación de correo: se avisa hasta que Firebase lo confirma.
+  const [verified, setVerified] = useState(() => user?.emailVerified ?? true);
+  const [verifyBusy, setVerifyBusy] = useState(false);
+  const [verifyNotice, setVerifyNotice] = useState<string | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setVerified(user?.emailVerified ?? true);
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -84,6 +98,40 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
     };
   }, [cart?.slug, context, openClientSession, user]);
 
+  async function resendVerification() {
+    if (!user) return;
+    setVerifyBusy(true);
+    setVerifyError(null);
+    setVerifyNotice(null);
+    try {
+      await api.sendVerificationEmail(await firebaseIdToken(user));
+      markVerificationSent();
+      setVerifyNotice('Listo, revisa tu bandeja (y el spam). El enlace solo se puede usar una vez.');
+    } catch (cause) {
+      setVerifyError(errorMessage(cause));
+    } finally {
+      setVerifyBusy(false);
+    }
+  }
+
+  async function checkVerified() {
+    if (!user) return;
+    setVerifyBusy(true);
+    try {
+      await user.reload();
+      if (user.emailVerified) {
+        clearVerificationSent();
+        setVerified(true);
+      } else {
+        setVerifyNotice('Aún no lo vemos verificado. Abre el enlace del correo e inténtalo de nuevo.');
+      }
+    } catch (cause) {
+      setVerifyError(errorMessage(cause));
+    } finally {
+      setVerifyBusy(false);
+    }
+  }
+
   async function deleteAccount() {
     if (!user) return;
     const confirmed = window.confirm('¿Eliminar tu cuenta? Esta acción no se puede deshacer.');
@@ -107,6 +155,38 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
       <main id="main-content" className="alumno-main">
         <AlumnoPageHeader kicker="Cuenta" title="Configuración" lead={user?.email ?? undefined} />
         {error ? <p className="alumno-error">{error}</p> : null}
+        {user && !verified ? (
+          <section className="alumno-banner" aria-label="Verifica tu correo">
+            <p>
+              <strong>
+                {verificationWasSent() || verifyNotice
+                  ? 'Te enviamos un enlace para verificar tu correo.'
+                  : 'Tu correo aún no está verificado.'}
+              </strong>{' '}
+              Sin verificar no puedes pedir. Revisa tu bandeja (y el spam).
+            </p>
+            {verifyNotice ? <p className="alumno-muted">{verifyNotice}</p> : null}
+            {verifyError ? <p className="alumno-error">{verifyError}</p> : null}
+            <div className="alumno-tracking__actions">
+              <button
+                className="alumno-btn alumno-btn--lime"
+                type="button"
+                disabled={verifyBusy}
+                onClick={() => void resendVerification()}
+              >
+                {verifyBusy ? 'Enviando…' : 'Reenviar correo'}
+              </button>
+              <button
+                className="alumno-btn"
+                type="button"
+                disabled={verifyBusy}
+                onClick={() => void checkVerified()}
+              >
+                Ya lo verifiqué
+              </button>
+            </div>
+          </section>
+        ) : null}
         <div className="alumno-settings-layout">
           <section className="alumno-card alumno-card--qr">
             <h2>QR para recargar</h2>

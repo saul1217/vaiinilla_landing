@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
+import { VaiinillaApiError } from '../lib/api-error';
 import { QA_PHOTO_TACOS } from '../lib/qa-catalog-photos';
 import { CartPage } from './cart-page';
 
@@ -29,6 +30,7 @@ const {
   createGuest,
   renewGuest,
   getLegalVersions,
+  sendVerificationEmail,
 } = vi.hoisted(() => ({
   getEstablishment: vi.fn(),
   getOperationalStatus: vi.fn(),
@@ -42,6 +44,7 @@ const {
   createGuest: vi.fn(),
   renewGuest: vi.fn(),
   getLegalVersions: vi.fn(),
+  sendVerificationEmail: vi.fn(),
 }));
 
 vi.mock('../lib/api', () => ({
@@ -57,6 +60,7 @@ vi.mock('../lib/api', () => ({
     createGuest: (...args: unknown[]) => createGuest(...args) as Promise<unknown>,
     renewGuest: (...args: unknown[]) => renewGuest(...args) as Promise<unknown>,
     getLegalVersions: (...args: unknown[]) => getLegalVersions(...args) as Promise<unknown>,
+    sendVerificationEmail: (...args: unknown[]) => sendVerificationEmail(...args) as Promise<unknown>,
     apiUrl: '/api/v1',
   },
 }));
@@ -68,6 +72,10 @@ vi.mock('../context/auth-context', () => ({
     configured: true,
     signOut: vi.fn(),
   }),
+}));
+
+vi.mock('../lib/firebase', () => ({
+  firebaseIdToken: vi.fn().mockResolvedValue('firebase-token'),
 }));
 
 vi.mock('../context/buyer-session', () => ({
@@ -645,8 +653,45 @@ describe('CartPage', () => {
     });
   });
 
-  describe('pagar al final', () => {
-    const line = {
+  describe('correo sin verificar', () => {
+    beforeEach(() => {
+      sendVerificationEmail.mockReset().mockResolvedValue({ aceptado: true });
+      cartState.cart = {
+        slug: 'demo-a',
+        establishmentName: 'Cafetería Demo A',
+        lines: [
+          {
+            productId: 1,
+            quantity: 1,
+            optionIds: [],
+            productName: 'Chocolate $120',
+            unitPreview: '120.00',
+            imageUrl: null,
+          },
+        ],
+      };
+    });
+
+    it('al bloquear el pedido ofrece reenviar el correo sin salir del carrito', async () => {
+      buyerSessionState.context = { access_token: 'jwt', contexto: { establecimiento_id: '1' } };
+      createOrder.mockRejectedValue(
+        new VaiinillaApiError(403, { code: 'EMAIL_NOT_VERIFIED', message: 'Verifica tu correo antes de continuar.' }),
+      );
+      const user = userEvent.setup();
+      renderCart();
+
+      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      await user.click(screen.getByRole('button', { name: /^continuar con/i }));
+
+      expect(await screen.findAllByText(/verifica tu correo antes de continuar/i)).not.toHaveLength(0);
+      await user.click(screen.getByRole('button', { name: /reenviar correo de verificación/i }));
+
+      expect(sendVerificationEmail).toHaveBeenCalledWith('firebase-token');
+      expect(await screen.findByText(/revisa tu bandeja/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('pagar al final', () => {    const line = {
       productId: 1,
       quantity: 1,
       optionIds: [],
