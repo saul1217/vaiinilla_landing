@@ -7,7 +7,9 @@ import { VaiinillaApiError } from '../lib/api-error';
 import { QA_PHOTO_TACOS } from '../lib/qa-catalog-photos';
 import { CartPage } from './cart-page';
 
-const authState: { user: { email: string; displayName: string } | null } = {
+const authState: {
+  user: { email: string; displayName: string; getIdToken?: (force?: boolean) => Promise<string> } | null;
+} = {
   user: { email: 'ana@example.test', displayName: 'Ana' },
 };
 
@@ -31,6 +33,7 @@ const {
   renewGuest,
   getLegalVersions,
   sendVerificationEmail,
+  firebaseIdToken,
 } = vi.hoisted(() => ({
   getEstablishment: vi.fn(),
   getOperationalStatus: vi.fn(),
@@ -45,6 +48,7 @@ const {
   renewGuest: vi.fn(),
   getLegalVersions: vi.fn(),
   sendVerificationEmail: vi.fn(),
+  firebaseIdToken: vi.fn(),
 }));
 
 vi.mock('../lib/api', () => ({
@@ -75,7 +79,7 @@ vi.mock('../context/auth-context', () => ({
 }));
 
 vi.mock('../lib/firebase', () => ({
-  firebaseIdToken: vi.fn().mockResolvedValue('firebase-token'),
+  firebaseIdToken: (...args: unknown[]) => firebaseIdToken(...args) as Promise<unknown>,
 }));
 
 vi.mock('../context/buyer-session', () => ({
@@ -155,6 +159,7 @@ describe('CartPage', () => {
     });
     getMyWallet.mockResolvedValue(null);
     listReservations.mockResolvedValue([]);
+    firebaseIdToken.mockReset().mockResolvedValue('firebase-token');
     getLegalVersions.mockResolvedValue({ terminos_version: 't-1', terminos_url: '/terminos', privacidad_version: 'p-1', privacidad_url: '/privacidad' });
     createGuest.mockReset();
     renewGuest.mockReset();
@@ -688,6 +693,53 @@ describe('CartPage', () => {
 
       expect(sendVerificationEmail).toHaveBeenCalledWith('firebase-token');
       expect(await screen.findByText(/revisa tu bandeja/i)).toBeInTheDocument();
+    });
+
+    it('si el token trae el claim viejo, fuerza uno fresco y reintenta una vez', async () => {
+      const getIdToken = vi.fn().mockResolvedValue('fresh-token');
+      authState.user = { email: 'ana@example.test', displayName: 'Ana', getIdToken };
+      buyerSessionState.context = { access_token: 'jwt', contexto: { establecimiento_id: '1' } };
+      cartState.cart = {
+        slug: 'demo-a',
+        establishmentName: 'Cafetería Demo A',
+        lines: [
+          {
+            productId: 1,
+            quantity: 1,
+            optionIds: [],
+            productName: 'Chocolate $120',
+            unitPreview: '120.00',
+            imageUrl: null,
+          },
+        ],
+      };
+      createOrder
+        .mockRejectedValueOnce(
+          new VaiinillaApiError(403, { code: 'EMAIL_NOT_VERIFIED', message: 'Verifica tu correo antes de continuar.' }),
+        )
+        .mockResolvedValueOnce({
+          id: 'ord-1',
+          folio: 42,
+          estado: 'por_cobrar',
+          metodo_pago: 'efectivo',
+          destino: 'para_llevar',
+          qr_token: 'qr',
+          espacio: null,
+          total: '120.00',
+          items: [],
+        });
+      const user = userEvent.setup();
+      renderCart();
+
+      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      await user.click(screen.getByRole('button', { name: /^continuar con/i }));
+
+      // Un reintento silencioso con token fresco, sin pedir reenvío.
+      expect(await screen.findByText('Mis pedidos ?nuevo=ord-1')).toBeInTheDocument();
+      expect(getIdToken).toHaveBeenCalledWith(true);
+      expect(createOrder).toHaveBeenCalledTimes(2);
+      expect(screen.queryByRole('button', { name: /reenviar correo de verificación/i })).not.toBeInTheDocument();
+      authState.user = { email: 'ana@example.test', displayName: 'Ana' };
     });
   });
 
