@@ -117,6 +117,7 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
         if (!resolved) return;
         const next = await api.getMyWallet(resolved.context.access_token);
         if (!active) return;
+        setError(null);
         setWallet(next);
         const userId = next.wallet.usuario_id || next.cliente.usuario_id;
         setQr(await QRCode.toDataURL(walletQrUrl(userId), { margin: 1, width: 320 }));

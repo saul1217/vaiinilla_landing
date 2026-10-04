@@ -1,3 +1,6 @@
+/* P2: --ink y --ink-soft viven en :root y no cambian con data-theme.
+   Estas tres reglas quedan con tinta de tema claro si se pintan sobre el fondo oscuro del PWA.
+   El cliente usa .alumno-btn / .alumno-chip (alumno.css), que sí cambian de tema. */
 .btn--ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
 .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 

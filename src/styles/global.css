@@ -5,7 +5,7 @@
   --ink-soft: #3f413b;
   --lime: #b9d86d;
   --lime-dark: #73931f;
-  --muted: #77796f;
+  --muted: #62645a;
   --white: #fbf9f2;
   --line: rgba(23, 24, 23, .12);
   --shadow: 0 22px 60px rgba(23, 24, 23, .14);
@@ -28,7 +28,7 @@ p { margin: 0; }
 .container { width: 100%; max-width: var(--maxw); margin-inline: auto; padding-inline: 24px; }
 .eyebrow { display: inline-flex; align-items: center; gap: 9px; color: var(--muted); font-size: .7rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .eyebrow::before { content: ''; width: 22px; height: 2px; border-radius: 2px; background: var(--lime-dark); }
-.lime-text { color: var(--lime-dark); }
+.lime-text { color: var(--lime-text, var(--lime-dark)); }
 .highlight { position: relative; display: inline-block; z-index: 0; }
 .highlight::after { content: ''; position: absolute; z-index: -1; left: -.07em; right: -.07em; bottom: .02em; height: .32em; border-radius: 5px; background: var(--lime); transform: rotate(-1.5deg); }
 
