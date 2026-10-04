@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AlumnoPageHeader } from "../components/alumno-brand";
 import { AppShell } from "../components/app-shell";
 import { OrderTrackCard } from "../components/order-track-card";
@@ -12,7 +12,7 @@ import { useCart } from "../context/cart-context";
 import { api } from "../lib/api";
 import { resolveClientSession } from "../lib/client-session";
 import { lastPlaceSlug } from "../lib/last-place";
-import { errorMessage } from "../lib/api-error";
+import { errorMessage, VaiinillaApiError } from "../lib/api-error";
 import { catalogImageMap, orderThumbUrl } from "../lib/catalog-images";
 import { formatAmount } from "../lib/money";
 import { persistPickupQrFromOrder } from "../lib/pickup-qr";
@@ -45,6 +45,7 @@ export function OrdersPage() {
   );
   const [loading, setLoading] = useState(() => !(ordersKey && peekResource(ordersKey)));
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   // Recién pedido: el carrito llega con ?nuevo=<id> y ese pedido ya se ve abierto.
   const [expandedId, setExpandedId] = useState<string | null>(() => searchParams.get("nuevo"));
   const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
@@ -93,6 +94,11 @@ export function OrdersPage() {
         setOrders(result.orders);
         setError(null);
       } catch (cause) {
+        // Alta a medias: /cuenta retoma el paso de términos (igual que el carrito).
+        if (cause instanceof VaiinillaApiError && cause.code === "IDENTITY_NOT_REGISTERED") {
+          if (active) void navigate("/cuenta?next=/cuenta/pedidos");
+          return;
+        }
         if (active && !silent) setError(errorMessage(cause));
       } finally {
         if (active) setLoading(false);
@@ -106,7 +112,7 @@ export function OrdersPage() {
       active = false;
       window.clearInterval(timer);
     };
-  }, [cart?.slug, context, openClientSession, ready, user]);
+  }, [cart?.slug, context, navigate, openClientSession, ready, user]);
 
   useEffect(() => {
     if (!deskPane) {

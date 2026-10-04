@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import type { User } from 'firebase/auth';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { AlumnoPageHeader } from '../components/alumno-brand';
@@ -7,7 +8,7 @@ import { AuthScreens } from '../components/auth-screens';
 import { useAuth } from '../context/auth-context';
 import { useTheme } from '../context/theme-context';
 import { api } from '../lib/api';
-import { errorMessage } from '../lib/api-error';
+import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { firebaseIdToken } from '../lib/firebase';
 import { resolveClientSession } from '../lib/client-session';
 import {
@@ -29,6 +30,7 @@ export function AccountPage() {
   // Firebase activa la sesión a mitad del login; la pantalla de acceso sigue montada hasta que
   // termine (por ejemplo, mientras la cuenta del equipo ve su aviso).
   const [signingIn, setSigningIn] = useState(false);
+  const registrationPending = useRegistrationPending(user, signingIn);
 
   if (!ready) {
     return (
@@ -40,15 +42,49 @@ export function AccountPage() {
     );
   }
 
-  if (!user || signingIn) {
+  if (!user || signingIn || registrationPending) {
     return (
       <AppShell tab="none">
-        <AuthScreens next={next} allowExplore={next === '/pedir'} onFlowChange={setSigningIn} />
+        <AuthScreens
+          next={next}
+          allowExplore={next === '/pedir'}
+          onFlowChange={setSigningIn}
+          unregisteredUser={registrationPending ? user : null}
+        />
       </AppShell>
     );
   }
 
   return <SettingsScreen onSignOut={() => void signOut()} />;
+}
+
+/**
+ * Una sesión de Firebase puede quedar abierta sin alta en Vaiinilla (se cerró la pestaña o falló el
+ * registro tras elegir la cuenta de Google). Se detecta aquí para retomar el paso de términos.
+ */
+function useRegistrationPending(user: User | null, paused: boolean): boolean {
+  const [pendingUid, setPendingUid] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user || paused) return;
+    let active = true;
+    void firebaseIdToken(user)
+      .then((token) => api.listAccesses(token))
+      .then(() => {
+        if (active) setPendingUid(null);
+      })
+      .catch((cause: unknown) => {
+        if (!active) return;
+        // Cualquier otro error lo muestra la pantalla de cuenta; solo el alta pendiente cambia de pantalla.
+        const pending = cause instanceof VaiinillaApiError && cause.code === 'IDENTITY_NOT_REGISTERED';
+        setPendingUid(pending ? user.uid : null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [user, paused]);
+
+  return Boolean(user && pendingUid === user.uid);
 }
 
 function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {

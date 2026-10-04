@@ -3,11 +3,14 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
+import { VaiinillaApiError } from '../lib/api-error';
 import { AccountPage } from './account-page';
 
 const passwordSignIn = vi.fn();
 const completeTotpSignIn = vi.fn();
 const sendVerificationEmail = vi.fn();
+const listAccesses = vi.fn();
+const registerIdentity = vi.fn();
 const authState: {
   user: {
     email: string;
@@ -26,8 +29,8 @@ vi.mock('../lib/api', () => ({
       terminos_url: 'https://example.test/terminos',
       privacidad_url: 'https://example.test/privacidad',
     }),
-    listAccesses: vi.fn().mockResolvedValue([]),
-    registerIdentity: vi.fn(),
+    listAccesses: (...args: unknown[]) => listAccesses(...args) as Promise<unknown>,
+    registerIdentity: (...args: unknown[]) => registerIdentity(...args) as Promise<unknown>,
     getEstablishment: vi.fn().mockResolvedValue({
       id: 'e1',
       nombre: 'Demo A',
@@ -81,6 +84,8 @@ describe('AccountPage', () => {
     authState.user = null;
     passwordSignIn.mockReset();
     completeTotpSignIn.mockReset();
+    listAccesses.mockReset().mockResolvedValue([]);
+    registerIdentity.mockReset();
   });
 
   it('pide el código TOTP cuando Firebase exige segundo factor', async () => {
@@ -266,6 +271,36 @@ describe('AccountPage', () => {
     await user.click(screen.getByRole('button', { name: /ya lo verifiqué/i }));
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: /ya lo verifiqué/i })).not.toBeInTheDocument();
+    });
+  });
+  it('una sesión con el alta a medias retoma los términos en vez de mostrar la cuenta', async () => {
+    authState.user = { email: 'nuevo@example.test', displayName: 'Nuevo Cliente' };
+    const notRegistered = new VaiinillaApiError(409, {
+      code: 'IDENTITY_NOT_REGISTERED',
+      message: 'La identidad aún no está dada de alta.',
+    });
+    listAccesses.mockRejectedValueOnce(notRegistered).mockRejectedValueOnce(notRegistered);
+    registerIdentity.mockResolvedValueOnce({});
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <AccountPage />
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/terminar de crear tu cuenta/i, { selector: 'p.alumno-lead' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /configuración/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: /términos/i }));
+    await user.click(screen.getByRole('checkbox', { name: /privacidad/i }));
+    await user.click(screen.getByRole('button', { name: /^crear cuenta$/i }));
+
+    await waitFor(() => {
+      expect(registerIdentity).toHaveBeenCalledWith(
+        'token',
+        expect.objectContaining({ nombre: 'Nuevo Cliente', terminos_version: '2026-07' }),
+      );
     });
   });
 });

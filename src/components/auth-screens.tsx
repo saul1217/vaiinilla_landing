@@ -86,7 +86,7 @@ const AUTH_COPY = {
         <span className="alumno-auth__accent">Sin filas.</span>
       </>
     ),
-    lead: 'Acepta los documentos vigentes para terminar el alta con Google.',
+    lead: 'Acepta los documentos vigentes para terminar de crear tu cuenta.',
     panelKicker: 'Registro',
     panelTitle: 'Crear cuenta',
   },
@@ -123,6 +123,7 @@ export function AuthScreens({
   allowExplore = false,
   onExplored,
   onFlowChange,
+  unregisteredUser = null,
 }: {
   next?: string;
   allowExplore?: boolean;
@@ -133,18 +134,20 @@ export function AuthScreens({
    * pantalla debe mantenerla montada hasta que el flujo termine.
    */
   onFlowChange?: (active: boolean) => void;
+  /** Sesión abierta cuyo alta quedó a medias: la pantalla abre directo en aceptar términos. */
+  unregisteredUser?: User | null;
 }) {
-  const { configured } = useAuth();
+  const { configured, signOut } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<AuthMode>('splash');
+  const [mode, setMode] = useState<AuthMode>(unregisteredUser ? 'google-legal' : 'splash');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [nombre, setNombre] = useState('');
+  const [nombre, setNombre] = useState(unregisteredUser?.displayName ?? '');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [legal, setLegal] = useState<LegalVersions | null>(null);
   const [resolver, setResolver] = useState<MultiFactorResolver | null>(null);
-  const [pendingGoogleUser, setPendingGoogleUser] = useState<User | null>(null);
+  const [pendingGoogleUser, setPendingGoogleUser] = useState<User | null>(unregisteredUser);
   const [totpCode, setTotpCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -358,6 +361,8 @@ export function AuthScreens({
       setTotpCode('');
       return;
     }
+    // Sin aceptar términos no hay alta: la sesión de Firebase no puede quedar abierta a medias.
+    if (mode === 'google-legal') void signOut().finally(() => onFlowChange?.(false));
     setPendingGoogleUser(null);
     setMode('splash');
   }
@@ -407,17 +412,19 @@ export function AuthScreens({
         </div>
         {error ? <p className="alumno-error">{error}</p> : null}
         <div className="alumno-splash__actions">
-          <button className="alumno-btn alumno-btn--lime" type="button" onClick={() => setMode('alta')}>
-            Crear cuenta
-          </button>
           <button
-            className="alumno-btn alumno-btn--google"
+            className="alumno-btn alumno-btn--lime alumno-splash__google"
             type="button"
             disabled={busy || !configured}
             onClick={() => void onGoogle()}
           >
-            <GoogleMark />
+            <span className="alumno-splash__google-mark">
+              <GoogleMark />
+            </span>
             Continuar con Google
+          </button>
+          <button className="alumno-btn alumno-btn--ghost" type="button" onClick={buyAsGuest}>
+            Comprar sin cuenta
           </button>
           <p className="alumno-splash__login">
             ¿Ya tienes cuenta?{' '}
@@ -425,8 +432,8 @@ export function AuthScreens({
               Iniciar sesión
             </button>
           </p>
-          <button className="alumno-btn alumno-btn--ghost" type="button" onClick={buyAsGuest}>
-            Comprar sin cuenta
+          <button className="alumno-splash__email" type="button" onClick={() => setMode('alta')}>
+            Crear cuenta con correo
           </button>
         </div>
       </main>
@@ -527,7 +534,7 @@ export function AuthScreens({
               ) : null}
             </>
           ) : (
-            <p className="alumno-lead">Acepta los documentos vigentes para terminar el alta con Google.</p>
+            <p className="alumno-lead">Acepta los documentos vigentes para terminar de crear tu cuenta.</p>
           )}
           {mode === 'entrar' ? (
             <p className="alumno-auth__forgot">
