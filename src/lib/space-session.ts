@@ -1,4 +1,6 @@
 const KEY = 'vaiinilla.buyer.space.v1';
+/** Una mesa escaneada vale por una visita: pasado esto se pide escanear otra vez. */
+const SPACE_TTL_MS = 4 * 60 * 60 * 1000;
 
 export interface SpaceSession {
   slug: string;
@@ -12,20 +14,68 @@ export interface SpaceSession {
   qrToken?: string;
 }
 
-export function readSpace(slug: string): SpaceSession | null {
+interface StoredSpace extends SpaceSession {
+  guardadoEn?: number;
+}
+
+// En el dispositivo y no en la pestaña: el QR abre el navegador, la app instalada es otro
+// contexto y el teléfono puede cerrar la app al ir a Google a entrar. La mesa debe seguir ahí.
+function readStored(): StoredSpace | null {
   try {
-    const raw = sessionStorage.getItem(KEY);
+    const raw = localStorage.getItem(KEY) ?? sessionStorage.getItem(KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as SpaceSession;
-    if (parsed.slug !== slug || !Number.isFinite(parsed.espacioId)) return null;
+    const parsed = JSON.parse(raw) as StoredSpace;
+    if (!parsed.slug || !Number.isFinite(parsed.espacioId)) return null;
+    if (parsed.guardadoEn !== undefined && Date.now() - parsed.guardadoEn > SPACE_TTL_MS) {
+      forgetSpace();
+      return null;
+    }
     return parsed;
   } catch {
     return null;
   }
 }
 
+function withoutStamp(stored: StoredSpace): SpaceSession {
+  const space: StoredSpace = { ...stored };
+  delete space.guardadoEn;
+  return space;
+}
+
+export function readSpace(slug: string): SpaceSession | null {
+  const stored = readStored();
+  return stored && stored.slug === slug ? withoutStamp(stored) : null;
+}
+
+/** La mesa escaneada vigente en cualquier negocio: para volver a ella al reabrir la app. */
+export function scannedSpace(): SpaceSession | null {
+  const stored = readStored();
+  return stored ? withoutStamp(stored) : null;
+}
+
 export function rememberSpace(session: SpaceSession): void {
-  sessionStorage.setItem(KEY, JSON.stringify(session));
+  const stored: StoredSpace = { ...session, guardadoEn: Date.now() };
+  try {
+    localStorage.setItem(KEY, JSON.stringify(stored));
+  } catch {
+    sessionStorage.setItem(KEY, JSON.stringify(stored));
+  }
+}
+
+export function forgetSpace(): void {
+  try {
+    localStorage.removeItem(KEY);
+    sessionStorage.removeItem(KEY);
+  } catch {
+    // nada que borrar
+  }
+}
+
+/** Tras entrar o elegir comprar sin cuenta, quien escaneó una mesa vuelve a su menú, no al selector. */
+export function entryAfterAccess(next: string): string {
+  if (next !== '/pedir') return next;
+  const space = scannedSpace();
+  return space ? `/e/${space.slug}` : next;
 }
 
 /** Lo mínimo de una renta para saber si el cliente está jugando ahora en una cancha. */

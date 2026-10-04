@@ -695,6 +695,43 @@ describe('CartPage', () => {
       expect(await screen.findByText(/revisa tu bandeja/i)).toBeInTheDocument();
     });
 
+    it('mientras el reintento sigue en curso, el botón no se libera ni crea un segundo pedido', async () => {
+      const getIdToken = vi.fn().mockResolvedValue('fresh-token');
+      authState.user = { email: 'ana@example.test', displayName: 'Ana', getIdToken };
+      buyerSessionState.context = { access_token: 'jwt', contexto: { establecimiento_id: '1' } };
+      cartState.cart = {
+        slug: 'demo-a',
+        establishmentName: 'Cafetería Demo A',
+        lines: [
+          {
+            productId: 1,
+            quantity: 1,
+            optionIds: [],
+            productName: 'Chocolate $120',
+            unitPreview: '120.00',
+            imageUrl: null,
+          },
+        ],
+      };
+      createOrder
+        .mockRejectedValueOnce(
+          new VaiinillaApiError(403, { code: 'EMAIL_NOT_VERIFIED', message: 'Verifica tu correo antes de continuar.' }),
+        )
+        .mockReturnValueOnce(new Promise(() => undefined));
+      const user = userEvent.setup();
+      renderCart();
+
+      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      const confirmButton = screen.getByRole('button', { name: /^continuar con/i });
+      await user.click(confirmButton);
+      await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(2));
+
+      expect(confirmButton).toBeDisabled();
+      await user.click(confirmButton);
+      expect(createOrder).toHaveBeenCalledTimes(2);
+      authState.user = { email: 'ana@example.test', displayName: 'Ana' };
+    });
+
     it('si el token trae el claim viejo, fuerza uno fresco y reintenta una vez', async () => {
       const getIdToken = vi.fn().mockResolvedValue('fresh-token');
       authState.user = { email: 'ana@example.test', displayName: 'Ana', getIdToken };
@@ -794,7 +831,7 @@ describe('CartPage', () => {
       // Va a Mis pedidos (con el arcade), con el pedido nuevo abierto; no al pedido suelto.
       expect(await screen.findByText('Mis pedidos ?nuevo=p9')).toBeInTheDocument();
       // La mesa sigue: la siguiente ronda no exige volver a escanear y sigue a la cuenta.
-      expect(JSON.parse(sessionStorage.getItem('vaiinilla.buyer.space.v1') ?? 'null')).toMatchObject({
+      expect(JSON.parse(localStorage.getItem('vaiinilla.buyer.space.v1') ?? 'null')).toMatchObject({
         espacioId: 12,
         pagaAlFinal: true,
       });

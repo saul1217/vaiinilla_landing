@@ -22,6 +22,7 @@ const authState: {
 } = { user: null };
 
 vi.mock('../lib/api', () => ({
+  ACCOUNT_DELETION_CONFIRMATION: 'ELIMINAR',
   api: {
     getLegalVersions: vi.fn().mockResolvedValue({
       terminos_version: '2026-07',

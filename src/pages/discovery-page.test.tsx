@@ -97,7 +97,7 @@ describe('DiscoveryPage', () => {
     await user.click(screen.getByRole('button', { name: /listo/i }));
 
     await waitFor(() => expect(resolveSpace).toHaveBeenCalledWith('12345678', 'demo-a'));
-    const raw = sessionStorage.getItem('vaiinilla.buyer.space.v1');
+    const raw = localStorage.getItem('vaiinilla.buyer.space.v1');
     expect(raw).toContain('"qrToken":"12345678"');
     expect(raw).toContain('"espacioId":3');
   });

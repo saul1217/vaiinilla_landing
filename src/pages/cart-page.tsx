@@ -62,6 +62,7 @@ export function CartPage() {
   const [verifyBusy, setVerifyBusy] = useState(false);
   const [verifyNotice, setVerifyNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const confirming = useRef(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [previousOrders, setPreviousOrders] = useState<OrderDetail[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -232,6 +233,8 @@ export function CartPage() {
     (moneyToCents(wallet.wallet.saldo) ?? 0n) < (moneyToCents(total) ?? 0n);
 
   async function confirm(retried = false) {
+    // Un solo pedido a la vez: un segundo toque mientras se crea no abre otro.
+    if (confirming.current && !retried) return;
     setError(null);
     setEmailBlocked(false);
     if (!place || lines.length === 0 || !total) return;
@@ -256,6 +259,7 @@ export function CartPage() {
       setError('Tienes un pago Stripe pendiente. Resuélvelo antes de crear otro pedido.');
       return;
     }
+    confirming.current = true;
     setSubmitting(true);
     try {
       const storedId = clientId || sessionStorage.getItem(`vaiinilla.buyer.client-id.${slug}`) || undefined;
@@ -338,13 +342,14 @@ export function CartPage() {
         } catch {
           // Sigue al reenvío con el error original.
         }
-        setSubmitting(false);
-        void confirm(true);
+        // Se espera el reintento: el botón sigue bloqueado hasta que termine.
+        await confirm(true);
         return;
       }
       setEmailBlocked(cause instanceof VaiinillaApiError && cause.code === 'EMAIL_NOT_VERIFIED');
       setError(errorMessage(cause));
     } finally {
+      if (!retried) confirming.current = false;
       setSubmitting(false);
     }
   }

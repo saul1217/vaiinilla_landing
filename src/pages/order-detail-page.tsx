@@ -103,15 +103,27 @@ export function OrderDetailPage() {
         if (active && !silent) setError(errorMessage(cause));
       }
     };
-    void run();
-    const timer = window.setInterval(() => {
-      const current = orderRef.current;
-      if (current && isTerminalOrderStatus(current.estado)) return;
-      void run(true);
-    }, currentPollMs(orderRef.current));
+    // Cada espera se calcula con el pedido más reciente: un pago Stripe sin confirmar se
+    // consulta más seguido que el resto, aunque al montar todavía no se supiera qué era.
+    let timer: number | undefined;
+    const schedule = () => {
+      timer = window.setTimeout(() => {
+        const current = orderRef.current;
+        if (current && isTerminalOrderStatus(current.estado)) {
+          schedule();
+          return;
+        }
+        void run(true).finally(() => {
+          if (active) schedule();
+        });
+      }, currentPollMs(orderRef.current));
+    };
+    void run().finally(() => {
+      if (active) schedule();
+    });
     return () => {
       active = false;
-      window.clearInterval(timer);
+      window.clearTimeout(timer);
     };
   }, [cart?.slug, context, id, openClientSession, user]);
 

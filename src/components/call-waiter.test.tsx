@@ -53,6 +53,18 @@ describe('CallWaiter', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.useRealTimers());
 
+  it('un pedido para llevar o ya cerrado no consulta llamadas al backend', async () => {
+    const current = vi.fn(() => Promise.resolve(null));
+    const api = client({ current });
+    render(<CallWaiter order={order({ destino: 'para_llevar', espacio: null })} client={api} />);
+    render(<CallWaiter order={order({ estado: 'expirado' })} client={api} />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(current).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /llamar al mesero/i })).not.toBeInTheDocument();
+  });
+
   it('solo aparece en pedidos para mesa que siguen abiertos', () => {
     expect(canCallWaiter(order())).toBe(true);
     expect(canCallWaiter(order({ destino: 'para_llevar', espacio: null }))).toBe(false);

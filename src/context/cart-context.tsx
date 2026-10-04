@@ -31,16 +31,21 @@ function sameLine(line: CartLine, productId: number, optionIds: number[]): boole
   return cartLineKey(line.productId, line.optionIds) === cartLineKey(productId, optionIds);
 }
 
+/** Un carrito sin líneas no existe: se borra del dispositivo; si tiene, se guarda tal cual. */
+function persistCart(next: StoredCart | null): StoredCart | null {
+  const normalized = next && next.lines.length > 0 ? next : null;
+  if (normalized) writeCart(normalized);
+  else clearCart();
+  return normalized;
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<StoredCart | null>(() =>
     typeof window === 'undefined' ? null : readCart(),
   );
 
   const commit = useCallback((next: StoredCart | null) => {
-    const normalized = next && next.lines.length > 0 ? next : null;
-    setCart(normalized);
-    if (!normalized) clearCart();
-    else writeCart(normalized);
+    setCart(persistCart(next));
   }, []);
 
   const addLine = useCallback(
@@ -73,9 +78,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 : line,
             )
           : [...base.lines, incoming];
-        const next = { slug, establishmentName, lines };
-        writeCart(next);
-        return next;
+        return persistCart({ slug, establishmentName, lines });
       });
     },
     [],
@@ -92,10 +95,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 ? { ...line, quantity: Math.min(20, quantity) }
                 : line,
             );
-      const next = lines.length ? { ...current, lines } : null;
-      if (next) writeCart(next);
-      else clearCart();
-      return next;
+      return persistCart({ ...current, lines });
     });
   }, []);
 
@@ -103,10 +103,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCart((current) => {
       if (!current) return current;
       const lines = current.lines.filter((line) => !sameLine(line, productId, optionIds));
-      const next = lines.length ? { ...current, lines } : null;
-      if (next) writeCart(next);
-      else clearCart();
-      return next;
+      return persistCart({ ...current, lines });
     });
   }, []);
 

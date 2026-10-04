@@ -7,6 +7,7 @@ import { readStoredClientContext } from "../lib/client-session";
 import {
   CALL_REASONS,
   CallsUnavailableError,
+  canCallWaiter,
   createBuyerCallClient,
   type BuyerCallClient,
   type CallReason,
@@ -17,14 +18,6 @@ import type { OrderDetail } from "../types/api";
 
 const POLL_MS = 5000;
 const COOLDOWN_S = 60;
-
-function canCallWaiter(order: OrderDetail) {
-  return (
-    order.destino === "en_espacio" &&
-    Boolean(order.espacio) &&
-    order.estado !== "cancelado"
-  );
-}
 
 type View = "idle" | "reasons" | "open" | "unavailable";
 
@@ -41,6 +34,8 @@ export function CallWaiter({
     return token ? createBuyerCallClient(token) : null;
   }, [injected]);
   const espacioId = order.espacio?.id ?? 0;
+  // Solo un pedido en mesa puede llamar: los demás no consultan al backend.
+  const callable = canCallWaiter(order);
   const [call, setCall] = useState<TableCall | null>(null);
   const [view, setView] = useState<View>("idle");
   const [busy, setBusy] = useState(false);
@@ -51,7 +46,7 @@ export function CallWaiter({
 
   // Restore an open call after a reload, then keep it fresh while open.
   useEffect(() => {
-    if (!client) return;
+    if (!client || !callable) return;
     let active = true;
     const tick = async () => {
       try {
@@ -74,7 +69,7 @@ export function CallWaiter({
       active = false;
       window.clearInterval(id);
     };
-  }, [client, espacioId]);
+  }, [callable, client, espacioId]);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -82,7 +77,7 @@ export function CallWaiter({
     return () => window.clearTimeout(id);
   }, [cooldown]);
 
-  if (!client || !canCallWaiter(order)) return null;
+  if (!client || !callable) return null;
 
   async function send(reason: CallReason) {
     if (!client) return;
