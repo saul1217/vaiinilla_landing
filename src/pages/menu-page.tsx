@@ -14,6 +14,7 @@ import { rememberPlace } from '../lib/last-place';
 import { formatMoney } from '../lib/money';
 import type { CatalogProduct, CatalogResponse, PublicEstablishment } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
+import { MotionSheet } from '../components/motion-sheet';
 import { ProductSheet } from '../components/product-sheet';
 import { peekResource, resourceKeys } from '../lib/resource-cache';
 
@@ -34,6 +35,13 @@ export function MenuPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(() => !peekResource(resourceKeys.catalog(slug)));
   const [rentsCourts, setRentsCourts] = useState(false);
+  // Cambio de tienda con carrito ajeno: se confirma antes de vaciarlo.
+  const [switchCart, setSwitchCart] = useState<{ count: number; from: string } | null>(null);
+  const [pendingAdd, setPendingAdd] = useState<{
+    product: CatalogProduct;
+    optionIds: number[];
+    quantity: number;
+  } | null>(null);
 
   // "Rentar cancha" solo se ofrece si el negocio tiene al menos una cancha con precio por hora.
   useEffect(() => {
@@ -124,6 +132,17 @@ export function MenuPage() {
       setError(invalid);
       return false;
     }
+    // El carrito es de una sola tienda: agregar en otra lo vacía, y eso se confirma.
+    if (cart && cart.slug !== slug && cart.lines.length > 0) {
+      setPendingAdd({ product: selected, optionIds, quantity });
+      setSwitchCart({
+        count: cart.lines.reduce((sum, line) => sum + line.quantity, 0),
+        from: cart.establishmentName,
+      });
+      if (!keepOpen) setSelected(null);
+      setError(null);
+      return false;
+    }
     addLine(place.slug, place.nombre, selected, optionIds, quantity);
     if (!keepOpen) setSelected(null);
     setError(null);
@@ -131,6 +150,15 @@ export function MenuPage() {
   }
 
   const preview = selected ? previewForProduct(selected, optionIds, quantity) : null;
+
+  function confirmSwitchCart(close: () => void) {
+    if (pendingAdd && place) {
+      addLine(place.slug, place.nombre, pendingAdd.product, pendingAdd.optionIds, pendingAdd.quantity);
+    }
+    setPendingAdd(null);
+    setSwitchCart(null);
+    close();
+  }
   const cartCount = cart?.slug === slug ? cart.lines.reduce((sum, line) => sum + line.quantity, 0) : 0;
   const menuActions = () => (
     <>
@@ -247,6 +275,41 @@ export function MenuPage() {
           onAdd={() => addCurrentProduct({ keepOpen: true })}
           onClosed={() => setSelected(null)}
         />
+      ) : null}
+      {switchCart ? (
+        <MotionSheet
+          className="alumno-sheet alumno-codesheet"
+          labelledBy="switch-title"
+          onClosed={() => {
+            setSwitchCart(null);
+            setPendingAdd(null);
+          }}
+        >
+          {(close, dragHandle) => (
+            <div className="alumno-codesheet__panel">
+              <div className="alumno-codesheet__grab" {...dragHandle}>
+                <span aria-hidden="true" />
+              </div>
+              <h2 id="switch-title">¿Cambiar de tienda?</h2>
+              <p className="alumno-muted">
+                Tienes {switchCart.count === 1 ? '1 producto' : `${switchCart.count} productos`} de{' '}
+                {switchCart.from} en tu carrito. Si agregas aquí, ese carrito se vacía.
+              </p>
+              <div className="alumno-tracking__actions">
+                <button
+                  className="alumno-btn alumno-btn--lime"
+                  type="button"
+                  onClick={() => confirmSwitchCart(close)}
+                >
+                  Vaciar y agregar aquí
+                </button>
+                <button className="alumno-btn" type="button" onClick={close}>
+                  Conservar mi carrito
+                </button>
+              </div>
+            </div>
+          )}
+        </MotionSheet>
       ) : null}
     </AppShell>
   );

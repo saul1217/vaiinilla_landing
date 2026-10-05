@@ -217,7 +217,11 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
                   ? 'Te enviamos un enlace para verificar tu correo.'
                   : 'Tu correo aún no está verificado.'}
               </strong>{' '}
-              Sin verificar no puedes pedir. Revisa tu bandeja (y el spam).
+              Sin verificar no puedes usar saldo ni tarjeta. En caja sí puedes pedir:{' '}
+              <Link className="alumno-link" to="/pedir">
+                pide como invitado
+              </Link>{' '}
+              y tus pedidos pasarán a tu cuenta al verificarla. Revisa tu bandeja (y el spam).
             </p>
             {verifyNotice ? <p className="alumno-muted">{verifyNotice}</p> : null}
             {verifyError ? <p className="alumno-error">{verifyError}</p> : null}

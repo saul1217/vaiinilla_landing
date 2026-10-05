@@ -13,6 +13,7 @@ import {
   sendPasswordReset,
 } from '../lib/firebase';
 import { enableGuestBuy, enableGuestExplore } from '../lib/guest-explore';
+import { claimGuestOrders } from '../lib/guest-claim';
 import { unpublishedLegalTestingEnabled } from '../lib/legal';
 import { entryAfterAccess } from '../lib/space-session';
 import { staffAccesses } from '../lib/staff-access';
@@ -183,6 +184,9 @@ export function AuthScreens({
         terminos_version: legal.terminos_version,
         privacidad_version: legal.privacidad_version,
       });
+      // Alta recién terminada: si en este navegador se pidió sin cuenta, esos
+      // pedidos se mudan solos a la cuenta (si falla, Mis pedidos lo ofrece).
+      await claimGuestOrders(nextUser).catch(() => null);
       return [];
     }
   }
@@ -228,8 +232,8 @@ export function AuthScreens({
         }
         const created = await createPasswordAccount(email, password, nombre);
         await finish(created);
-        // Sin verificar no se puede pedir: el correo se manda aquí; si falla,
-        // /cuenta lo reenvía (la cuenta ya quedó creada).
+        // La cuenta plena (saldo y tarjeta) pide correo verificado: se manda aquí;
+        // si falla, /cuenta lo reenvía. En caja se puede pedir como invitado.
         await sendVerificationEmail(created).catch(() => undefined);
         return;
       }
