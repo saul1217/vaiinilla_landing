@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { formatAmount } from '../lib/money';
-import { orderedGroups, tableOrderState } from '../lib/shared-table';
+import { orderedGroups, tableGroupKey, tableOrderState, tablePersonKey } from '../lib/shared-table';
+import { dropTableParticipantOnSessionChange } from '../lib/table-participant';
 import { spaceNoun } from '../lib/space-words';
 import type { SharedTable } from '../types/api';
 
@@ -48,7 +49,10 @@ export function SharedTableCard({
   const refresh = useCallback(async () => {
     if (!token) return;
     try {
-      setTable(await api.currentTable(token));
+      const next = await api.currentTable(token);
+      // La sesión cambió (mesa cerrada / nueva sesión): la identidad local ya no vale.
+      dropTableParticipantOnSessionChange(next?.sesion_id ?? null);
+      setTable(next);
     } catch (cause) {
       // Una consulta fallida no borra la mesa que ya se ve; la siguiente lo intenta otra vez.
       if (isUnauthorized(cause)) onUnauthorized?.();
@@ -159,7 +163,7 @@ export function SharedTableCard({
 
       <div className="alumno-chips shared-table__people" aria-label={`Quién está en la ${noun}`}>
         {table.participantes.map((person, index) => (
-          <span key={`${person.alias}-${index}`} className={person.soy_yo ? 'alumno-chip is-on' : 'alumno-chip'}>
+          <span key={tablePersonKey(person, index)} className={person.soy_yo ? 'alumno-chip is-on' : 'alumno-chip'}>
             {person.soy_yo ? `${person.alias} (tú)` : person.alias}
           </span>
         ))}
@@ -171,7 +175,7 @@ export function SharedTableCard({
         orderedGroups(table)
           .filter((group) => group.pedidos.length > 0)
           .map((group, index) => (
-            <section key={`${group.alias ?? 'otros'}-${index}`} className="shared-table__group" style={{ ['--i' as string]: index }}>
+            <section key={tableGroupKey(group, index)} className="shared-table__group" style={{ ['--i' as string]: index }}>
               <h3 className="alumno-section-label">
                 {group.soy_yo ? 'Tus pedidos' : (group.alias ?? `Otros en la ${noun}`)}
               </h3>

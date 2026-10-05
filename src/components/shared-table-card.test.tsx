@@ -13,15 +13,18 @@ const ZERO = { total: '0.00', pagado: '0.00', pendiente: '0.00' };
 function table(overrides: Partial<SharedTable> = {}): SharedTable {
   return {
     espacio: { id: 3, nombre: 'Mesa 3', tipo: 'mesa' },
+    sesion_id: 'ses-1',
     mi_alias: 'Ana',
+    mi_participante: { id: 'p-ana', alias: 'Ana' },
     cuenta_abierta: true,
     participantes: [
-      { alias: 'Luis', soy_yo: false, unido_en: null },
-      { alias: 'Ana', soy_yo: true, unido_en: null },
+      { id: 'p-luis', alias: 'Luis', soy_yo: false, unido_en: null },
+      { id: 'p-ana', alias: 'Ana', soy_yo: true, unido_en: null },
     ],
     grupos: [
       {
         alias: 'Luis',
+        participante_id: 'p-luis',
         soy_yo: false,
         total: '20.20',
         pagado: '20.20',
@@ -30,6 +33,7 @@ function table(overrides: Partial<SharedTable> = {}): SharedTable {
       },
       {
         alias: 'Ana',
+        participante_id: 'p-ana',
         soy_yo: true,
         total: '10.10',
         pagado: '0.00',
@@ -115,7 +119,7 @@ describe('mesa compartida', () => {
     apiMock.currentTable.mockResolvedValue(
       table({
         grupos: [
-          { alias: 'Luis', soy_yo: false, total: '20.20', pagado: '0.00', pendiente: '20.20',
+          { alias: 'Luis', participante_id: 'p-luis', soy_yo: false, total: '20.20', pagado: '0.00', pendiente: '20.20',
             pedidos: [{ id: null, folio: 7, estado: 'listo', items_resumen: '1× Torta', total: '20.20', pendiente_cobro: true, creado_en: 'a', pagara: null, lo_pago_yo: false }] },
         ],
       }),
@@ -123,7 +127,7 @@ describe('mesa compartida', () => {
     apiMock.claimTableOrder.mockResolvedValue(
       table({
         grupos: [
-          { alias: 'Luis', soy_yo: false, total: '20.20', pagado: '0.00', pendiente: '20.20',
+          { alias: 'Luis', participante_id: 'p-luis', soy_yo: false, total: '20.20', pagado: '0.00', pendiente: '20.20',
             pedidos: [{ id: null, folio: 7, estado: 'listo', items_resumen: '1× Torta', total: '20.20', pendiente_cobro: true, creado_en: 'a', pagara: 'Ana', lo_pago_yo: true }] },
         ],
       }),
@@ -141,7 +145,7 @@ describe('mesa compartida', () => {
     apiMock.currentTable.mockResolvedValue(
       table({
         grupos: [
-          { alias: 'Luis', soy_yo: false, total: '20.20', pagado: '0.00', pendiente: '20.20',
+          { alias: 'Luis', participante_id: 'p-luis', soy_yo: false, total: '20.20', pagado: '0.00', pendiente: '20.20',
             pedidos: [{ id: null, folio: 7, estado: 'listo', items_resumen: '1× Torta', total: '20.20', pendiente_cobro: true, creado_en: 'a', pagara: 'Luis', lo_pago_yo: false }] },
         ],
       }),
@@ -181,7 +185,7 @@ describe('mesa compartida', () => {
     apiMock.currentTable.mockResolvedValue(
       table({
         grupos: [
-          { alias: 'Luis', soy_yo: false, total: '20.20', pagado: '0.00', pendiente: '20.20',
+          { alias: 'Luis', participante_id: 'p-luis', soy_yo: false, total: '20.20', pagado: '0.00', pendiente: '20.20',
             pedidos: [{ id: null, folio: 7, estado: 'listo', items_resumen: '1× Torta', total: '20.20', pendiente_cobro: true, creado_en: 'a', pagara: null, lo_pago_yo: false }] },
         ],
       }),

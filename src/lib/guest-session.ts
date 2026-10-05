@@ -43,11 +43,13 @@ export function forgetGuest() {
 /**
  * Una sesión de cliente para el invitado en este negocio: renueva con la llave
  * guardada; si no hay llave (o ya no sirve, o cambió el nombre) da de alta otra.
+ * Sin nombre usa/renueva la llave y crea un invitado anónimo si no hay (para la
+ * mesa: lo visible es el alias del participante, no el del invitado).
  */
-export async function guestSession(slug: string, nombre: string): Promise<ClientContextResponse> {
+export async function guestSession(slug: string, nombre?: string): Promise<ClientContextResponse> {
   const stored = readGuest();
-  const clean = nombre.trim().replace(/\s+/g, ' ');
-  if (stored && stored.nombre === clean) {
+  const clean = (nombre ?? '').trim().replace(/\s+/g, ' ');
+  if (stored && (clean === '' || stored.nombre === clean)) {
     try {
       const renewed = await api.renewGuest(slug, stored.llave);
       writeStoredClientContext(renewed, slug);
@@ -59,7 +61,7 @@ export async function guestSession(slug: string, nombre: string): Promise<Client
   const legal = await api.getLegalVersions();
   const created = await api.createGuest({
     slug,
-    nombre: clean,
+    ...(clean === '' ? {} : { nombre: clean }),
     terminosVersion: legal.terminos_version,
     privacidadVersion: legal.privacidad_version,
   });

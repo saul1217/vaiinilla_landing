@@ -23,7 +23,12 @@ import { deliveredAtLabel, spaceNoun } from '../lib/space-words';
 import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
 import { isStripeCheckoutEnabled, offersCardPayment, STRIPE_UNAVAILABLE_COPY } from '../lib/stripe-public';
 import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '../lib/stripe-session';
-import { guestSession, readGuest } from '../lib/guest-session';
+import { readGuest } from '../lib/guest-session';
+import { clientSessionForPlace } from '../lib/client-session-for-place';
+import {
+  dropTableParticipantOnSessionChange,
+  tableParticipantFor,
+} from '../lib/table-participant';
 import { rememberGuestOrder, trackingPath } from '../lib/guest-orders';
 import type { SpaceSession } from '../lib/space-session';
 import type {
@@ -96,7 +101,42 @@ export function CartPage() {
   const guestBlocked = guest && place?.identificador_cliente_obligatorio === true;
   const canCheckout = !guestBlocked;
   const [guestName, setGuestName] = useState(() => readGuest()?.nombre ?? '');
-  const guestNameValid = guestName.trim().length >= 2;
+  // En mesa con participante vigente no se pide nombre: el pedido ya va a su nombre.
+  const qrToken = scanned?.qrToken ?? null;
+  const [tableAlias, setTableAlias] = useState<string | null>(null);
+  useEffect(() => {
+    if (!qrToken) {
+      setTableAlias(null);
+      return;
+    }
+    let active = true;
+    void (async () => {
+      try {
+        const client = await clientSessionForPlace({
+          slug,
+          place,
+          user: user ?? null,
+          context,
+          openClientSession: openClientSessionRef.current,
+        });
+        if (!active) return;
+        const table = await api.tableSession(client.access_token, qrToken);
+        if (!active) return;
+        // Sesión nueva: la identidad local se borra y se vuelve a pedir nombre.
+        dropTableParticipantOnSessionChange(table.sesion_id);
+        const mine = tableParticipantFor(slug, table.espacio.id, table.sesion_id);
+        setTableAlias(mine ? mine.alias : null);
+      } catch {
+        if (active) setTableAlias(null);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [context, qrToken, slug, user, place]);
+  const guestNameValid = tableAlias ? true : guestName.trim().length >= 2;
+  const whoHref =
+    qrToken != null ? `/e/${slug}/m/${encodeURIComponent(qrToken)}/quien?next=${encodeURIComponent(`/e/${slug}/carrito`)}` : null;
   const [legal, setLegal] = useState<LegalVersions | null>(null);
   useEffect(() => {
     if (!guest || legal) return;
@@ -270,15 +310,24 @@ export function CartPage() {
     setSubmitting(true);
     try {
       const storedId = clientId || sessionStorage.getItem(`vaiinilla.buyer.client-id.${slug}`) || undefined;
+      const asGuest = !user || fallbackGuest;
       let session;
-      if (!user || fallbackGuest) {
-        session = await guestSession(slug, guestName);
-      } else if (context?.contexto.establecimiento_id === place.id) {
-        session = context;
-      } else {
-        try {
-          session = await openClientSession(user, place, storedId);
-        } catch (cause) {
+      try {
+        // Invitado (con nombre, o anónimo en mesa con participante) o registrado:
+        // una sola función para no duplicar la resolución de sesión.
+        // En mesa con participante el nombre temporal vive en el participante, no en
+        // el invitado: se reusa la llave anónima del dispositivo (la misma con que se
+        // unió a la mesa) y nunca se manda el alias como nombre.
+        session = await clientSessionForPlace({
+          slug,
+          place,
+          user: asGuest ? null : user,
+          context: asGuest ? null : context,
+          openClientSession,
+          guestName: tableAlias ? undefined : asGuest ? guestName : undefined,
+          clientId: storedId,
+        });
+      } catch (cause) {
           // Cuenta a medias (sin alta o correo sin verificar) que paga en caja:
           // no se le rebota a /cuenta; confirma como invitado y reclama después.
           const code = cause instanceof VaiinillaApiError ? cause.code : null;
@@ -288,7 +337,7 @@ export function CartPage() {
           if (pending && cashLike && !fallbackGuest) {
             setFallbackGuest(true);
             if (!guestName.trim()) {
-              const suggested = user.displayName?.trim() ?? '';
+              const suggested = user?.displayName?.trim() ?? '';
               if (suggested) setGuestName(suggested);
             }
             setError(
@@ -300,7 +349,6 @@ export function CartPage() {
           }
           throw cause;
         }
-      }
       const operational = await api.getOperationalStatus(session.access_token);
       setStatus(operational);
       if (!canAcceptOrders(operational)) {
@@ -494,7 +542,11 @@ export function CartPage() {
                   Incluye comisión por tarjeta {formatAmount(fee)}.
                 </p>
               ) : null}
-              {guestLike ? (
+              {tableAlias && whoHref ? (
+                <p className="alumno-guest-checkout__who">
+                  Pides como {tableAlias} · <Link to={whoHref}>Cambiar</Link>
+                </p>
+              ) : guestLike ? (
                 <div className="alumno-guest-checkout">
                   <label className="alumno-field">
                     <span>Tu nombre</span>

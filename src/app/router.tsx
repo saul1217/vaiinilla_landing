@@ -11,6 +11,7 @@ import { OrderDetailPage } from '../pages/order-detail-page';
 import { OrdersPage } from '../pages/orders-page';
 import { SupportPage } from '../pages/support-page';
 import { TableJoinPage } from '../pages/table-join-page';
+import { TableWhoPage } from '../pages/table-who-page';
 import { WalletPage, WalletQrPage } from '../pages/wallet-page';
 import {
   AlumnoQaCartPage,
@@ -35,6 +36,8 @@ export function AppRouter() {
         <Route path="/e/:slug/canchas" element={<ReservationsPage />} />
         <Route path="/e/:slug/m/:token" element={<TableJoinPage />} />
         <Route path="/:slug/m/:token" element={<TableJoinPage />} />
+        <Route path="/e/:slug/m/:token/quien" element={<TableWhoPage />} />
+        <Route path="/:slug/m/:token/quien" element={<TableWhoPage />} />
         <Route path="/seguimiento/:token" element={<TrackingPage />} />
         <Route path="/cuenta" element={<AccountPage />} />
         <Route path="/cuenta/pedidos" element={<OrdersPage />} />

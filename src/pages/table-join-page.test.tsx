@@ -27,12 +27,18 @@ function AccessProbe() {
   return <p>Acceso {location.search}</p>;
 }
 
+function WhoProbe() {
+  const location = useLocation();
+  return <p>Quién eres {location.search}</p>;
+}
+
 function renderJoin() {
   return render(
     <MemoryRouter initialEntries={['/demo-a/m/qr-1']}>
       <Routes>
         <Route path="/:slug/m/:token" element={<TableJoinPage />} />
         <Route path="/e/:slug" element={<p>Menú demo-a</p>} />
+        <Route path="/e/:slug/m/:token/quien" element={<WhoProbe />} />
         <Route path="/cuenta" element={<AccessProbe />} />
       </Routes>
     </MemoryRouter>,
@@ -78,7 +84,7 @@ describe('TableJoinPage', () => {
     expect(await screen.findByText(/no está disponible/i)).toBeInTheDocument();
   });
 
-  it('sin cuenta, el QR primero ofrece entrar o pedir sin cuenta y luego lleva al menú', async () => {
+  it('sin cuenta, el QR de mesa primero pregunta quién eres y luego lleva al menú', async () => {
     authState.user = null;
     resolveSpace.mockResolvedValue({
       establecimiento_slug: 'demo-a',
@@ -87,11 +93,13 @@ describe('TableJoinPage', () => {
       espacio_tipo: 'mesa',
     });
     renderJoin();
-    expect(await screen.findByText('Acceso ?next=%2Fe%2Fdemo-a')).toBeInTheDocument();
+    // A ¿Quién eres?, con el destino original (elegir cómo pedir) como next.
+    expect(await screen.findByText(/quién eres/i)).toBeInTheDocument();
+    expect(screen.getByText(/quién eres/i).textContent).toContain(encodeURIComponent('/cuenta?next='));
     expect(localStorage.getItem('vaiinilla.buyer.space.v1')).toContain('"espacioId":3');
   });
 
-  it('quien ya pidió sin cuenta antes no vuelve a elegir: va directo al menú', async () => {
+  it('quien ya pidió sin cuenta antes va a quién eres directo (ya no repite acceso)', async () => {
     authState.user = null;
     localStorage.setItem('vaiinilla.buyer.guest.v1', JSON.stringify({ nombre: 'Ana', llave: 'llave-1' }));
     resolveSpace.mockResolvedValue({
@@ -101,16 +109,30 @@ describe('TableJoinPage', () => {
       espacio_tipo: 'mesa',
     });
     renderJoin();
-    expect(await screen.findByText('Menú demo-a')).toBeInTheDocument();
+    expect(await screen.findByText(/quién eres/i)).toBeInTheDocument();
+    expect(screen.getByText(/quién eres/i).textContent).toContain(encodeURIComponent('/e/demo-a'));
   });
 
-  it('registrado con QR válido sigue al menú', async () => {
+  it('registrado con QR de mesa válido pasa por quién eres', async () => {
     authState.user = { email: 'ana@example.test' };
     resolveSpace.mockResolvedValue({
       establecimiento_slug: 'demo-a',
       espacio_id: 3,
       espacio_nombre: 'Mesa 3',
       espacio_tipo: 'mesa',
+    });
+    renderJoin();
+    expect(await screen.findByText(/quién eres/i)).toBeInTheDocument();
+    authState.user = null;
+  });
+
+  it('la cancha no es compartible: sigue directo al menú sin preguntar quién eres', async () => {
+    authState.user = { email: 'ana@example.test' };
+    resolveSpace.mockResolvedValue({
+      establecimiento_slug: 'demo-a',
+      espacio_id: 9,
+      espacio_nombre: 'Cancha 1',
+      espacio_tipo: 'cancha',
     });
     renderJoin();
     expect(await screen.findByText('Menú demo-a')).toBeInTheDocument();
