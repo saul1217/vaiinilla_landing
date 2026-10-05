@@ -385,16 +385,43 @@ export interface SharedTableOrder {
 export interface SharedTableGroup extends SharedTableAmounts {
   /** null: pedidos de quien no se unió a la mesa. */
   alias: string | null;
+  /** Identificador interno del participante; null en grupos sin participante. Nunca uses el alias como key. */
+  participante_id: string | null;
   soy_yo: boolean;
   pedidos: SharedTableOrder[];
+}
+
+/** Participante temporal de la sesión activa de una mesa. El alias es solo etiqueta visible. */
+export interface TableParticipant {
+  id: string;
+  alias: string;
+  soy_yo: boolean;
+}
+
+/** Quién soy yo en la sesión activa de la mesa. */
+export interface TableSelf {
+  id: string;
+  alias: string;
+}
+
+/** GET /mesas/espacio/:token (rol cliente): sesión activa de la mesa y quién soy. */
+export interface TableSession {
+  espacio: { id: number; nombre: string; tipo: string };
+  sesion_id: string;
+  participantes: TableParticipant[];
+  yo: TableSelf | null;
 }
 
 /** GET /mesas/actual. Contrato: back docs/mesa-compartida.md. */
 export interface SharedTable {
   espacio: { id: number; nombre: string; tipo: string };
+  /** Sesión activa de la mesa; la identidad local solo vale si coincide. */
+  sesion_id: string;
   mi_alias: string;
+  /** Quién soy en esta sesión; null si aún no me uní. */
+  mi_participante: TableSelf | null;
   cuenta_abierta: boolean;
-  participantes: { alias: string; soy_yo: boolean; unido_en: string | null }[];
+  participantes: (TableParticipant & { unido_en: string | null })[];
   grupos: SharedTableGroup[];
   totales: SharedTableAmounts;
   mi_parte: SharedTableAmounts;

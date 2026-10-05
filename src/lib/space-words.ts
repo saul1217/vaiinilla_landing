@@ -27,3 +27,12 @@ export function openingTitle(kind: Kind | null | undefined): string {
 export function deliveredAtLabel(kind: Kind | null | undefined): string {
   return `El pedido se entrega en tu ${spaceNoun(kind)}`;
 }
+
+/**
+ * Espacios compartibles: varias personas piden a la misma cuenta y eligen quién
+ * son al entrar. La mesa (y la barra) lo son; cancha, cajón y asiento no: ahí el
+ * QR lleva directo al menú. El tipo ausente es mesa (ver `spaceNoun`).
+ */
+export function isSharableSpace(kind: Kind | null | undefined): boolean {
+  return kind == null || kind === 'mesa' || kind === 'barra';
+}

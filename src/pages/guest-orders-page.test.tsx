@@ -107,15 +107,18 @@ function liveOrder(over: Partial<TrackedOrder> = {}): TrackedOrder {
 function mesa(over: Partial<SharedTable> = {}): SharedTable {
   return {
     espacio: { id: 5, nombre: 'Mesa 5', tipo: 'mesa' },
+    sesion_id: 'ses-5',
     mi_alias: 'Lupi',
+    mi_participante: { id: 'p-lupi', alias: 'Lupi' },
     cuenta_abierta: true,
     participantes: [
-      { alias: 'Lupi', soy_yo: true, unido_en: null },
-      { alias: 'Beto', soy_yo: false, unido_en: null },
+      { id: 'p-lupi', alias: 'Lupi', soy_yo: true, unido_en: null },
+      { id: 'p-beto', alias: 'Beto', soy_yo: false, unido_en: null },
     ],
     grupos: [
       {
         alias: 'Beto',
+        participante_id: 'p-beto',
         soy_yo: false,
         total: '20.20',
         pagado: '0.00',
