@@ -8,6 +8,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { GuestLiveOrders } from '../components/guest-live-orders';
+import { GuestOrderSaveLink } from '../components/guest-order-save-link';
 import { GuestOrdersBanner } from '../components/guest-orders-banner';
 import { SharedTableCard } from '../components/shared-table-card';
 import { WaitingArcade } from '../arcade/waiting-arcade';
@@ -163,6 +164,15 @@ export function GuestOrdersPage() {
               imageFor={(order) => orderThumbUrl(order, thumbImages, catalogProducts)}
               initialExpandedToken={nuevoToken}
             />
+            {live.orders
+              .filter((order) => typeof order.seguimiento_token === 'string')
+              .map((order) => (
+                <GuestOrderSaveLink
+                  key={order.id}
+                  token={order.seguimiento_token as string}
+                  folio={order.folio}
+                />
+              ))}
             <WaitingArcade />
           </>
         )}
