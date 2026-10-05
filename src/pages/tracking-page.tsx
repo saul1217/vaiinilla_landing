@@ -5,6 +5,7 @@
 // Contrato: vaiinilla_back docs/compra-sin-cuenta.md.
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import QRCode from 'qrcode';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { OrderTrackCard } from '../components/order-track-card';
@@ -13,6 +14,7 @@ import { OrderTicketView } from './order-detail-page';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import { readGuestOrders, trackingUrl } from '../lib/guest-orders';
+import { isStorageAvailable } from '../lib/storage-available';
 import { isActiveOrder } from '../lib/order-labels';
 import { isPermanentTrackingError, trackingRetryDelay } from '../lib/tracking-poll';
 import { isStripePaymentConfirmedByBackend } from '../lib/stripe-status';
@@ -34,6 +36,22 @@ export function TrackingPage() {
   const [paying, setPaying] = useState(false);
   const saved = readGuestOrders().find((o) => o.token === token) ?? null;
   const link = trackingUrl(token);
+  // QR del enlace para pasarlo a otro dispositivo sin escribirlo.
+  const [qr, setQr] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    void QRCode.toDataURL(link, { margin: 1, width: 240 })
+      .then((url) => {
+        if (active) setQr(url);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [link]);
+  // Sin almacenamiento (modo privado), el enlace es la única copia que existe.
+  const [storageOk] = useState(isStorageAvailable);
+  const whatsappHref = `https://wa.me/?text=${encodeURIComponent(`Mi pedido en Vaiinilla: ${link}`)}`;
 
   useEffect(() => {
     let active = true;
@@ -105,12 +123,20 @@ export function TrackingPage() {
 
         <section className="alumno-tracking__keep" role="note" aria-label="Guarda este enlace">
           <strong>{justOrdered ? '¡Listo! Guarda este enlace' : 'Guarda este enlace'}</strong>
-          <p>
-            Tu pedido también vive en este navegador, en la pestaña{' '}
-            <Link to="/cuenta/pedidos">Pedidos</Link>. Guarda el enlace como respaldo para otro
-            dispositivo o si borras los datos: pediste sin cuenta, así que no te llegará por
-            correo.
-          </p>
+          {storageOk ? (
+            <p>
+              Tu pedido también vive en este navegador, en la pestaña{' '}
+              <Link to="/cuenta/pedidos">Pedidos</Link>. Guarda el enlace como respaldo para otro
+              dispositivo o si borras los datos: pediste sin cuenta, así que no te llegará por
+              correo.
+            </p>
+          ) : (
+            <p>
+              <strong>Este navegador no guarda datos:</strong> este enlace es tu única copia del
+              pedido. Mándalo a otro lado ahora: no lo verás en la pestaña{' '}
+              <Link to="/cuenta/pedidos">Pedidos</Link> al cerrar.
+            </p>
+          )}
           <code className="alumno-tracking__link">{link}</code>
           <div className="alumno-tracking__actions">
             <button type="button" className="alumno-btn alumno-btn--lime" onClick={() => void copy()}>
@@ -121,12 +147,18 @@ export function TrackingPage() {
                 Compartir
               </button>
             ) : null}
+            <a className="alumno-btn" href={whatsappHref} target="_blank" rel="noreferrer">
+              Enviar por WhatsApp
+            </a>
             {saved && !stripePending ? (
               <Link className="alumno-btn" to="/cuenta/pedidos">
                 Ver en Mis pedidos
               </Link>
             ) : null}
           </div>
+          {qr ? (
+            <img className="wallet-qr" src={qr} alt="Código QR de tu enlace de seguimiento" />
+          ) : null}
         </section>
 
         {error && !order ? <p className="alumno-error">{error}</p> : null}

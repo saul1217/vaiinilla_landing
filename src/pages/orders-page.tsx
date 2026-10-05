@@ -17,6 +17,10 @@ import { catalogImageMap, orderThumbUrl } from "../lib/catalog-images";
 import { formatAmount } from "../lib/money";
 import { persistPickupQrFromOrder } from "../lib/pickup-qr";
 import { isActiveOrder, openTab } from "../lib/order-labels";
+import { readGuestOrders } from "../lib/guest-orders";
+import { forgetGuest } from "../lib/guest-session";
+import { claimGuestOrders, hasClaimableGuestOrders } from "../lib/guest-claim";
+import { usePwaInstall } from "../lib/pwa-install";
 import { usePickupQrToken } from "../lib/use-pickup-qr";
 import { useDeskPane } from "../lib/use-desk-pane";
 import type {
@@ -49,8 +53,18 @@ export function OrdersPage() {
   // Recién pedido: el carrito llega con ?nuevo=<id> y ese pedido ya se ve abierto.
   const [expandedId, setExpandedId] = useState<string | null>(() => searchParams.get("nuevo"));
   const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
+  // Reclamo invitado → cuenta: tras pasarlos se vuelve a consultar para verlos aquí.
+  const [claimKey, setClaimKey] = useState(0);
+  const [claim, setClaim] = useState<{
+    state: "idle" | "busy" | "done" | "error";
+    pedidos?: number;
+    detail?: string;
+  }>({ state: "idle" });
   const deskPane = useDeskPane();
   const deskAutoSelected = useRef(false);
+  // Instalación en contexto: recién pedido, seguir sin guardar enlaces tiene sentido.
+  // Junto a los demás hooks: antes del retorno de invitado.
+  const pwa = usePwaInstall();
   const thumbImages = catalogImageMap(catalogProducts);
 
   useEffect(() => {
@@ -112,7 +126,7 @@ export function OrdersPage() {
       active = false;
       window.clearInterval(timer);
     };
-  }, [cart?.slug, context, navigate, openClientSession, ready, user]);
+  }, [cart?.slug, claimKey, context, navigate, openClientSession, ready, user]);
 
   useEffect(() => {
     if (!deskPane) {
@@ -138,6 +152,32 @@ export function OrdersPage() {
     setExpandedId((current) => (current === id ? null : id));
   }
 
+  // "Estos pedidos eran míos": lo que se pidió sin cuenta en este navegador se
+  // muda a la cuenta (el alta recién hecha ya lo intentó en silencio).
+  async function claimNow() {
+    if (!user || claim.state === "busy") return;
+    setClaim({ state: "busy" });
+    try {
+      const out = await claimGuestOrders(user);
+      if (!out) {
+        setClaim({ state: "idle" });
+        return;
+      }
+      setClaim({ state: "done", pedidos: out.reclamado.pedidos });
+      setClaimKey((current) => current + 1);
+    } catch (cause) {
+      if (cause instanceof VaiinillaApiError && cause.code === "GUEST_KEY_INVALID") {
+        forgetGuest();
+        setClaim({ state: "idle" });
+        return;
+      }
+      setClaim({ state: "error", detail: errorMessage(cause) });
+    }
+  }
+
+  const claimableCount = user ? readGuestOrders().length : 0;
+  const justOrdered = searchParams.get("nuevo") !== null;
+
   return (
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
@@ -146,6 +186,54 @@ export function OrdersPage() {
           <p className="alumno-place-name">{place.nombre}</p>
         ) : null}
         {error ? <p className="alumno-error">{error}</p> : null}
+        {user && claim.state === "idle" && hasClaimableGuestOrders() ? (
+          <section className="alumno-banner" aria-label="Pasar pedidos de invitado a tu cuenta">
+            <p>
+              <strong>Pediste sin cuenta en este navegador.</strong> Pásalos a tu
+              cuenta para verlos aquí siempre, en este y otros dispositivos.
+            </p>
+            <div className="alumno-tracking__actions">
+              <button
+                className="alumno-btn alumno-btn--lime"
+                type="button"
+                onClick={() => void claimNow()}
+              >
+                {claimableCount === 1
+                  ? "Pasar mi pedido a mi cuenta"
+                  : `Pasar mis ${claimableCount} pedidos a mi cuenta`}
+              </button>
+            </div>
+          </section>
+        ) : null}
+        {claim.state === "busy" ? <p role="status">Pasando tus pedidos…</p> : null}
+        {claim.state === "done" ? (
+          <p className="alumno-banner" role="status">
+            {claim.pedidos === 0
+              ? "Listo: esos pedidos ya estaban en tu cuenta."
+              : `Listo: ${claim.pedidos === 1 ? "tu pedido ya está" : `tus ${claim.pedidos} pedidos ya están`} en tu cuenta.`}
+          </p>
+        ) : null}
+        {claim.state === "error" ? <p className="alumno-error">{claim.detail}</p> : null}
+        {pwa.offer && justOrdered ? (
+          <section className="alumno-banner" aria-label="Instalar Vaiinilla">
+            <p>
+              <strong>¿Instalas Vaiinilla?</strong> Sigue tus pedidos sin guardar
+              enlaces, directo desde tu pantalla de inicio.
+            </p>
+            <div className="alumno-tracking__actions">
+              <button
+                className="alumno-btn alumno-btn--lime"
+                type="button"
+                onClick={() => void pwa.install()}
+              >
+                Instalar
+              </button>
+              <button className="alumno-btn" type="button" onClick={pwa.dismiss}>
+                Ahora no
+              </button>
+            </div>
+          </section>
+        ) : null}
         <SharedTableCard
           accessToken={context?.access_token ?? null}
           qrToken={readSpace(place?.slug ?? placeGuess ?? "")?.qrToken ?? null}

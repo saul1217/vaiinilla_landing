@@ -408,3 +408,14 @@ export interface GuestSessionResponse extends ClientContextResponse {
 
 /** Pedido visto por su enlace de seguimiento; `qr_token` llega ya pagado. */
 export type TrackedOrder = OrderDetail & { qr_token: string | null };
+
+/** Respuesta de POST /invitados/reclamar: lo que se mudó a la cuenta. */
+export interface ClaimGuestOrdersResponse {
+  reclamado: {
+    pedidos: number;
+    establecimientos: string[];
+    mesa_transferida: boolean;
+    mesa_ocupada: boolean;
+  };
+  invitado: { nombre: string };
+}

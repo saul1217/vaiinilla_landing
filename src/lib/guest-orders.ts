@@ -40,3 +40,14 @@ export function rememberGuestOrder(link: GuestOrderLink): void {
     // Sin almacenamiento: queda solo el enlace.
   }
 }
+
+/** Tras reclamar a la cuenta, los enlaces de esos negocios ya viven ahí. */
+export function forgetGuestOrdersBySlugs(slugs: string[]): void {
+  if (slugs.length === 0) return;
+  try {
+    const rest = readGuestOrders().filter((o) => !slugs.includes(o.slug));
+    localStorage.setItem(KEY, JSON.stringify(rest.slice(0, MAX)));
+  } catch {
+    // Nada que borrar.
+  }
+}

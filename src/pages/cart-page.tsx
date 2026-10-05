@@ -10,7 +10,7 @@ import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
-import { canAcceptOrders, canPayAtEnd, cartTotal, toCreateOrderInput, unitFor } from '../lib/cart';
+import { canAcceptOrders, canPayAtEnd, cardFee, cartTotal, toCreateOrderInput, unitFor } from '../lib/cart';
 import { leftoverPeekProducts, peekCatalogProducts, productImageUrl } from '../lib/catalog-images';
 import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
 import { formatAmount, formatMoney, linePreview, moneyToCents } from '../lib/money';
@@ -77,17 +77,22 @@ export function CartPage() {
   useEffect(() => {
     if (rentalSpace && !scanned) setForHere(true);
   }, [rentalSpace, scanned]);
+  // Compra sin cuenta: quien no entra pide con solo su nombre, salvo donde el negocio
+  // exige un identificador (matrícula), que necesita cuenta.
+  const guest = !user;
+  // Cuenta a medias (sin alta o sin verificar) que paga en caja: confirma como
+  // invitado y sus pedidos se reclaman solos al verificarla.
+  const [fallbackGuest, setFallbackGuest] = useState(false);
+  const guestLike = guest || fallbackGuest;
   // Sin cuenta no hay sesión para leer el estado operativo: lo dice la ficha pública.
-  const tabAllowed = user
+  // El fallback a invitado (cuenta sin verificar) sigue la regla de invitado.
+  const tabAllowed = !guestLike
     ? canPayAtEnd(status, forHere && Boolean(space))
     : forHere && Boolean(space) && place?.permite_pago_al_final === true;
   const useTab = payAtEnd && tabAllowed && payment === 'efectivo';
   const stripeEnabled = isStripeCheckoutEnabled();
   const cardOffered = offersCardPayment(place);
   const pendingStripeOrderId = readPendingStripeOrderId();
-  // Compra sin cuenta: quien no entra pide con solo su nombre, salvo donde el negocio
-  // exige un identificador (matrícula), que necesita cuenta.
-  const guest = !user;
   const guestBlocked = guest && place?.identificador_cliente_obligatorio === true;
   const canCheckout = !guestBlocked;
   const [guestName, setGuestName] = useState(() => readGuest()?.nombre ?? '');
@@ -108,6 +113,8 @@ export function CartPage() {
   );
   // Solo la tarjeta lleva la comisión: el total y la validación de saldo siguen al método.
   const total = useMemo(() => cartTotal(lines, payment), [lines, payment]);
+  // Desglose de la comisión: el total con tarjeta se ve igual, pero se dice por qué subió.
+  const fee = useMemo(() => (payment === 'stripe' ? cardFee(lines) : null), [lines, payment]);
 
   useEffect(() => {
     let active = true;
@@ -242,11 +249,11 @@ export function CartPage() {
       void navigate(`/cuenta?next=/e/${slug}/carrito`);
       return;
     }
-    if (guest && !guestNameValid) {
+    if (guestLike && !guestNameValid) {
       setError('Escribe tu nombre para que sepan de quién es el pedido.');
       return;
     }
-    if (guest && payment === 'saldo') {
+    if (guestLike && payment === 'saldo') {
       setError('El saldo Vaiinilla es de tu cuenta: paga en caja o con tarjeta.');
       return;
     }
@@ -263,11 +270,37 @@ export function CartPage() {
     setSubmitting(true);
     try {
       const storedId = clientId || sessionStorage.getItem(`vaiinilla.buyer.client-id.${slug}`) || undefined;
-      const session = !user
-        ? await guestSession(slug, guestName)
-        : context?.contexto.establecimiento_id === place.id
-          ? context
-          : await openClientSession(user, place, storedId);
+      let session;
+      if (!user || fallbackGuest) {
+        session = await guestSession(slug, guestName);
+      } else if (context?.contexto.establecimiento_id === place.id) {
+        session = context;
+      } else {
+        try {
+          session = await openClientSession(user, place, storedId);
+        } catch (cause) {
+          // Cuenta a medias (sin alta o correo sin verificar) que paga en caja:
+          // no se le rebota a /cuenta; confirma como invitado y reclama después.
+          const code = cause instanceof VaiinillaApiError ? cause.code : null;
+          const cashLike = payment !== 'saldo' && payment !== 'stripe';
+          const pending =
+            code === 'IDENTITY_NOT_REGISTERED' || (code === 'EMAIL_NOT_VERIFIED' && retried);
+          if (pending && cashLike && !fallbackGuest) {
+            setFallbackGuest(true);
+            if (!guestName.trim()) {
+              const suggested = user.displayName?.trim() ?? '';
+              if (suggested) setGuestName(suggested);
+            }
+            setError(
+              'Tu cuenta aún no está verificada, pero en caja sí puedes pedir: confirma como invitado y tus pedidos pasarán a tu cuenta al verificarla.',
+            );
+            confirming.current = false;
+            setSubmitting(false);
+            return;
+          }
+          throw cause;
+        }
+      }
       const operational = await api.getOperationalStatus(session.access_token);
       setStatus(operational);
       if (!canAcceptOrders(operational)) {
@@ -310,7 +343,7 @@ export function CartPage() {
       forgetIdempotencyKey(fingerprint);
       // La tarjeta se cobra en la pantalla del pedido (espera la confirmación de Stripe);
       // el resto va a Mis pedidos, con el arcade y el pedido nuevo ya abierto.
-      if (!user && order.seguimiento_token) {
+      if ((!user || fallbackGuest) && order.seguimiento_token) {
         // Sin cuenta, el enlace se guarda como respaldo; el pedido vive en Mis pedidos.
         rememberGuestOrder({
           token: order.seguimiento_token,
@@ -320,8 +353,9 @@ export function CartPage() {
           createdAt: Date.now(),
         });
         // Solo la tarjeta se termina en el seguimiento; lo demás abre Mis pedidos igual
-        // que un registrado (el pedido se expande por su token).
-        if (payment === 'stripe') {
+        // que un registrado (el pedido se expande por su token). El fallback (cuenta a
+        // medias) también va al seguimiento: su pedido aún no vive en la cuenta.
+        if (payment === 'stripe' || fallbackGuest) {
           void navigate(`${trackingPath(order.seguimiento_token)}?nuevo=1`);
           return;
         }
@@ -376,7 +410,7 @@ export function CartPage() {
         {error ? <p className="alumno-error">{error}</p> : null}
         {emailBlocked && user ? (
           <p className="alumno-banner">
-            Sin verificar no puedes pedir.{' '}
+            Sin verificar no puedes usar saldo ni tarjeta: elige pago en caja o verifica tu correo.{' '}
             <button
               className="alumno-link"
               type="button"
@@ -455,7 +489,12 @@ export function CartPage() {
                 </button>
               </div>
               <p className="alumno-paysheet__total">Total {total ? formatMoney(total) : '—'}</p>
-              {guest ? (
+              {fee ? (
+                <p className="alumno-muted alumno-paysheet__fee">
+                  Incluye comisión por tarjeta {formatAmount(fee)}.
+                </p>
+              ) : null}
+              {guestLike ? (
                 <div className="alumno-guest-checkout">
                   <label className="alumno-field">
                     <span>Tu nombre</span>
@@ -468,8 +507,17 @@ export function CartPage() {
                     />
                   </label>
                   <p className="alumno-muted alumno-guest-checkout__note">
-                    Sin cuenta: solo tu nombre. Al confirmar te damos un enlace para seguir tu pedido.{' '}
-                    <Link to={`/cuenta?next=/e/${slug}/carrito`}>¿Tienes cuenta? Entra</Link>
+                    {fallbackGuest ? (
+                      <>
+                        Tu cuenta aún no está verificada: pides como invitado. Al
+                        verificarla, este pedido pasará a tu cuenta solo.
+                      </>
+                    ) : (
+                      <>
+                        Sin cuenta: solo tu nombre. Al confirmar te damos un enlace para seguir tu pedido.{' '}
+                        <Link to={`/cuenta?next=/e/${slug}/carrito`}>¿Tienes cuenta? Entra</Link>
+                      </>
+                    )}
                   </p>
                 </div>
               ) : null}
@@ -518,7 +566,7 @@ export function CartPage() {
               ) : null}
               {/* Oculta hasta que el dueño active la tarjeta en su panel (el flujo queda intacto). */}
               {/* Sin cuenta, por ahora solo caja o pagar al final: la tarjeta aún no termina de cobrar. */}
-              {cardOffered && !guest ? (
+              {cardOffered && !guestLike ? (
               <PayOption
                 selected={payment === 'stripe'}
                 icon="card"
@@ -534,8 +582,13 @@ export function CartPage() {
               />
               ) : null}
               {error ? <p className="alumno-error">{error}</p> : null}
-              {insufficientBalance ? <p className="alumno-error">No tienes saldo suficiente para este pedido.</p> : null}
-              {guest ? (
+              {insufficientBalance ? (
+                <p className="alumno-error">
+                  No tienes saldo suficiente para este pedido.{' '}
+                  <Link to="/cuenta/saldo">Ver mi saldo y cómo recargar en caja</Link>
+                </p>
+              ) : null}
+              {guestLike ? (
                 <p className="alumno-muted alumno-guest-checkout__legal">
                   Al pedir aceptas los{' '}
                   <a href={legal?.terminos_url ?? '/terminos'} target="_blank" rel="noreferrer">Términos</a> y el{' '}
@@ -549,7 +602,7 @@ export function CartPage() {
                   submitting ||
                   Boolean(insufficientBalance) ||
                   Boolean(pendingStripeOrderId) ||
-                  (guest && !guestNameValid)
+                  (guestLike && !guestNameValid)
                 }
                 onClick={() => void confirm()}
               >

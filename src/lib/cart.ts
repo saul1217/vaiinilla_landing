@@ -1,5 +1,5 @@
 import type { CartLine, CatalogProduct, CreateOrderInput, OrderDestination, PaymentMethod } from '../types/api';
-import { cartPreview, linePreview, productUnitPreview } from './money';
+import { cartPreview, centsToMoney, linePreview, moneyToCents, productUnitPreview } from './money';
 
 export function optionExtraPrices(product: CatalogProduct, optionIds: number[]): string[] {
   return product.grupos_opcion
@@ -65,6 +65,21 @@ export function cartTotal(lines: CartLine[], method: PaymentMethod | null = null
     totals.push(total);
   }
   return cartPreview(totals);
+}
+
+/**
+ * Comisión por tarjeta: lo que sube el total frente a mostrador. Null si no hay
+ * diferencia o no se puede calcular: no hay nada que desglosar.
+ */
+export function cardFee(lines: CartLine[]): string | null {
+  const cash = cartTotal(lines, 'efectivo');
+  const card = cartTotal(lines, 'stripe');
+  if (!cash || !card) return null;
+  const cashCents = moneyToCents(cash);
+  const cardCents = moneyToCents(card);
+  if (cashCents === null || cardCents === null) return null;
+  const fee = cardCents - cashCents;
+  return fee > 0n ? centsToMoney(fee) : null;
 }
 
 export function toCreateOrderInput(

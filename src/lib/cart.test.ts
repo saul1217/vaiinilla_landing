@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogProduct } from '../types/api';
-import { cartTotal, defaultOptionIds, previewForProduct, toCreateOrderInput, validateSelections } from './cart';
+import { cardFee, cartTotal, defaultOptionIds, previewForProduct, toCreateOrderInput, validateSelections } from './cart';
 
 const burrito = {
   id: 103,
@@ -142,5 +142,10 @@ describe('precio según cómo se paga (comisión pasada al cliente)', () => {
   it('un carrito guardado antes del cambio (sin precio de mostrador) sigue sumando', () => {
     const old = { ...line, unitCounter: undefined };
     expect(cartTotal([old], 'saldo')).toBe('242.00');
+  });
+
+  it('la comisión por tarjeta es la diferencia contra mostrador; sin diferencia no hay desglose', () => {
+    expect(cardFee([line])).toBe('22.00');
+    expect(cardFee([{ ...line, unitPreview: '110.00' }])).toBeNull();
   });
 });

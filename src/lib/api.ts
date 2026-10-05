@@ -3,6 +3,7 @@ import { createIdempotencyKey } from './idempotency';
 import { resolveApiUrl } from './env';
 import type {
   ApiEnvelope,
+  ClaimGuestOrdersResponse,
   GuestSessionResponse,
   TrackedOrder,
   SharedTable,
@@ -171,6 +172,21 @@ export const api = {
       await request<TrackedOrder[]>('/publico/invitados/pedidos', {
         method: 'POST',
         body: { establecimiento_slug: slug, llave },
+        cache: 'no-store',
+      })
+    ).data;
+  },
+
+  /**
+   * "Estos pedidos eran míos": pasa los pedidos del invitado a la cuenta.
+   * La llave es la prueba de propiedad; repetirlo mueve cero filas.
+   */
+  async claimGuestOrders(firebaseToken: string, llave: string): Promise<ClaimGuestOrdersResponse> {
+    return (
+      await request<ClaimGuestOrdersResponse>('/invitados/reclamar', {
+        method: 'POST',
+        token: firebaseToken,
+        body: { llave },
         cache: 'no-store',
       })
     ).data;

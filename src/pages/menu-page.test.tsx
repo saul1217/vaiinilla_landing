@@ -11,6 +11,9 @@ const addLine = vi.fn();
 const authState: { user: { email: string; displayName: string } | null } = {
   user: null,
 };
+const cartState: {
+  cart: { slug: string; establishmentName: string; lines: unknown[] } | null;
+} = { cart: { slug: "demo-a", establishmentName: "Demo A", lines: [] } };
 
 vi.mock("../lib/api", () => ({
   api: {
@@ -56,7 +59,7 @@ vi.mock("../context/auth-context", () => ({
 
 vi.mock("../context/cart-context", () => ({
   useCart: () => ({
-    cart: { slug: "demo-a", establishmentName: "Demo A", lines: [] },
+    cart: cartState.cart,
     addLine,
     updateQuantity: vi.fn(),
     removeLine: vi.fn(),
@@ -82,6 +85,7 @@ describe("MenuPage", () => {
   beforeEach(() => {
     sessionStorage.clear();
     authState.user = null;
+    cartState.cart = { slug: "demo-a", establishmentName: "Demo A", lines: [] };
     addLine.mockReset();
   });
 
@@ -96,6 +100,38 @@ describe("MenuPage", () => {
     expect(
       screen.queryByRole("link", { name: /crea tu cuenta/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("con carrito de otra tienda confirma antes de vaciarlo", async () => {
+    cartState.cart = {
+      slug: "otra",
+      establishmentName: "Otra",
+      lines: [
+        {
+          productId: 1,
+          quantity: 2,
+          optionIds: [],
+          productName: "Taco",
+          unitPreview: "20.00",
+          imageUrl: null,
+        },
+      ],
+    };
+    const user = userEvent.setup();
+    renderMenu();
+    await user.click(
+      await screen.findByRole("button", { name: /chocolate frío/i }),
+    );
+    await user.click(screen.getByRole("button", { name: /agregar/i }));
+    // No vacía sin preguntar.
+    expect(addLine).not.toHaveBeenCalled();
+    expect(
+      await screen.findByRole("heading", { name: /cambiar de tienda/i }),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: /vaciar y agregar aquí/i }),
+    );
+    expect(addLine).toHaveBeenCalledTimes(1);
   });
 
   it("donde se pide con matrícula, sin sesión pide crear cuenta", async () => {

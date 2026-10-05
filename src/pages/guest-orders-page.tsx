@@ -22,6 +22,7 @@ import { openTab } from '../lib/order-labels';
 import { readSpace, rememberSpace } from '../lib/space-session';
 import { useGuestLiveOrders } from '../lib/use-guest-live-orders';
 import { useGuestSpaceToken } from '../lib/use-guest-space-token';
+import { usePwaInstall } from '../lib/pwa-install';
 import type { CatalogProduct, LegalVersions, PublicEstablishment } from '../types/api';
 
 export function GuestOrdersPage() {
@@ -48,6 +49,8 @@ export function GuestOrdersPage() {
     [live.orders],
   );
   const tab = openTab(live.orders);
+  const pwa = usePwaInstall();
+  const justOrdered = nuevoToken !== null;
 
   useEffect(() => {
     if (!slug) return;
@@ -177,6 +180,26 @@ export function GuestOrdersPage() {
           </>
         )}
         <GuestOrdersBanner slug={slug} excludeTokens={liveTokens} />
+        {pwa.offer && justOrdered ? (
+          <section className="alumno-banner" aria-label="Instalar Vaiinilla">
+            <p>
+              <strong>¿Instalas Vaiinilla?</strong> Tus pedidos sin cuenta siguen aquí
+              sin guardar enlaces, directo desde tu pantalla de inicio.
+            </p>
+            <div className="alumno-tracking__actions">
+              <button
+                className="alumno-btn alumno-btn--lime"
+                type="button"
+                onClick={() => void pwa.install()}
+              >
+                Instalar
+              </button>
+              <button className="alumno-btn" type="button" onClick={pwa.dismiss}>
+                Ahora no
+              </button>
+            </div>
+          </section>
+        ) : null}
         <GuestAccountInvite name={guestName || undefined} />
       </main>
     </AppShell>
