@@ -1,4 +1,4 @@
-import type { CartLine, CatalogProduct, CreateOrderInput, OrderDestination, PaymentMethod } from '../types/api';
+import type { CartLine, CatalogProduct, CreateOrderInput, CreateOrderItemInput, OrderDestination, PaymentMethod } from '../types/api';
 import { cartPreview, centsToMoney, linePreview, moneyToCents, productUnitPreview } from './money';
 
 export function optionExtraPrices(product: CatalogProduct, optionIds: number[]): string[] {

@@ -132,7 +132,7 @@ export function CartPage() {
         // Sesión nueva: la identidad local se borra y se vuelve a pedir nombre.
         dropTableParticipantOnSessionChange(table.sesion_id);
         const mine = tableParticipantFor(slug, table.espacio.id, table.sesion_id);
-        setTableAlias(mine ? mine.alias : (user?.displayName || (user?.email ? user.email.split('@')[0] : null)));
+        setTableAlias(mine ? mine.alias : (user?.displayName ?? (user?.email ? user.email.split('@')[0] : null) ?? null));
       } catch {
         if (active) setTableAlias(null);
       }

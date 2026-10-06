@@ -20,7 +20,7 @@ describe('catalog-order', () => {
       {
         id: 10,
         categoria_id: 1,
-        estacion_preparacion: 'barra',
+        estacion_preparacion: 'caja',
         nombre: 'Café Americano',
         descripcion: null,
         ingredientes: null,
@@ -35,7 +35,7 @@ describe('catalog-order', () => {
       {
         id: 20,
         categoria_id: 2,
-        estacion_preparacion: 'barra',
+        estacion_preparacion: 'caja',
         nombre: 'Flan Casero',
         descripcion: null,
         ingredientes: null,
