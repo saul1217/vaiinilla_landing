@@ -11,7 +11,7 @@ import {
   QA_PHOTO_POZOLE,
   QA_PHOTO_TACOS,
 } from "../lib/qa-catalog-photos";
-import type { CartLine, CatalogProduct, OrderDetail } from "../types/api";
+import type { CartLine, CatalogProduct, OrderDetail, SharedTable } from "../types/api";
 import { CartEmptyView, CartFilledView } from "./cart-page";
 import { OrderTicketView } from "./order-detail-page";
 import { useDeskPane } from "../lib/use-desk-pane";
@@ -66,7 +66,82 @@ const MESA = qaOrder({
   metodo_pago: "stripe",
   destino: "en_espacio",
   espacio: { id: 4, nombre: "Mesa 4", tipo: "mesa" },
+  total: "999999.99",
+  items: [
+    {
+      id: 1,
+      producto_id: 1,
+      nombre_producto: "Chocolate artesanal de temporada con descripción especialmente larga para revisar el ajuste en pantallas pequeñas sin cortar el nombre del producto",
+      estacion_preparacion: "cocina",
+      cantidad: 1,
+      precio_digital_unitario: "999999.99",
+      subtotal: "999999.99",
+      opciones: [],
+    },
+  ],
 });
+const QA_SHARED_TABLE: SharedTable = {
+  espacio: { id: 4, nombre: "Mesa 4", tipo: "mesa" },
+  sesion_id: "qa-session-1",
+  mi_alias: "Ana María con un nombre de participante largo",
+  mi_participante: { id: "qa-participant-ana", alias: "Ana María con un nombre de participante largo" },
+  cuenta_abierta: true,
+  participantes: [
+    { id: "qa-participant-ana", alias: "Ana María con un nombre de participante largo", soy_yo: true, unido_en: "2026-09-17T12:00:00Z" },
+    { id: "qa-participant-luis", alias: "Luis Fernando con otro alias largo", soy_yo: false, unido_en: "2026-09-17T12:02:00Z" },
+  ],
+  grupos: [
+    {
+      alias: "Ana María con un nombre de participante largo",
+      participante_id: "qa-participant-ana",
+      soy_yo: true,
+      pedidos: [
+        {
+          id: MESA.id,
+          folio: MESA.folio,
+          estado: MESA.estado,
+          items_resumen: "1 × Chocolate artesanal de temporada con descripción larga para revisar el ajuste en pantallas pequeñas",
+          total: "999999.99",
+          pendiente_cobro: true,
+          creado_en: MESA.creado_en,
+        },
+        {
+          id: "qa-97",
+          folio: 97,
+          estado: "preparando",
+          items_resumen: "2 × Pan de masa madre con relleno de temporada",
+          total: "15000.00",
+          pendiente_cobro: true,
+          creado_en: "2026-09-17T12:03:00Z",
+        },
+      ],
+      total: "1014999.99",
+      pagado: "0.00",
+      pendiente: "1014999.99",
+    },
+    {
+      alias: "Luis Fernando con otro alias largo",
+      participante_id: "qa-participant-luis",
+      soy_yo: false,
+      pedidos: [
+        {
+          id: "qa-98",
+          folio: 98,
+          estado: "listo",
+          items_resumen: "1 × Agua mineral",
+          total: "250000.00",
+          pendiente_cobro: true,
+          creado_en: "2026-09-17T12:04:00Z",
+        },
+      ],
+      total: "250000.00",
+      pagado: "0.00",
+      pendiente: "250000.00",
+    },
+  ],
+  totales: { total: "1264999.99", pagado: "0.00", pendiente: "1264999.99" },
+  mi_parte: { total: "1014999.99", pagado: "0.00", pendiente: "1014999.99" },
+};
 const qaCallClient = createMockBuyerCallClient();
 const CARD = qaOrder({
   id: "qa-94",
@@ -387,7 +462,7 @@ export function AlumnoQaTableOrderPage() {
       <main id="main-content" className="alumno-main">
         <AlumnoPageHeader title="Mis pedidos" />
         <p className="alumno-place-name">Venecia · Mesa 4</p>
-        <div className="alumno-order-list">
+        <div className="alumno-detail-split">
           <OrderTrackCard
             order={MESA}
             expanded={open}
@@ -395,6 +470,7 @@ export function AlumnoQaTableOrderPage() {
             imageUrl={qaOrderThumb(MESA)}
             callClient={qaCallClient}
           />
+          <OrderTicketView order={MESA} table={QA_SHARED_TABLE} />
         </div>
       </main>
     </AppShell>

@@ -14,16 +14,19 @@ import { OrderTicketView } from './order-detail-page';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import { readGuestOrders, trackingUrl } from '../lib/guest-orders';
+import { useGuestSpaceToken } from '../lib/use-guest-space-token';
 import { isStorageAvailable } from '../lib/storage-available';
 import { isActiveOrder } from '../lib/order-labels';
 import { isPermanentTrackingError, trackingRetryDelay } from '../lib/tracking-poll';
 import { isStripePaymentConfirmedByBackend } from '../lib/stripe-status';
 import { clearStripeCheckoutSession, peekStripeCheckoutSession } from '../lib/stripe-session';
-import type { StripePaymentSession, TrackedOrder } from '../types/api';
+import type { SharedTable, StripePaymentSession, TrackedOrder } from '../types/api';
 
 const POLL_MS = 5000;
 
 const POLL_PAYING_MS = 2000;
+
+const TABLE_POLL_MS = 5000;
 
 export function TrackingPage() {
   const { token = '' } = useParams();
@@ -35,6 +38,11 @@ export function TrackingPage() {
   const [stripeSession, setStripeSession] = useState<StripePaymentSession | null>(null);
   const [paying, setPaying] = useState(false);
   const saved = readGuestOrders().find((o) => o.token === token) ?? null;
+  const guestSpace = useGuestSpaceToken(saved?.slug ?? null);
+  const [tableSnapshot, setTableSnapshot] = useState<{
+    orderId: string;
+    table: SharedTable | null;
+  } | null>(null);
   const link = trackingUrl(token);
   // QR del enlace para pasarlo a otro dispositivo sin escribirlo.
   const [qr, setQr] = useState<string | null>(null);
@@ -90,6 +98,37 @@ export function TrackingPage() {
       window.clearTimeout(timer);
     };
   }, [token, paying]);
+
+  useEffect(() => {
+    const accessToken = guestSpace.token;
+    const orderId = order?.id;
+    const spaceId = order?.espacio?.id;
+    if (!accessToken || !orderId || spaceId == null) return;
+
+    let active = true;
+    let loading = false;
+    const refreshTable = async () => {
+      if (loading) return;
+      loading = true;
+      try {
+        const table = await api.currentTable(accessToken);
+        if (active) setTableSnapshot({ orderId, table });
+      } catch {
+        // The personal guest ticket remains usable when the shared account is unavailable.
+      } finally {
+        loading = false;
+      }
+    };
+
+    void refreshTable();
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refreshTable();
+    }, TABLE_POLL_MS);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [guestSpace.token, order?.espacio?.id, order?.id]);
 
   async function copy() {
     try {
@@ -193,7 +232,10 @@ export function TrackingPage() {
               completeLink={false}
               pickupToken={order.qr_token}
             />
-            <OrderTicketView order={order} />
+            <OrderTicketView
+              order={order}
+              table={tableSnapshot?.orderId === order.id ? tableSnapshot.table : null}
+            />
           </div>
         ) : null}
 

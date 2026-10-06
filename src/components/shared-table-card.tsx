@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { formatAmount } from '../lib/money';
-import { orderedGroups, tableOrderState } from '../lib/shared-table';
+import { orderedGroups, tableGroupKey, tableOrderState, tablePersonKey } from '../lib/shared-table';
+import { dropTableParticipantOnSessionChange } from '../lib/table-participant';
+import { forgetSpace } from '../lib/space-session';
 import { spaceNoun } from '../lib/space-words';
 import type { SharedTable } from '../types/api';
 
@@ -25,6 +27,7 @@ export function SharedTableCard({
   legalNote,
   onEnsureToken,
   onUnauthorized,
+  onLeave,
 }: {
   accessToken: string | null;
   qrToken: string | null;
@@ -32,6 +35,7 @@ export function SharedTableCard({
   legalNote?: ReactNode;
   onEnsureToken?: (alias: string) => Promise<string>;
   onUnauthorized?: () => void;
+  onLeave?: () => void;
 }) {
   const [table, setTable] = useState<SharedTable | null>(null);
   const [alias, setAlias] = useState(defaultAlias ?? '');
@@ -48,7 +52,10 @@ export function SharedTableCard({
   const refresh = useCallback(async () => {
     if (!token) return;
     try {
-      setTable(await api.currentTable(token));
+      const next = await api.currentTable(token);
+      // La sesión cambió (mesa cerrada / nueva sesión): la identidad local ya no vale.
+      dropTableParticipantOnSessionChange(next?.sesion_id ?? null);
+      setTable(next);
     } catch (cause) {
       // Una consulta fallida no borra la mesa que ya se ve; la siguiente lo intenta otra vez.
       if (isUnauthorized(cause)) onUnauthorized?.();
@@ -100,16 +107,22 @@ export function SharedTableCard({
   }
 
   async function leave() {
-    if (!token) return;
-    setBusy(true);
-    try {
-      await api.leaveTable(token);
+    forgetSpace();
+    if (token) {
+      setBusy(true);
+      try {
+        await api.leaveTable(token);
+        setTable(null);
+        onLeave?.();
+      } catch (cause) {
+        if (isUnauthorized(cause)) onUnauthorized?.();
+        setError(errorMessage(cause));
+      } finally {
+        setBusy(false);
+      }
+    } else {
       setTable(null);
-    } catch (cause) {
-      if (isUnauthorized(cause)) onUnauthorized?.();
-      setError(errorMessage(cause));
-    } finally {
-      setBusy(false);
+      onLeave?.();
     }
   }
 
@@ -119,6 +132,17 @@ export function SharedTableCard({
       <form className="alumno-track-card shared-table alumno-arrive" onSubmit={join}>
         <header className="alumno-track-card__top">
           <span className="alumno-track-card__folio">Mesa compartida</span>
+          <button
+            type="button"
+            className="alumno-btn alumno-btn--ghost"
+            style={{ fontSize: '0.85rem', padding: '0.2rem 0.6rem' }}
+            onClick={() => {
+              forgetSpace();
+              onLeave?.();
+            }}
+          >
+            Salir de la mesa
+          </button>
         </header>
         <div className="alumno-track-card__copy">
           <strong>¿Compartes la mesa?</strong>
@@ -159,7 +183,7 @@ export function SharedTableCard({
 
       <div className="alumno-chips shared-table__people" aria-label={`Quién está en la ${noun}`}>
         {table.participantes.map((person, index) => (
-          <span key={`${person.alias}-${index}`} className={person.soy_yo ? 'alumno-chip is-on' : 'alumno-chip'}>
+          <span key={tablePersonKey(person, index)} className={person.soy_yo ? 'alumno-chip is-on' : 'alumno-chip'}>
             {person.soy_yo ? `${person.alias} (tú)` : person.alias}
           </span>
         ))}
@@ -171,7 +195,7 @@ export function SharedTableCard({
         orderedGroups(table)
           .filter((group) => group.pedidos.length > 0)
           .map((group, index) => (
-            <section key={`${group.alias ?? 'otros'}-${index}`} className="shared-table__group" style={{ ['--i' as string]: index }}>
+            <section key={tableGroupKey(group, index)} className="shared-table__group" style={{ ['--i' as string]: index }}>
               <h3 className="alumno-section-label">
                 {group.soy_yo ? 'Tus pedidos' : (group.alias ?? `Otros en la ${noun}`)}
               </h3>

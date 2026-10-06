@@ -35,7 +35,8 @@ import {
   STRIPE_POLL_INTERVAL_MS,
   stripePaymentCopy,
 } from '../lib/stripe-status';
-import type { CatalogProduct, OrderDetail, StripePaymentSession } from '../types/api';
+import { orderedGroups, tableOrderState } from '../lib/shared-table';
+import type { CatalogProduct, OrderDetail, SharedTable, StripePaymentSession } from '../types/api';
 
 const POLL_MS = 5000;
 
@@ -57,6 +58,10 @@ export function OrderDetailPage() {
   const [retrySessionReady, setRetrySessionReady] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [tableSnapshot, setTableSnapshot] = useState<{
+    orderId: string;
+    table: SharedTable | null;
+  } | null>(null);
   const [panelProcessing, setPanelProcessing] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
   const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
@@ -64,6 +69,8 @@ export function OrderDetailPage() {
   const orderRef = useRef<OrderDetail | null>(null);
   orderRef.current = order;
   const pickupQrToken = usePickupQrToken(order, accessToken);
+  const orderId = order?.id;
+  const orderSpaceId = order?.espacio?.id;
 
   useEffect(() => {
     if (!user) return;
@@ -126,6 +133,35 @@ export function OrderDetailPage() {
       window.clearTimeout(timer);
     };
   }, [cart?.slug, context, id, openClientSession, user]);
+
+  useEffect(() => {
+    if (!accessToken || orderId !== id || orderSpaceId == null) return;
+    let active = true;
+    let loading = false;
+
+    const refreshTable = async () => {
+      if (loading) return;
+      loading = true;
+      try {
+        const table = await api.currentTable(accessToken);
+        if (active) setTableSnapshot({ orderId: id, table });
+      } catch {
+        // Keep the personal ticket available if the shared account is unavailable.
+      } finally {
+        loading = false;
+      }
+    };
+
+    void refreshTable();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refreshTable();
+    }, POLL_MS);
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [accessToken, id, orderId, orderSpaceId]);
 
   useEffect(() => {
     const slug = cart?.slug ?? lastPlaceSlug();
@@ -310,7 +346,12 @@ export function OrderDetailPage() {
               imageUrl={orderThumbUrl(order, catalogImageMap(catalogProducts), catalogProducts)}
               pickupToken={pickupQrToken}
             />
-            <OrderTicketView order={order} />
+            <OrderTicketView
+              order={order}
+              table={
+                order.id === id && tableSnapshot?.orderId === order.id ? tableSnapshot.table : null
+              }
+            />
           </div>
         ) : null}
       </main>
@@ -320,16 +361,35 @@ export function OrderDetailPage() {
 
 export function OrderTicketView({
   order,
+  table,
 }: {
   order: OrderDetail;
+  table?: SharedTable | null;
 }) {
+  const tableIncludesOrder = Boolean(
+    table?.cuenta_abierta &&
+      table.grupos.some((group) => group.pedidos.some((sharedOrder) => sharedOrder.id === order.id)),
+  );
+
   return (
     <section className="alumno-card alumno-card--ticket">
       <div className="alumno-ticket-head">
-        <p className="alumno-muted">
-          {orderPayLabel(order)} · {orderDestinationLabel(order)}
-        </p>
-        <p className="alumno-wallet-balance">{formatAmount(order.total)}</p>
+        <div className="alumno-ticket-head__copy">
+          <p className="alumno-muted">
+            Pedido #{order.folio} · {orderPayLabel(order)} · {orderDestinationLabel(order)}
+          </p>
+        </div>
+        <div className="alumno-ticket-head__actions">
+          <p className="alumno-wallet-balance">{formatAmount(order.total)}</p>
+          <button
+            className="alumno-btn alumno-btn--ghost alumno-ticket-print"
+            type="button"
+            aria-label={`Imprimir ticket del pedido #${order.folio}`}
+            onClick={() => window.print()}
+          >
+            Imprimir ticket
+          </button>
+        </div>
       </div>
       <ul className="alumno-ticket-items">
         {order.items.map((item) => (
@@ -353,6 +413,74 @@ export function OrderTicketView({
         ))}
       </ul>
       {order.notas_cocina ? <p className="alumno-muted alumno-ticket-note">Nota: {order.notas_cocina}</p> : null}
+      {tableIncludesOrder && table ? (
+        <section className="alumno-ticket-table" aria-labelledby="order-table-account-title">
+          <header className="alumno-ticket-table__head">
+            <div>
+              <h2 className="alumno-section-label" id="order-table-account-title">
+                Cuenta de la mesa
+              </h2>
+              <p className="alumno-muted">
+                {table.espacio.nombre} ·{' '}
+                {table.participantes.length === 1 ? '1 persona' : `${table.participantes.length} personas`}
+              </p>
+            </div>
+          </header>
+
+          {orderedGroups(table)
+            .filter((group) => group.pedidos.length > 0)
+            .map((group) => {
+              const subtotalLabel = group.soy_yo
+                ? 'Subtotal de tus pedidos'
+                : `Subtotal de ${group.alias ?? 'otros pedidos'}`;
+              return (
+                <div
+                  className="alumno-ticket-table__group"
+                  key={group.participante_id ?? `general-${group.pedidos.map((sharedOrder) => sharedOrder.folio).join('-')}`}
+                >
+                  <h3 className="alumno-section-label">
+                    {group.soy_yo ? 'Tus pedidos' : (group.alias ?? 'Otros pedidos')}
+                  </h3>
+                  <ul className="alumno-ticket-items">
+                    {group.pedidos.map((sharedOrder) => (
+                      <li key={`${sharedOrder.folio}-${sharedOrder.creado_en ?? ''}`}>
+                        <span className="alumno-ticket-table__order-copy">
+                          <strong>Pedido #{sharedOrder.folio}</strong>
+                          <span>{sharedOrder.items_resumen || 'Pedido de la mesa'}</span>
+                          <small>{tableOrderState(sharedOrder)}</small>
+                        </span>
+                        <strong>{formatAmount(sharedOrder.total)}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="alumno-ticket-table__subtotal">
+                    <span>{subtotalLabel}</span>
+                    <strong>{formatAmount(group.total)}</strong>
+                  </p>
+                </div>
+              );
+            })}
+
+          <ul className="alumno-ticket-items alumno-ticket-table__totals">
+            <li>
+              <span>Total de la mesa</span>
+              <strong>{formatAmount(table.totales.total)}</strong>
+            </li>
+            <li>
+              <span>Pagado</span>
+              <strong>{formatAmount(table.totales.pagado)}</strong>
+            </li>
+            <li>
+              <span>Por pagar</span>
+              <strong>{formatAmount(table.totales.pendiente)}</strong>
+            </li>
+            <li className="alumno-ticket-table__mine">
+              <strong>Tu parte por pagar</strong>
+              <strong>{formatAmount(table.mi_parte.pendiente)}</strong>
+            </li>
+          </ul>
+        </section>
+      ) : null}
     </section>
   );
 }

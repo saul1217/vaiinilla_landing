@@ -5,7 +5,7 @@ import { AppShell } from '../components/app-shell';
 import { useAuth } from '../context/auth-context';
 import { errorMessage } from '../lib/api-error';
 import { enterSpace } from '../lib/space-entry';
-import { openingTitle, spaceNoun } from '../lib/space-words';
+import { isSharableSpace, openingTitle, spaceNoun } from '../lib/space-words';
 
 export function TableJoinPage() {
   const { slug = '', token = '' } = useParams();
@@ -21,6 +21,12 @@ export function TableJoinPage() {
       .then(({ destination, tipo }) => {
         if (!active) return;
         setKind(tipo);
+        // Espacio compartible (mesa): antes del menú se elige quién se es.
+        if (isSharableSpace(tipo)) {
+          const base = slug ? `/e/${slug}/m/${encodeURIComponent(token)}/quien` : `/m/${encodeURIComponent(token)}/quien`;
+          void navigate(`${base}?next=${encodeURIComponent(destination)}`, { replace: true });
+          return;
+        }
         void navigate(destination, { replace: true });
       })
       .catch((cause: unknown) => {

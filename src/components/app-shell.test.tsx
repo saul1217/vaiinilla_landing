@@ -72,4 +72,28 @@ describe('AppShell', () => {
     );
     expect(screen.getByRole('link', { name: /pedidos/i })).toHaveAttribute('href', '/cuenta?next=/cuenta/pedidos');
   });
+
+  it('el logo de la barra navega al establecimiento si está recordado', () => {
+    localStorage.setItem('vaiinilla.buyer.last-place.v1', 'padel-club');
+    render(
+      <MemoryRouter>
+        <AppShell tab="menu">
+          <main>contenido</main>
+        </AppShell>
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: /^vaiinilla$/i })).toHaveAttribute('href', '/e/padel-club');
+  });
+
+  it('notifica sesión terminada cuando ocurre 401', async () => {
+    const { notifyUnauthorized } = await import('../lib/unauthorized');
+    render(
+      <MemoryRouter initialEntries={['/e/demo-a']}>
+        <AppShell tab="menu">
+          <main>contenido</main>
+        </AppShell>
+      </MemoryRouter>,
+    );
+    expect(() => notifyUnauthorized()).not.toThrow();
+  });
 });

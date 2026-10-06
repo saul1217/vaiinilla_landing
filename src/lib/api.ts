@@ -7,6 +7,7 @@ import type {
   GuestSessionResponse,
   TrackedOrder,
   SharedTable,
+  TableSession,
   ApiErrorEnvelope,
   CatalogResponse,
   ClientContextResponse,
@@ -45,6 +46,9 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
   idempotent?: boolean;
   idempotencyKey?: string;
 }
+
+import { notifyUnauthorized, onUnauthorizedSession, type UnauthorizedListener } from './unauthorized';
+export { notifyUnauthorized, onUnauthorizedSession, type UnauthorizedListener };
 
 /** Cliente HTTP único del backend: encabezados, Idempotency-Key, sobre `{ data, error }` y errores. */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<ApiEnvelope<T>> {
@@ -85,6 +89,9 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       message: 'El servidor no devolvió una respuesta válida.',
     };
     const retryAfter = Number(response.headers.get('Retry-After')) || undefined;
+    if (response.status === 401) {
+      notifyUnauthorized();
+    }
     throw new VaiinillaApiError(response.status, error, retryAfter);
   }
 
@@ -134,19 +141,21 @@ export const api = {
   /** Compra sin cuenta: alta con solo el nombre. La llave se guarda en el dispositivo. */
   async createGuest(input: {
     slug: string;
-    nombre: string;
+    nombre?: string;
     terminosVersion: string;
     privacidadVersion: string;
   }): Promise<GuestSessionResponse> {
+    const body: Record<string, unknown> = {
+      establecimiento_slug: input.slug,
+      terminos_version: input.terminosVersion,
+      privacidad_version: input.privacidadVersion,
+    };
+    // Sin nombre: invitado anónimo para la mesa (el alias del participante es lo visible).
+    if (input.nombre !== undefined && input.nombre.trim() !== '') body.nombre = input.nombre;
     return (
       await request<GuestSessionResponse>('/publico/invitados', {
         method: 'POST',
-        body: {
-          establecimiento_slug: input.slug,
-          nombre: input.nombre,
-          terminos_version: input.terminosVersion,
-          privacidad_version: input.privacidadVersion,
-        },
+        body,
       })
     ).data;
   },
@@ -257,9 +266,30 @@ export const api = {
     ).data;
   },
 
-  /** Se une a la mesa del QR con un alias que escribe el cliente. */
-  async joinTable(token: string, qrToken: string, alias: string): Promise<SharedTable> {
-    return (await request<SharedTable>('/mesas/unirse', { token, method: 'POST', body: { token: qrToken, alias } })).data;
+  /** Sesión activa de la mesa por su QR: participantes y quién soy (rol cliente). */
+  async tableSession(token: string, qrToken: string): Promise<TableSession> {
+    return (
+      await request<TableSession>(`/mesas/espacio/${encodeURIComponent(qrToken)}`, { token })
+    ).data;
+  },
+
+  /**
+   * Se une a la mesa del QR: con `{ alias }` crea (o renombra el mío), con
+   * `{ participanteId }` continúa como ese participante. Acepta el alias suelto
+   * por compatibilidad con llamadas existentes.
+   */
+  async joinTable(
+    token: string,
+    qrToken: string,
+    input: string | { alias: string } | { participanteId: string },
+  ): Promise<SharedTable> {
+    const body =
+      typeof input === 'string'
+        ? { token: qrToken, alias: input }
+        : 'alias' in input
+          ? { token: qrToken, alias: input.alias }
+          : { token: qrToken, participante_id: input.participanteId };
+    return (await request<SharedTable>('/mesas/unirse', { token, method: 'POST', body })).data;
   },
 
   /** La mesa del cliente, o null si no está en ninguna. */

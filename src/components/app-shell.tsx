@@ -1,5 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { Link, NavigationType, useLocation, useNavigationType } from 'react-router-dom';
+import { Link, NavigationType, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
+import { onUnauthorizedSession } from '../lib/unauthorized';
 import { applyAlumnoTheme, useTheme } from '../context/theme-context';
 import { useAuth } from '../context/auth-context';
 import { useCart } from '../context/cart-context';
@@ -236,8 +237,17 @@ export function AppShell({
   tab?: AlumnoTab;
 }) {
   const { resolved } = useTheme();
+  const navigate = useNavigate();
 
   useEffect(() => applyAlumnoTheme(resolved), [resolved]);
+
+  useEffect(() => {
+    return onUnauthorizedSession(({ pathname }) => {
+      if (!pathname.startsWith('/cuenta')) {
+        navigate(`/cuenta?next=${encodeURIComponent(pathname)}`, { replace: true });
+      }
+    });
+  }, [navigate]);
 
   return (
     <div className={tab === 'none' ? 'alumno' : 'alumno alumno--nav'}>

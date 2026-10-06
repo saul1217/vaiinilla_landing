@@ -7190,6 +7190,39 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   color: var(--text);
 }
 
+.alumno-ticket-table__order-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.alumno-ticket-table__order-copy > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.alumno-ticket-table__order-copy > small {
+  color: rgba(244, 241, 231, 0.62);
+}
+
+.alumno-ticket-table__subtotal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 12px;
+  margin: 8px 0 0;
+}
+
+.alumno-ticket-table__subtotal > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.alumno-ticket-table__subtotal > strong {
+  text-align: right;
+  white-space: nowrap;
+}
+
 /* ---------- Buyer: mesa compartida ----------
    Usa la tarjeta de pedido (alumno-track-card), alumno-chip, alumno-section-label y
    alumno-ticket-items. Aquí solo lo que esas piezas necesitan sobre fondo oscuro. */
@@ -7425,5 +7458,158 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   .alumno-entry__option {
     animation: none;
     transition: none;
+  }
+}
+
+/* "¿Quién eres?" de la mesa: la lista entra con el stagger de alumno-arrive; el
+ * nombre se despliega con altura animada (como alumno-delete) y el error con fade.
+ * Los botones usan el mismo feedback al presionar del resto de la app. */
+.table-who__stack {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.table-who .alumno-btn {
+  transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1), filter 160ms ease;
+}
+
+.table-who .alumno-btn:not(:disabled):active {
+  transform: scale(0.97);
+  filter: brightness(0.94);
+  transition-duration: 90ms;
+}
+
+.table-who__add {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 380ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 220ms ease;
+}
+
+.table-who__add.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.table-who__add-inner {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.table-who__add.is-open .table-who__add-inner {
+  padding: 4px 0 8px;
+}
+
+.table-who__fade {
+  animation: alumno-fade-in 260ms ease both;
+}
+
+.alumno-guest-checkout__who {
+  margin: 0 0 14px;
+  font-weight: 700;
+}
+
+.alumno-guest-checkout__who a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table-who .alumno-btn,
+  .table-who__add,
+  .table-who__fade {
+    animation: none;
+    transition: none;
+  }
+  .table-who__add {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 0 !important;
+    background: #fff !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .alumno-card--ticket,
+  .alumno-card--ticket * {
+    visibility: visible !important;
+  }
+
+  .alumno-card--ticket {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+    color: #111 !important;
+    box-shadow: none !important;
+  }
+
+  .alumno-ticket-print {
+    display: none !important;
+  }
+
+  .alumno-card--ticket .alumno-muted,
+  .alumno-ticket-table .alumno-section-label,
+  .alumno-ticket-table__order-copy small,
+  .alumno-ticket-table__subtotal {
+    color: #444 !important;
+  }
+
+  .alumno-card--ticket .alumno-wallet-balance {
+    color: #111 !important;
+    font-size: 22pt !important;
+  }
+
+  .alumno-card--ticket .alumno-ticket-items li {
+    padding: 6px 0;
+    border-bottom: 1px dashed #bbb !important;
+    color: #111 !important;
+  }
+
+  .alumno-ticket-table {
+    border-top-color: #777 !important;
+    break-inside: avoid-page;
+  }
+
+  .alumno-ticket-table__group,
+  .alumno-ticket-table__totals {
+    break-inside: avoid-page;
+  }
+
+  .alumno-ticket-table__order-copy > span {
+    color: #222 !important;
+  }
+
+  .alumno-ticket-table__mine strong:first-child {
+    color: #111 !important;
   }
 }

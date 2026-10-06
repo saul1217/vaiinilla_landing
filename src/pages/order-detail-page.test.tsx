@@ -1,35 +1,34 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
+import { VaiinillaApiError } from '../lib/api-error';
 import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
 import { rememberStripeCheckoutSession } from '../lib/stripe-session';
 import { CASH_COUNTER_COPY, STRIPE_COPY, STRIPE_TOTAL_LABEL } from '../lib/stripe-status';
-import type { OrderDetail } from '../types/api';
+import type { OrderDetail, SharedTable, SharedTableOrder } from '../types/api';
 import { OrderDetailPage } from './order-detail-page';
 
-const { getOrder, getOrderQr, retryStripePayment } = vi.hoisted(() => ({
+const { getEstablishment, getGuestCatalog, getOrder, getOrderQr, retryStripePayment, currentTable } = vi.hoisted(() => ({
+  getEstablishment: vi.fn(),
+  getGuestCatalog: vi.fn(),
   getOrder: vi.fn(),
   getOrderQr: vi.fn(),
   retryStripePayment: vi.fn(),
+  currentTable: vi.fn(),
 }));
 
 vi.mock('../lib/api', () => ({
   api: {
-    getEstablishment: vi.fn().mockResolvedValue({
-      id: 'e1',
-      nombre: 'Demo A',
-      slug: 'demo-a',
-      identificador_cliente_etiqueta: 'Cliente',
-      identificador_cliente_obligatorio: false,
-    }),
-    getGuestCatalog: vi.fn().mockResolvedValue({ categorias: [], productos: [] }),
+    getEstablishment: (...args: unknown[]) => getEstablishment(...args) as Promise<unknown>,
+    getGuestCatalog: (...args: unknown[]) => getGuestCatalog(...args) as Promise<unknown>,
     getOrder: (...args: unknown[]) => getOrder(...args) as Promise<unknown>,
     getOrderQr: (...args: unknown[]) => getOrderQr(...args) as Promise<unknown>,
     retryStripePayment: (...args: unknown[]) => retryStripePayment(...args) as Promise<unknown>,
+    currentTable: (...args: unknown[]) => currentTable(...args) as Promise<unknown>,
     apiUrl: '/api/v1',
   },
 }));
@@ -104,6 +103,68 @@ function stripeOrder(overrides: Partial<OrderDetail> & { pago?: OrderDetail['pag
   };
 }
 
+function mesaOrder(overrides: Partial<OrderDetail> = {}): OrderDetail {
+  return stripeOrder({
+    estado: 'cobrado',
+    metodo_pago: 'saldo',
+    destino: 'en_espacio',
+    espacio: { id: 4, nombre: 'Mesa 4', tipo: 'mesa' },
+    total: '70.00',
+    pago: null,
+    items: [
+      {
+        id: 2,
+        producto_id: 2,
+        nombre_producto: 'Taco de prueba',
+        estacion_preparacion: 'cocina',
+        cantidad: 1,
+        precio_digital_unitario: '70.00',
+        subtotal: '70.00',
+        opciones: [],
+      },
+    ],
+    ...overrides,
+  });
+}
+
+function sharedOrder(overrides: Partial<SharedTableOrder> = {}): SharedTableOrder {
+  return {
+    id: 'ord-1',
+    folio: 7,
+    estado: 'cobrado',
+    items_resumen: '1 × Taco de mesa',
+    total: '70.00',
+    pendiente_cobro: true,
+    creado_en: '2026-09-15T12:00:00Z',
+    ...overrides,
+  };
+}
+
+function sharedTable(overrides: Partial<SharedTable> = {}): SharedTable {
+  return {
+    espacio: { id: 4, nombre: 'Mesa 4', tipo: 'mesa' },
+    sesion_id: 'session-4',
+    mi_alias: 'Ana',
+    mi_participante: { id: 'participant-ana', alias: 'Ana' },
+    cuenta_abierta: true,
+    participantes: [{ id: 'participant-ana', alias: 'Ana', soy_yo: true, unido_en: '2026-09-15T12:00:00Z' }],
+    grupos: [
+      {
+        alias: 'Ana',
+        participante_id: 'participant-ana',
+        soy_yo: true,
+        pedidos: [sharedOrder()],
+        total: '70.00',
+        pagado: '0.00',
+        pendiente: '70.00',
+      },
+    ],
+    totales: { total: '70.00', pagado: '0.00', pendiente: '70.00' },
+    mi_parte: { total: '70.00', pagado: '0.00', pendiente: '70.00' },
+    ...overrides,
+  };
+}
+
 function renderOrder() {
   return render(
     <MemoryRouter initialEntries={['/cuenta/pedidos/ord-1']}>
@@ -117,13 +178,40 @@ function renderOrder() {
 }
 
 describe('OrderDetailPage', () => {
+  let visibilityDescriptor: PropertyDescriptor | undefined;
+  let printDescriptor: PropertyDescriptor | undefined;
+  let spyCleanups: Array<() => void> = [];
+
   beforeEach(() => {
+    spyCleanups = [];
+    visibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+    printDescriptor = Object.getOwnPropertyDescriptor(window, 'print');
     sessionStorage.clear();
     localStorage.clear();
+    getEstablishment.mockReset();
+    getEstablishment.mockResolvedValue({
+      id: 'e1',
+      nombre: 'Demo A',
+      slug: 'demo-a',
+      identificador_cliente_etiqueta: 'Cliente',
+      identificador_cliente_obligatorio: false,
+    });
+    getGuestCatalog.mockReset();
+    getGuestCatalog.mockResolvedValue({ categorias: [], productos: [] });
     getOrder.mockReset();
     getOrderQr.mockReset();
     getOrderQr.mockRejectedValue(new Error('QR recovery not configured in this test'));
     retryStripePayment.mockReset();
+    currentTable.mockReset();
+    currentTable.mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    for (const cleanup of spyCleanups) cleanup();
+    if (visibilityDescriptor) Object.defineProperty(document, 'visibilityState', visibilityDescriptor);
+    else Reflect.deleteProperty(document, 'visibilityState');
+    if (printDescriptor) Object.defineProperty(window, 'print', printDescriptor);
+    else Reflect.deleteProperty(window, 'print');
   });
 
   it('muestra ticket con QR, mesa y pasos', async () => {
@@ -360,5 +448,281 @@ describe('OrderDetailPage', () => {
     await user.click(await screen.findByRole('button', { name: /salir del pago/i }));
     expect(readPendingStripeOrderId()).toBe('ord-1');
     expect(await screen.findByRole('button', { name: /reintentar pago/i })).toBeInTheDocument();
+  });
+
+  it('pedido normal: conserva el ticket individual y no consulta la cuenta de mesa', async () => {
+    getOrder.mockResolvedValue(stripeOrder({ metodo_pago: 'saldo', estado: 'cobrado' }));
+    const { container } = renderOrder();
+
+    expect(await screen.findByText(/Pedido #7/)).toBeInTheDocument();
+    expect(container.querySelector('.alumno-card--ticket')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /cuenta de la mesa/i })).not.toBeInTheDocument();
+    expect(currentTable).not.toHaveBeenCalled();
+  });
+
+  it('pedido de una mesa activa: muestra el detalle individual y la cuenta agrupada', async () => {
+    getOrder.mockResolvedValue(mesaOrder());
+    currentTable.mockResolvedValue(sharedTable());
+    renderOrder();
+
+    expect(await screen.findByText('1 × Taco de prueba')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Cuenta de la mesa' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Tus pedidos' })).toBeInTheDocument();
+    expect(currentTable).toHaveBeenCalledWith('jwt');
+  });
+
+  it('muestra cada participante una vez, agrupa sus pedidos y usa los montos del backend', async () => {
+    getOrder.mockResolvedValue(mesaOrder());
+    currentTable.mockResolvedValue(
+      sharedTable({
+        participantes: [
+          { id: 'participant-ana', alias: 'Ana', soy_yo: true, unido_en: '2026-09-15T12:00:00Z' },
+          { id: 'participant-luis', alias: 'Luis', soy_yo: false, unido_en: '2026-09-15T12:01:00Z' },
+        ],
+        grupos: [
+          {
+            alias: 'Ana',
+            participante_id: 'participant-ana',
+            soy_yo: true,
+            pedidos: [
+              sharedOrder({ folio: 7, items_resumen: '1 × Taco primero', total: '12.00' }),
+              sharedOrder({ id: 'ana-order-2', folio: 8, items_resumen: '2 × Taco segundo', total: '18.00' }),
+            ],
+            total: '888.88',
+            pagado: '88.88',
+            pendiente: '800.00',
+          },
+          {
+            alias: 'Luis',
+            participante_id: 'participant-luis',
+            soy_yo: false,
+            pedidos: [
+              sharedOrder({ id: null, folio: 9, items_resumen: '1 × Agua', total: '5.00' }),
+            ],
+            total: '5.00',
+            pagado: '0.00',
+            pendiente: '5.00',
+          },
+        ],
+        totales: { total: '777777.77', pagado: '111.11', pendiente: '777666.66' },
+        mi_parte: { total: '333.33', pagado: '10.00', pendiente: '323.33' },
+      }),
+    );
+    renderOrder();
+
+    expect(await screen.findByRole('heading', { name: 'Cuenta de la mesa' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { name: 'Tus pedidos' })).toHaveLength(1);
+    expect(screen.getAllByRole('heading', { name: 'Luis' })).toHaveLength(1);
+    expect(screen.getByText('1 × Taco primero')).toBeInTheDocument();
+    expect(screen.getByText('2 × Taco segundo')).toBeInTheDocument();
+    expect(screen.getByText('Subtotal de tus pedidos').parentElement).toHaveTextContent('$888.88');
+    expect(screen.getByText('Total de la mesa').parentElement).toHaveTextContent('$777777.77');
+    expect(screen.getByText('Tu parte por pagar').parentElement).toHaveTextContent('$323.33');
+  });
+
+  it('conserva separados a participantes distintos aunque compartan alias', async () => {
+    getOrder.mockResolvedValue(mesaOrder());
+    currentTable.mockResolvedValue(
+      sharedTable({
+        participantes: [
+          { id: 'participant-ana-1', alias: 'Ana', soy_yo: true, unido_en: null },
+          { id: 'participant-ana-2', alias: 'Ana', soy_yo: false, unido_en: null },
+        ],
+        grupos: [
+          {
+            alias: 'Ana',
+            participante_id: 'participant-ana-1',
+            soy_yo: true,
+            pedidos: [sharedOrder({ id: 'ord-1', folio: 7, items_resumen: '1 × Taco propio' })],
+            total: '70.00',
+            pagado: '0.00',
+            pendiente: '70.00',
+          },
+          {
+            alias: 'Ana',
+            participante_id: 'participant-ana-2',
+            soy_yo: false,
+            pedidos: [sharedOrder({ id: 'ana-2-order', folio: 8, items_resumen: '1 × Agua' })],
+            total: '5.00',
+            pagado: '0.00',
+            pendiente: '5.00',
+          },
+        ],
+      }),
+    );
+
+    renderOrder();
+
+    expect(await screen.findByRole('heading', { name: 'Cuenta de la mesa' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { name: 'Tus pedidos' })).toHaveLength(1);
+    expect(screen.getAllByRole('heading', { name: 'Ana' })).toHaveLength(1);
+    expect(screen.getByText('1 × Taco propio')).toBeInTheDocument();
+    expect(screen.getByText('1 × Agua')).toBeInTheDocument();
+    expect(document.querySelectorAll('.alumno-ticket-table__group')).toHaveLength(2);
+  });
+
+  it('no muestra una sesión activa que no contiene el pedido consultado', async () => {
+    getOrder.mockResolvedValue(mesaOrder());
+    currentTable.mockResolvedValue(
+      sharedTable({
+        grupos: [
+          {
+            alias: 'Ana',
+            participante_id: 'participant-ana',
+            soy_yo: true,
+            pedidos: [sharedOrder({ id: 'another-order', folio: 99 })],
+            total: '99.00',
+            pagado: '0.00',
+            pendiente: '99.00',
+          },
+        ],
+      }),
+    );
+    const { container } = renderOrder();
+
+    expect(await screen.findByText('1 × Taco de prueba')).toBeInTheDocument();
+    await waitFor(() => expect(currentTable).toHaveBeenCalled());
+    expect(container.querySelector('.alumno-card--ticket')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /cuenta de la mesa/i })).not.toBeInTheDocument();
+  });
+
+  it('si no existe una cuenta activa, muestra solamente el ticket individual', async () => {
+    getOrder.mockResolvedValue(mesaOrder());
+    currentTable.mockResolvedValue(null);
+    const { container } = renderOrder();
+
+    expect(await screen.findByText('1 × Taco de prueba')).toBeInTheDocument();
+    await waitFor(() => expect(currentTable).toHaveBeenCalled());
+    expect(screen.queryByRole('heading', { name: /cuenta de la mesa/i })).not.toBeInTheDocument();
+    expect(container.querySelector('.alumno-card--ticket')).toBeInTheDocument();
+  });
+
+  it('pedido histórico: renderiza sin consultar ni requerir participantes', async () => {
+    getOrder.mockResolvedValue(mesaOrder({ espacio: null, estado: 'entregado' }));
+    const { container } = renderOrder();
+
+    expect(await screen.findByText('1 × Taco de prueba')).toBeInTheDocument();
+    expect(container.querySelector('.alumno-card--ticket')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /cuenta de la mesa/i })).not.toBeInTheDocument();
+    expect(currentTable).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [401, 'UNAUTHENTICATED'],
+    [403, 'FORBIDDEN_ROLE'],
+    [404, 'SPACE_NOT_FOUND'],
+  ])('si currentTable devuelve %i, mantiene el comprobante y no registra error', async (status, code) => {
+    getOrder.mockResolvedValue(mesaOrder());
+    currentTable.mockRejectedValue(
+      new VaiinillaApiError(status, { code, message: 'Cuenta no disponible', details: [] }),
+    );
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    spyCleanups.push(() => consoleError.mockRestore());
+    const { container } = renderOrder();
+
+    expect(await screen.findByText('1 × Taco de prueba')).toBeInTheDocument();
+    await waitFor(() => expect(currentTable).toHaveBeenCalled());
+    expect(container.querySelector('.alumno-card--ticket')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /cuenta de la mesa/i })).not.toBeInTheDocument();
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it('si currentTable falla por red, mantiene el comprobante individual', async () => {
+    getOrder.mockResolvedValue(mesaOrder());
+    currentTable.mockRejectedValue(new Error('network unavailable'));
+    const { container } = renderOrder();
+
+    expect(await screen.findByText('1 × Taco de prueba')).toBeInTheDocument();
+    expect(container.querySelector('.alumno-card--ticket')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /cuenta de la mesa/i })).not.toBeInTheDocument();
+  });
+
+  it('el ticket no espera a que cargue la cuenta compartida', async () => {
+    let resolveTable: (value: SharedTable | null) => void = () => undefined;
+    currentTable.mockReturnValue(
+      new Promise<SharedTable | null>((resolve) => {
+        resolveTable = resolve;
+      }),
+    );
+    getOrder.mockResolvedValue(mesaOrder());
+    renderOrder();
+
+    expect(await screen.findByText('1 × Taco de prueba')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /cuenta de la mesa/i })).not.toBeInTheDocument();
+    resolveTable(sharedTable());
+    expect(await screen.findByRole('heading', { name: 'Cuenta de la mesa' })).toBeInTheDocument();
+  });
+
+  it('refresca cada cinco segundos solo cuando está visible y limpia el interval al desmontar', async () => {
+    const intervalId = 314 as unknown as number;
+    const intervals: Array<{ callback: () => void; delay: number }> = [];
+    const intervalSpy = vi.spyOn(window, 'setInterval').mockImplementation(
+      ((handler: TimerHandler, timeout?: number) => {
+        if (typeof handler === 'function' && timeout === 5000) {
+          intervals.push({ callback: handler as () => void, delay: Number(timeout) });
+        }
+        return intervalId;
+      }) as typeof window.setInterval,
+    );
+    const clearIntervalSpy = vi.spyOn(window, 'clearInterval').mockImplementation(() => undefined);
+    spyCleanups.push(() => intervalSpy.mockRestore(), () => clearIntervalSpy.mockRestore());
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    getOrder.mockResolvedValue(mesaOrder());
+    currentTable.mockResolvedValueOnce(sharedTable());
+    const { container, unmount } = renderOrder();
+
+    expect(await screen.findByRole('heading', { name: 'Cuenta de la mesa' })).toBeInTheDocument();
+    expect(intervalSpy.mock.calls.filter(([, delay]) => delay === 5000)).toHaveLength(1);
+    expect(intervals).toHaveLength(1);
+    expect(intervals[0]?.delay).toBe(5000);
+
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    await act(() => {
+      intervals[0]?.callback();
+      return Promise.resolve();
+    });
+    expect(currentTable).toHaveBeenCalledTimes(1);
+
+    currentTable.mockResolvedValueOnce(
+      sharedTable({
+        grupos: [
+          {
+            alias: 'Ana',
+            participante_id: 'participant-ana',
+            soy_yo: true,
+            pedidos: [sharedOrder()],
+            total: '456.78',
+            pagado: '0.00',
+            pendiente: '456.78',
+          },
+        ],
+        totales: { total: '456.78', pagado: '0.00', pendiente: '456.78' },
+        mi_parte: { total: '456.78', pagado: '0.00', pendiente: '456.78' },
+      }),
+    );
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    await act(() => {
+      intervals[0]?.callback();
+      return Promise.resolve();
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText('Total de la mesa').parentElement).toHaveTextContent('$456.78'),
+    );
+    expect(screen.getByText('1 × Taco de prueba')).toBeInTheDocument();
+    expect(container.querySelectorAll('.alumno-ticket-table')).toHaveLength(1);
+    unmount();
+    expect(clearIntervalSpy).toHaveBeenCalledWith(intervalId);
+  });
+
+  it('imprime el ticket desde su acción visible', async () => {
+    const print = vi.fn();
+    Object.defineProperty(window, 'print', { configurable: true, value: print });
+    getOrder.mockResolvedValue(mesaOrder());
+    const user = userEvent.setup();
+    renderOrder();
+
+    await user.click(await screen.findByRole('button', { name: 'Imprimir ticket del pedido #7' }));
+    expect(print).toHaveBeenCalledOnce();
   });
 });

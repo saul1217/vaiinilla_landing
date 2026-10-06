@@ -314,7 +314,7 @@ export const RESERVATION_STATE_LABEL: Record<ReservationStatus, string> = {
   en_curso: 'En juego',
   terminada: 'Terminada',
   cancelada: 'Cancelada',
-  expirada: 'Venció el apartado',
+  expirada: 'Cancelada por tiempo de espera',
   conflicto: 'Revisar con el personal',
 };
 

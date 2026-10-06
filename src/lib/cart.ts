@@ -37,8 +37,9 @@ export function defaultOptionIds(product: CatalogProduct): number[] {
   return selected;
 }
 
-export function cartLineKey(productId: number, optionIds: number[]): string {
-  return `${productId}:${[...optionIds].sort((a, b) => a - b).join(',')}`;
+export function cartLineKey(productId: number, optionIds: number[], notes = ''): string {
+  const norm = notes.trim().toLowerCase();
+  return `${productId}:${[...optionIds].sort((a, b) => a - b).join(',')}:${norm}`;
 }
 
 export function previewForProduct(product: CatalogProduct, optionIds: number[], quantity: number) {
@@ -99,21 +100,31 @@ export function toCreateOrderInput(
   if (payAtEnd && (destination !== 'en_espacio' || paymentMethod !== 'efectivo')) {
     throw new Error('Pagar al final solo aplica a un pedido en tu lugar, sin pagar antes.');
   }
+  const lineNotesSummary = lines
+    .filter((l) => l.notes?.trim())
+    .map((l) => `${l.productName}: ${l.notes?.trim()}`)
+    .join(' · ');
+  const combinedKitchenNotes = [kitchenNotes.trim(), lineNotesSummary].filter(Boolean).join(' | ');
+
   return {
     metodo_pago: paymentMethod,
     destino: destination,
     espacio_id: destination === 'en_espacio' ? spaceId : null,
-    notas_cocina: kitchenNotes.trim() || null,
+    notas_cocina: combinedKitchenNotes || null,
     ...(payAtEnd ? { pago_diferido: true } : {}),
     items: lines.map((line) => {
       if (line.quantity < 1 || line.quantity > 20) {
         throw new Error('Cada producto admite entre 1 y 20 piezas.');
       }
-      return {
+      const item: CreateOrderItemInput = {
         producto_id: line.productId,
         cantidad: line.quantity,
         opcion_ids: [...line.optionIds].sort((a, b) => a - b),
       };
+      if (line.notes?.trim()) {
+        item.notas = line.notes.trim();
+      }
+      return item;
     }),
   };
 }

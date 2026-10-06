@@ -9,9 +9,10 @@ import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import { defaultOptionIds, previewForProduct, validateSelections } from '../lib/cart';
 import { productImageUrl } from '../lib/catalog-images';
+import { sortProductsForTodo } from '../lib/catalog-order';
 import { initialsFrom } from '../lib/initials';
 import { rememberPlace } from '../lib/last-place';
-import { formatMoney } from '../lib/money';
+import { formatAmount } from '../lib/money';
 import type { CatalogProduct, CatalogResponse, PublicEstablishment } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
 import { MotionSheet } from '../components/motion-sheet';
@@ -41,6 +42,7 @@ export function MenuPage() {
     product: CatalogProduct;
     optionIds: number[];
     quantity: number;
+    notes?: string;
   } | null>(null);
 
   // "Rentar cancha" solo se ofrece si el negocio tiene al menos una cancha con precio por hora.
@@ -83,7 +85,11 @@ export function MenuPage() {
 
   const products = useMemo(() => {
     const list = catalog?.productos ?? [];
-    const byCategory = categoryId == null ? list : list.filter((product) => product.categoria_id === categoryId);
+    const categories = catalog?.categorias ?? [];
+    const byCategory =
+      categoryId == null
+        ? sortProductsForTodo(list, categories)
+        : list.filter((product) => product.categoria_id === categoryId);
     const needle = query.trim().toLowerCase();
     if (!needle) return byCategory;
     return byCategory.filter((product) => {
@@ -125,7 +131,7 @@ export function MenuPage() {
   }
 
   // keepOpen lets the sheet animate out itself instead of vanishing on unmount.
-  function addCurrentProduct({ keepOpen = false } = {}) {
+  function addCurrentProduct({ keepOpen = false, notes = '' }: { keepOpen?: boolean; notes?: string } = {}) {
     if (!selected || !place) return false;
     const invalid = validateSelections(selected, optionIds);
     if (invalid) {
@@ -134,7 +140,7 @@ export function MenuPage() {
     }
     // El carrito es de una sola tienda: agregar en otra lo vacía, y eso se confirma.
     if (cart && cart.slug !== slug && cart.lines.length > 0) {
-      setPendingAdd({ product: selected, optionIds, quantity });
+      setPendingAdd({ product: selected, optionIds, quantity, notes });
       setSwitchCart({
         count: cart.lines.reduce((sum, line) => sum + line.quantity, 0),
         from: cart.establishmentName,
@@ -143,7 +149,7 @@ export function MenuPage() {
       setError(null);
       return false;
     }
-    addLine(place.slug, place.nombre, selected, optionIds, quantity);
+    addLine(place.slug, place.nombre, selected, optionIds, quantity, notes);
     if (!keepOpen) setSelected(null);
     setError(null);
     return true;
@@ -153,7 +159,7 @@ export function MenuPage() {
 
   function confirmSwitchCart(close: () => void) {
     if (pendingAdd && place) {
-      addLine(place.slug, place.nombre, pendingAdd.product, pendingAdd.optionIds, pendingAdd.quantity);
+      addLine(place.slug, place.nombre, pendingAdd.product, pendingAdd.optionIds, pendingAdd.quantity, pendingAdd.notes);
     }
     setPendingAdd(null);
     setSwitchCart(null);
@@ -251,7 +257,7 @@ export function MenuPage() {
               )}
               <div>
                 <h2>{product.nombre}</h2>
-                <p>{formatMoney(product.precio_digital)}</p>
+                <p>{formatAmount(product.precio_digital)}</p>
               </div>
             </button>
               );
@@ -272,7 +278,7 @@ export function MenuPage() {
           onToggleOption={toggleOption}
           onClearGroup={clearOptionGroup}
           onQuantityChange={(delta) => setQuantity((value) => Math.min(20, Math.max(1, value + delta)))}
-          onAdd={() => addCurrentProduct({ keepOpen: true })}
+          onAdd={(notes) => addCurrentProduct({ keepOpen: true, notes })}
           onClosed={() => setSelected(null)}
         />
       ) : null}
