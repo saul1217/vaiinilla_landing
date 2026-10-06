@@ -19,16 +19,17 @@ interface CartContextValue {
     product: CatalogProduct,
     optionIds: number[],
     quantity: number,
+    notes?: string,
   ) => void;
-  updateQuantity: (productId: number, optionIds: number[], quantity: number) => void;
-  removeLine: (productId: number, optionIds: number[]) => void;
+  updateQuantity: (productId: number, optionIds: number[], quantity: number, notes?: string) => void;
+  removeLine: (productId: number, optionIds: number[], notes?: string) => void;
   reset: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-function sameLine(line: CartLine, productId: number, optionIds: number[]): boolean {
-  return cartLineKey(line.productId, line.optionIds) === cartLineKey(productId, optionIds);
+function sameLine(line: CartLine, productId: number, optionIds: number[], notes = ''): boolean {
+  return cartLineKey(line.productId, line.optionIds, line.notes ?? '') === cartLineKey(productId, optionIds, notes);
 }
 
 /** Un carrito sin líneas no existe: se borra del dispositivo; si tiene, se guarda tal cual. */
@@ -55,14 +56,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
       product: CatalogProduct,
       optionIds: number[],
       quantity: number,
+      notes?: string,
     ) => {
       const preview = previewForProduct(product, optionIds, 1);
       if (!preview) throw new Error('No se pudo calcular el precio de vista previa.');
+      const cleanNotes = notes?.trim() || undefined;
       const incoming: CartLine = {
         productId: product.id,
         quantity,
         optionIds,
         productName: product.nombre,
+        notes: cleanNotes,
         unitPreview: preview.unit,
         unitCounter: preview.counterUnit,
         imageUrl: product.imagen_url,
@@ -70,10 +74,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setCart((current) => {
         const base: StoredCart =
           current && current.slug === slug ? current : { slug, establishmentName, lines: [] };
-        const existing = base.lines.find((line) => sameLine(line, product.id, optionIds));
+        const existing = base.lines.find((line) => sameLine(line, product.id, optionIds, cleanNotes));
         const lines = existing
           ? base.lines.map((line) =>
-              sameLine(line, product.id, optionIds)
+              sameLine(line, product.id, optionIds, cleanNotes)
                 ? { ...line, quantity: Math.min(20, line.quantity + quantity) }
                 : line,
             )
@@ -84,14 +88,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const updateQuantity = useCallback((productId: number, optionIds: number[], quantity: number) => {
+  const updateQuantity = useCallback((productId: number, optionIds: number[], quantity: number, notes?: string) => {
     setCart((current) => {
       if (!current) return current;
+      const cleanNotes = notes?.trim() || undefined;
       const lines =
         quantity < 1
-          ? current.lines.filter((line) => !sameLine(line, productId, optionIds))
+          ? current.lines.filter((line) => !sameLine(line, productId, optionIds, cleanNotes))
           : current.lines.map((line) =>
-              sameLine(line, productId, optionIds)
+              sameLine(line, productId, optionIds, cleanNotes)
                 ? { ...line, quantity: Math.min(20, quantity) }
                 : line,
             );
@@ -99,10 +104,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const removeLine = useCallback((productId: number, optionIds: number[]) => {
+  const removeLine = useCallback((productId: number, optionIds: number[], notes?: string) => {
     setCart((current) => {
       if (!current) return current;
-      const lines = current.lines.filter((line) => !sameLine(line, productId, optionIds));
+      const cleanNotes = notes?.trim() || undefined;
+      const lines = current.lines.filter((line) => !sameLine(line, productId, optionIds, cleanNotes));
       return persistCart({ ...current, lines });
     });
   }, []);

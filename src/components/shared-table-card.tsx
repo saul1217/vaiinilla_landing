@@ -4,6 +4,7 @@ import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { formatAmount } from '../lib/money';
 import { orderedGroups, tableGroupKey, tableOrderState, tablePersonKey } from '../lib/shared-table';
 import { dropTableParticipantOnSessionChange } from '../lib/table-participant';
+import { forgetSpace } from '../lib/space-session';
 import { spaceNoun } from '../lib/space-words';
 import type { SharedTable } from '../types/api';
 
@@ -26,6 +27,7 @@ export function SharedTableCard({
   legalNote,
   onEnsureToken,
   onUnauthorized,
+  onLeave,
 }: {
   accessToken: string | null;
   qrToken: string | null;
@@ -33,6 +35,7 @@ export function SharedTableCard({
   legalNote?: ReactNode;
   onEnsureToken?: (alias: string) => Promise<string>;
   onUnauthorized?: () => void;
+  onLeave?: () => void;
 }) {
   const [table, setTable] = useState<SharedTable | null>(null);
   const [alias, setAlias] = useState(defaultAlias ?? '');
@@ -104,16 +107,22 @@ export function SharedTableCard({
   }
 
   async function leave() {
-    if (!token) return;
-    setBusy(true);
-    try {
-      await api.leaveTable(token);
+    forgetSpace();
+    if (token) {
+      setBusy(true);
+      try {
+        await api.leaveTable(token);
+        setTable(null);
+        onLeave?.();
+      } catch (cause) {
+        if (isUnauthorized(cause)) onUnauthorized?.();
+        setError(errorMessage(cause));
+      } finally {
+        setBusy(false);
+      }
+    } else {
       setTable(null);
-    } catch (cause) {
-      if (isUnauthorized(cause)) onUnauthorized?.();
-      setError(errorMessage(cause));
-    } finally {
-      setBusy(false);
+      onLeave?.();
     }
   }
 
@@ -123,6 +132,17 @@ export function SharedTableCard({
       <form className="alumno-track-card shared-table alumno-arrive" onSubmit={join}>
         <header className="alumno-track-card__top">
           <span className="alumno-track-card__folio">Mesa compartida</span>
+          <button
+            type="button"
+            className="alumno-btn alumno-btn--ghost"
+            style={{ fontSize: '0.85rem', padding: '0.2rem 0.6rem' }}
+            onClick={() => {
+              forgetSpace();
+              onLeave?.();
+            }}
+          >
+            Salir de la mesa
+          </button>
         </header>
         <div className="alumno-track-card__copy">
           <strong>¿Compartes la mesa?</strong>

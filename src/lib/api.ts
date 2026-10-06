@@ -47,6 +47,9 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
   idempotencyKey?: string;
 }
 
+import { notifyUnauthorized, onUnauthorizedSession, type UnauthorizedListener } from './unauthorized';
+export { notifyUnauthorized, onUnauthorizedSession, type UnauthorizedListener };
+
 /** Cliente HTTP único del backend: encabezados, Idempotency-Key, sobre `{ data, error }` y errores. */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<ApiEnvelope<T>> {
   const { token, body, idempotent, idempotencyKey, ...requestOptions } = options;
@@ -86,6 +89,9 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       message: 'El servidor no devolvió una respuesta válida.',
     };
     const retryAfter = Number(response.headers.get('Retry-After')) || undefined;
+    if (response.status === 401) {
+      notifyUnauthorized();
+    }
     throw new VaiinillaApiError(response.status, error, retryAfter);
   }
 

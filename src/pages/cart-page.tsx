@@ -13,12 +13,12 @@ import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { canAcceptOrders, canPayAtEnd, cardFee, cartTotal, toCreateOrderInput, unitFor } from '../lib/cart';
 import { leftoverPeekProducts, peekCatalogProducts, productImageUrl } from '../lib/catalog-images';
 import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
-import { formatAmount, formatMoney, linePreview, moneyToCents } from '../lib/money';
+import { formatAmount, linePreview, moneyToCents } from '../lib/money';
 import { resolveClientSession } from '../lib/client-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { orderHistoryHeadline } from '../lib/order-labels';
 import { rememberPickupQrToken } from '../lib/pickup-qr';
-import { activeRentalSpace, readSpace, rememberSpace } from '../lib/space-session';
+import { activeRentalSpace, forgetSpace, readSpace, rememberSpace } from '../lib/space-session';
 import { deliveredAtLabel, spaceNoun } from '../lib/space-words';
 import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
 import { isStripeCheckoutEnabled, offersCardPayment, STRIPE_UNAVAILABLE_COPY } from '../lib/stripe-public';
@@ -74,7 +74,8 @@ export function CartPage() {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
   const menuPeek = useMemo(() => peekCatalogProducts(catalogProducts), [catalogProducts]);
-  const scanned = readSpace(slug);
+  const [spaceVersion, setSpaceVersion] = useState(0);
+  const scanned = useMemo(() => readSpace(slug), [slug, spaceVersion]);
   // Sin QR escaneado, una renta en curso en este negocio hace de mesa: la comida va a la cancha.
   const [rentalSpace, setRentalSpace] = useState<SpaceSession | null>(null);
   const space = scanned ?? rentalSpace;
@@ -82,6 +83,12 @@ export function CartPage() {
   useEffect(() => {
     if (rentalSpace && !scanned) setForHere(true);
   }, [rentalSpace, scanned]);
+  const handleLeaveSpace = () => {
+    forgetSpace();
+    setForHere(false);
+    setTableAlias(null);
+    setSpaceVersion((v) => v + 1);
+  };
   // Compra sin cuenta: quien no entra pide con solo su nombre, salvo donde el negocio
   // exige un identificador (matrícula), que necesita cuenta.
   const guest = !user;
@@ -125,7 +132,7 @@ export function CartPage() {
         // Sesión nueva: la identidad local se borra y se vuelve a pedir nombre.
         dropTableParticipantOnSessionChange(table.sesion_id);
         const mine = tableParticipantFor(slug, table.espacio.id, table.sesion_id);
-        setTableAlias(mine ? mine.alias : null);
+        setTableAlias(mine ? mine.alias : (user?.displayName || (user?.email ? user.email.split('@')[0] : null)));
       } catch {
         if (active) setTableAlias(null);
       }
@@ -496,6 +503,7 @@ export function CartPage() {
             onToggleDestination={() => {
               if (space) setForHere((value) => !value);
             }}
+            onLeaveSpace={handleLeaveSpace}
             place={place}
             clientId={clientId}
             onClientIdChange={setClientId}
@@ -536,7 +544,7 @@ export function CartPage() {
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
                 </button>
               </div>
-              <p className="alumno-paysheet__total">Total {total ? formatMoney(total) : '—'}</p>
+              <p className="alumno-paysheet__total">Total {total ? formatAmount(total) : '—'}</p>
               {fee ? (
                 <p className="alumno-muted alumno-paysheet__fee">
                   Incluye comisión por tarjeta {formatAmount(fee)}.
@@ -605,9 +613,9 @@ export function CartPage() {
                   badge="Saldo"
                   subtitle={
                     insufficientBalance && wallet
-                      ? `Saldo insuficiente · Disponible: ${formatMoney(wallet.wallet.saldo)}`
+                      ? `Saldo insuficiente · Disponible: ${formatAmount(wallet.wallet.saldo)}`
                       : wallet
-                        ? `Disponible: ${formatMoney(wallet.wallet.saldo)}`
+                        ? `Disponible: ${formatAmount(wallet.wallet.saldo)}`
                         : 'Entra a tu cuenta para ver el saldo.'
                   }
                   onSelect={() => {
@@ -675,6 +683,7 @@ export function CartFilledView({
   forHere,
   space,
   onToggleDestination,
+  onLeaveSpace,
   place,
   clientId,
   onClientIdChange,
@@ -690,11 +699,12 @@ export function CartFilledView({
 }: {
   lines: CartLine[];
   payment: PaymentMethod;
-  onUpdateQuantity: (productId: number, optionIds: number[], quantity: number) => void;
-  onRemoveLine: (productId: number, optionIds: number[]) => void;
+  onUpdateQuantity: (productId: number, optionIds: number[], quantity: number, notes?: string) => void;
+  onRemoveLine: (productId: number, optionIds: number[], notes?: string) => void;
   forHere: boolean;
   space: SpaceSession | null;
   onToggleDestination: () => void;
+  onLeaveSpace?: () => void;
   place: PublicEstablishment | null;
   clientId: string;
   onClientIdChange: (value: string) => void;
@@ -714,7 +724,7 @@ export function CartFilledView({
           const thumb = productImageUrl(line.imageUrl);
           const lineTotal = linePreview(unitFor(line, payment), line.quantity);
           return (
-            <div className="alumno-line" key={`${line.productId}-${line.optionIds.join(',')}`}>
+            <div className="alumno-line" key={`${line.productId}-${line.optionIds.join(',')}-${line.notes || ''}`}>
               {thumb ? (
                 <img className="alumno-line__thumb" src={thumb} alt="" />
               ) : (
@@ -724,12 +734,13 @@ export function CartFilledView({
               )}
               <div className="alumno-line__copy">
                 <strong>{line.productName}</strong>
+                {line.notes ? <p className="alumno-muted alumno-line__notes" style={{ margin: '0.15rem 0', fontSize: '0.85rem' }}>{line.notes}</p> : null}
                 <p>{formatAmount(unitFor(line, payment))} c/u</p>
                 <div className="alumno-qty">
                   <button
                     type="button"
                     aria-label={`Quitar una ${line.productName}`}
-                    onClick={() => onUpdateQuantity(line.productId, line.optionIds, line.quantity - 1)}
+                    onClick={() => onUpdateQuantity(line.productId, line.optionIds, line.quantity - 1, line.notes)}
                   >
                     −
                   </button>
@@ -737,7 +748,7 @@ export function CartFilledView({
                   <button
                     type="button"
                     aria-label={`Agregar una ${line.productName}`}
-                    onClick={() => onUpdateQuantity(line.productId, line.optionIds, line.quantity + 1)}
+                    onClick={() => onUpdateQuantity(line.productId, line.optionIds, line.quantity + 1, line.notes)}
                   >
                     +
                   </button>
@@ -748,7 +759,7 @@ export function CartFilledView({
                 <button
                   className="alumno-line__remove"
                   type="button"
-                  onClick={() => onRemoveLine(line.productId, line.optionIds)}
+                  onClick={() => onRemoveLine(line.productId, line.optionIds, line.notes)}
                 >
                   Quitar
                 </button>
@@ -769,6 +780,16 @@ export function CartFilledView({
                   : 'Recoges en mostrador cuando esté listo.'}
             </p>
           </button>
+          {space && onLeaveSpace ? (
+            <button
+              type="button"
+              className="alumno-btn alumno-btn--ghost alumno-cart__leave-space"
+              onClick={onLeaveSpace}
+              style={{ marginTop: '-0.5rem', marginBottom: '0.75rem', width: '100%' }}
+            >
+              Salir de {space.nombre}
+            </button>
+          ) : null}
           {place?.identificador_cliente_obligatorio ? (
             <label className="alumno-field">
               {place.identificador_cliente_etiqueta}

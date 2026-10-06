@@ -296,6 +296,7 @@ export interface CreateOrderItemInput {
   producto_id: number;
   cantidad: number;
   opcion_ids: number[];
+  notas?: string | null;
 }
 
 export interface CreateOrderInput {
@@ -350,6 +351,7 @@ export interface CartLine {
   quantity: number;
   optionIds: number[];
   productName: string;
+  notes?: string;
   /** Precio con tarjeta (con la comisión si el negocio la pasa): lo que muestra el menú. */
   unitPreview: string;
   /** Precio de mostrador: efectivo, saldo y pagar al final. Ausente en carritos viejos. */

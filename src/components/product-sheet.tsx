@@ -3,7 +3,7 @@
 // bottom dock with the selection summary, quantity and the add button.
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { formatMoney } from '../lib/money';
+import { formatAmount } from '../lib/money';
 import type { CatalogProduct } from '../types/api';
 import { MotionSheet } from './motion-sheet';
 
@@ -20,13 +20,14 @@ export interface ProductSheetProps {
   onToggleOption: (groupId: number, optionId: number, max: number) => void;
   onClearGroup: (groupId: number) => void;
   onQuantityChange: (delta: number) => void;
-  onAdd: () => boolean;
+  onAdd: (notes?: string) => boolean;
   onClosed: () => void;
 }
 
 export function ProductSheet(props: ProductSheetProps) {
   const { product, photoUrl, optionIds, quantity, lineTotal, error, canAddToCart } = props;
   const [photoReady, setPhotoReady] = useState(false);
+  const [notes, setNotes] = useState('');
   const selectedNames = product.grupos_opcion
     .flatMap((group) => group.opciones)
     .filter((option) => optionIds.includes(option.id))
@@ -34,7 +35,7 @@ export function ProductSheet(props: ProductSheetProps) {
   const customized = product.grupos_opcion.some((group) =>
     group.opciones.some((option) => option.precio_extra !== '0.00' && optionIds.includes(option.id)),
   );
-  const price = lineTotal ? formatMoney(lineTotal) : '';
+  const price = lineTotal ? formatAmount(lineTotal) : '';
 
   return (
     <MotionSheet className="alumno-sheet alumno-psheet" labelledBy="product-detail" onClosed={props.onClosed}>
@@ -104,7 +105,7 @@ export function ProductSheet(props: ProductSheetProps) {
                           key={option.id}
                           type={single ? 'radio' : 'checkbox'}
                           name={`group-${group.id}`}
-                          label={option.precio_extra === '0.00' ? option.nombre : `${option.nombre} +${formatMoney(option.precio_extra)}`}
+                          label={option.precio_extra === '0.00' ? option.nombre : `${option.nombre} +${formatAmount(option.precio_extra)}`}
                           checked={optionIds.includes(option.id)}
                           onChange={() => props.onToggleOption(group.id, option.id, group.max_selecciones)}
                         />
@@ -113,6 +114,17 @@ export function ProductSheet(props: ProductSheetProps) {
                   </fieldset>
                 );
               })}
+
+              <label className="alumno-field alumno-psheet__notes" style={{ marginTop: '1rem' }}>
+                <span>Instrucciones o especificaciones (opcional)</span>
+                <input
+                  type="text"
+                  placeholder="Ej. Sin cebolla, salsa aparte…"
+                  value={notes}
+                  maxLength={140}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </label>
             </div>
           </div>
 
@@ -137,7 +149,7 @@ export function ProductSheet(props: ProductSheetProps) {
                 className="alumno-psheet__add"
                 type="button"
                 onClick={() => {
-                  if (props.onAdd()) close();
+                  if (props.onAdd(notes)) close();
                 }}
               >
                 Agregar · <span key={price} className="alumno-ticker">{price}</span>

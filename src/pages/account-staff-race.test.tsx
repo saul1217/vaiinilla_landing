@@ -27,6 +27,7 @@ const session = vi.hoisted(() => {
 const mocks = vi.hoisted(() => ({ listAccesses: vi.fn() }));
 
 vi.mock('../lib/api', () => ({
+  ACCOUNT_DELETION_CONFIRMATION: 'ELIMINAR',
   api: {
     getLegalVersions: vi.fn().mockResolvedValue({ terminos_version: 'v', privacidad_version: 'v', terminos_url: '#', privacidad_url: '#' }),
     listAccesses: mocks.listAccesses,
@@ -47,6 +48,7 @@ vi.mock('../lib/firebase', () => ({
   googleSignIn: vi.fn(),
   sendPasswordReset: vi.fn(),
   firebaseIdToken: vi.fn().mockResolvedValue('token'),
+  signsInWithGoogle: () => false,
 }));
 
 vi.mock('../context/auth-context', () => ({

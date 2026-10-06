@@ -242,7 +242,18 @@ export function useReservations(
         }));
         onPaidRef.current(payment, method);
       } catch (cause) {
-        patch({ working: false, error: errorMessage(cause) });
+        const msg = errorMessage(cause);
+        const isExpired =
+          msg.toLowerCase().includes('venció') ||
+          msg.toLowerCase().includes('expir') ||
+          msg.toLowerCase().includes('tiempo');
+        patch({
+          working: false,
+          pending: isExpired ? null : stateRef.current.pending,
+          error: isExpired
+            ? 'Tiempo de espera agotado: se apartó pero no se completó el pago dentro de los 10 minutos. Tu apartado fue cancelado; por favor elige el horario nuevamente.'
+            : msg,
+        });
       }
       await refresh();
     },

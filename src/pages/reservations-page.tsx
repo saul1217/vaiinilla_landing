@@ -605,7 +605,7 @@ function PaySheet({
               role="timer"
               aria-live="off"
             >
-              {expired ? 'Venció el apartado: vuelve a elegir el horario.' : `Apartada por ${clock(remaining)}`}
+              {expired ? 'Tiempo de espera agotado: se canceló el apartado al no registrarse el pago. Vuelve a elegir el horario.' : `Apartada por ${clock(remaining)}`}
             </p>
           ) : null}
           <div className="alumno-res__pay-list alumno-arrive">

@@ -55,6 +55,7 @@ export function OrdersPage() {
   const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
   // Reclamo invitado → cuenta: tras pasarlos se vuelve a consultar para verlos aquí.
   const [claimKey, setClaimKey] = useState(0);
+  const [tableKey, setTableKey] = useState(0);
   const [claim, setClaim] = useState<{
     state: "idle" | "busy" | "done" | "error";
     pedidos?: number;
@@ -235,8 +236,11 @@ export function OrdersPage() {
           </section>
         ) : null}
         <SharedTableCard
+          key={tableKey}
           accessToken={context?.access_token ?? null}
           qrToken={readSpace(place?.slug ?? placeGuess ?? "")?.qrToken ?? null}
+          defaultAlias={user?.displayName || user?.email?.split('@')[0] || undefined}
+          onLeave={() => setTableKey((k) => k + 1)}
         />
         {tab ? (
           <section className="alumno-tab" aria-label="Tu cuenta">

@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { lastPlaceSlug } from '../lib/last-place';
 
 export function AlumnoLockup({
-  to = '/pedir',
+  to,
   onDark = false,
   linked = true,
 }: {
@@ -10,6 +11,7 @@ export function AlumnoLockup({
   onDark?: boolean;
   linked?: boolean;
 }) {
+  const targetTo = to ?? (lastPlaceSlug() ? `/e/${lastPlaceSlug()}` : '/pedir');
   const className = onDark ? 'alumno-lockup alumno-lockup--on-dark' : 'alumno-lockup';
   const content = (
     <>
@@ -25,7 +27,7 @@ export function AlumnoLockup({
     );
   }
   return (
-    <Link className={className} to={to} aria-label="Vaiinilla">
+    <Link className={className} to={targetTo} aria-label="Vaiinilla">
       {content}
     </Link>
   );
