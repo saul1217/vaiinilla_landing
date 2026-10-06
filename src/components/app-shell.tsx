@@ -4,6 +4,7 @@ import { onUnauthorizedSession } from '../lib/unauthorized';
 import { applyAlumnoTheme, useTheme } from '../context/theme-context';
 import { useAuth } from '../context/auth-context';
 import { useCart } from '../context/cart-context';
+import { isGuestBuy } from '../lib/guest-explore';
 import { readGuest } from '../lib/guest-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { canAnimate, createSpring } from '../lib/spring';
@@ -131,7 +132,8 @@ export function BottomNav({ tab }: { tab: Exclude<AlumnoTab, 'none'> }) {
   const menuHref = placeSlug ? `/e/${placeSlug}` : '/pedir';
   // Con llave de invitado, la misma app que un registrado menos Cartera (el saldo
   // es personal de cuenta): Menú, Pedidos y Carrito. Sin llave, Pedidos invita a entrar.
-  const guest = !user && readGuest() !== null;
+  // Invitado desde que eligió "Comprar sin cuenta", no solo tras su primer pedido.
+  const guest = !user && (readGuest() !== null || isGuestBuy());
   const ordersHref = user || guest ? '/cuenta/pedidos' : `/cuenta?next=/cuenta/pedidos`;
   const walletHref = user ? '/cuenta/saldo' : `/cuenta?next=/cuenta/saldo`;
   const menuActive = tab === 'menu' || location.pathname === '/pedir';

@@ -25,6 +25,7 @@ describe('AppShell', () => {
   beforeEach(() => {
     authState.user = { email: 'ana@example.test' };
     localStorage.clear();
+    sessionStorage.clear();
   });
 
   it('muestra la bottom nav de alumno y no la de marketing', () => {
@@ -59,6 +60,23 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: /pedidos/i })).toHaveAttribute('href', '/cuenta/pedidos');
     expect(screen.getByRole('link', { name: /carrito/i })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /cartera/i })).not.toBeInTheDocument();
+  });
+
+  it('tras "Comprar sin cuenta" (aún sin pedido) el dock no manda a iniciar sesión', () => {
+    authState.user = null;
+    sessionStorage.setItem('vaiinilla.buyer.guest-buy.v1', '1');
+    render(
+      <MemoryRouter>
+        <AppShell tab="menu">
+          <main>contenido</main>
+        </AppShell>
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: /pedidos/i })).toHaveAttribute('href', '/cuenta/pedidos');
+    expect(screen.queryByRole('link', { name: /cartera/i })).not.toBeInTheDocument();
+    for (const link of screen.getAllByRole('link')) {
+      expect(link.getAttribute('href') ?? '').not.toMatch(/^\/cuenta\?next=/);
+    }
   });
 
   it('sin llave, Pedidos invita a entrar', () => {
