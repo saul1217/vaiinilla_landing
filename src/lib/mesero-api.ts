@@ -8,7 +8,7 @@ export type CallReason = 'atencion' | 'utensilios' | 'problema' | 'cuenta';
 export type CallStatus = 'pendiente' | 'en_camino' | 'atendida' | 'cancelada' | 'expirada';
 
 export const CALL_REASONS: { value: CallReason; label: string }[] = [
-  { value: 'cuenta', label: 'Quiero pagar la cuenta' },
+  { value: 'cuenta', label: 'Pedir cuenta' },
   { value: 'atencion', label: 'Necesito algo' },
   { value: 'utensilios', label: 'Cubiertos o servilletas' },
   { value: 'problema', label: 'Algo está mal con mi pedido' },
