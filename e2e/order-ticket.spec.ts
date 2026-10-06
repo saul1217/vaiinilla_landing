@@ -181,6 +181,48 @@ test.describe('ticket de mesa compartida', () => {
     expect(layout.ticketInsideViewport).toBe(true);
   });
 
+  test('separa el resumen del estado y el subtotal en móvil, tablet y escritorio', async ({ page }) => {
+    await page.goto('/__qa/pedido-mesa');
+    await expect(page.locator('.alumno-card--ticket')).toBeVisible();
+
+    for (const width of [320, 360, 375, 390, 414, 768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      const layout = await page.evaluate(() => {
+        const ticket = document.querySelector('.alumno-card--ticket');
+        const orderCopy = document.querySelector('.alumno-ticket-table__order-copy');
+        const summary = orderCopy?.querySelector(':scope > span');
+        const status = orderCopy?.querySelector(':scope > small');
+        const subtotal = document.querySelector('.alumno-ticket-table__subtotal');
+        const subtotalLabel = subtotal?.querySelector(':scope > span');
+        const subtotalAmount = subtotal?.querySelector(':scope > strong');
+        const summaryBounds = summary?.getBoundingClientRect();
+        const statusBounds = status?.getBoundingClientRect();
+        const labelBounds = subtotalLabel?.getBoundingClientRect();
+        const amountBounds = subtotalAmount?.getBoundingClientRect();
+        const bounds = ticket?.getBoundingClientRect();
+        return {
+          viewportWidth: document.documentElement.clientWidth,
+          pageWidth: document.documentElement.scrollWidth,
+          orderCopyDisplay: orderCopy ? getComputedStyle(orderCopy).display : null,
+          summaryStatusGap:
+            summaryBounds && statusBounds ? statusBounds.top - summaryBounds.bottom : null,
+          subtotalDisplay: subtotal ? getComputedStyle(subtotal).display : null,
+          subtotalGap: labelBounds && amountBounds ? amountBounds.left - labelBounds.right : null,
+          ticketLeft: bounds?.left ?? null,
+          ticketRight: bounds?.right ?? null,
+        };
+      });
+
+      expect(layout.pageWidth, `page width at ${width}px`).toBeLessThanOrEqual(layout.viewportWidth);
+      expect(layout.orderCopyDisplay, `order copy layout at ${width}px`).toBe('grid');
+      expect(layout.summaryStatusGap ?? -Infinity, `summary/status gap at ${width}px`).toBeGreaterThanOrEqual(1);
+      expect(layout.subtotalDisplay, `subtotal layout at ${width}px`).toBe('grid');
+      expect(layout.subtotalGap ?? -Infinity, `subtotal label/value gap at ${width}px`).toBeGreaterThanOrEqual(8);
+      expect(layout.ticketLeft ?? -Infinity, `ticket left edge at ${width}px`).toBeGreaterThanOrEqual(-1);
+      expect(layout.ticketRight ?? Infinity, `ticket right edge at ${width}px`).toBeLessThanOrEqual(width + 1);
+    }
+  });
+
   test('al imprimir muestra solo el ticket y oculta acciones y navegación', async ({ page }) => {
     await page.goto('/__qa/pedido-mesa');
     await expect(page.locator('.alumno-card--ticket')).toBeVisible();

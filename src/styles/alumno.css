@@ -7190,6 +7190,39 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   color: var(--text);
 }
 
+.alumno-ticket-table__order-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.alumno-ticket-table__order-copy > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.alumno-ticket-table__order-copy > small {
+  color: rgba(244, 241, 231, 0.62);
+}
+
+.alumno-ticket-table__subtotal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 12px;
+  margin: 8px 0 0;
+}
+
+.alumno-ticket-table__subtotal > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.alumno-ticket-table__subtotal > strong {
+  text-align: right;
+  white-space: nowrap;
+}
+
 /* ---------- Buyer: mesa compartida ----------
    Usa la tarjeta de pedido (alumno-track-card), alumno-chip, alumno-section-label y
    alumno-ticket-items. Aquí solo lo que esas piezas necesitan sobre fondo oscuro. */
