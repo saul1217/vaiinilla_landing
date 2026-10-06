@@ -139,7 +139,7 @@ describe('CallWaiter', () => {
 });
 
 describe('CallWaiter: pedir la cuenta', () => {
-  it('"Quiero pagar la cuenta" solo sale en un pedido a la cuenta', async () => {
+  it('"Pedir cuenta" solo sale en un pedido a la cuenta', async () => {
     const user = userEvent.setup();
     const { unmount } = render(<CallWaiter order={order()} client={client()} />);
     await user.click(await screen.findByRole('button', { name: /llamar al mesero/i }));
@@ -151,7 +151,7 @@ describe('CallWaiter: pedir la cuenta', () => {
       <CallWaiter order={order({ pago_diferido: true, pago_pendiente: true })} client={client({ call: send })} />,
     );
     await user.click(await screen.findByRole('button', { name: /llamar al mesero/i }));
-    await user.click(screen.getByRole('button', { name: /quiero pagar la cuenta/i }));
+    await user.click(screen.getByRole('button', { name: 'Pedir cuenta' }));
     expect(send).toHaveBeenCalledWith(4, 'cuenta', 'p1');
   });
 });

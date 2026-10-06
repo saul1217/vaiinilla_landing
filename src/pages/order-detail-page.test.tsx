@@ -715,14 +715,11 @@ describe('OrderDetailPage', () => {
     expect(clearIntervalSpy).toHaveBeenCalledWith(intervalId);
   });
 
-  it('imprime el ticket desde su acción visible', async () => {
-    const print = vi.fn();
-    Object.defineProperty(window, 'print', { configurable: true, value: print });
+  it('no ofrece imprimir el ticket al cliente', async () => {
     getOrder.mockResolvedValue(mesaOrder());
-    const user = userEvent.setup();
     renderOrder();
 
-    await user.click(await screen.findByRole('button', { name: 'Imprimir ticket del pedido #7' }));
-    expect(print).toHaveBeenCalledOnce();
+    await waitFor(() => expect(document.querySelector('.alumno-card--ticket')).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /imprimir (ticket|cuenta)/i })).not.toBeInTheDocument();
   });
 });

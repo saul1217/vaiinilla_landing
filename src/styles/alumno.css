@@ -7666,10 +7666,6 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
     box-shadow: none !important;
   }
 
-  .alumno-ticket-print {
-    display: none !important;
-  }
-
   .alumno-card--ticket .alumno-muted,
   .alumno-ticket-table .alumno-section-label,
   .alumno-ticket-table__order-copy small,
