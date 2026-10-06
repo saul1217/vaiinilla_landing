@@ -380,16 +380,8 @@ export function OrderTicketView({
             Pedido #{order.folio} · {orderPayLabel(order)} · {orderDestinationLabel(order)}
           </p>
         </div>
-        <div className="alumno-ticket-head__actions">
+        <div className="alumno-ticket-head__total">
           <p className="alumno-wallet-balance">{formatAmount(order.total)}</p>
-          <button
-            className="alumno-btn alumno-btn--ghost alumno-ticket-print"
-            type="button"
-            aria-label={`Imprimir ticket del pedido #${order.folio}`}
-            onClick={() => window.print()}
-          >
-            Imprimir ticket
-          </button>
         </div>
       </div>
       <ul className="alumno-ticket-items">
