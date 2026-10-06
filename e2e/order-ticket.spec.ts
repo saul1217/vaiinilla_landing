@@ -223,24 +223,11 @@ test.describe('ticket de mesa compartida', () => {
     }
   });
 
-  test('al imprimir muestra solo el ticket y oculta acciones y navegación', async ({ page }) => {
+  test('el cliente conserva el comprobante informativo sin acción de impresión', async ({ page }) => {
     await page.goto('/__qa/pedido-mesa');
-    await expect(page.locator('.alumno-card--ticket')).toBeVisible();
-    await page.emulateMedia({ media: 'print' });
-
-    const printStyles = await page.evaluate(() => ({
-      ticket: getComputedStyle(document.querySelector('.alumno-card--ticket')!).visibility,
-      tracking: getComputedStyle(document.querySelector('.alumno-track-card')!).visibility,
-      navigation: getComputedStyle(document.querySelector('.alumno-nav')!).visibility,
-      printButton: getComputedStyle(document.querySelector('.alumno-ticket-print')!).display,
-    }));
-
-    expect(printStyles).toEqual({
-      ticket: 'visible',
-      tracking: 'hidden',
-      navigation: 'hidden',
-      printButton: 'none',
-    });
-    await expect(page.locator('.alumno-ticket-table')).toBeVisible();
+    const ticket = page.locator('.alumno-card--ticket');
+    await expect(ticket).toBeVisible();
+    await expect(ticket.getByRole('heading', { name: 'Cuenta de la mesa' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /imprimir (ticket|cuenta)/i })).toHaveCount(0);
   });
 });

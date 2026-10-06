@@ -192,6 +192,25 @@ describe('seguimiento sin cuenta', () => {
     expect(screen.queryByRole('heading', { name: 'Cuenta de la mesa' })).not.toBeInTheDocument();
   });
 
+  it.each([
+    ['sin cuenta de mesa', null],
+    ['con cuenta de mesa', sharedTable()],
+  ] as const)('el comprador no recibe acciones de impresión %s', async (_case, table) => {
+    guestAccessToken.mockReturnValue('guest-jwt');
+    getTracking.mockResolvedValue(order({
+      items: [{ id: 1, producto_id: 1, nombre_producto: 'Agua', estacion_preparacion: 'cocina', cantidad: 1, precio_digital_unitario: '20.00', subtotal: '20.00', opciones: [] }],
+      espacio: { id: 67, nombre: 'Mesa 67', tipo: 'mesa' },
+    }));
+    currentTable.mockResolvedValue(table);
+    rememberGuestOrder({ token: TOKEN, slug: 'demo-a', folio: 21, placeName: 'Mesa 67', createdAt: Date.now() });
+
+    renderAt(`/seguimiento/${TOKEN}`);
+
+    expect(await screen.findByText(/1 × Agua/)).toBeInTheDocument();
+    if (table) expect(await screen.findByRole('heading', { name: 'Cuenta de la mesa' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /imprimir (ticket|cuenta)/i })).not.toBeInTheDocument();
+  });
+
   it('actualiza la cuenta cada cinco segundos mientras está visible y limpia el interval', async () => {
     const intervalId = 271 as unknown as number;
     const intervals: Array<() => void> = [];
