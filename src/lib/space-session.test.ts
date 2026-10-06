@@ -1,5 +1,14 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activeRentalSpace, entryAfterAccess, readSpace, rememberSpace, scannedSpace } from './space-session';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { rememberPlace, forgetPlace } from './last-place';
+import {
+  activeRentalSpace,
+  entryAfterAccess,
+  guestEntryAfterAccess,
+  readSpace,
+  rememberSpace,
+  requiresAccount,
+  scannedSpace,
+} from './space-session';
 
 const now = Date.parse('2026-10-02T20:00:00Z');
 const rental = (over: object) => ({ courtId: 3, courtName: 'Cancha 1', start: now - 30 * 60_000, end: now + 30 * 60_000, state: 'confirmada', ...over });
@@ -46,5 +55,35 @@ describe('mesa escaneada', () => {
     rememberSpace(mesa);
     expect(entryAfterAccess('/pedir')).toBe('/e/usagi');
     expect(entryAfterAccess('/e/usagi/carrito')).toBe('/e/usagi/carrito');
+  });
+});
+
+describe('comprar sin cuenta desde una ruta que pide cuenta', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+    forgetPlace();
+  });
+
+  it('saldo, detalle de pedido y QR personal piden cuenta; el menú y el carrito no', () => {
+    expect(requiresAccount('/cuenta/saldo')).toBe(true);
+    expect(requiresAccount('/cuenta/pedidos/42')).toBe(true);
+    expect(requiresAccount('/u/abc')).toBe(true);
+    expect(requiresAccount('/cuenta/pedidos')).toBe(false);
+    expect(requiresAccount('/e/padel/carrito')).toBe(false);
+  });
+
+  it('desde Cartera el invitado va al último lugar, no de vuelta al splash', () => {
+    expect(guestEntryAfterAccess('/cuenta/saldo')).toBe('/pedir');
+    rememberPlace('padel');
+    expect(guestEntryAfterAccess('/cuenta/saldo')).toBe('/e/padel');
+    expect(guestEntryAfterAccess('/cuenta/pedidos/9')).toBe('/e/padel');
+  });
+
+  it('con mesa escaneada gana la mesa; las rutas sin cuenta siguen igual', () => {
+    rememberPlace('padel');
+    rememberSpace({ slug: 'usagi', espacioId: 1, nombre: 'Mesa 1', tipo: 'mesa' });
+    expect(guestEntryAfterAccess('/u/abc')).toBe('/e/usagi');
+    expect(guestEntryAfterAccess('/e/padel/carrito')).toBe('/e/padel/carrito');
   });
 });

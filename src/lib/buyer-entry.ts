@@ -1,9 +1,13 @@
 import { enableGuestExplore } from './guest-explore';
-import { lastPlaceSlug } from './last-place';
+import { scannedSpace } from './space-session';
 
-/** Path into the buyer app: last establishment, otherwise the public picker. */
-export function buyerEntryPath(cartSlug?: string | null): string {
-  const slug = cartSlug || lastPlaceSlug();
+/**
+ * Path into the buyer app: the store of an order in progress (cart or scanned table),
+ * otherwise the picker, which asks for the QR or code. With several stores, a store
+ * visited before is never assumed.
+ */
+export function buyerEntryPath(activeSlug?: string | null): string {
+  const slug = activeSlug || scannedSpace()?.slug;
   return slug ? `/e/${slug}` : '/pedir';
 }
 

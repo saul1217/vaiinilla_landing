@@ -59,6 +59,8 @@ export interface PublicEstablishment {
   acepta_tarjeta?: boolean;
   /** Permite pagar al final: sin sesión, lo dice la ficha pública. */
   permite_pago_al_final?: boolean;
+  /** Saldo y recargas: el dueño puede apagarlo. Ausente (backend viejo) = sí hay saldo. */
+  permite_saldo?: boolean;
   id: string;
   nombre: string;
   slug: string;

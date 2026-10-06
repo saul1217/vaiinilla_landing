@@ -129,7 +129,6 @@ export function BottomNav({ tab }: { tab: Exclude<AlumnoTab, 'none'> }) {
   const placeSlug = cart?.slug ?? lastPlaceSlug();
   const count = cart?.lines.reduce((sum, line) => sum + line.quantity, 0) ?? 0;
   const menuHref = placeSlug ? `/e/${placeSlug}` : '/pedir';
-  const cartHref = placeSlug ? `/e/${placeSlug}/carrito` : '/pedir';
   // Con llave de invitado, la misma app que un registrado menos Cartera (el saldo
   // es personal de cuenta): Menú, Pedidos y Carrito. Sin llave, Pedidos invita a entrar.
   const guest = !user && readGuest() !== null;
@@ -143,7 +142,10 @@ export function BottomNav({ tab }: { tab: Exclude<AlumnoTab, 'none'> }) {
     ...(guest
       ? []
       : [{ id: 'wallet' as const, href: walletHref, label: 'Cartera', Icon: IconWallet, active: tab === 'wallet' }]),
-    { id: 'cart' as const, href: cartHref, label: 'Carrito', Icon: IconCart, badge: count, active: tab === 'cart' },
+    // Sin lugar no hay carrito al que ir: el atajo no lleva de vuelta al selector.
+    ...(placeSlug
+      ? [{ id: 'cart' as const, href: `/e/${placeSlug}/carrito`, label: 'Carrito', Icon: IconCart, badge: count, active: tab === 'cart' }]
+      : []),
   ];
 
   const activeIndex = items.findIndex((item) => item.active);

@@ -143,6 +143,18 @@ describe('rechazo por artículo', () => {
     expect(orderItemHeadline(order({ items }))).toBe('3 Tacos');
   });
 
+  it('nombra cada artículo, sin el (N) crudo, y resume después de tres', () => {
+    const line = (id: number, nombre: string, cantidad: number) => ({ ...items[1]!, id, nombre_producto: nombre, cantidad });
+    expect(orderItemHeadline(order({ items: [line(1, 'Hamburguesa', 2), line(2, 'Refresco', 1)] }))).toBe(
+      '2 Hamburguesa, 1 Refresco',
+    );
+    expect(orderItemHeadline(order({ items: [line(1, 'Tacos dorados de res (5)', 1)] }))).toBe(
+      '1 Tacos dorados de res · 5 pzs',
+    );
+    const many = [line(1, 'A', 1), line(2, 'B', 1), line(3, 'C', 1), line(4, 'D', 1), line(5, 'E', 1)];
+    expect(orderItemHeadline(order({ items: many }))).toBe('1 A, 1 B, 1 C y 2 más');
+  });
+
   it('avisa qué se quitó y por qué', () => {
     expect(orderRejectedItemsHint(order({ items }))).toBe('Se quitó Torta: Se terminó el pan.');
     expect(orderRejectedItemsHint(order({ items: [items[1]!] }))).toBeNull();

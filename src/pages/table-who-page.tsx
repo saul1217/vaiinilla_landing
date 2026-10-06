@@ -101,7 +101,7 @@ export function TableWhoPage() {
         alias: mine.alias,
       });
     }
-    void navigate(next, { replace: true });
+    void navigate(next, { replace: true, state: { seatedAt: table.espacio.nombre } });
   }
 
   async function joinAs(input: { alias: string } | { participanteId: string }) {

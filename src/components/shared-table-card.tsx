@@ -132,17 +132,6 @@ export function SharedTableCard({
       <form className="alumno-track-card shared-table alumno-arrive" onSubmit={join}>
         <header className="alumno-track-card__top">
           <span className="alumno-track-card__folio">Mesa compartida</span>
-          <button
-            type="button"
-            className="alumno-btn alumno-btn--ghost"
-            style={{ fontSize: '0.85rem', padding: '0.2rem 0.6rem' }}
-            onClick={() => {
-              forgetSpace();
-              onLeave?.();
-            }}
-          >
-            Salir de la mesa
-          </button>
         </header>
         <div className="alumno-track-card__copy">
           <strong>¿Compartes la mesa?</strong>

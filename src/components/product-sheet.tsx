@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatAmount } from '../lib/money';
+import { piecesLabel, splitPieces } from '../lib/product-pieces';
 import type { CatalogProduct } from '../types/api';
 import { MotionSheet } from './motion-sheet';
 
@@ -32,6 +33,7 @@ export function ProductSheet(props: ProductSheetProps) {
     .flatMap((group) => group.opciones)
     .filter((option) => optionIds.includes(option.id))
     .map((option) => option.nombre);
+  const label = splitPieces(product.nombre);
   const customized = product.grupos_opcion.some((group) =>
     group.opciones.some((option) => option.precio_extra !== '0.00' && optionIds.includes(option.id)),
   );
@@ -69,8 +71,9 @@ export function ProductSheet(props: ProductSheetProps) {
             <div className="alumno-psheet__body">
               {props.placeName ? <p className="alumno-psheet__eyebrow">{props.placeName}</p> : null}
               <h2 id="product-detail" className="alumno-psheet__title">
-                {product.nombre}
+                {label.name}
               </h2>
+              {label.pieces ? <p className="alumno-pieces alumno-psheet__pieces">{piecesLabel(label.pieces)}</p> : null}
               {product.descripcion ? <p className="alumno-psheet__lead">{product.descripcion}</p> : null}
 
               <div className="alumno-psheet__meta">

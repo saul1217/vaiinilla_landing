@@ -31,6 +31,7 @@ export function WalletPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [placeSlug, setPlaceSlug] = useState<string | null>(() => cart?.slug ?? lastPlaceSlug());
+  const [allowsBalance, setAllowsBalance] = useState(true);
   const userId = wallet?.wallet.usuario_id || wallet?.cliente.usuario_id;
   const reloadHref = userId ? `/u/${userId}` : '/cuenta';
 
@@ -84,6 +85,12 @@ export function WalletPage() {
     }
     let active = true;
     void api
+      .getEstablishment(placeSlug)
+      .then((place) => {
+        if (active) setAllowsBalance(place.permite_saldo !== false);
+      })
+      .catch(() => undefined);
+    void api
       .getGuestCatalog(placeSlug)
       .then((catalog) => {
         const products = Array.isArray(catalog?.productos) ? catalog.productos : [];
@@ -110,6 +117,7 @@ export function WalletPage() {
             saldo={wallet.wallet.saldo}
             placeSlug={placeSlug}
             reloadHref={reloadHref}
+            allowsBalance={allowsBalance}
             movimientos={wallet.movimientos}
             menuPeek={menuPeek}
           />
@@ -123,12 +131,15 @@ export function WalletBoardView({
   saldo,
   placeSlug,
   reloadHref,
+  allowsBalance = true,
   movimientos,
   menuPeek = [],
 }: {
   saldo: string;
   placeSlug: string | null;
   reloadHref: string;
+  /** Si el lugar apagó el saldo, no se ofrece recargar ni mostrar el QR. */
+  allowsBalance?: boolean;
   movimientos: WalletData['movimientos'];
   menuPeek?: CatalogProduct[];
 }) {
@@ -145,7 +156,7 @@ export function WalletBoardView({
           <p className="alumno-muted">Saldo Vaiinilla</p>
         </section>
         <div className="alumno-wallet-shortcuts">
-          <div className="alumno-actions-3">
+          <div className="alumno-actions-3" data-count={allowsBalance ? 3 : 2}>
             <Link to={placeSlug ? `/e/${placeSlug}/carrito` : '/pedir'}>
               <span className="alumno-lime-orb" aria-hidden="true">
                 <ShortcutPay />
@@ -160,13 +171,15 @@ export function WalletBoardView({
               Pedidos
               <span aria-hidden="true">Ver actividad</span>
             </Link>
-            <Link to={reloadHref}>
-              <span className="alumno-lime-orb" aria-hidden="true">
-                <ShortcutReload />
-              </span>
-              Recargar
-              <span aria-hidden="true">Mostrar QR</span>
-            </Link>
+            {allowsBalance ? (
+              <Link to={reloadHref}>
+                <span className="alumno-lime-orb" aria-hidden="true">
+                  <ShortcutReload />
+                </span>
+                Recargar
+                <span aria-hidden="true">Mostrar QR</span>
+              </Link>
+            ) : null}
           </div>
           <Link className="alumno-wallet-menu" to={placeSlug ? `/e/${placeSlug}` : '/pedir'}>
             <span className="alumno-wallet-menu__icon" aria-hidden="true">

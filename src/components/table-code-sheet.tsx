@@ -1,6 +1,8 @@
 // Android SpaceCodeSheet: digit slots and a 3×4 keypad in a bottom sheet that can be dragged away.
 import { MotionSheet } from './motion-sheet';
 
+// Los códigos son de 4 dígitos; el backend los alarga (hasta 8) solo si se agotan.
+const MIN_DIGITS = 4;
 const MAX_DIGITS = 8;
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
@@ -19,7 +21,8 @@ export function TableCodeSheet({
   onConfirm: () => void;
   onClosed: () => void;
 }) {
-  const slots = Math.min(MAX_DIGITS, Math.max(4, code.length + 1));
+  const ready = code.length >= MIN_DIGITS && !resolving;
+  const slots = Math.max(MIN_DIGITS, code.length);
   const press = (digit: string) => {
     if (code.length < MAX_DIGITS) onChange(code + digit);
   };
@@ -32,7 +35,7 @@ export function TableCodeSheet({
           onKeyDown={(event) => {
             if (/^\d$/.test(event.key)) press(event.key);
             else if (event.key === 'Backspace') onChange(code.slice(0, -1));
-            else if (event.key === 'Enter' && code) onConfirm();
+            else if (event.key === 'Enter' && ready) onConfirm();
           }}
         >
           <div className="alumno-codesheet__grab" {...dragHandle}>
@@ -66,12 +69,12 @@ export function TableCodeSheet({
             <button type="button" onClick={() => press('0')}>
               0
             </button>
-            <button type="button" className="is-lime" disabled={!code || resolving} onClick={onConfirm}>
+            <button type="button" className="is-lime" disabled={!ready} onClick={onConfirm}>
               LISTO
             </button>
           </div>
 
-          <button className="alumno-btn alumno-btn--lime alumno-codesheet__confirm" type="button" disabled={!code || resolving} onClick={onConfirm}>
+          <button className="alumno-btn alumno-btn--lime alumno-codesheet__confirm" type="button" disabled={!ready} onClick={onConfirm}>
             {resolving ? 'Buscando mesa…' : 'Confirmar y sentarme'}
           </button>
           <button className="alumno-link alumno-codesheet__cancel" type="button" onClick={close}>

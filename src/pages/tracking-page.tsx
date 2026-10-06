@@ -13,6 +13,7 @@ import { StripePaymentPanel } from '../components/stripe-payment-panel';
 import { OrderTicketView } from './order-detail-page';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
+import { buyerEntryPath } from '../lib/buyer-entry';
 import { readGuestOrders, trackingUrl } from '../lib/guest-orders';
 import { useGuestSpaceToken } from '../lib/use-guest-space-token';
 import { isStorageAvailable } from '../lib/storage-available';
@@ -34,6 +35,7 @@ export function TrackingPage() {
   const justOrdered = search.get('nuevo') === '1';
   const [order, setOrder] = useState<TrackedOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
   const [stripeSession, setStripeSession] = useState<StripePaymentSession | null>(null);
   const [paying, setPaying] = useState(false);
@@ -87,7 +89,10 @@ export function TrackingPage() {
       } catch (cause) {
         if (!active) return;
         setError(errorMessage(cause));
-        if (isPermanentTrackingError(cause)) return;
+        if (isPermanentTrackingError(cause)) {
+          setNotFound(true);
+          return;
+        }
         failures += 1;
         timer = window.setTimeout(() => void load(), trackingRetryDelay(failures));
       }
@@ -152,6 +157,28 @@ export function TrackingPage() {
     order?.metodo_pago === 'stripe' && !isStripePaymentConfirmedByBackend(order) && order.estado === 'por_cobrar';
   const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
+  if (notFound && !order) {
+    return (
+      <AppShell tab="none">
+        <main id="main-content" className="alumno-main alumno-tracking">
+          <div className="alumno-empty alumno-arrive" role="alert">
+            <img src="/vaini/cutout-frente.png" alt="" />
+            <h2>No encontramos este pedido</h2>
+            <p className="alumno-lead">El enlace no es válido o el pedido ya no existe.</p>
+            <div className="alumno-tracking__actions">
+              <Link className="alumno-btn alumno-btn--lime" to="/cuenta/pedidos">
+                Ver mis pedidos
+              </Link>
+              <Link className="alumno-btn" to={buyerEntryPath(saved?.slug)}>
+                Ir al menú
+              </Link>
+            </div>
+          </div>
+        </main>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell tab="none">
       <main id="main-content" className="alumno-main alumno-tracking">
@@ -160,45 +187,47 @@ export function TrackingPage() {
           title={order ? `Pedido #${order.folio}` : 'Tu pedido'}
         />
 
-        <section className="alumno-tracking__keep" role="note" aria-label="Guarda este enlace">
-          <strong>{justOrdered ? '¡Listo! Guarda este enlace' : 'Guarda este enlace'}</strong>
-          {storageOk ? (
-            <p>
-              Tu pedido también vive en este navegador, en la pestaña{' '}
-              <Link to="/cuenta/pedidos">Pedidos</Link>. Guarda el enlace como respaldo para otro
-              dispositivo o si borras los datos: pediste sin cuenta, así que no te llegará por
-              correo.
-            </p>
-          ) : (
-            <p>
-              <strong>Este navegador no guarda datos:</strong> este enlace es tu única copia del
-              pedido. Mándalo a otro lado ahora: no lo verás en la pestaña{' '}
-              <Link to="/cuenta/pedidos">Pedidos</Link> al cerrar.
-            </p>
-          )}
-          <code className="alumno-tracking__link">{link}</code>
-          <div className="alumno-tracking__actions">
-            <button type="button" className="alumno-btn alumno-btn--lime" onClick={() => void copy()}>
-              {copied ? 'Enlace copiado' : 'Copiar enlace'}
-            </button>
-            {canShare ? (
-              <button type="button" className="alumno-btn" onClick={() => void share()}>
-                Compartir
+        {order ? (
+          <section className="alumno-tracking__keep" role="note" aria-label="Guarda este enlace">
+            <strong>{justOrdered ? '¡Listo! Guarda este enlace' : 'Guarda este enlace'}</strong>
+            {storageOk ? (
+              <p>
+                Tu pedido también vive en este navegador, en la pestaña{' '}
+                <Link to="/cuenta/pedidos">Pedidos</Link>. Guarda el enlace como respaldo para otro
+                dispositivo o si borras los datos: pediste sin cuenta, así que no te llegará por
+                correo.
+              </p>
+            ) : (
+              <p>
+                <strong>Este navegador no guarda datos:</strong> este enlace es tu única copia del
+                pedido. Mándalo a otro lado ahora: no lo verás en la pestaña{' '}
+                <Link to="/cuenta/pedidos">Pedidos</Link> al cerrar.
+              </p>
+            )}
+            <code className="alumno-tracking__link">{link}</code>
+            <div className="alumno-tracking__actions">
+              <button type="button" className="alumno-btn alumno-btn--lime" onClick={() => void copy()}>
+                {copied ? 'Enlace copiado' : 'Copiar enlace'}
               </button>
+              {canShare ? (
+                <button type="button" className="alumno-btn" onClick={() => void share()}>
+                  Compartir
+                </button>
+              ) : null}
+              <a className="alumno-btn" href={whatsappHref} target="_blank" rel="noreferrer">
+                Enviar por WhatsApp
+              </a>
+              {saved && !stripePending ? (
+                <Link className="alumno-btn" to="/cuenta/pedidos">
+                  Ver en Mis pedidos
+                </Link>
+              ) : null}
+            </div>
+            {qr ? (
+              <img className="wallet-qr" src={qr} alt="Código QR de tu enlace de seguimiento" />
             ) : null}
-            <a className="alumno-btn" href={whatsappHref} target="_blank" rel="noreferrer">
-              Enviar por WhatsApp
-            </a>
-            {saved && !stripePending ? (
-              <Link className="alumno-btn" to="/cuenta/pedidos">
-                Ver en Mis pedidos
-              </Link>
-            ) : null}
-          </div>
-          {qr ? (
-            <img className="wallet-qr" src={qr} alt="Código QR de tu enlace de seguimiento" />
-          ) : null}
-        </section>
+          </section>
+        ) : null}
 
         {error && !order ? <p className="alumno-error">{error}</p> : null}
         {!order && !error ? <p className="alumno-muted">Cargando tu pedido…</p> : null}

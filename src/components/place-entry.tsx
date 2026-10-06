@@ -3,8 +3,7 @@
 // código de 4 dígitos de la mesa o acercar el teléfono a su etiqueta NFC.
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/auth-context';
-import { errorMessage } from '../lib/api-error';
+import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { enterSpace, parseEntry, storeDestination } from '../lib/space-entry';
 import { NfcSheet } from './nfc-sheet';
 import { QrScannerSheet } from './qr-scanner-sheet';
@@ -13,7 +12,6 @@ import { TableCodeSheet } from './table-code-sheet';
 type Sheet = 'qr' | 'code' | 'nfc' | null;
 
 export function PlaceEntry({ prominent = false }: { prominent?: boolean }) {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [sheet, setSheet] = useState<Sheet>(null);
   const [code, setCode] = useState('');
@@ -33,11 +31,15 @@ export function PlaceEntry({ prominent = false }: { prominent?: boolean }) {
     setBusy(true);
     setError(null);
     try {
-      const { destination } = await enterSpace(target.token, Boolean(user));
+      const { destination, nombre } = await enterSpace(target.token);
       setSheet(null);
-      void navigate(destination);
+      void navigate(destination, { state: { seatedAt: nombre } });
     } catch (cause) {
-      setError(errorMessage(cause));
+      setError(
+        cause instanceof VaiinillaApiError && cause.status === 404
+          ? 'Ese código no existe. Revísalo junto al QR de tu mesa.'
+          : errorMessage(cause),
+      );
     } finally {
       setBusy(false);
     }
@@ -91,7 +93,10 @@ export function PlaceEntry({ prominent = false }: { prominent?: boolean }) {
           code={code}
           resolving={busy}
           error={error}
-          onChange={(next) => setCode(next.replace(/\D/g, ''))}
+          onChange={(next) => {
+            setCode(next.replace(/\D/g, ''));
+            setError(null);
+          }}
           onConfirm={() => void enter(code)}
           onClosed={() => setSheet((current) => (current === 'code' ? null : current))}
         />

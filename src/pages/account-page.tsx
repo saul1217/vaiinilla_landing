@@ -96,6 +96,7 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
   const navigate = useNavigate();
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [qr, setQr] = useState<string | null>(null);
+  const [allowsBalance, setAllowsBalance] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Verificación de correo: se avisa hasta que Firebase lo confirma.
   const [verified, setVerified] = useState(() => user?.emailVerified ?? true);
@@ -151,10 +152,14 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
           openClientSession,
         });
         if (!resolved) return;
-        const next = await api.getMyWallet(resolved.context.access_token);
+        const [next, place] = await Promise.all([
+          api.getMyWallet(resolved.context.access_token),
+          resolved.slug ? api.getEstablishment(resolved.slug).catch(() => null) : Promise.resolve(null),
+        ]);
         if (!active) return;
         setError(null);
         setWallet(next);
+        setAllowsBalance(place?.permite_saldo !== false);
         const userId = next.wallet.usuario_id || next.cliente.usuario_id;
         setQr(await QRCode.toDataURL(walletQrUrl(userId), { margin: 1, width: 320 }));
       } catch (cause) {
@@ -246,14 +251,16 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
           </section>
         ) : null}
         <div className="alumno-settings-layout">
-          <section className="alumno-card alumno-card--qr">
-            <h2>QR para recargar</h2>
-            <p className="alumno-muted">Muéstralo en Caja. La recarga la hace el establecimiento.</p>
-            {qr ? <img className="wallet-qr" src={qr} alt="Código QR para recargar saldo en caja" /> : null}
-            {wallet ? (
-              <p className="alumno-muted">{walletQrUrl(wallet.wallet.usuario_id || wallet.cliente.usuario_id)}</p>
-            ) : null}
-          </section>
+          {allowsBalance ? (
+            <section className="alumno-card alumno-card--qr">
+              <h2>QR para recargar</h2>
+              <p className="alumno-muted">Muéstralo en Caja. La recarga la hace el establecimiento.</p>
+              {qr ? <img className="wallet-qr" src={qr} alt="Código QR para recargar saldo en caja" /> : null}
+              {wallet ? (
+                <p className="alumno-muted">{walletQrUrl(wallet.wallet.usuario_id || wallet.cliente.usuario_id)}</p>
+              ) : null}
+            </section>
+          ) : null}
           <div>
             <h2 style={{ fontSize: '1rem', margin: '0 0 8px' }}>Tema</h2>
             <div className="alumno-themes">

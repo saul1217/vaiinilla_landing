@@ -242,4 +242,24 @@ describe('WalletPage', () => {
     expect(screen.queryByRole('heading', { name: /movimientos/i })).not.toBeInTheDocument();
     expect(document.querySelectorAll('.alumno-moves li')).toHaveLength(0);
   });
+
+  it('sin saldo en el lugar: no ofrece recargar ni el QR', () => {
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <WalletBoardView
+            saldo="0.00"
+            placeSlug="demo-a"
+            reloadHref="/u/preview"
+            allowsBalance={false}
+            movimientos={[]}
+            menuPeek={[]}
+          />
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole('link', { name: /^recargar$/i })).not.toBeInTheDocument();
+    expect(document.querySelector('[data-wallet-reload="qr"]')).toBeNull();
+    expect(screen.getByRole('link', { name: /^pagar$/i })).toBeInTheDocument();
+  });
 });

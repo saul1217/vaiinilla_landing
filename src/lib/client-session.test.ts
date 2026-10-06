@@ -153,7 +153,8 @@ describe('resolveClientSession', () => {
     expect(listAccesses).toHaveBeenCalledWith('firebase-token');
     expect(openClientSession).toHaveBeenCalledWith({ uid: 'u1' }, place);
     expect(resolved?.slug).toBe('renasci-bar');
-    expect(localStorage.getItem('vaiinilla.buyer.last-place.v1')).toBe('renasci-bar');
+    // La cuenta eligió el lugar, no el cliente: no se guarda como su lugar.
+    expect(localStorage.getItem('vaiinilla.buyer.last-place.v1')).toBeNull();
   });
 
   it('sin accesos de cliente no fabrica historial ni saldo', async () => {
@@ -205,7 +206,7 @@ describe('resolveClientSession', () => {
     expect(listAccesses).toHaveBeenCalledWith('firebase-token');
     expect(openClientSession).toHaveBeenCalledWith({ uid: 'u1' }, place);
     expect(resolved?.slug).toBe('renasci-bar');
-    expect(localStorage.getItem('vaiinilla.buyer.last-place.v1')).toBe('renasci-bar');
+    expect(localStorage.getItem('vaiinilla.buyer.last-place.v1')).toBeNull();
   });
   it('si la ficha del lugar actual falla un momento, abre ese lugar y no el primero de la cuenta', async () => {
     const otherAccess: SessionAccess = {

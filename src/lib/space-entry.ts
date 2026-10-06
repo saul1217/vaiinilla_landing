@@ -1,7 +1,6 @@
 // Entrar a un lugar desde la ventana "Escanear QR · Código · NFC": lo que se lee (un
 // enlace de QR o NFC, o el código de 4 dígitos de la mesa) se convierte en a dónde ir.
 import { api } from './api';
-import { readGuest } from './guest-session';
 import { rememberPlace } from './last-place';
 import { rememberSpace } from './space-session';
 
@@ -35,14 +34,13 @@ export function parseEntry(text: string): EntryTarget | null {
 }
 
 /**
- * Resuelve la mesa (por token de QR o por código), la guarda para el pedido y dice a
- * dónde seguir: sin cuenta, primero elegir cómo pedir; con cuenta (o ya invitado), el menú.
+ * Resuelve la mesa (por token de QR o por código), la guarda para el pedido y lleva al
+ * menú. La cuenta se ofrece hasta pagar, no al sentarse.
  */
 export async function enterSpace(
   token: string,
-  hasAccount: boolean,
   slugHint?: string,
-): Promise<{ destination: string; tipo: string | null }> {
+): Promise<{ destination: string; tipo: string | null; nombre: string }> {
   const resolved = await api.resolveSpace(token, slugHint);
   rememberPlace(resolved.establecimiento_slug);
   rememberSpace({
@@ -53,9 +51,11 @@ export async function enterSpace(
     // El backend acepta el token o el código para unirse a la mesa compartida.
     qrToken: token,
   });
-  const menu = `/e/${resolved.establecimiento_slug}`;
-  const destination = !hasAccount && readGuest() === null ? `/cuenta?next=${encodeURIComponent(menu)}` : menu;
-  return { destination, tipo: resolved.espacio_tipo };
+  return {
+    destination: `/e/${resolved.establecimiento_slug}`,
+    tipo: resolved.espacio_tipo,
+    nombre: resolved.espacio_nombre,
+  };
 }
 
 export function storeDestination(slug: string): string {

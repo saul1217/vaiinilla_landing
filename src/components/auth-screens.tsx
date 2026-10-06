@@ -13,9 +13,14 @@ import {
   sendPasswordReset,
 } from '../lib/firebase';
 import { enableGuestBuy, enableGuestExplore } from '../lib/guest-explore';
+import { emailProblem, passwordProblem } from '../lib/auth-validation';
 import { claimGuestOrders } from '../lib/guest-claim';
 import { unpublishedLegalTestingEnabled } from '../lib/legal';
-import { entryAfterAccess } from '../lib/space-session';
+import { cartTotal } from '../lib/cart';
+import { readCart } from '../lib/cart-storage';
+import { formatAmount } from '../lib/money';
+import { entryAfterAccess, guestEntryAfterAccess, guestMenuPath, scannedSpace } from '../lib/space-session';
+import { splashContextFor } from '../lib/splash-context';
 import { staffAccesses } from '../lib/staff-access';
 import { markVerificationSent } from '../lib/verification';
 import type { LegalVersions, SessionAccess } from '../types/api';
@@ -141,6 +146,9 @@ export function AuthScreens({
 }) {
   const { configured, signOut } = useAuth();
   const navigate = useNavigate();
+  const cart = readCart();
+  const cartAmount = cart ? cartTotal(cart.lines) : null;
+  const splashContext = splashContextFor(next, cartAmount ? formatAmount(cartAmount) : null);
   const [mode, setMode] = useState<AuthMode>(unregisteredUser ? 'google-legal' : 'splash');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -155,6 +163,7 @@ export function AuthScreens({
   const [notice, setNotice] = useState<string | null>(null);
   const [staff, setStaff] = useState<SessionAccess[]>([]);
   const [busy, setBusy] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string | null; password?: string | null }>({});
 
   useEffect(() => {
     void api
@@ -224,6 +233,11 @@ export function AuthScreens({
     event.preventDefault();
     setError(null);
     if (!configured) return;
+    if (mode === 'entrar') {
+      const problems = { email: emailProblem(email), password: passwordProblem(password) };
+      setFieldErrors(problems);
+      if (problems.email || problems.password) return;
+    }
     setBusy(true);
     try {
       if (mode === 'alta') {
@@ -330,14 +344,16 @@ export function AuthScreens({
   async function onForgot() {
     setError(null);
     setNotice(null);
-    if (!email.trim()) {
-      setError('Escribe tu correo para enviarte el enlace.');
+    const problem = emailProblem(email);
+    if (problem) {
+      setFieldErrors({ email: problem === 'Escribe tu correo' ? 'Escribe tu correo para enviarte el enlace' : problem });
       return;
     }
     setBusy(true);
     try {
-      await sendPasswordReset(email.trim().toLowerCase());
-      setNotice('Te enviamos un correo para restablecer la contraseña.');
+      const target = email.trim().toLowerCase();
+      await sendPasswordReset(target);
+      setNotice(`Te enviamos un enlace a ${target}`);
     } catch (cause) {
       setError(firebaseAuthMessage(cause));
     } finally {
@@ -348,13 +364,21 @@ export function AuthScreens({
   function explore() {
     enableGuestExplore();
     onExplored?.();
-    if (window.location.pathname !== '/pedir') void navigate('/pedir');
+    const space = scannedSpace();
+    const destination = space ? `/e/${space.slug}` : '/pedir';
+    if (window.location.pathname !== destination) void navigate(destination);
   }
 
   function buyAsGuest() {
     enableGuestBuy();
     onExplored?.();
-    void navigate(entryAfterAccess(next));
+    void navigate(guestEntryAfterAccess(next));
+  }
+
+  function backToMenu() {
+    enableGuestBuy();
+    onExplored?.();
+    void navigate(guestMenuPath(next));
   }
 
   function goBack() {
@@ -410,10 +434,11 @@ export function AuthScreens({
           </div>
         </div>
         <div className="alumno-splash__copy">
+          {splashContext ? <p className="alumno-kicker alumno-splash__kicker">{splashContext.kicker}</p> : null}
           <h1>
             Tu lugar, <em>a tu ritmo.</em>
           </h1>
-          <p>Pide, sigue tu pedido y paga desde un solo lugar.</p>
+          <p>{splashContext?.line ?? 'Pide, sigue tu pedido y paga desde un solo lugar.'}</p>
         </div>
         {error ? <p className="alumno-error">{error}</p> : null}
         <div className="alumno-splash__actions">
@@ -440,6 +465,11 @@ export function AuthScreens({
           <button className="alumno-splash__email" type="button" onClick={() => setMode('alta')}>
             Crear cuenta con correo
           </button>
+          {next !== '/pedir' ? (
+            <button className="alumno-splash__email" type="button" onClick={backToMenu}>
+              Volver al menú
+            </button>
+          ) : null}
         </div>
       </main>
     );
@@ -506,6 +536,7 @@ export function AuthScreens({
         </>
       ) : (
         <form
+          noValidate
           onSubmit={(event) =>
             void (mode === 'google-legal' ? confirmGoogleLegal(event) : onPassword(event))
           }
@@ -519,10 +550,14 @@ export function AuthScreens({
                 <input
                   type="email"
                   value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  required
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    setFieldErrors((current) => ({ ...current, email: null }));
+                  }}
+                  aria-invalid={fieldErrors.email ? true : undefined}
                   autoComplete="email"
                 />
+                {fieldErrors.email ? <span className="alumno-field-error">{fieldErrors.email}</span> : null}
               </label>
               {mode === 'entrar' ? (
                 <label className="alumno-field">
@@ -530,11 +565,14 @@ export function AuthScreens({
                   <input
                     type="password"
                     value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    required
-                    minLength={8}
+                    onChange={(event) => {
+                      setPassword(event.target.value);
+                      setFieldErrors((current) => ({ ...current, password: null }));
+                    }}
+                    aria-invalid={fieldErrors.password ? true : undefined}
                     autoComplete="current-password"
                   />
+                  {fieldErrors.password ? <span className="alumno-field-error">{fieldErrors.password}</span> : null}
                 </label>
               ) : null}
             </>

@@ -10,15 +10,15 @@ import { isSharableSpace, openingTitle, spaceNoun } from '../lib/space-words';
 export function TableJoinPage() {
   const { slug = '', token = '' } = useParams();
   const navigate = useNavigate();
-  const { user, ready } = useAuth();
+  const { ready } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [kind, setKind] = useState<string | null>(null);
 
   useEffect(() => {
     if (!ready) return;
     let active = true;
-    void enterSpace(token, Boolean(user), slug)
-      .then(({ destination, tipo }) => {
+    void enterSpace(token, slug)
+      .then(({ destination, tipo, nombre }) => {
         if (!active) return;
         setKind(tipo);
         // Espacio compartible (mesa): antes del menú se elige quién se es.
@@ -27,7 +27,7 @@ export function TableJoinPage() {
           void navigate(`${base}?next=${encodeURIComponent(destination)}`, { replace: true });
           return;
         }
-        void navigate(destination, { replace: true });
+        void navigate(destination, { replace: true, state: { seatedAt: nombre } });
       })
       .catch((cause: unknown) => {
         if (active) setError(errorMessage(cause));
@@ -35,7 +35,7 @@ export function TableJoinPage() {
     return () => {
       active = false;
     };
-  }, [navigate, ready, slug, token, user]);
+  }, [navigate, ready, slug, token]);
 
   return (
     <AppShell tab="none">

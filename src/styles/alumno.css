@@ -581,6 +581,10 @@ html[data-theme='amoled'] .alumno-nav {
   text-wrap: balance;
 }
 
+.alumno-splash__kicker {
+  margin: 0 0 8px;
+}
+
 .alumno-splash__copy em {
   font-style: italic;
   font-weight: 700;
@@ -768,6 +772,22 @@ html[data-theme='amoled'] .alumno-antojo img {
   font: inherit;
   font-weight: 500;
   width: 100%;
+}
+
+.alumno-field-error {
+  color: var(--danger);
+  font-size: 0.8rem;
+  font-weight: 600;
+  animation: alumno-field-error-in 220ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.alumno-field input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+@keyframes alumno-field-error-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
 }
 
 .alumno-check {
@@ -1110,6 +1130,12 @@ html[data-theme='amoled'] .alumno-antojo img {
   font-size: 1.45rem;
   letter-spacing: -0.04em;
   margin: 4px 0 8px;
+}
+
+.alumno-pieces {
+  color: var(--text-soft);
+  font-size: 0.8125rem;
+  font-weight: 500;
 }
 
 .alumno-empty .alumno-lead {
@@ -1680,6 +1706,10 @@ html[data-theme='amoled'] .alumno-antojo img {
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.alumno-actions-3[data-count='2'] {
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .alumno-actions-3 a,
@@ -4768,6 +4798,10 @@ html[data-theme='amoled'] .alumno-lockup img,
   letter-spacing: -0.045em;
 }
 
+.alumno-psheet__pieces {
+  margin: 6px 0 0;
+}
+
 .alumno-psheet__lead {
   margin: 10px 0 0;
   color: var(--muted);
@@ -5791,6 +5825,47 @@ html[data-theme='light'] .alumno-codesheet__slots > span.is-filled {
 
 @media (prefers-reduced-motion: reduce) {
   .alumno-update { animation: none; }
+}
+
+/* "Estás en Mesa 1": same pill as the update toast, springs in and out. */
+.alumno-seated {
+  position: fixed;
+  z-index: 60;
+  top: calc(env(safe-area-inset-top) + 10px);
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px 10px 14px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+  animation: alumno-update-in 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.alumno-seated.is-leaving {
+  animation: alumno-seated-out 260ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.alumno-seated__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--lime);
+}
+
+@keyframes alumno-seated-out {
+  to { opacity: 0; transform: translateY(-12px) scale(0.94); filter: blur(4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alumno-seated,
+  .alumno-seated.is-leaving { animation: none; }
 }
 
 /* Stripe's hidden fraud iframe (m-outer) briefly mounts wider than the screen;
@@ -7288,6 +7363,24 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 }
 .alumno-tracking__actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .alumno-tracking__account { font-size: 0.875rem; text-align: center; }
+.alumno-tracking__account a {
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--lime-dark);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+/* Al bajar por el menú, las categorías quedan a la mano. */
+.alumno-main--catalog .alumno-chips {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin-inline: -4px;
+  padding: 8px 4px;
+  background: var(--bg);
+}
 .alumno-guest-orders { display: grid; gap: 8px; margin: 12px 0; }
 .alumno-guest-orders__item {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;

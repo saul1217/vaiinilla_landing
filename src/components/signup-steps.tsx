@@ -2,6 +2,7 @@
 // email → password (reveal toggle) → name → legal. The last step submits the
 // form, so account creation stays in AuthScreens.onPassword.
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { emailProblem, passwordProblem } from '../lib/auth-validation';
 import type { LegalVersions } from '../types/api';
 
 const STEPS = [
@@ -39,13 +40,16 @@ export function SignupSteps(props: SignupStepsProps) {
   const current = STEPS[step] ?? STEPS[0];
   const isLast = step === STEPS.length - 1;
 
-  const email = props.email.trim();
-  const canAdvance = [
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
-    props.password.length >= 8,
-    props.nombre.trim().length > 0,
-    props.acceptedTerms && props.acceptedPrivacy && Boolean(props.legal) && !props.busy && props.configured,
+  const [tried, setTried] = useState(false);
+  // Lo que falta en este paso, dicho en palabras: el botón no se queda gris sin explicar.
+  const problem = [
+    emailProblem(props.email),
+    passwordProblem(props.password),
+    props.nombre.trim() ? null : 'Escribe tu nombre',
+    null,
   ][step];
+  const legalReady = props.acceptedTerms && props.acceptedPrivacy && Boolean(props.legal) && !props.busy && props.configured;
+  const canAdvance = isLast ? legalReady : !problem;
 
   useEffect(() => {
     // Wait for the slide to settle; focusing mid-transition drops the keyboard request on iOS.
@@ -54,6 +58,7 @@ export function SignupSteps(props: SignupStepsProps) {
   }, [step]);
 
   function go(next: number) {
+    setTried(false);
     setDirection(next > step ? 1 : -1);
     setStep(next);
   }
@@ -65,7 +70,10 @@ export function SignupSteps(props: SignupStepsProps) {
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (!canAdvance) return;
+    if (!canAdvance) {
+      setTried(true);
+      return;
+    }
     if (isLast) props.onSubmit(event);
     else go(step + 1);
   }
@@ -114,7 +122,10 @@ export function SignupSteps(props: SignupStepsProps) {
                 placeholder="Correo"
                 aria-label="Correo"
                 value={props.email}
-                onChange={(event) => props.onEmail(event.target.value)}
+                onChange={(event) => {
+                  setTried(false);
+                  props.onEmail(event.target.value);
+                }}
               />
             ) : null}
             {current.key === 'password' ? (
@@ -127,7 +138,10 @@ export function SignupSteps(props: SignupStepsProps) {
                   placeholder="Contraseña"
                   aria-label="Contraseña"
                   value={props.password}
-                  onChange={(event) => props.onPassword(event.target.value)}
+                  onChange={(event) => {
+                  setTried(false);
+                  props.onPassword(event.target.value);
+                }}
                 />
                 <button type="button" onClick={() => setReveal((value) => !value)} aria-label={reveal ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -147,7 +161,10 @@ export function SignupSteps(props: SignupStepsProps) {
                 placeholder="Tu nombre"
                 aria-label="Nombre"
                 value={props.nombre}
-                onChange={(event) => props.onNombre(event.target.value)}
+                onChange={(event) => {
+                  setTried(false);
+                  props.onNombre(event.target.value);
+                }}
               />
             ) : null}
             {current.key === 'legal' ? (
@@ -170,11 +187,16 @@ export function SignupSteps(props: SignupStepsProps) {
               </div>
             ) : null}
           </div>
+          {tried && problem ? (
+            <p className="alumno-field-error" role="alert">
+              {problem}
+            </p>
+          ) : null}
           {props.error ? <p className="alumno-error">{props.error}</p> : null}
         </section>
 
         <footer className="alumno-signup__dock">
-          <button className="alumno-btn alumno-btn--lime" type="submit" disabled={!canAdvance}>
+          <button className="alumno-btn alumno-btn--lime" type="submit" disabled={isLast && !legalReady}>
             {isLast ? (props.busy ? 'Creando…' : 'Crear cuenta') : 'Continuar'}
           </button>
         </footer>

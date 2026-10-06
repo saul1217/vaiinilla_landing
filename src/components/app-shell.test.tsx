@@ -73,7 +73,7 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: /pedidos/i })).toHaveAttribute('href', '/cuenta?next=/cuenta/pedidos');
   });
 
-  it('el logo de la barra navega al establecimiento si está recordado', () => {
+  it('el logo no abre solo un lugar visitado antes: lleva a elegir con QR o código', () => {
     localStorage.setItem('vaiinilla.buyer.last-place.v1', 'padel-club');
     render(
       <MemoryRouter>
@@ -82,7 +82,7 @@ describe('AppShell', () => {
         </AppShell>
       </MemoryRouter>,
     );
-    expect(screen.getByRole('link', { name: /^vaiinilla$/i })).toHaveAttribute('href', '/e/padel-club');
+    expect(screen.getByRole('link', { name: /^vaiinilla$/i })).toHaveAttribute('href', '/pedir');
   });
 
   it('notifica sesión terminada cuando ocurre 401', async () => {

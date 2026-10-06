@@ -14,6 +14,7 @@ import { canAcceptOrders, canPayAtEnd, cardFee, cartTotal, toCreateOrderInput, u
 import { leftoverPeekProducts, peekCatalogProducts, productImageUrl } from '../lib/catalog-images';
 import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
 import { formatAmount, linePreview, moneyToCents } from '../lib/money';
+import { piecesLabel, splitPieces } from '../lib/product-pieces';
 import { resolveClientSession } from '../lib/client-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { orderHistoryHeadline } from '../lib/order-labels';
@@ -723,6 +724,7 @@ export function CartFilledView({
         {lines.map((line) => {
           const thumb = productImageUrl(line.imageUrl);
           const lineTotal = linePreview(unitFor(line, payment), line.quantity);
+          const { pieces } = splitPieces(line.productName);
           return (
             <div className="alumno-line" key={`${line.productId}-${line.optionIds.join(',')}-${line.notes || ''}`}>
               {thumb ? (
@@ -733,13 +735,16 @@ export function CartFilledView({
                 </div>
               )}
               <div className="alumno-line__copy">
-                <strong>{line.productName}</strong>
+                <strong>
+                  {splitPieces(line.productName).name}
+                  {pieces ? <span className="alumno-pieces"> · {piecesLabel(pieces)}</span> : null}
+                </strong>
                 {line.notes ? <p className="alumno-muted alumno-line__notes" style={{ margin: '0.15rem 0', fontSize: '0.85rem' }}>{line.notes}</p> : null}
                 <p>{formatAmount(unitFor(line, payment))} c/u</p>
                 <div className="alumno-qty">
                   <button
                     type="button"
-                    aria-label={`Quitar una ${line.productName}`}
+                    aria-label={`Quitar una ${splitPieces(line.productName).name}`}
                     onClick={() => onUpdateQuantity(line.productId, line.optionIds, line.quantity - 1, line.notes)}
                   >
                     −
@@ -747,7 +752,7 @@ export function CartFilledView({
                   <span key={line.quantity} className="alumno-ticker">{line.quantity}</span>
                   <button
                     type="button"
-                    aria-label={`Agregar una ${line.productName}`}
+                    aria-label={`Agregar una ${splitPieces(line.productName).name}`}
                     onClick={() => onUpdateQuantity(line.productId, line.optionIds, line.quantity + 1, line.notes)}
                   >
                     +

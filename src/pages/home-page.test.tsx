@@ -43,7 +43,7 @@ describe('HomePage', () => {
     expect(screen.getAllByText(/pago confirmado/i).length).toBeGreaterThan(0);
   });
 
-  it('Pedir vuelve al último lugar si ya hay uno guardado', async () => {
+  it('Pedir no abre solo el último lugar: con varias tiendas pide QR o código', async () => {
     rememberPlace('renasci-bar');
     render(
       <MemoryRouter>
@@ -53,7 +53,7 @@ describe('HomePage', () => {
     await waitFor(() => {
       expect(screen.getAllByRole('link', { name: /^pedir$/i })[0]).toHaveAttribute(
         'href',
-        '/e/renasci-bar',
+        '/pedir',
       );
     });
   });

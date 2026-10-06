@@ -124,6 +124,7 @@ export async function resolveClientSession(input: {
   if (!access) return null;
   const place = await api.getEstablishment(access.establecimiento.slug);
   const context = await input.openClientSession(input.user, place);
-  rememberPlace(place.slug);
+  // Elegido por la cuenta, no por el cliente: no se guarda como su lugar, o la app
+  // lo abriría sola en vez de pedir el QR o el código.
   return { context, slug: place.slug, place };
 }

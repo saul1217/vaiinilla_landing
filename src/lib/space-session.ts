@@ -1,3 +1,4 @@
+import { lastPlaceSlug } from './last-place';
 const KEY = 'vaiinilla.buyer.space.v1';
 /** Una mesa escaneada vale por una visita: pasado esto se pide escanear otra vez. */
 const SPACE_TTL_MS = 4 * 60 * 60 * 1000;
@@ -76,6 +77,26 @@ export function entryAfterAccess(next: string): string {
   if (next !== '/pedir') return next;
   const space = scannedSpace();
   return space ? `/e/${space.slug}` : next;
+}
+
+const ACCOUNT_ONLY_PATHS = [/^\/cuenta\/saldo\/?$/, /^\/cuenta\/pedidos\/[^/]+\/?$/, /^\/u\/[^/]+\/?$/];
+
+/** Rutas que no existen sin cuenta: mandar ahí a un invitado lo regresa al splash. */
+export function requiresAccount(path: string): boolean {
+  const pathname = path.split(/[?#]/)[0] ?? path;
+  return ACCOUNT_ONLY_PATHS.some((pattern) => pattern.test(pathname));
+}
+
+/** El menú al que vuelve quien no quiere cuenta: la mesa, el último lugar o el selector. */
+export function guestMenuPath(next: string): string {
+  const fromNext = /^\/e\/([^/?#]+)/.exec(next)?.[1];
+  const slug = fromNext ?? scannedSpace()?.slug ?? lastPlaceSlug();
+  return slug ? `/e/${slug}` : '/pedir';
+}
+
+/** Comprar sin cuenta: sigue a `next` salvo que esa ruta pida cuenta. */
+export function guestEntryAfterAccess(next: string): string {
+  return requiresAccount(next) ? guestMenuPath(next) : entryAfterAccess(next);
 }
 
 /** Lo mínimo de una renta para saber si el cliente está jugando ahora en una cancha. */

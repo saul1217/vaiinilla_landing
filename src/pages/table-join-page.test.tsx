@@ -84,7 +84,7 @@ describe('TableJoinPage', () => {
     expect(await screen.findByText(/no está disponible/i)).toBeInTheDocument();
   });
 
-  it('sin cuenta, el QR de mesa primero pregunta quién eres y luego lleva al menú', async () => {
+  it('sin cuenta, el QR de mesa pregunta quién eres y lleva al menú, sin pedir cuenta', async () => {
     authState.user = null;
     resolveSpace.mockResolvedValue({
       establecimiento_slug: 'demo-a',
@@ -93,9 +93,10 @@ describe('TableJoinPage', () => {
       espacio_tipo: 'mesa',
     });
     renderJoin();
-    // A ¿Quién eres?, con el destino original (elegir cómo pedir) como next.
+    // La cuenta se ofrece al pagar: después de ¿Quién eres? sigue el menú.
     expect(await screen.findByText(/quién eres/i)).toBeInTheDocument();
-    expect(screen.getByText(/quién eres/i).textContent).toContain(encodeURIComponent('/cuenta?next='));
+    expect(screen.getByText(/quién eres/i).textContent).toContain(encodeURIComponent('/e/demo-a'));
+    expect(screen.getByText(/quién eres/i).textContent).not.toContain(encodeURIComponent('/cuenta?next='));
     expect(localStorage.getItem('vaiinilla.buyer.space.v1')).toContain('"espacioId":3');
   });
 

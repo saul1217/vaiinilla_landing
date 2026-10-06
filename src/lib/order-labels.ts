@@ -1,5 +1,6 @@
 import type { OrderDetail, OrderStatus } from '../types/api';
 import { moneyToCents } from './money';
+import { piecesLabel, splitPieces } from './product-pieces';
 import {
   RENTAL_STEPS,
   isLiveRental,
@@ -105,26 +106,37 @@ export function orderMetaLine(order: OrderDetail, now: Date = new Date()): strin
   return `${orderDestinationLabel(order)} · ${orderCompactPayLabel(order)}`;
 }
 
+const HEADLINE_ITEMS = 3;
+
+/** "Tacos dorados de res · 5 pzs": el nombre sin el (N) crudo. */
+export function itemNameLabel(rawName: string): string {
+  const { name, pieces } = splitPieces(rawName);
+  return pieces ? `${name} · ${piecesLabel(pieces)}` : name;
+}
+
 export function orderItemHeadline(order: OrderDetail): string {
   // Lo que sí se prepara: un artículo quitado no encabeza la tarjeta.
   const items = (order.items ?? []).filter((item) => !item.rechazo);
-  const first = items[0];
-  if (!first) return `Pedido #${order.folio}`;
-  const extra = items.length > 1 ? ` +${items.length - 1}` : '';
-  return `${first.cantidad} ${first.nombre_producto}${extra}`;
+  if (items.length === 0) return `Pedido #${order.folio}`;
+  const shown = items
+    .slice(0, HEADLINE_ITEMS)
+    .map((item) => `${item.cantidad} ${itemNameLabel(item.nombre_producto)}`)
+    .join(', ');
+  const rest = items.length - HEADLINE_ITEMS;
+  return rest > 0 ? `${shown} y ${rest} más` : shown;
 }
 
 /** "Se quitó Torta: Se terminó el pan." para el cliente, o null si no se quitó nada. */
 export function orderRejectedItemsHint(order: OrderDetail): string | null {
   const quitados = (order.items ?? []).filter((item) => item.rechazo);
   if (quitados.length === 0) return null;
-  return quitados.map((item) => `Se quitó ${item.nombre_producto}: ${item.rechazo?.motivo}.`).join(' ');
+  return quitados.map((item) => `Se quitó ${splitPieces(item.nombre_producto).name}: ${item.rechazo?.motivo}.`).join(' ');
 }
 
 export function orderHistoryHeadline(order: OrderDetail): string {
   const first = order.items?.[0];
   if (!first) return `Pedido #${order.folio}`;
-  return `${first.cantidad}× ${first.nombre_producto}`;
+  return `${first.cantidad}× ${itemNameLabel(first.nombre_producto)}`;
 }
 
 /** Texto de la píldora: la renta y la cuenta abierta no se leen como una comida cobrada. */

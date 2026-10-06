@@ -6,17 +6,20 @@ import { AppShell } from '../components/app-shell';
 import { useAuth } from '../context/auth-context';
 import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
-import { errorMessage } from '../lib/api-error';
+import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { defaultOptionIds, previewForProduct, validateSelections } from '../lib/cart';
 import { productImageUrl } from '../lib/catalog-images';
 import { sortProductsForTodo } from '../lib/catalog-order';
 import { initialsFrom } from '../lib/initials';
 import { rememberPlace } from '../lib/last-place';
 import { formatAmount } from '../lib/money';
+import { piecesLabel, splitPieces } from '../lib/product-pieces';
+import { NotFoundPage } from './not-found-page';
 import type { CatalogProduct, CatalogResponse, PublicEstablishment } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
 import { MotionSheet } from '../components/motion-sheet';
 import { ProductSheet } from '../components/product-sheet';
+import { SeatedToast } from '../components/seated-toast';
 import { peekResource, resourceKeys } from '../lib/resource-cache';
 
 export function MenuPage() {
@@ -34,6 +37,7 @@ export function MenuPage() {
   const [optionIds, setOptionIds] = useState<number[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [missing, setMissing] = useState(false);
   const [loading, setLoading] = useState(() => !peekResource(resourceKeys.catalog(slug)));
   const [rentsCourts, setRentsCourts] = useState(false);
   // Cambio de tienda con carrito ajeno: se confirma antes de vaciarlo.
@@ -69,10 +73,15 @@ export function MenuPage() {
         setPlace(nextPlace);
         setCatalog(nextCatalog);
         rememberPlace(nextPlace.slug);
+        setMissing(false);
         setError(null);
       })
       .catch((cause: unknown) => {
         if (!active) return;
+        if (cause instanceof VaiinillaApiError && cause.status === 404) {
+          setMissing(true);
+          return;
+        }
         setError(errorMessage(cause));
       })
       .finally(() => {
@@ -178,8 +187,21 @@ export function MenuPage() {
     </>
   );
 
+  if (missing) {
+    return (
+      <NotFoundPage
+        title="No encontramos este lugar"
+        lead="Revisa el enlace o elige otro lugar para pedir."
+        cta={{ to: '/pedir', label: 'Elegir lugar' }}
+      />
+    );
+  }
+
+  const searching = query.trim() !== '';
+
   return (
     <AppShell tab="menu">
+      <SeatedToast />
       <main id="main-content" className="alumno-main alumno-main--catalog">
         {/* Los vivos viven en su tab Pedidos; aquí solo un atajo compacto para no empujar el menú. */}
         <GuestOrdersBanner slug={slug} />
@@ -241,6 +263,7 @@ export function MenuPage() {
         <div className="alumno-grid alumno-arrive">
             {products.map((product) => {
               const thumb = productImageUrl(product.imagen_url);
+              const label = splitPieces(product.nombre);
               return (
             <button
               key={product.id}
@@ -256,13 +279,25 @@ export function MenuPage() {
                 </span>
               )}
               <div>
-                <h2>{product.nombre}</h2>
-                <p>{formatAmount(product.precio_digital)}</p>
+                <h2>{label.name}</h2>
+                <p>
+                  {formatAmount(product.precio_digital)}
+                  {label.pieces ? <span className="alumno-pieces"> · {piecesLabel(label.pieces)}</span> : null}
+                </p>
               </div>
             </button>
               );
             })}
         </div>
+        {catalog && searching && products.length === 0 ? (
+          <div className="alumno-empty alumno-arrive" role="status">
+            <img src="/vaini/cutout-frente.png" alt="" />
+            <h2>No encontramos “{query.trim()}” en el menú</h2>
+            <button className="alumno-btn alumno-btn--lime" type="button" onClick={() => setQuery('')}>
+              Limpiar búsqueda
+            </button>
+          </div>
+        ) : null}
       </main>
       {selected ? (
         <ProductSheet

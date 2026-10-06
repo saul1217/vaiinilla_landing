@@ -1,3 +1,4 @@
+import { VaiinillaApiError } from '../lib/api-error';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -104,6 +105,17 @@ describe('seguimiento sin cuenta', () => {
     guestAccessToken.mockReset();
     guestAccessToken.mockReturnValue(null);
     guestSpaceSlug.mockReset();
+  });
+
+  it('un enlace que no existe muestra solo el error, sin QR ni compartir', async () => {
+    getTracking.mockRejectedValue(new VaiinillaApiError(404, { code: 'NOT_FOUND', message: 'Pedido no encontrado' }));
+    renderAt('/seguimiento/no-existe');
+    expect(await screen.findByRole('heading', { name: /no encontramos este pedido/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /ver mis pedidos/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /ir al menú/i })).toBeInTheDocument();
+    expect(screen.queryByText(/guarda este enlace/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /whatsapp/i })).not.toBeInTheDocument();
+    expect(screen.queryByAltText(/código qr/i)).not.toBeInTheDocument();
   });
 
   it('añade la cuenta de mesa al ticket de invitado usando la sesión de este navegador', async () => {
@@ -258,7 +270,7 @@ describe('seguimiento sin cuenta', () => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
     renderAt(`/seguimiento/${TOKEN}?nuevo=1`);
 
-    expect(screen.getByText('¡Listo! Guarda este enlace')).toBeInTheDocument();
+    expect(await screen.findByText('¡Listo! Guarda este enlace')).toBeInTheDocument();
     expect(screen.getByText(/como respaldo para otro/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ver en Mis pedidos' })).toHaveAttribute('href', '/cuenta/pedidos');
     expect(screen.getByText(`${window.location.origin}/seguimiento/${TOKEN}`)).toBeInTheDocument();

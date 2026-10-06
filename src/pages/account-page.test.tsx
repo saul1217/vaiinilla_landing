@@ -134,7 +134,7 @@ describe('AccountPage', () => {
     expect(screen.getByRole('button', { name: /eliminar cuenta/i })).toBeInTheDocument();
   });
 
-  it('alta pide un dato por pantalla y solo avanza con datos válidos', async () => {
+  it('alta pide un dato por pantalla, explica qué falta y solo avanza con datos válidos', async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
@@ -145,15 +145,20 @@ describe('AccountPage', () => {
     await user.click(screen.getByRole('button', { name: /crear cuenta/i }));
     expect(screen.getByRole('heading', { name: /cuál es tu correo/i })).toBeInTheDocument();
     const next = () => screen.getByRole('button', { name: /^continuar$/i });
-    expect(next()).toBeDisabled();
+    await user.click(next());
+    expect(screen.getByRole('alert')).toHaveTextContent('Escribe tu correo');
     await user.type(screen.getByLabelText('Correo'), 'ana@escuela');
-    expect(next()).toBeDisabled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    await user.click(next());
+    expect(screen.getByRole('alert')).toHaveTextContent('Ese correo no parece válido');
+    expect(screen.getByRole('heading', { name: /cuál es tu correo/i })).toBeInTheDocument();
     await user.type(screen.getByLabelText('Correo'), '.mx');
     await user.click(next());
 
     expect(screen.getByRole('heading', { name: /crea una contraseña/i })).toBeInTheDocument();
     await user.type(screen.getByLabelText('Contraseña'), 'corta');
-    expect(next()).toBeDisabled();
+    await user.click(next());
+    expect(screen.getByRole('alert')).toHaveTextContent('al menos 8 caracteres');
     await user.type(screen.getByLabelText('Contraseña'), '1234');
     await user.click(next());
 

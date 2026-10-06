@@ -43,6 +43,21 @@ vi.mock("../lib/api", () => ({
           imagen_url: null,
           grupos_opcion: [],
         },
+        {
+          id: 11,
+          categoria_id: 1,
+          estacion_preparacion: "cocina",
+          nombre: "Tacos dorados de res (5)",
+          descripcion: null,
+          ingredientes: null,
+          alergenos: null,
+          tiempo_estimado_min: 10,
+          precio_mostrador: "150.00",
+          precio_digital: "145.00",
+          disponible: true,
+          imagen_url: null,
+          grupos_opcion: [],
+        },
       ],
     }),
   },
@@ -100,6 +115,23 @@ describe("MenuPage", () => {
     expect(
       screen.queryByRole("link", { name: /crea tu cuenta/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("muestra las piezas aparte y nunca el (N) crudo", async () => {
+    renderMenu();
+    const card = await screen.findByRole("button", { name: /tacos dorados de res/i });
+    expect(card).toHaveTextContent("$145 · 5 pzs");
+    expect(card).not.toHaveTextContent("(5)");
+  });
+
+  it("búsqueda sin resultados dice qué no encontró y deja limpiarla", async () => {
+    const user = userEvent.setup();
+    renderMenu();
+    await screen.findByRole("button", { name: /chocolate frío/i });
+    await user.type(screen.getByLabelText("Buscar en el menú"), "pizza");
+    expect(screen.getByRole("status")).toHaveTextContent("No encontramos “pizza” en el menú");
+    await user.click(screen.getByRole("button", { name: /limpiar búsqueda/i }));
+    expect(screen.getByRole("button", { name: /chocolate frío/i })).toBeInTheDocument();
   });
 
   it("con carrito de otra tienda confirma antes de vaciarlo", async () => {

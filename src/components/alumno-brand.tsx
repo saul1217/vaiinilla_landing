@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { lastPlaceSlug } from '../lib/last-place';
+import { buyerEntryPath } from '../lib/buyer-entry';
 
 export function AlumnoLockup({
   to,
@@ -11,7 +11,7 @@ export function AlumnoLockup({
   onDark?: boolean;
   linked?: boolean;
 }) {
-  const targetTo = to ?? (lastPlaceSlug() ? `/e/${lastPlaceSlug()}` : '/pedir');
+  const targetTo = to ?? buyerEntryPath();
   const className = onDark ? 'alumno-lockup alumno-lockup--on-dark' : 'alumno-lockup';
   const content = (
     <>

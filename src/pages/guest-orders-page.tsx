@@ -12,9 +12,11 @@ import { GuestOrderSaveLink } from '../components/guest-order-save-link';
 import { GuestOrdersBanner } from '../components/guest-orders-banner';
 import { SharedTableCard } from '../components/shared-table-card';
 import { WaitingArcade } from '../arcade/waiting-arcade';
+import { LoadingSkeleton } from '../components/loading-skeleton';
 import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
+import { readGuestOrders } from '../lib/guest-orders';
 import { readGuest } from '../lib/guest-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { formatAmount } from '../lib/money';
@@ -35,6 +37,8 @@ export function GuestOrdersPage() {
   const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
   const [legal, setLegal] = useState<LegalVersions | null>(null);
   const live = useGuestLiveOrders(slug ?? '');
+  // Lo guardado en este navegador también cuenta: con "Tu pedido #N" a la vista no se dice que no hay pedidos.
+  const savedHere = readGuestOrders().some((order) => order.slug === slug);
   const mesa = useGuestSpaceToken(slug);
   const guestName = readGuest()?.nombre ?? '';
   const qrToken = slug ? (readSpace(slug)?.qrToken ?? null) : null;
@@ -152,7 +156,9 @@ export function GuestOrdersPage() {
             <span className="alumno-tab__total">{formatAmount(tab.total)}</span>
           </section>
         ) : null}
-        {live.orders.length === 0 ? (
+        {live.orders.length === 0 && live.loading ? (
+          <LoadingSkeleton shape="orders" label="Cargando pedidos…" />
+        ) : live.orders.length === 0 && savedHere ? null : live.orders.length === 0 ? (
           <div className="alumno-empty">
             <img src="/vaini/cutout-frente.png" alt="" />
             <p>Aún no hay pedidos en esta sesión.</p>

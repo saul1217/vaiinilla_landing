@@ -18,6 +18,7 @@ import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
 import { usePickupQrToken } from '../lib/use-pickup-qr';
 import {
   isTerminalOrderStatus,
+  itemNameLabel,
   orderDestinationLabel,
   orderPayLabel,
 } from '../lib/order-labels';
@@ -398,13 +399,13 @@ export function OrderTicketView({
               {item.rechazo ? (
                 <>
                   <del>
-                    {item.cantidad} × {item.nombre_producto}
+                    {item.cantidad} × {itemNameLabel(item.nombre_producto)}
                   </del>
                   <small className="alumno-ticket-rejection">Se quitó: {item.rechazo.motivo}</small>
                 </>
               ) : (
                 <>
-                  {item.cantidad} × {item.nombre_producto}
+                  {item.cantidad} × {itemNameLabel(item.nombre_producto)}
                 </>
               )}
             </span>

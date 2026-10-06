@@ -113,9 +113,9 @@ export function SiteFooter() {
         <p className="footer__tag">Menú, pedidos y retiro para cualquier negocio de comida. Apps nativas, próximamente.</p>
         <nav className="footer__links" aria-label="Pie de página">
           <BuyerEntryLink className="footer__app">Pedir</BuyerEntryLink>
-          <Link className="footer__app" to="/soporte">
+          <NavLink className="footer__app" to="/soporte">
             Soporte
-          </Link>
+          </NavLink>
           <a className="footer__app" href={STAFF_APP_URL} target="_blank" rel="noreferrer">
             Soy establecimiento ↗
           </a>
