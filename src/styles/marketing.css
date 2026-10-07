@@ -57,9 +57,7 @@
 .phone-shot { --dw: 260px; position: relative; width: var(--dw); max-width: 80vw; padding: calc(var(--dw) * .035); border-radius: calc(var(--dw) * .16); background: linear-gradient(145deg, #3b3b3a, #0d0e0d); box-shadow: var(--shadow-lg), inset 0 0 0 1.5px rgba(255,255,255,.09); }
 .phone-shot::before { content: ''; position: absolute; z-index: 2; top: calc(var(--dw) * .058); left: 50%; width: 31%; height: calc(var(--dw) * .085); border-radius: 99px; background: #000; transform: translateX(-50%); }
 .phone-shot__screen { overflow: hidden; border-radius: calc(var(--dw) * .125); background: var(--status-bg, #1d1d1b); }
-.phone-shot__status { display: flex; align-items: center; justify-content: space-between; height: calc(var(--dw) * .15); padding: 0 calc(var(--dw) * .085) 0 calc(var(--dw) * .1); color: #fff; font-size: calc(var(--dw) * .05); font-weight: 700; letter-spacing: -.01em; }
-.phone-shot__icons { display: flex; align-items: center; gap: calc(var(--dw) * .016); }
-.phone-shot__icons svg { width: auto; height: calc(var(--dw) * .042); }
+.phone-shot__status { height: calc(var(--dw) * .15); }
 .phone-shot__screen img { width: 100%; height: auto; }
 
 .hero__visual { position: relative; display: grid; place-items: center; padding: 70px 0 64px; }
