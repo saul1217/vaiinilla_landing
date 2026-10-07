@@ -7,6 +7,7 @@ import { OrderTrackerDemo } from '../components/order-tracker-demo';
 import { StickyOrderBar } from '../components/sticky-order-bar';
 import { StepsCarousel, type Step } from '../components/steps-carousel';
 import { PhoneShot } from '../components/phone-shot';
+import { CafeFilm } from '../components/cafe-film';
 
 const STEPS: readonly Step[] = [
   {
@@ -123,6 +124,23 @@ export function HomePage() {
               </h2>
             </div>
             <StepsCarousel steps={STEPS} />
+          </div>
+        </section>
+
+        <section className="cafe" id="del-otro-lado" aria-labelledby="cafe-title">
+          <div className="container cafe__grid">
+            <div className="section-head cafe__head" data-reveal>
+              <p className="eyebrow">Del otro lado de la barra</p>
+              <h2 id="cafe-title">
+                Tu pedido llega
+                <br />
+                <span className="lime-text">directo al café.</span>
+              </h2>
+              <p>En cuanto pagas, el café lo ve en su panel y empieza a prepararlo. Sin papelitos ni nombres a gritos.</p>
+            </div>
+            <div data-reveal>
+              <CafeFilm />
+            </div>
           </div>
         </section>
 
