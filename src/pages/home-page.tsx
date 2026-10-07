@@ -6,6 +6,7 @@ import { LiveOrderPill } from '../components/live-order-pill';
 import { OrderTrackerDemo } from '../components/order-tracker-demo';
 import { StickyOrderBar } from '../components/sticky-order-bar';
 import { StepsCarousel, type Step } from '../components/steps-carousel';
+import { PhoneShot } from '../components/phone-shot';
 
 const STEPS: readonly Step[] = [
   {
@@ -13,26 +14,45 @@ const STEPS: readonly Step[] = [
     body: 'Usa el QR de la mesa o elige el negocio de la lista.',
     image: '/screens/screen-table-code.jpg',
     alt: 'Teclado para ingresar el código de la mesa',
+    statusColor: '#0e0e0e',
   },
   {
     title: 'Arma tu pedido y paga',
     body: 'Con tarjeta, con tu saldo o en efectivo al recoger.',
     image: '/screens/screen-cart.jpg',
     alt: 'Carrito con ramen y mac & cheese, entrega en mesa y botón Pagar',
+    statusColor: '#1d1d1b',
   },
   {
     title: 'Recoge cuando esté listo',
     body: 'Te avisamos y te damos tu código para la barra.',
     image: '/screens/screen-orders.jpg',
     alt: 'Seguimiento del pedido paso a paso',
+    statusColor: '#1d1d1b',
   },
 ];
 
 const FEATURES = [
-  { icon: '◎', title: 'Menú al día', body: 'Ves lo que hay hoy, con fotos, precios e ingredientes.' },
-  { icon: '⌗', title: 'Mesa o para llevar', body: 'Escanea el QR de tu mesa o pide para recoger en barra.' },
-  { icon: '◐', title: 'Saldo en Cartera', body: 'Paga con tu saldo Vaiinilla. Recargas en Caja.' },
-  { icon: '↗', title: 'Sin crear cuenta', body: 'Tu primer pedido no pide registro. La cuenta es opcional.' },
+  {
+    icon: 'M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2zM22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z',
+    title: 'Menú al día',
+    body: 'Ves lo que hay hoy, con fotos, precios e ingredientes.',
+  },
+  {
+    icon: 'M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM15 15h2v2h-2zM19 19h2v2h-2zM19 15h2M15 19h2',
+    title: 'Mesa o para llevar',
+    body: 'Escanea el QR de tu mesa o pide para recoger en barra.',
+  },
+  {
+    icon: 'M20 7H5a2 2 0 0 1 0-4h13v4M3 5v14a2 2 0 0 0 2 2h15V7M16 14h.01',
+    title: 'Saldo en Cartera',
+    body: 'Paga con tu saldo Vaiinilla. Recargas en Caja.',
+  },
+  {
+    icon: 'M13 2 3 14h9l-1 8 10-12h-9z',
+    title: 'Sin crear cuenta',
+    body: 'Tu primer pedido no pide registro. La cuenta es opcional.',
+  },
 ] as const;
 
 const STICKY_WATCH = ['#hero-actions', '#cta', '.footer'] as const;
@@ -73,21 +93,21 @@ export function HomePage() {
 
             <div className="hero__visual" data-reveal>
               <div className="hero__halo" aria-hidden="true" />
-              <div className="hero__device device">
-                <div className="device__screen">
-                  <img
-                    src="/screens/screen-cart.jpg"
-                    alt="Pedido en Vaiinilla con dos productos y el total a pagar"
-                    width="720"
-                    height="1476"
-                    fetchPriority="high"
-                  />
+              <div className="hero__phone">
+                <PhoneShot
+                  className="hero__device"
+                  src="/screens/screen-cart.jpg"
+                  alt="Pedido en Vaiinilla con dos productos y el total a pagar"
+                  width={720}
+                  height={1476}
+                  statusColor="#1d1d1b"
+                  priority
+                />
+                <img className="hero__vaini" src="/vaini/cutout-frente.png" alt="" width="640" height="860" />
+                <div className="hero__pill">
+                  <LiveOrderPill />
                 </div>
               </div>
-              <div className="hero__pill">
-                <LiveOrderPill />
-              </div>
-              <img className="hero__vaini" src="/vaini/cutout-frente.png" alt="" width="640" height="860" />
             </div>
           </div>
         </section>
@@ -139,7 +159,9 @@ export function HomePage() {
               {FEATURES.map((feature) => (
                 <li key={feature.title} className="feature" data-reveal>
                   <span className="feature__icon" aria-hidden="true">
-                    {feature.icon}
+                    <svg viewBox="0 0 24 24">
+                      <path d={feature.icon} />
+                    </svg>
                   </span>
                   <strong>{feature.title}</strong>
                   <span>{feature.body}</span>

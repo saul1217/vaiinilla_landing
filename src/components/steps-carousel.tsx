@@ -2,12 +2,14 @@
 // indicator that springs to the step in view.
 import { useEffect, useRef, useState } from 'react';
 import { SNAPPY, createSpring } from '../lib/spring';
+import { PhoneShot } from './phone-shot';
 
 export interface Step {
   title: string;
   body: string;
   image: string;
   alt: string;
+  statusColor: string;
 }
 
 const DOT_GAP = 18;
@@ -63,11 +65,14 @@ export function StepsCarousel({ steps }: { steps: readonly Step[] }) {
             <span className="step-card__n">{index + 1}</span>
             <h3>{step.title}</h3>
             <p>{step.body}</p>
-            <div className="step-card__phone device">
-              <div className="device__screen">
-                <img src={step.image} alt={step.alt} width="720" height="1476" loading="lazy" />
-              </div>
-            </div>
+            <PhoneShot
+              className="step-card__phone"
+              src={step.image}
+              alt={step.alt}
+              width={720}
+              height={1476}
+              statusColor={step.statusColor}
+            />
           </li>
         ))}
       </ol>
