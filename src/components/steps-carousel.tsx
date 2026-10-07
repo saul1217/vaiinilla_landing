@@ -65,7 +65,7 @@ export function StepsCarousel({ steps }: { steps: readonly Step[] }) {
             <p>{step.body}</p>
             <div className="step-card__phone device">
               <div className="device__screen">
-                <img src={step.image} alt={step.alt} width="390" height="844" loading="lazy" />
+                <img src={step.image} alt={step.alt} width="720" height="1476" loading="lazy" />
               </div>
             </div>
           </li>

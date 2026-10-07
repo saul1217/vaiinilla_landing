@@ -11,20 +11,20 @@ const STEPS: readonly Step[] = [
   {
     title: 'Escanea o busca tu lugar',
     body: 'Usa el QR de la mesa o elige el negocio de la lista.',
-    image: '/screens/screen-8.jpeg',
-    alt: 'Pantalla para elegir el lugar donde pedir',
+    image: '/screens/screen-table-code.jpg',
+    alt: 'Teclado para ingresar el código de la mesa',
   },
   {
     title: 'Arma tu pedido y paga',
     body: 'Con tarjeta, con tu saldo o en efectivo al recoger.',
     image: '/screens/screen-cart.jpg',
-    alt: 'Carrito con dos productos y el botón Pagar',
+    alt: 'Carrito con ramen y mac & cheese, entrega en mesa y botón Pagar',
   },
   {
     title: 'Recoge cuando esté listo',
     body: 'Te avisamos y te damos tu código para la barra.',
-    image: '/screens/screen-order-ready.jpg',
-    alt: 'Pedido listo con su código de retiro y QR',
+    image: '/screens/screen-orders.jpg',
+    alt: 'Seguimiento del pedido paso a paso',
   },
 ];
 
@@ -78,8 +78,8 @@ export function HomePage() {
                   <img
                     src="/screens/screen-cart.jpg"
                     alt="Pedido en Vaiinilla con dos productos y el total a pagar"
-                    width="390"
-                    height="844"
+                    width="720"
+                    height="1476"
                     fetchPriority="high"
                   />
                 </div>
@@ -87,7 +87,7 @@ export function HomePage() {
               <div className="hero__pill">
                 <LiveOrderPill />
               </div>
-              <img className="hero__vaini" src="/vaini/cutout-lado.png" alt="" width="480" height="640" />
+              <img className="hero__vaini" src="/vaini/cutout-frente.png" alt="" width="640" height="860" />
             </div>
           </div>
         </section>

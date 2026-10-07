@@ -58,8 +58,8 @@
 .hero__halo { position: absolute; width: min(520px, 110%); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 40% 35%, var(--lime) 0, rgba(185,216,109,.55) 45%, rgba(185,216,109,0) 70%); }
 .hero__device { --dw: 290px; transform: rotate(-3deg); }
 .hero__pill { position: absolute; z-index: 6; left: 50%; bottom: 13%; transform: translateX(-62%); }
-.hero__vaini { position: absolute; z-index: 7; right: 4%; top: 8%; width: 120px; height: auto; transform: rotate(10deg); animation: vaini-bob 4.2s ease-in-out infinite; pointer-events: none; }
-@keyframes vaini-bob { 50% { translate: 0 -10px; rotate: -4deg; } }
+.hero__vaini { position: absolute; z-index: 7; right: 4%; top: 8%; width: 130px; height: auto; transform: rotate(6deg); animation: vaini-bob 4.2s ease-in-out infinite; pointer-events: none; }
+@keyframes vaini-bob { 50% { translate: 0 -8px; } }
 
 .live-pill { display: inline-flex; overflow: hidden; border-radius: 999px; background: var(--ink); color: var(--white); box-shadow: 0 18px 40px rgba(23,24,23,.3); will-change: width; transition: background-color 300ms ease; }
 .live-pill--ready { background: var(--lime); color: var(--ink); }
