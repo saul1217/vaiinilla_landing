@@ -40,7 +40,8 @@ describe('HomePage', () => {
     expect(screen.queryByText(/cafetería escolar/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/del campus/i)).not.toBeInTheDocument();
     expect(screen.getAllByText(/cualquier negocio de comida/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/pago confirmado/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: /pide sin fila/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/seguimiento de un pedido/i)).toBeInTheDocument();
   });
 
   it('Pedir no abre solo el último lugar: con varias tiendas pide QR o código', async () => {
