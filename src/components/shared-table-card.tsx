@@ -1,15 +1,29 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { formatAmount } from '../lib/money';
 import { orderedGroups, tableGroupKey, tableOrderState, tablePersonKey } from '../lib/shared-table';
-import { dropTableParticipantOnSessionChange, forgetTableParticipant } from '../lib/table-participant';
+import { readTableParticipant } from '../lib/table-participant';
 import { forgetSpace } from '../lib/space-session';
+import { clearClosedTableSession, observeTableSession } from '../lib/table-session-cleanup';
 import { spaceNoun } from '../lib/space-words';
+import { CallWaiter } from './call-waiter';
 import type { SharedTable } from '../types/api';
 
 const POLL_MS = 5000;
 const ALIAS_MAX = 30;
+
+function sessionStartLabel(value?: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  const day = date.toDateString() === new Date().toDateString()
+    ? 'Hoy'
+    : new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short' }).format(date);
+  const time = new Intl.DateTimeFormat('es-MX', { hour: 'numeric', minute: '2-digit' }).format(date);
+  return `${day} · ${time}`;
+}
 
 function isUnauthorized(cause: unknown): boolean {
   return cause instanceof VaiinillaApiError && cause.status === 401;
@@ -23,27 +37,52 @@ function isUnauthorized(cause: unknown): boolean {
 export function SharedTableCard({
   accessToken,
   qrToken,
+  slug,
   defaultAlias,
   legalNote,
   onEnsureToken,
   onUnauthorized,
   onLeave,
+  onTableChange,
 }: {
   accessToken: string | null;
   qrToken: string | null;
+  slug?: string;
   defaultAlias?: string;
   legalNote?: ReactNode;
   onEnsureToken?: (alias: string) => Promise<string>;
   onUnauthorized?: () => void;
   onLeave?: () => void;
+  onTableChange?: (table: SharedTable | null) => void;
 }) {
   const [table, setTable] = useState<SharedTable | null>(null);
+  const tableRef = useRef<SharedTable | null>(null);
+  const onTableChangeRef = useRef(onTableChange);
+  onTableChangeRef.current = onTableChange;
   const [alias, setAlias] = useState(defaultAlias ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // La sesión que el invitado aseguró al unirse; el padre la confirma con accessToken.
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const token = accessToken ?? sessionToken;
+
+  const publishTable = useCallback((next: SharedTable | null) => {
+    const identity = readTableParticipant();
+    const activeSlug = slug ?? (next ? identity?.slug : undefined);
+    if (next && activeSlug) {
+      observeTableSession(next.sesion_id, {
+        slug: activeSlug,
+        espacioId: next.espacio.id,
+        nombre: next.espacio.nombre,
+        tipo: next.espacio.tipo,
+      });
+    } else if (!next) {
+      clearClosedTableSession(activeSlug ?? identity?.slug, tableRef.current?.espacio.id ?? identity?.espacioId);
+    }
+    tableRef.current = next;
+    setTable(next);
+    onTableChangeRef.current?.(next);
+  }, [slug]);
 
   useEffect(() => {
     if (!alias && defaultAlias) setAlias(defaultAlias);
@@ -54,14 +93,12 @@ export function SharedTableCard({
     try {
       const next = await api.currentTable(token);
       // La sesión cambió (mesa cerrada / nueva sesión): la identidad local ya no vale.
-      if (next) dropTableParticipantOnSessionChange(next.sesion_id);
-      else forgetTableParticipant();
-      setTable(next);
+      publishTable(next);
     } catch (cause) {
       // Una consulta fallida no borra la mesa que ya se ve; la siguiente lo intenta otra vez.
       if (isUnauthorized(cause)) onUnauthorized?.();
     }
-  }, [onUnauthorized, token]);
+  }, [onUnauthorized, publishTable, token]);
 
   useEffect(() => {
     if (!token) return;
@@ -84,7 +121,7 @@ export function SharedTableCard({
       const next = token ?? (onEnsureToken ? await onEnsureToken(clean) : null);
       if (!next) return;
       setSessionToken(next);
-      setTable(await api.joinTable(next, qrToken, clean));
+      publishTable(await api.joinTable(next, qrToken, clean));
     } catch (cause) {
       if (isUnauthorized(cause)) onUnauthorized?.();
       setError(errorMessage(cause));
@@ -98,7 +135,7 @@ export function SharedTableCard({
     setBusy(true);
     setError(null);
     try {
-      setTable(await api.claimTableOrder(token, folio, payIt));
+      publishTable(await api.claimTableOrder(token, folio, payIt));
     } catch (cause) {
       if (isUnauthorized(cause)) onUnauthorized?.();
       setError(errorMessage(cause));
@@ -108,12 +145,14 @@ export function SharedTableCard({
   }
 
   async function leave() {
-    forgetSpace();
+    const currentSpaceId = table?.espacio.id;
     if (token) {
       setBusy(true);
       try {
         await api.leaveTable(token);
-        setTable(null);
+        clearClosedTableSession(slug, currentSpaceId);
+        forgetSpace();
+        publishTable(null);
         onLeave?.();
       } catch (cause) {
         if (isUnauthorized(cause)) onUnauthorized?.();
@@ -122,7 +161,9 @@ export function SharedTableCard({
         setBusy(false);
       }
     } else {
-      setTable(null);
+      clearClosedTableSession(slug, currentSpaceId);
+      forgetSpace();
+      publishTable(null);
       onLeave?.();
     }
   }
@@ -164,10 +205,11 @@ export function SharedTableCard({
 
   const noun = spaceNoun(table.espacio.tipo);
   const people = table.participantes.length;
+  const started = sessionStartLabel(table.sesion_inicio);
   return (
-    <article className="alumno-track-card shared-table alumno-arrive" aria-labelledby="shared-table-title">
+    <article id="mesa-activa" className="alumno-track-card shared-table alumno-arrive" aria-label={`Sesión activa de ${table.espacio.nombre}`}>
       <header className="alumno-track-card__top">
-        <span className="alumno-track-card__folio" id="shared-table-title">{table.espacio.nombre}</span>
+        <span className="alumno-track-card__folio">{table.espacio.nombre}{started ? ` · ${started}` : ''}</span>
         <span className="alumno-track-card__pill">{people === 1 ? `Solo tú` : `${people} personas`}</span>
       </header>
 
@@ -237,6 +279,8 @@ export function SharedTableCard({
       </ul>
 
       {error ? <p className="alumno-error">{error}</p> : null}
+      <CallWaiter space={table.espacio} allowAccountRequest={table.cuenta_abierta} />
+      {slug ? <Link className="alumno-btn alumno-btn--ghost shared-table__leave" to={`/e/${slug}`}>Pedir más</Link> : null}
       <button className="alumno-btn alumno-btn--ghost shared-table__leave" type="button" onClick={() => void leave()} disabled={busy}>
         Salir de la {noun}
       </button>

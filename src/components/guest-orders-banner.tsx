@@ -9,6 +9,7 @@ export function GuestOrdersBanner({ slug, excludeTokens }: { slug?: string; excl
   const excluded = new Set(excludeTokens ?? []);
   const orders = readGuestOrders()
     .filter((o) => !slug || o.slug === slug)
+    .filter((o) => o.destination === 'para_llevar' && !o.sessionId)
     .filter((o) => !excluded.has(o.token))
     .slice(0, 3);
   if (orders.length === 0) return null;

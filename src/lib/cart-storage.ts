@@ -5,6 +5,9 @@ const STORAGE_KEY = 'vaiinilla.buyer.cart.v1';
 export interface StoredCart {
   slug: string;
   establishmentName: string;
+  /** El carrito pertenece a una única sesión de mesa cuando se pidió desde una. */
+  sessionId?: string | null;
+  spaceId?: number | null;
   lines: CartLine[];
 }
 

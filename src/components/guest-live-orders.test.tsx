@@ -137,8 +137,23 @@ describe('tus pedidos sin cuenta', () => {
   });
 
   it('el banner no duplica los enlaces que ya se ven en vivo', () => {
-    rememberGuestOrder({ token: TOKEN, slug: 'padel', folio: 7, placeName: 'Pádel', createdAt: Date.now() });
-    rememberGuestOrder({ token: 'O'.repeat(43), slug: 'padel', folio: 6, placeName: 'Pádel', createdAt: Date.now() });
+    rememberGuestOrder({
+      token: TOKEN,
+      slug: 'padel',
+      folio: 7,
+      placeName: 'Pádel',
+      createdAt: Date.now(),
+      destination: 'en_espacio',
+      sessionId: 'sesion-mesa-1',
+    });
+    rememberGuestOrder({
+      token: 'O'.repeat(43),
+      slug: 'padel',
+      folio: 6,
+      placeName: 'Pádel',
+      createdAt: Date.now(),
+      destination: 'para_llevar',
+    });
     render(
       <MemoryRouter>
         <GuestOrdersBanner slug="padel" excludeTokens={[TOKEN]} />
