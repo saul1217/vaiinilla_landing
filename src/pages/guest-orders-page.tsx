@@ -3,7 +3,7 @@
 // espacio escaneado y sus enlaces guardados. Sin Cartera: el saldo es de cuentas;
 // abajo va la invitación opcional a crearla. Contrato: backend
 // docs/compra-sin-cuenta.md (tercera vuelta).
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
@@ -20,15 +20,20 @@ import { readGuestOrders } from '../lib/guest-orders';
 import { readGuest } from '../lib/guest-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { formatAmount } from '../lib/money';
-import { openTab } from '../lib/order-labels';
+import { belongsToActiveTable, openTab } from '../lib/order-labels';
 import { readSpace, rememberSpace } from '../lib/space-session';
 import { useGuestLiveOrders } from '../lib/use-guest-live-orders';
 import { useGuestSpaceToken } from '../lib/use-guest-space-token';
 import { usePwaInstall } from '../lib/pwa-install';
-import type { CatalogProduct, LegalVersions, PublicEstablishment } from '../types/api';
+import type { CatalogProduct, LegalVersions, PublicEstablishment, SharedTable } from '../types/api';
+
+const noopResetTableSession = () => undefined;
 
 export function GuestOrdersPage() {
-  const { cart } = useCart();
+  const cartContext = useCart();
+  const { cart } = cartContext;
+  const resetTableSession = cartContext.resetTableSession ?? noopResetTableSession;
+  const associateTableSession = cartContext.associateTableSession ?? noopResetTableSession;
   const [search] = useSearchParams();
   // Recién pedido: el carrito llega con ?nuevo=<token> y ese pedido ya se ve abierto.
   const nuevoToken = search.get('nuevo');
@@ -36,23 +41,36 @@ export function GuestOrdersPage() {
   const [place, setPlace] = useState<PublicEstablishment | null>(null);
   const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
   const [legal, setLegal] = useState<LegalVersions | null>(null);
-  const live = useGuestLiveOrders(slug ?? '');
-  // Lo guardado en este navegador también cuenta: con "Tu pedido #N" a la vista no se dice que no hay pedidos.
-  const savedHere = readGuestOrders().some((order) => order.slug === slug);
   const mesa = useGuestSpaceToken(slug);
+  const live = useGuestLiveOrders(slug ?? '');
+  const [activeTable, setActiveTable] = useState<SharedTable | null>(null);
+  const onActiveTableChange = useCallback((table: SharedTable | null) => {
+    setActiveTable(table);
+    if (slug && table) associateTableSession(slug, table.espacio.id, table.sesion_id);
+  }, [associateTableSession, slug]);
+  const onSessionEnded = useCallback(
+    ({ espacioId, sesionId }: { espacioId: number; sesionId: string }) => resetTableSession(espacioId, sesionId),
+    [resetTableSession],
+  );
+  const operationalOrders = useMemo(
+    () => live.orders.filter((order) => belongsToActiveTable(order, activeTable)),
+    [activeTable, live.orders],
+  );
+  // Los enlaces históricos se muestran como seguimientos guardados, no como pedidos activos.
+  const savedHere = readGuestOrders().some((order) => order.slug === slug);
   const guestName = readGuest()?.nombre ?? '';
   const qrToken = slug ? (readSpace(slug)?.qrToken ?? null) : null;
   const thumbImages = useMemo(() => catalogImageMap(catalogProducts), [catalogProducts]);
   const liveTokens = useMemo(
     () =>
       new Set(
-        live.orders
+          operationalOrders
           .map((order) => order.seguimiento_token)
           .filter((token): token is string => typeof token === 'string'),
       ),
-    [live.orders],
+    [operationalOrders],
   );
-  const tab = openTab(live.orders);
+  const tab = openTab(operationalOrders);
   const pwa = usePwaInstall();
   const justOrdered = nuevoToken !== null;
 
@@ -121,6 +139,7 @@ export function GuestOrdersPage() {
         {place?.nombre ? <p className="alumno-place-name">{place.nombre}</p> : null}
         {live.error ? <p className="alumno-error">{live.error}</p> : null}
         <SharedTableCard
+          slug={slug}
           accessToken={mesa.token}
           qrToken={qrToken}
           defaultAlias={guestName || undefined}
@@ -143,6 +162,8 @@ export function GuestOrdersPage() {
           onUnauthorized={() => {
             void mesa.ensure().catch(() => undefined);
           }}
+          onActiveTableChange={onActiveTableChange}
+          onSessionEnded={onSessionEnded}
         />
         {tab ? (
           <section className="alumno-tab" aria-label="Tu cuenta">
@@ -156,9 +177,9 @@ export function GuestOrdersPage() {
             <span className="alumno-tab__total">{formatAmount(tab.total)}</span>
           </section>
         ) : null}
-        {live.orders.length === 0 && live.loading ? (
+        {operationalOrders.length === 0 && live.loading ? (
           <LoadingSkeleton shape="orders" label="Cargando pedidos…" />
-        ) : live.orders.length === 0 && savedHere ? null : live.orders.length === 0 ? (
+        ) : operationalOrders.length === 0 && savedHere ? null : operationalOrders.length === 0 ? (
           <div className="alumno-empty">
             <img src="/vaini/cutout-frente.png" alt="" />
             <p>Aún no hay pedidos en esta sesión.</p>
@@ -169,11 +190,11 @@ export function GuestOrdersPage() {
         ) : (
           <>
             <GuestLiveOrders
-              orders={live.orders}
+              orders={operationalOrders}
               imageFor={(order) => orderThumbUrl(order, thumbImages, catalogProducts)}
               initialExpandedToken={nuevoToken}
             />
-            {live.orders
+            {operationalOrders
               .filter((order) => typeof order.seguimiento_token === 'string')
               .map((order) => (
                 <GuestOrderSaveLink

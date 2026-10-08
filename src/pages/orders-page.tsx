@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AlumnoPageHeader } from "../components/alumno-brand";
 import { AppShell } from "../components/app-shell";
@@ -16,7 +16,7 @@ import { errorMessage, VaiinillaApiError } from "../lib/api-error";
 import { catalogImageMap, orderThumbUrl } from "../lib/catalog-images";
 import { formatAmount } from "../lib/money";
 import { persistPickupQrFromOrder } from "../lib/pickup-qr";
-import { isActiveOrder, openTab } from "../lib/order-labels";
+import { belongsToActiveTable, isActiveOrder, openTab } from "../lib/order-labels";
 import { readGuestOrders } from "../lib/guest-orders";
 import { forgetGuest } from "../lib/guest-session";
 import { claimGuestOrders, hasClaimableGuestOrders } from "../lib/guest-claim";
@@ -27,16 +27,21 @@ import type {
   CatalogProduct,
   OrderDetail,
   PublicEstablishment,
+  SharedTable,
 } from "../types/api";
 import { LoadingSkeleton } from "../components/loading-skeleton";
 import { peekResource, resourceKeys, storeResource } from "../lib/resource-cache";
 import { GuestOrdersPage } from "./guest-orders-page";
 
 const POLL_MS = 5000;
+const noopResetTableSession = () => undefined;
 
 export function OrdersPage() {
   const { user, ready } = useAuth();
-  const { cart } = useCart();
+  const cartContext = useCart();
+  const { cart } = cartContext;
+  const resetTableSession = cartContext.resetTableSession ?? noopResetTableSession;
+  const associateTableSession = cartContext.associateTableSession ?? noopResetTableSession;
   const { context, openClientSession } = useBuyerSession();
   // Al volver a esta pestaña se ven al instante los últimos pedidos de esta cuenta en
   // este negocio; la consulta de cada 5 s los actualiza en segundo plano.
@@ -56,6 +61,16 @@ export function OrdersPage() {
   // Reclamo invitado → cuenta: tras pasarlos se vuelve a consultar para verlos aquí.
   const [claimKey, setClaimKey] = useState(0);
   const [tableKey, setTableKey] = useState(0);
+  const [activeTable, setActiveTable] = useState<SharedTable | null>(null);
+  const currentSlug = place?.slug ?? placeGuess ?? undefined;
+  const onActiveTableChange = useCallback((table: SharedTable | null) => {
+    setActiveTable(table);
+    if (currentSlug && table) associateTableSession(currentSlug, table.espacio.id, table.sesion_id);
+  }, [associateTableSession, currentSlug]);
+  const onSessionEnded = useCallback(
+    ({ espacioId, sesionId }: { espacioId: number; sesionId: string }) => resetTableSession(espacioId, sesionId),
+    [resetTableSession],
+  );
   const [claim, setClaim] = useState<{
     state: "idle" | "busy" | "done" | "error";
     pedidos?: number;
@@ -136,18 +151,19 @@ export function OrdersPage() {
     }
     if (deskAutoSelected.current || expandedId || orders.length === 0) return;
     deskAutoSelected.current = true;
-    const firstActive = orders.find((item) => isActiveOrder(item));
-    setExpandedId(firstActive?.id ?? orders[0]?.id ?? null);
-  }, [deskPane, expandedId, orders]);
+    const firstActive = orders.find((item) => isActiveOrder(item) && belongsToActiveTable(item, activeTable));
+    setExpandedId(firstActive?.id ?? null);
+  }, [activeTable, deskPane, expandedId, orders]);
 
   const selected = orders.find((order) => order.id === expandedId) ?? null;
   const pickupToken = usePickupQrToken(selected, context?.access_token ?? null);
 
   if (ready && !user) return <GuestOrdersPage />;
 
-  const activeOrders = orders.filter((order) => isActiveOrder(order));
-  const pastOrders = orders.filter((order) => !isActiveOrder(order));
-  const tab = openTab(orders);
+  const currentOrders = orders.filter((order) => belongsToActiveTable(order, activeTable));
+  const activeOrders = currentOrders.filter((order) => isActiveOrder(order));
+  const pastOrders = orders.filter((order) => !currentOrders.includes(order) || !isActiveOrder(order));
+  const tab = openTab(currentOrders);
 
   function toggle(id: string) {
     setExpandedId((current) => (current === id ? null : id));
@@ -237,10 +253,13 @@ export function OrdersPage() {
         ) : null}
         <SharedTableCard
           key={tableKey}
+          slug={currentSlug}
           accessToken={context?.access_token ?? null}
           qrToken={readSpace(place?.slug ?? placeGuess ?? "")?.qrToken ?? null}
           defaultAlias={user?.displayName || user?.email?.split('@')[0] || undefined}
           onLeave={() => setTableKey((k) => k + 1)}
+          onActiveTableChange={onActiveTableChange}
+          onSessionEnded={onSessionEnded}
         />
         {tab ? (
           <section className="alumno-tab" aria-label="Tu cuenta">

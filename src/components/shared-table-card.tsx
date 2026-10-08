@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { formatAmount } from '../lib/money';
 import { orderedGroups, tableGroupKey, tableOrderState, tablePersonKey } from '../lib/shared-table';
-import { dropTableParticipantOnSessionChange } from '../lib/table-participant';
-import { forgetSpace } from '../lib/space-session';
+import { dropTableParticipantOnSessionChange, forgetTableParticipant, readTableParticipant, rememberTableParticipant } from '../lib/table-participant';
+import { forgetSpace, readSpace, rememberSpace, scannedSpace } from '../lib/space-session';
 import { spaceNoun } from '../lib/space-words';
 import type { SharedTable } from '../types/api';
 
@@ -28,6 +28,9 @@ export function SharedTableCard({
   onEnsureToken,
   onUnauthorized,
   onLeave,
+  slug,
+  onActiveTableChange,
+  onSessionEnded,
 }: {
   accessToken: string | null;
   qrToken: string | null;
@@ -36,6 +39,9 @@ export function SharedTableCard({
   onEnsureToken?: (alias: string) => Promise<string>;
   onUnauthorized?: () => void;
   onLeave?: () => void;
+  slug?: string;
+  onActiveTableChange?: (table: SharedTable | null) => void;
+  onSessionEnded?: (session: { espacioId: number; sesionId: string }) => void;
 }) {
   const [table, setTable] = useState<SharedTable | null>(null);
   const [alias, setAlias] = useState(defaultAlias ?? '');
@@ -43,7 +49,27 @@ export function SharedTableCard({
   const [error, setError] = useState<string | null>(null);
   // La sesión que el invitado aseguró al unirse; el padre la confirma con accessToken.
   const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const lastTable = useRef<SharedTable | null>(null);
+  const tableMutationVersion = useRef(0);
+  const callbacks = useRef({ onActiveTableChange, onSessionEnded, onUnauthorized });
+  callbacks.current = { onActiveTableChange, onSessionEnded, onUnauthorized };
   const token = accessToken ?? sessionToken;
+
+  const rememberParticipant = useCallback((table: SharedTable) => {
+    if (!slug) return;
+    const space = readSpace(slug);
+    if (space?.espacioId !== table.espacio.id) {
+      rememberSpace({ slug, espacioId: table.espacio.id, nombre: table.espacio.nombre, tipo: table.espacio.tipo });
+    }
+    if (!table.mi_participante?.id) return;
+    rememberTableParticipant({
+      slug,
+      espacioId: table.espacio.id,
+      sesionId: table.sesion_id,
+      participanteId: table.mi_participante.id,
+      alias: table.mi_participante.alias,
+    });
+  }, [slug]);
 
   useEffect(() => {
     if (!alias && defaultAlias) setAlias(defaultAlias);
@@ -51,19 +77,53 @@ export function SharedTableCard({
 
   const refresh = useCallback(async () => {
     if (!token) return;
+    const requestVersion = tableMutationVersion.current;
     try {
       const next = await api.currentTable(token);
+      if (requestVersion !== tableMutationVersion.current) return;
       // La sesión cambió (mesa cerrada / nueva sesión): la identidad local ya no vale.
+      const previousParticipant = readTableParticipant();
+      if (
+        next &&
+        previousParticipant &&
+        previousParticipant.sesionId !== next.sesion_id
+      ) {
+        callbacks.current.onSessionEnded?.({ espacioId: previousParticipant.espacioId, sesionId: previousParticipant.sesionId });
+      }
       dropTableParticipantOnSessionChange(next?.sesion_id ?? null);
+      if (!next) {
+        const staleParticipant = readTableParticipant();
+        const previousTable = lastTable.current;
+        const endedSpaceId = staleParticipant?.espacioId ?? previousTable?.espacio.id;
+        const endedSessionId = staleParticipant?.sesionId ?? previousTable?.sesion_id;
+        if (staleParticipant && staleParticipant.sesionId === endedSessionId) {
+          forgetTableParticipant();
+          const space = readSpace(staleParticipant.slug);
+          if (space?.espacioId === staleParticipant.espacioId) forgetSpace();
+        }
+        if (previousTable && endedSpaceId === previousTable.espacio.id) {
+          const space = scannedSpace();
+          if (space?.espacioId === previousTable.espacio.id) forgetSpace();
+        }
+        if (endedSpaceId !== undefined && endedSessionId) {
+          callbacks.current.onSessionEnded?.({ espacioId: endedSpaceId, sesionId: endedSessionId });
+        }
+      }
+      lastTable.current = next;
+      if (next) rememberParticipant(next);
       setTable(next);
+      callbacks.current.onActiveTableChange?.(next);
     } catch (cause) {
       // Una consulta fallida no borra la mesa que ya se ve; la siguiente lo intenta otra vez.
-      if (isUnauthorized(cause)) onUnauthorized?.();
+      if (isUnauthorized(cause)) callbacks.current.onUnauthorized?.();
     }
-  }, [onUnauthorized, token]);
+  }, [rememberParticipant, token]);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      callbacks.current.onActiveTableChange?.(null);
+      return;
+    }
     void refresh();
     // Solo consulta mientras la pestaña está a la vista.
     const timer = window.setInterval(() => {
@@ -79,13 +139,18 @@ export function SharedTableCard({
     if (!clean) return;
     setBusy(true);
     setError(null);
+    tableMutationVersion.current += 1;
     try {
       const next = token ?? (onEnsureToken ? await onEnsureToken(clean) : null);
       if (!next) return;
       setSessionToken(next);
-      setTable(await api.joinTable(next, qrToken, clean));
+      const joined = await api.joinTable(next, qrToken, clean);
+      tableMutationVersion.current += 1;
+      rememberParticipant(joined);
+      setTable(joined);
+      callbacks.current.onActiveTableChange?.(joined);
     } catch (cause) {
-      if (isUnauthorized(cause)) onUnauthorized?.();
+      if (isUnauthorized(cause)) callbacks.current.onUnauthorized?.();
       setError(errorMessage(cause));
     } finally {
       setBusy(false);
@@ -96,10 +161,15 @@ export function SharedTableCard({
     if (!token) return;
     setBusy(true);
     setError(null);
+    tableMutationVersion.current += 1;
     try {
-      setTable(await api.claimTableOrder(token, folio, payIt));
+      const updated = await api.claimTableOrder(token, folio, payIt);
+      tableMutationVersion.current += 1;
+      rememberParticipant(updated);
+      setTable(updated);
+      callbacks.current.onActiveTableChange?.(updated);
     } catch (cause) {
-      if (isUnauthorized(cause)) onUnauthorized?.();
+      if (isUnauthorized(cause)) callbacks.current.onUnauthorized?.();
       setError(errorMessage(cause));
     } finally {
       setBusy(false);
@@ -109,13 +179,17 @@ export function SharedTableCard({
   async function leave() {
     forgetSpace();
     if (token) {
+      tableMutationVersion.current += 1;
       setBusy(true);
       try {
         await api.leaveTable(token);
+        tableMutationVersion.current += 1;
+        forgetTableParticipant();
         setTable(null);
+        callbacks.current.onActiveTableChange?.(null);
         onLeave?.();
       } catch (cause) {
-        if (isUnauthorized(cause)) onUnauthorized?.();
+        if (isUnauthorized(cause)) callbacks.current.onUnauthorized?.();
         setError(errorMessage(cause));
       } finally {
         setBusy(false);

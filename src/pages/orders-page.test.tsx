@@ -223,6 +223,49 @@ describe("OrdersPage", () => {
     });
   });
 
+  it("mueve pedidos de una mesa cerrada a anteriores sin ocultar el pedido", async () => {
+    listOrders.mockResolvedValue({ orders: [{
+      ...liveOrder, id: "old-table-order", folio: 30, estado: "listo",
+      espacio: { id: 5, nombre: "Mesa 5", tipo: "mesa" },
+    }] });
+    currentTable.mockResolvedValue(null);
+
+    renderOrders();
+
+    expect(await screen.findByRole("heading", { name: "Anteriores" })).toBeInTheDocument();
+    expect(screen.getByText("#30")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "En curso" })).not.toBeInTheDocument();
+  });
+
+  it("en la misma mesa activa sólo mantiene la sesión actual en curso", async () => {
+    listOrders.mockResolvedValue({ orders: [
+      { ...liveOrder, id: "old-table-order", folio: 30, estado: "listo", espacio: { id: 5, nombre: "Mesa 5", tipo: "mesa" } },
+      { ...liveOrder, id: "new-table-order", folio: 31, estado: "listo", espacio: { id: 5, nombre: "Mesa 5", tipo: "mesa" } },
+    ] });
+    currentTable.mockResolvedValue({
+      espacio: { id: 5, nombre: "Mesa 5", tipo: "mesa" },
+      sesion_id: "session-b",
+      mi_alias: "Ana",
+      mi_participante: { id: "participant-b", alias: "Ana" },
+      cuenta_abierta: true,
+      participantes: [],
+      grupos: [{
+        alias: "Ana", participante_id: "participant-b", soy_yo: true,
+        total: "70.00", pagado: "0.00", pendiente: "70.00",
+        pedidos: [{ id: "new-table-order", folio: 31, estado: "listo", items_resumen: "1× Quiere keke", total: "70.00", pendiente_cobro: true, creado_en: null }],
+      }],
+      totales: { total: "70.00", pagado: "0.00", pendiente: "70.00" },
+      mi_parte: { total: "70.00", pagado: "0.00", pendiente: "70.00" },
+    });
+
+    renderOrders();
+
+    expect(await screen.findByRole("heading", { name: "En curso" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Anteriores" })).toBeInTheDocument();
+    expect(screen.getByText("#30")).toBeInTheDocument();
+    expect(screen.getByText("#31")).toBeInTheDocument();
+  });
+
   it("expande el seguimiento con timeline y pedido completo", async () => {
     const user = userEvent.setup();
     renderOrders();

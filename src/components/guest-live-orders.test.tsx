@@ -144,8 +144,9 @@ describe('tus pedidos sin cuenta', () => {
         <GuestOrdersBanner slug="padel" excludeTokens={[TOKEN]} />
       </MemoryRouter>,
     );
-    expect(screen.queryByText('Tu pedido #7')).not.toBeInTheDocument();
-    expect(screen.getByText('Tu pedido #6')).toBeInTheDocument();
+    expect(screen.queryByText('Seguimiento guardado · Pedido #7')).not.toBeInTheDocument();
+    expect(screen.getByText('Seguimiento guardado · Pedido #6')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /pedido #6/i })).toHaveAttribute('href', `/seguimiento/${'O'.repeat(43)}`);
   });
 
   it('recién pedido (?nuevo): esa tarjeta ya llega abierta', async () => {

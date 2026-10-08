@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
 import type { SharedTable, TrackedOrder } from '../types/api';
 import { GuestOrdersPage } from './guest-orders-page';
+import { rememberGuestOrder } from '../lib/guest-orders';
 
 const authState: { user: null | { email: string } } = { user: null };
 
@@ -186,6 +187,49 @@ describe('pedidos del invitado', () => {
 
     expect(await screen.findByText('Tus pedidos')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /ocultar seguimiento/i })).toBeInTheDocument();
+  });
+
+  it('mueve una referencia de una mesa cerrada fuera de pedidos activos y conserva su seguimiento', async () => {
+    const oldToken = 'O'.repeat(43);
+    const oldTableOrder = liveOrder({
+      id: 'old-table-order', folio: 31, estado: 'listo',
+      espacio: { id: 5, nombre: 'Mesa 5', tipo: 'mesa' }, seguimiento_token: oldToken,
+    });
+    listGuestOrders.mockResolvedValue([oldTableOrder]);
+    rememberGuestOrder({ token: oldToken, slug: 'padel', folio: 31, placeName: 'Pádel', createdAt: Date.now() });
+
+    renderPage();
+
+    expect(await screen.findByText('Seguimiento guardado · Pedido #31')).toBeInTheDocument();
+    expect(screen.queryByText('Tus pedidos')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /pedido #31/i })).toHaveAttribute('href', `/seguimiento/${oldToken}`);
+  });
+
+  it('en una nueva sesión de la misma mesa conserva sólo sus pedidos', async () => {
+    const oldOrder = liveOrder({ id: 'old', folio: 31, estado: 'listo', espacio: { id: 5, nombre: 'Mesa 5', tipo: 'mesa' }, items: [{
+      id: 1, producto_id: 1, nombre_producto: 'Producto viejo', estacion_preparacion: 'cocina', cantidad: 1,
+      precio_digital_unitario: '60.00', subtotal: '60.00', opciones: [],
+    }] });
+    const newOrder = liveOrder({ id: 'new', folio: 32, estado: 'listo', espacio: { id: 5, nombre: 'Mesa 5', tipo: 'mesa' }, items: [{
+      id: 2, producto_id: 2, nombre_producto: 'Producto nuevo', estacion_preparacion: 'cocina', cantidad: 1,
+      precio_digital_unitario: '60.00', subtotal: '60.00', opciones: [],
+    }] });
+    listGuestOrders.mockResolvedValue([oldOrder, newOrder]);
+    currentTable.mockResolvedValue(mesa({
+      sesion_id: 'ses-b',
+      grupos: [{
+        alias: 'Lupi', participante_id: 'p-lupi', soy_yo: true,
+        total: '60.00', pagado: '0.00', pendiente: '60.00',
+        pedidos: [{ id: 'new', folio: 32, estado: 'listo', items_resumen: '1× Producto nuevo', total: '60.00', pendiente_cobro: true, creado_en: null }],
+      }],
+    }));
+
+    renderPage();
+
+    expect(await screen.findByRole('article', { name: 'Mesa 5' })).toBeInTheDocument();
+    expect((await screen.findAllByText('Tus pedidos')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/producto nuevo/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/producto viejo/i)).not.toBeInTheDocument();
   });
 
   it('quien escaneó el QR se une a la mesa con su alias', async () => {

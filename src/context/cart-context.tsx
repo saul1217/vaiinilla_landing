@@ -10,6 +10,8 @@ import {
 import type { CartLine, CatalogProduct } from '../types/api';
 import { cartLineKey, previewForProduct } from '../lib/cart';
 import { clearCart, readCart, writeCart, type StoredCart } from '../lib/cart-storage';
+import { readSpace } from '../lib/space-session';
+import { readTableParticipant } from '../lib/table-participant';
 
 interface CartContextValue {
   cart: StoredCart | null;
@@ -24,6 +26,8 @@ interface CartContextValue {
   updateQuantity: (productId: number, optionIds: number[], quantity: number, notes?: string) => void;
   removeLine: (productId: number, optionIds: number[], notes?: string) => void;
   reset: () => void;
+  resetTableSession: (espacioId: number, sesionId: string) => void;
+  associateTableSession: (slug: string, espacioId: number, sesionId: string) => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -61,6 +65,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const preview = previewForProduct(product, optionIds, 1);
       if (!preview) throw new Error('No se pudo calcular el precio de vista previa.');
       const cleanNotes = notes?.trim() || undefined;
+      const space = readSpace(slug);
+      const participant = readTableParticipant();
+      const tableSession = space?.tipo === 'mesa'
+        ? {
+            espacioId: space.espacioId,
+            ...(participant?.slug === slug && participant.espacioId === space.espacioId
+              ? { sesionId: participant.sesionId }
+              : {}),
+          }
+        : undefined;
       const incoming: CartLine = {
         productId: product.id,
         quantity,
@@ -73,7 +87,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       };
       setCart((current) => {
         const base: StoredCart =
-          current && current.slug === slug ? current : { slug, establishmentName, lines: [] };
+          current &&
+          current.slug === slug &&
+          ((!current.tableSession && !tableSession) ||
+            (current.tableSession?.espacioId === tableSession?.espacioId &&
+              (!current.tableSession?.sesionId || !tableSession?.sesionId ||
+                current.tableSession.sesionId === tableSession.sesionId)))
+            ? { ...current, ...(tableSession ? { tableSession } : {}) }
+            : { slug, establishmentName, lines: [], ...(tableSession ? { tableSession } : {}) };
         const existing = base.lines.find((line) => sameLine(line, product.id, optionIds, cleanNotes));
         const lines = existing
           ? base.lines.map((line) =>
@@ -82,7 +103,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 : line,
             )
           : [...base.lines, incoming];
-        return persistCart({ slug, establishmentName, lines });
+        return persistCart({ ...base, slug, establishmentName, lines });
       });
     },
     [],
@@ -114,10 +135,32 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const reset = useCallback(() => commit(null), [commit]);
+  const associateTableSession = useCallback((slug: string, espacioId: number, sesionId: string) => {
+    setCart((current) => {
+      if (!current || current.slug !== slug) return current;
+      const previous = current.tableSession;
+      if (previous?.espacioId === espacioId && previous.sesionId === sesionId) return current;
+      if (previous && (previous.espacioId !== espacioId || previous.sesionId !== sesionId)) {
+        return persistCart(null);
+      }
+      return persistCart({ ...current, tableSession: { espacioId, sesionId } });
+    });
+  }, []);
+  const resetTableSession = useCallback((espacioId: number, sesionId: string) => {
+    setCart((current) => {
+      const tableSession = current?.tableSession;
+      if (
+        !current ||
+        tableSession?.espacioId !== espacioId ||
+        (tableSession.sesionId && tableSession.sesionId !== sesionId)
+      ) return current;
+      return persistCart(null);
+    });
+  }, []);
 
   const value = useMemo(
-    () => ({ cart, addLine, updateQuantity, removeLine, reset }),
-    [addLine, cart, removeLine, reset, updateQuantity],
+    () => ({ cart, addLine, updateQuantity, removeLine, reset, resetTableSession, associateTableSession }),
+    [addLine, associateTableSession, cart, removeLine, reset, resetTableSession, updateQuantity],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

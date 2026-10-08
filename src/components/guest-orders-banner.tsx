@@ -1,7 +1,5 @@
-// "Tu pedido en curso": los pedidos sin cuenta hechos en este navegador. Atajo a
-// Mis pedidos (la pestaña Pedidos, igual que una cuenta); no sustituye guardar el
-// enlace (en otro dispositivo no aparece).
-// Los que ya se ven en vivo ("Tus pedidos") se excluyen para no duplicarlos.
+// Enlaces de seguimiento guardados. Son una referencia recuperable, no una señal
+// de que el pedido o la sesión de mesa sigan activos.
 import { Link } from 'react-router-dom';
 import { readGuestOrders } from '../lib/guest-orders';
 
@@ -13,14 +11,14 @@ export function GuestOrdersBanner({ slug, excludeTokens }: { slug?: string; excl
     .slice(0, 3);
   if (orders.length === 0) return null;
   return (
-    <section className="alumno-guest-orders" aria-label="Tus pedidos sin cuenta">
+    <section className="alumno-guest-orders" aria-label="Seguimientos guardados">
       {orders.map((order) => (
-        <Link key={order.token} className="alumno-guest-orders__item" to={`/cuenta/pedidos?nuevo=${order.token}`}>
+        <Link key={order.token} className="alumno-guest-orders__item" to={`/seguimiento/${order.token}`}>
           <span>
-            <strong>Tu pedido #{order.folio}</strong>
+            <strong>Seguimiento guardado · Pedido #{order.folio}</strong>
             <small>{order.placeName}</small>
           </span>
-          <span aria-hidden="true">Ver mis pedidos →</span>
+          <span aria-hidden="true">Abrir seguimiento →</span>
         </Link>
       ))}
     </section>

@@ -1,4 +1,4 @@
-import type { OrderDetail, OrderStatus } from '../types/api';
+import type { OrderDetail, OrderStatus, SharedTable } from '../types/api';
 import { moneyToCents } from './money';
 import { piecesLabel, splitPieces } from './product-pieces';
 import {
@@ -154,6 +154,16 @@ export function isActiveOrder(order: OrderDetail, now: Date = new Date()): boole
   if (order.reserva) return isLiveRental(order, now);
   if (isUnpaidTab(order) && order.estado === 'entregado') return true;
   return isActiveOrderStatus(order.estado);
+}
+
+/**
+ * A table order is operational only while it is part of the backend's current
+ * open table account. Order status alone cannot keep a closed table session alive.
+ */
+export function belongsToActiveTable(order: OrderDetail, table: SharedTable | null): boolean {
+  if (order.espacio?.tipo !== 'mesa') return true;
+  if (!table || table.espacio.id !== order.espacio.id) return false;
+  return table.grupos.some((group) => group.pedidos.some((tableOrder) => tableOrder.folio === order.folio));
 }
 
 /** Pedido para llevar que el cliente puede avisar que ya llegó por él. */

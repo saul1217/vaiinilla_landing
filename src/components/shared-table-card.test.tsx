@@ -85,6 +85,33 @@ describe('mesa compartida', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it('al confirmar que ya no hay sesión, limpia la identidad y el QR de esa mesa', async () => {
+    localStorage.setItem('vaiinilla.buyer.space.v1', JSON.stringify({
+      slug: 'demo', espacioId: 3, nombre: 'Mesa 3', tipo: 'mesa', qrToken: 'qr-3',
+    }));
+    localStorage.setItem('vaiinilla.buyer.table-participant.v1', JSON.stringify({
+      slug: 'demo', espacioId: 3, sesionId: 'ses-1', participanteId: 'p-ana', alias: 'Ana',
+    }));
+    apiMock.currentTable.mockResolvedValue(null);
+    const onActiveTableChange = vi.fn();
+    const onSessionEnded = vi.fn();
+
+    render(
+      <SharedTableCard
+        accessToken="jwt"
+        qrToken="qr-3"
+        onActiveTableChange={onActiveTableChange}
+        onSessionEnded={onSessionEnded}
+      />,
+    );
+
+    await waitFor(() => expect(localStorage.getItem('vaiinilla.buyer.table-participant.v1')).toBeNull());
+    expect(localStorage.getItem('vaiinilla.buyer.space.v1')).toBeNull();
+    expect(onActiveTableChange).toHaveBeenCalledWith(null);
+    expect(onSessionEnded).toHaveBeenCalledWith({ espacioId: 3, sesionId: 'ses-1' });
+    expect(screen.getByText('¿Compartes la mesa?')).toBeInTheDocument();
+  });
+
   it('muestra quién está, los pedidos por persona y tu parte', async () => {
     apiMock.currentTable.mockResolvedValue(table());
     render(<SharedTableCard accessToken="jwt" qrToken={null} />);

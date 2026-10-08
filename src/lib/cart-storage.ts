@@ -6,6 +6,8 @@ export interface StoredCart {
   slug: string;
   establishmentName: string;
   lines: CartLine[];
+  /** Mesa de la que viene el carrito; sesión ausente en carritos previos al join. */
+  tableSession?: { espacioId: number; sesionId?: string };
 }
 
 /** Un carrito olvidado no debe reaparecer al día siguiente. */

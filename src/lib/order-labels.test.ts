@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { OrderDetail } from '../types/api';
 import {
+  belongsToActiveTable,
   orderCancelReason,
   orderRejectedItemsHint,
   orderCollapsedStatusHint,
@@ -11,6 +12,7 @@ import {
   orderProgressFilled,
   orderTrackSteps,
 } from './order-labels';
+import type { SharedTable } from '../types/api';
 
 function order(overrides: Partial<OrderDetail>): OrderDetail {
   return {
@@ -48,6 +50,28 @@ function order(overrides: Partial<OrderDetail>): OrderDetail {
 }
 
 describe('order-labels Android tracking', () => {
+  it('solo mantiene operativos los pedidos de mesa incluidos en la sesión activa', () => {
+    const active: SharedTable = {
+      espacio: { id: 5, nombre: 'Mesa 5', tipo: 'mesa' },
+      sesion_id: 'ses-b',
+      mi_alias: 'Kikin',
+      mi_participante: { id: 'p-b', alias: 'Kikin' },
+      cuenta_abierta: true,
+      participantes: [],
+      grupos: [{
+        alias: 'Kikin', participante_id: 'p-b', soy_yo: true,
+        total: '20.00', pagado: '0.00', pendiente: '20.00',
+        pedidos: [{ id: 'o-2', folio: 2, estado: 'listo', items_resumen: 'Agua', total: '20.00', pendiente_cobro: true, creado_en: null }],
+      }],
+      totales: { total: '20.00', pagado: '0.00', pendiente: '20.00' },
+      mi_parte: { total: '20.00', pagado: '0.00', pendiente: '20.00' },
+    };
+    expect(belongsToActiveTable(order({ folio: 1, espacio: { id: 5, nombre: 'Mesa 5', tipo: 'mesa' } }), active)).toBe(false);
+    expect(belongsToActiveTable(order({ folio: 2, espacio: { id: 5, nombre: 'Mesa 5', tipo: 'mesa' } }), active)).toBe(true);
+    expect(belongsToActiveTable(order({ folio: 1, espacio: { id: 9, nombre: 'Mesa 9', tipo: 'mesa' } }), active)).toBe(false);
+    expect(belongsToActiveTable(order({ espacio: null }), null)).toBe(true);
+  });
+
   it('arma titular, meta y barra de efectivo', () => {
     const cash = order({});
     expect(orderItemHeadline(cash)).toBe('1 Quiere keke');
