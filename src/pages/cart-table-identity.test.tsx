@@ -102,6 +102,8 @@ function renderCart() {
       <ThemeProvider>
         <Routes>
           <Route path="/e/:slug/carrito" element={<CartPage />} />
+          <Route path="/e/:slug/m/:token/quien" element={<p>Elegir participante</p>} />
+          <Route path="/cuenta/pedidos" element={<p>Mis pedidos</p>} />
         </Routes>
       </ThemeProvider>
     </MemoryRouter>,
@@ -150,9 +152,9 @@ describe('CartPage con participante de mesa', () => {
     renewGuest.mockRejectedValue(new Error('sin llave'));
     tableSession.mockReset().mockResolvedValue({
       espacio: { id: 5, nombre: 'Mesa 5', tipo: 'mesa' },
-      sesion_id: 'ses-5',
-      participantes: [{ id: 'p-kikin', alias: 'Kikin', soy_yo: true }],
-      yo: { id: 'p-kikin', alias: 'Kikin' },
+      sesion_id: '81f42715-e218-4e69-a7f6-8d4017a6f3d4',
+      participantes: [{ id: '9c42b167-4785-4f6c-ac30-b11ad86c58a6', alias: 'Kikin' }],
+      yo: { id: '9c42b167-4785-4f6c-ac30-b11ad86c58a6', alias: 'Kikin' },
     });
   });
 
@@ -163,7 +165,7 @@ describe('CartPage con participante de mesa', () => {
     );
     localStorage.setItem(
       'vaiinilla.buyer.table-participant.v1',
-      JSON.stringify({ slug: 'demo-a', espacioId: 5, sesionId: 'ses-5', participanteId: 'p-kikin', alias: 'Kikin' }),
+      JSON.stringify({ slug: 'demo-a', espacioId: 5, sesionId: '81f42715-e218-4e69-a7f6-8d4017a6f3d4', participanteId: '9c42b167-4785-4f6c-ac30-b11ad86c58a6', alias: 'Kikin' }),
     );
     const user = userEvent.setup();
     renderCart();
@@ -186,7 +188,7 @@ describe('CartPage con participante de mesa', () => {
     );
     localStorage.setItem(
       'vaiinilla.buyer.table-participant.v1',
-      JSON.stringify({ slug: 'demo-a', espacioId: 5, sesionId: 'ses-5', participanteId: 'p-kikin', alias: 'Kikin' }),
+      JSON.stringify({ slug: 'demo-a', espacioId: 5, sesionId: '81f42715-e218-4e69-a7f6-8d4017a6f3d4', participanteId: '9c42b167-4785-4f6c-ac30-b11ad86c58a6', alias: 'Kikin' }),
     );
     // La misma llave anónima con que se unió a la mesa.
     localStorage.setItem(
@@ -222,10 +224,39 @@ describe('CartPage con participante de mesa', () => {
     // Reusa la llave del dispositivo en vez de dar de alta otro invitado…
     expect(renewGuest).toHaveBeenCalledWith('demo-a', 'L'.repeat(43));
     expect(createGuest).not.toHaveBeenCalled();
+    expect(createOrder.mock.calls[0]?.[1]).not.toHaveProperty('comensal_grupo');
     // …y aunque se diera de alta, el alias jamás va como nombre de invitado.
     for (const call of createGuest.mock.calls) {
       expect(JSON.stringify(call[0] ?? {})).not.toContain('Kikin');
     }
+  });
+
+  it('regresión #30: no crea el pedido si el alias local de Kikin está obsoleto y el backend aún no lo reconoce', async () => {
+    localStorage.setItem(
+      'vaiinilla.buyer.space.v1',
+      JSON.stringify({ slug: 'demo-a', espacioId: 5, nombre: 'Mesa 5', tipo: 'mesa', qrToken: 'qr-5', guardadoEn: Date.now() }),
+    );
+    localStorage.setItem(
+      'vaiinilla.buyer.table-participant.v1',
+      JSON.stringify({ slug: 'demo-a', espacioId: 5, sesionId: '81f42715-e218-4e69-a7f6-8d4017a6f3d4', participanteId: 'stale-id', alias: 'Kikin' }),
+    );
+    tableSession.mockResolvedValue({
+      espacio: { id: 5, nombre: 'Mesa 5', tipo: 'mesa' },
+      sesion_id: '81f42715-e218-4e69-a7f6-8d4017a6f3d4',
+      participantes: [{ id: '9c42b167-4785-4f6c-ac30-b11ad86c58a6', alias: 'Kikin', soy_yo: false }],
+      yo: null,
+    });
+    const user = userEvent.setup();
+    renderCart();
+
+    await waitFor(() => expect(tableSession).toHaveBeenCalled());
+    await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+    await user.click(await screen.findByRole('button', { name: /continuar con pago en caja/i }));
+
+    expect(await screen.findByText('Elegir participante')).toBeInTheDocument();
+    expect(createOrder).not.toHaveBeenCalled();
+    expect(screen.queryByText(/pides como kikin/i)).not.toBeInTheDocument();
+    expect(localStorage.getItem('vaiinilla.buyer.table-participant.v1')).toContain('Kikin');
   });
 
   it('si la sesión cambió se borra la identidad y se vuelve a pedir nombre', async () => {
@@ -248,7 +279,10 @@ describe('CartPage con participante de mesa', () => {
     await waitFor(() => expect(tableSession).toHaveBeenCalled());
     expect(localStorage.getItem('vaiinilla.buyer.table-participant.v1')).toBeNull();
     await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
-    expect(await screen.findByLabelText('Tu nombre')).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Elegir participante' })).toHaveAttribute(
+      'href',
+      '/e/demo-a/m/qr-5/quien?next=%2Fe%2Fdemo-a%2Fcarrito',
+    );
   });
 
   it('sin mesa (para llevar) sigue pidiendo el nombre como antes', async () => {
