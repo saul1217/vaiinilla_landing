@@ -28,7 +28,6 @@ import { readGuest } from '../lib/guest-session';
 import { clientSessionForPlace } from '../lib/client-session-for-place';
 import {
   dropTableParticipantOnSessionChange,
-  tableParticipantFor,
 } from '../lib/table-participant';
 import { rememberGuestOrder, trackingPath } from '../lib/guest-orders';
 import type { SpaceSession } from '../lib/space-session';
@@ -132,8 +131,9 @@ export function CartPage() {
         if (!active) return;
         // Sesión nueva: la identidad local se borra y se vuelve a pedir nombre.
         dropTableParticipantOnSessionChange(table.sesion_id);
-        const mine = tableParticipantFor(slug, table.espacio.id, table.sesion_id);
-        setTableAlias(mine ? mine.alias : (user?.displayName ?? (user?.email ? user.email.split('@')[0] : null) ?? null));
+        // Solo el servidor confirma quién está unido. El displayName de la cuenta
+        // no atribuye pedidos a un participante temporal.
+        setTableAlias(table.yo?.alias ?? null);
       } catch {
         if (active) setTableAlias(null);
       }
@@ -297,7 +297,7 @@ export function CartPage() {
       void navigate(`/cuenta?next=/e/${slug}/carrito`);
       return;
     }
-    if (guestLike && !guestNameValid) {
+    if (guestLike && !guestNameValid && !qrToken) {
       setError('Escribe tu nombre para que sepan de quién es el pedido.');
       return;
     }
@@ -374,6 +374,15 @@ export function CartPage() {
       const destination = here && target ? 'en_espacio' : 'para_llevar';
       if (useTab && !canPayAtEnd(operational, destination === 'en_espacio')) {
         throw new Error('Este negocio ya no permite pagar al final. Elige otra forma de pago.');
+      }
+      if (destination === 'en_espacio' && target?.tipo === 'mesa' && qrToken && whoHref) {
+        // El estado local solo sirve para presentar la UI. Antes de crear el pedido
+        // confirmamos en backend que esta identidad ya pertenece a la sesión vigente.
+        const table = await api.tableSession(session.access_token, qrToken);
+        if (!table.yo || Number(table.espacio.id) !== Number(target.espacioId)) {
+          void navigate(whoHref);
+          return;
+        }
       }
       const payload = toCreateOrderInput(
         lines,
@@ -551,11 +560,16 @@ export function CartPage() {
                   Incluye comisión por tarjeta {formatAmount(fee)}.
                 </p>
               ) : null}
-              {tableAlias && whoHref ? (
+              {whoHref && !tableAlias ? (
+                <p className="alumno-guest-checkout__who">
+                  Para pedir en esta mesa, primero elige quién eres.{' '}
+                  <Link to={whoHref}>Elegir participante</Link>
+                </p>
+              ) : tableAlias && whoHref ? (
                 <p className="alumno-guest-checkout__who">
                   Pides como {tableAlias} · <Link to={whoHref}>Cambiar</Link>
                 </p>
-              ) : guestLike ? (
+              ) : guestLike && !whoHref ? (
                 <div className="alumno-guest-checkout">
                   <label className="alumno-field">
                     <span>Tu nombre</span>
