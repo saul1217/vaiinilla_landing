@@ -123,7 +123,7 @@ describe('AlumnoQaOrdersPage', () => {
     expect(document.querySelectorAll('.alumno-track-card__thumb--vaini')).toHaveLength(0);
   });
 
-  it('abre COBRADO #94 contra Android y deja LISTO como segunda card', async () => {
+  it('presenta el estado legado cobrado como recibido y conserva LISTO', async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
@@ -135,35 +135,33 @@ describe('AlumnoQaOrdersPage', () => {
 
     const listCards = [...document.querySelectorAll('.alumno-orders-desk__list .alumno-track-card')];
     expect(listCards.map((card) => card.querySelector('.alumno-track-card__pill')?.textContent)).toEqual([
-      'Por cobrar',
-      'Cobrado',
+      'Pedido recibido',
+      'Pedido recibido',
       'Listo',
     ]);
     const open = document.querySelector('.alumno-orders-desk__list .alumno-track-card.is-open');
     expect(open?.querySelector('.alumno-track-card__folio')).toHaveTextContent('#94');
-    expect(open?.querySelector('.alumno-track-card__pill')).toHaveTextContent('Cobrado');
+    expect(open?.querySelector('.alumno-track-card__pill')).toHaveTextContent('Pedido recibido');
     expect(open?.querySelector('.alumno-pickup')).toBeNull();
     expect(open?.querySelector('.alumno-track-card__status')).toHaveTextContent(
-      /Cobrado\s+Cocina recibió la comanda/i,
+      /Pedido recibido/i,
     );
     const steps = [...(open?.querySelectorAll('.alumno-timeline li') ?? [])];
     expect(steps.map((step) => step.querySelector('strong')?.textContent)).toEqual([
-      'Pago confirmado',
-      'Cobrado',
+      'Pedido recibido',
       'Preparando',
       'Listo',
       'Entregado',
     ]);
-    expect(steps[0]).toHaveClass('is-done');
-    expect(steps[1]).toHaveClass('is-current');
-    expect(steps[1]?.querySelector('.alumno-timeline__mark')?.textContent).toBe('2');
-    expect(steps.slice(2).every((step) => step.classList.contains('is-todo'))).toBe(true);
-    expect(steps.slice(2).map((step) => step.querySelector('.alumno-timeline__mark')?.textContent)).toEqual([
+    expect(steps[0]).toHaveClass('is-current');
+    expect(steps[0]?.querySelector('.alumno-timeline__mark')?.textContent).toBe('1');
+    expect(steps.slice(1).every((step) => step.classList.contains('is-todo'))).toBe(true);
+    expect(steps.slice(1).map((step) => step.querySelector('.alumno-timeline__mark')?.textContent)).toEqual([
+      '2',
       '3',
       '4',
-      '5',
     ]);
-    expect(open?.querySelector('.alumno-timeline li:nth-child(4)')).toHaveTextContent(/recógelo en la barra/i);
+    expect(open?.querySelector('.alumno-timeline li:nth-child(3)')).toHaveTextContent(/recógelo en la barra/i);
     expect(open?.querySelector('.alumno-pickup')).toBeNull();
     expect(screen.queryByRole('img', { name: /código qr/i })).not.toBeInTheDocument();
     expect((open?.textContent?.match(/Recógelo en la barra/gi) ?? []).length).toBe(1);
@@ -173,7 +171,7 @@ describe('AlumnoQaOrdersPage', () => {
     expect(siblingAbove).not.toHaveClass('is-open');
     expect(siblingAbove?.querySelector('.alumno-track-card__folio')).toHaveTextContent('#95');
     expect(siblingAbove?.querySelector('.alumno-track-bar')).toBeTruthy();
-    expect(siblingAbove?.querySelector('.alumno-track-card__status')).toHaveTextContent(/por cobrar/i);
+    expect(siblingAbove?.querySelector('.alumno-track-card__status')).toHaveTextContent(/Pedido recibido/i);
     expect(siblingAbove?.querySelector('.alumno-track-card__toggle')).toHaveTextContent(/ver seguimiento/i);
 
     const listoRow = listCards[2];
@@ -182,7 +180,7 @@ describe('AlumnoQaOrdersPage', () => {
     const listo = document.querySelector('.alumno-orders-desk__list .alumno-track-card.is-open');
     expect(listo?.querySelector('.alumno-track-card__pill')).toHaveTextContent('Listo');
     expect(listo?.querySelector('.alumno-pickup')).toHaveTextContent(/recógelo en la barra/i);
-    expect(listo?.querySelector('.alumno-timeline li.is-current .alumno-timeline__mark')?.textContent).toBe('4');
+    expect(listo?.querySelector('.alumno-timeline li.is-current .alumno-timeline__mark')?.textContent).toBe('3');
   });
 
   it('en split 1280 Recógelo de LISTO #93 vive solo en el detalle', async () => {
@@ -210,10 +208,10 @@ describe('AlumnoQaOrdersPage', () => {
     expect(document.querySelector('.alumno-orders-desk__list .alumno-track-card.is-open')).toBeNull();
     const selected = document.querySelector('.alumno-orders-desk__list .alumno-track-card.is-selected');
     expect(selected?.querySelector('.alumno-track-card__folio')).toHaveTextContent('#94');
-    expect(selected?.querySelector('.alumno-track-card__pill')).toHaveTextContent('Cobrado');
+    expect(selected?.querySelector('.alumno-track-card__pill')).toHaveTextContent('Pedido recibido');
     expect(selected?.querySelector('.alumno-pickup')).toBeNull();
     expect(selected?.querySelector('.alumno-track-card__status')).toHaveTextContent(
-      /Cobrado\s+Cocina recibió la comanda/i,
+      /Pedido recibido/i,
     );
 
     const detail = document.querySelector('.alumno-orders-desk__detail .alumno-track-card');
@@ -238,7 +236,7 @@ describe('AlumnoQaOrdersPage', () => {
     expect(detailListo?.querySelector('.alumno-pickup')).toHaveTextContent(/recógelo en la barra/i);
     expect(detailListo?.querySelector('.alumno-pickup__folio')).toHaveTextContent('#93');
     expect(detailListo?.querySelector('.alumno-timeline li.is-current .alumno-timeline__mark')?.textContent).toBe(
-      '4',
+      '3',
     );
     expect(await screen.findByRole('img', { name: /código qr/i })).toBeInTheDocument();
     expect(document.querySelectorAll('.alumno-pickup')).toHaveLength(1);

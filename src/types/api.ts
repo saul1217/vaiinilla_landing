@@ -7,6 +7,16 @@ export type OrderStatus =
   | 'cancelado'
   | 'no_recogido'
   | 'expirado';
+/** Avance de preparación/entrega separado de la cobranza. */
+export type OperationalOrderStatus =
+  | 'recibido'
+  | 'preparando'
+  | 'listo'
+  | 'entregado'
+  | 'cancelado'
+  | 'no_recogido'
+  | 'expirado';
+export type PaymentStatus = 'pendiente' | 'parcial' | 'pagado' | 'reembolsado' | 'sin_cargo';
 
 export type PaymentMethod = 'stripe' | 'efectivo' | 'saldo';
 export type EstablishmentKind =
@@ -242,6 +252,9 @@ export interface OrderDetail {
   folio: number;
   fecha_operativa: string;
   estado: OrderStatus;
+  /** Ausente en backends anteriores; nunca se infiere desde `estado` cuando viene presente. */
+  estado_operativo?: OperationalOrderStatus;
+  estado_pago?: PaymentStatus;
   metodo_pago: PaymentMethod;
   destino: OrderDestination;
   espacio: OrderSpace | null;
@@ -249,6 +262,9 @@ export interface OrderDetail {
   ahorro_combinado: string;
   cashback_otorgado: string;
   total: string;
+  monto_pagado?: string;
+  monto_reembolsado?: string;
+  saldo_pendiente?: string;
   version: number;
   creado_en: string;
   actualizado_en: string;
@@ -377,8 +393,12 @@ export interface SharedTableOrder {
   id: string | null;
   folio: number;
   estado: OrderStatus;
+  estado_operativo?: OperationalOrderStatus;
+  estado_pago?: PaymentStatus;
   items_resumen: string;
   total: string;
+  monto_pagado?: string;
+  saldo_pendiente?: string;
   pendiente_cobro: boolean;
   creado_en: string | null;
   /** "Esto lo pago yo": alias de quien dijo que lo paga. */

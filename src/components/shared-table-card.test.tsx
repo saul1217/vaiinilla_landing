@@ -56,8 +56,8 @@ describe('mesa compartida', () => {
 
   it('a la cuenta y sin pagar no dice "Cobrado"', () => {
     const base = { id: null, folio: 1, items_resumen: '', total: '1.00', creado_en: null };
-    expect(tableOrderState({ ...base, estado: 'cobrado', pendiente_cobro: true })).toBe('En la cuenta');
-    expect(tableOrderState({ ...base, estado: 'listo', pendiente_cobro: true })).toBe('Listo');
+    expect(tableOrderState({ ...base, estado: 'cobrado', pendiente_cobro: true })).toBe('Pedido recibido · en cuenta');
+    expect(tableOrderState({ ...base, estado: 'listo', pendiente_cobro: true })).toBe('Listo · en cuenta');
     expect(tableOrderState({ ...base, estado: 'entregado', pendiente_cobro: false })).toBe('Entregado · pagado');
   });
 

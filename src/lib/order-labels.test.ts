@@ -9,6 +9,9 @@ import {
   orderItemHeadline,
   orderMetaLine,
   orderProgressFilled,
+  isOrderPaid,
+  orderPayLabel,
+  orderStatusLabel,
   orderTrackSteps,
 } from './order-labels';
 
@@ -56,8 +59,7 @@ describe('order-labels Android tracking', () => {
     expect(orderCompactPayLabel(cash)).toBe('Efectivo');
     expect(orderProgressFilled(cash)).toBe(1);
     expect(orderTrackSteps(cash).map((step) => step.label)).toEqual([
-      'Por cobrar',
-      'Cobrado',
+      'Pedido recibido',
       'Preparando',
       'Listo',
       'Entregado',
@@ -65,7 +67,7 @@ describe('order-labels Android tracking', () => {
     expect(orderTrackSteps(cash)[0]?.state).toBe('current');
   });
 
-  it('sustituye por cobrar con pago confirmado en tarjeta cobrada', () => {
+  it('mantiene el pago separado del avance operativo para tarjeta confirmada', () => {
     const card = order({
       estado: 'cobrado',
       metodo_pago: 'stripe',
@@ -77,15 +79,47 @@ describe('order-labels Android tracking', () => {
       },
     });
     const steps = orderTrackSteps(card);
-    expect(steps[0]?.label).toBe('Pago confirmado');
-    expect(steps[0]?.state).toBe('done');
-    expect(steps[1]?.label).toBe('Cobrado');
-    expect(steps[1]?.state).toBe('current');
-    expect(orderProgressFilled(card)).toBe(2);
+    expect(steps.map((step) => step.label)).toEqual(['Pedido recibido', 'Preparando', 'Listo', 'Entregado']);
+    expect(steps[0]?.state).toBe('current');
+    expect(orderProgressFilled(card)).toBe(1);
     expect(orderMetaLine(card)).toBe('Para llevar · Tarjeta');
   });
 
-  it('marca LISTO como paso 4 actual, no como palomita', () => {
+  it('no afirma que se pagó una cuenta diferida basándose en `cobrado` ni en el booleano legado', () => {
+    const tableOrder = order({
+      estado: 'cobrado',
+      estado_operativo: 'recibido',
+      estado_pago: 'pendiente',
+      saldo_pendiente: '73.70',
+      pago_diferido: true,
+      pago_pendiente: false,
+    });
+    expect(orderCompactPayLabel(tableOrder)).toBe('Al final');
+    expect(orderTrackSteps(tableOrder).map((step) => step.label)).toEqual([
+      'Pedido recibido', 'Preparando', 'Listo', 'Entregado',
+    ]);
+    expect(orderTrackSteps(tableOrder)[0]?.hint).toContain('cuenta de mesa');
+    expect(orderStatusLabel(tableOrder)).toBe('Pedido recibido');
+    expect(orderPayLabel(tableOrder)).toBe('Se paga al final');
+  });
+
+  it('no infiere un pago Stripe desde el estado operativo legado', () => {
+    const stripe = order({
+      estado: 'cobrado',
+      metodo_pago: 'stripe',
+      pago: {
+        payment_attempt_id: 'a1',
+        payment_intent_id: 'pi',
+        stripe_account_id: 'acct',
+        payment_status: 'confirmado',
+      },
+    });
+    expect(isOrderPaid(stripe)).toBe(false);
+    expect(orderPayLabel(stripe)).toBe('Tarjeta');
+    expect(isOrderPaid({ ...stripe, saldo_pendiente: '0.00' })).toBe(true);
+  });
+
+  it('marca LISTO como paso 3 actual, no como palomita', () => {
     const ready = order({
       estado: 'listo',
       metodo_pago: 'stripe',
@@ -97,12 +131,12 @@ describe('order-labels Android tracking', () => {
       },
     });
     const steps = orderTrackSteps(ready);
-    expect(steps[3]?.label).toBe('Listo');
-    expect(steps[3]?.state).toBe('current');
-    expect(steps[3]?.hint).toBe('');
-    expect(orderProgressFilled(ready)).toBe(4);
-    expect(steps.slice(0, 3).every((step) => step.state === 'done')).toBe(true);
-    expect(steps[4]?.state).toBe('todo');
+    expect(steps[2]?.label).toBe('Listo');
+    expect(steps[2]?.state).toBe('current');
+    expect(steps[2]?.hint).toBe('');
+    expect(orderProgressFilled(ready)).toBe(3);
+    expect(steps.slice(0, 2).every((step) => step.state === 'done')).toBe(true);
+    expect(steps[3]?.state).toBe('todo');
   });
 
   it('deja Recógelo en la barra para LISTO futuro', () => {
@@ -116,7 +150,7 @@ describe('order-labels Android tracking', () => {
         payment_status: 'confirmado',
       },
     });
-    expect(orderTrackSteps(preparing)[3]?.hint).toBe('Recógelo en la barra.');
+    expect(orderTrackSteps(preparing)[2]?.hint).toBe('Recógelo en la barra.');
   });
 
   it('en fila colapsada LISTO es solo Listo, Recógelo queda al expandir', () => {

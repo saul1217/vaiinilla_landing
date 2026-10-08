@@ -229,16 +229,16 @@ describe("OrdersPage", () => {
     await user.click(
       await screen.findByRole("button", { name: /ver seguimiento/i }),
     );
-    expect(screen.getByText(/pago confirmado|por cobrar/i)).toBeInTheDocument();
-    expect(document.querySelectorAll(".alumno-timeline li")).toHaveLength(5);
+    expect(screen.getByText(/para llevar · efectivo/i)).toBeInTheDocument();
+    expect(document.querySelectorAll(".alumno-timeline li")).toHaveLength(4);
     expect(
       document.querySelector(
         ".alumno-timeline li.is-current .alumno-timeline__mark",
       )?.textContent,
-    ).toBe("3");
+    ).toBe("2");
     expect(
       document.querySelectorAll(".alumno-timeline li.is-done svg"),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
     expect(
       screen.getByRole("link", { name: /ver pedido completo/i }),
     ).toHaveAttribute("href", "/cuenta/pedidos/ord-1");
