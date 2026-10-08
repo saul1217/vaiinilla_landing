@@ -17,7 +17,7 @@ import { buyerEntryPath } from '../lib/buyer-entry';
 import { readGuestOrders, trackingUrl } from '../lib/guest-orders';
 import { useGuestSpaceToken } from '../lib/use-guest-space-token';
 import { isStorageAvailable } from '../lib/storage-available';
-import { isActiveOrder } from '../lib/order-labels';
+import { isActiveOrder, isOrderPaid, orderOperationalStatus } from '../lib/order-labels';
 import { isPermanentTrackingError, trackingRetryDelay } from '../lib/tracking-poll';
 import { isStripePaymentConfirmedByBackend } from '../lib/stripe-status';
 import { clearStripeCheckoutSession, peekStripeCheckoutSession } from '../lib/stripe-session';
@@ -83,7 +83,7 @@ export function TrackingPage() {
         }
         // Con el formulario de tarjeta a la vista no se recarga: lo vaciaría a media captura.
         const formOpen =
-          next.metodo_pago === 'stripe' && next.estado === 'por_cobrar' && Boolean(session) && !paying;
+          next.metodo_pago === 'stripe' && !isOrderPaid(next) && orderOperationalStatus(next) === 'recibido' && Boolean(session) && !paying;
         if (isActiveOrder(next) && !formOpen)
           timer = window.setTimeout(() => void load(), paying ? POLL_PAYING_MS : POLL_MS);
       } catch (cause) {
@@ -154,7 +154,7 @@ export function TrackingPage() {
   }
 
   const stripePending =
-    order?.metodo_pago === 'stripe' && !isStripePaymentConfirmedByBackend(order) && order.estado === 'por_cobrar';
+    order?.metodo_pago === 'stripe' && !isStripePaymentConfirmedByBackend(order) && orderOperationalStatus(order) === 'recibido';
   const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
   if (notFound && !order) {

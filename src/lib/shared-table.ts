@@ -1,13 +1,18 @@
-import { ORDER_STATUS_LABEL } from './order-labels';
-import type { SharedTable } from '../types/api';
+import type { OperationalOrderStatus, SharedTable } from '../types/api';
 
 /**
  * El estado de un pedido de la mesa. A la cuenta, `cobrado` solo quiere decir que
  * Cocina lo recibió: mientras no se pague, se dice que está en la cuenta.
  */
 export function tableOrderState(order: SharedTable['grupos'][number]['pedidos'][number]): string {
-  if (order.pendiente_cobro) return order.estado === 'cobrado' ? 'En la cuenta' : ORDER_STATUS_LABEL[order.estado];
-  return `${ORDER_STATUS_LABEL[order.estado]} · pagado`;
+  const legacyReceived = order.estado === 'por_cobrar' || order.estado === 'cobrado' ? 'recibido' : order.estado;
+  const status = order.estado_operativo ?? legacyReceived;
+  const label: Record<OperationalOrderStatus, string> = {
+    recibido: 'Pedido recibido', preparando: 'Preparando', listo: 'Listo', entregado: 'Entregado',
+    cancelado: 'Cancelado', no_recogido: 'No recogido', expirado: 'Expirado',
+  };
+  if (order.pendiente_cobro) return `${label[status]} · en cuenta`;
+  return `${label[status]} · pagado`;
 }
 
 /** Tus pedidos primero; luego el resto en el orden en que se unieron. */

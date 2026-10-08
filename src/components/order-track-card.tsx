@@ -11,6 +11,7 @@ import {
   orderMetaLine,
   orderCancelReason,
   orderOperationalHint,
+  orderOperationalStatus,
   orderProgressFilled,
   orderStatusLabel,
   orderTrackSteps,
@@ -58,7 +59,7 @@ export function OrderTrackCard({
     ? RENTAL_STEPS.findIndex((item) => item.key === rentalCurrent) + 1
     : orderProgressFilled(order);
   const steps = orderTrackSteps(order);
-  const inFlow = rental ? rentalCurrent !== null : ORDER_FLOW.includes(order.estado);
+  const inFlow = rental ? rentalCurrent !== null : ORDER_FLOW.includes(orderOperationalStatus(order));
   const active = isActiveOrder(order);
   const statusLabel = orderStatusLabel(order);
   const showBar = inFlow;
@@ -333,7 +334,6 @@ function ArrowIcon() {
 // One glyph per tracking state, like Android's trackingIcon: receipt, paid, kitchen, ready bell, delivered seal.
 const TRACK_ICONS = [
   'M7 3h10v18l-2.5-1.6L12 21l-2.5-1.6L7 21V3Zm3 5h4m-4 4h4',
-  'M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-11.5 0 2.4 2.4 4.6-4.8',
   'M7 3v8m-2-8v4a2 2 0 0 0 4 0V3M7 11v10M17 21V3c-2 1.2-3 3.4-3 6v4h3',
   'M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16Zm4 4a2 2 0 0 0 4 0',
   'M12 3l2.3 1.6 2.8-.1.9 2.6 2.2 1.7-.8 2.7.8 2.7-2.2 1.7-.9 2.6-2.8-.1L12 21l-2.3-1.6-2.8.1-.9-2.6L3.8 15.2l.8-2.7-.8-2.7L6 8.1l.9-2.6 2.8.1L12 3Zm-3 9.2 2 2 4-4.4',

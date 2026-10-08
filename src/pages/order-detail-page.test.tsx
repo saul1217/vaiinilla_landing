@@ -272,6 +272,9 @@ describe('OrderDetailPage', () => {
       stripeOrder({
         folio: 1,
         estado: 'listo',
+        estado_pago: 'pagado',
+        monto_pagado: '123.60',
+        saldo_pendiente: '0.00',
         qr_token: undefined,
         pago: {
           payment_attempt_id: 'attempt-1',
@@ -361,6 +364,9 @@ describe('OrderDetailPage', () => {
     getOrder.mockResolvedValue(
       stripeOrder({
         estado: 'cobrado',
+        estado_pago: 'pagado',
+        monto_pagado: '123.60',
+        saldo_pendiente: '0.00',
         pago: {
           payment_attempt_id: 'attempt-1',
           payment_intent_id: 'pi_test_001',

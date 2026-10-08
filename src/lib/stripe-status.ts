@@ -16,13 +16,12 @@ export const STRIPE_COPY = {
   timedOut: 'Seguimos confirmando tu pago',
 } as const;
 
-const CONFIRMED_ORDER_STATES: OrderDetail['estado'][] = ['cobrado', 'preparando', 'listo', 'entregado'];
-
 export function isStripePaymentConfirmedByBackend(order: OrderDetail): boolean {
   return (
     order.metodo_pago === 'stripe' &&
     order.pago?.payment_status === 'confirmado' &&
-    CONFIRMED_ORDER_STATES.includes(order.estado)
+    (order.estado_pago === 'pagado' ||
+      (order.saldo_pendiente !== undefined && order.saldo_pendiente === '0.00'))
   );
 }
 

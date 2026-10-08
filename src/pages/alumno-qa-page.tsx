@@ -160,6 +160,9 @@ const CARD_LISTO = qaOrder({
   folio: 93,
   estado: "listo",
   metodo_pago: "stripe",
+  estado_pago: "pagado",
+  monto_pagado: "73.70",
+  saldo_pendiente: "0.00",
   qr_token: "QA94LISTO",
   pago: {
     payment_attempt_id: "qa-attempt-2",

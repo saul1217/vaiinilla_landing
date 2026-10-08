@@ -51,8 +51,8 @@ function rental(overrides: Partial<OrderDetail> = {}): OrderDetail {
 }
 
 describe('pedido a la cuenta (pagar al final)', () => {
-  it('no se lee como cobrado: está en la cuenta', () => {
-    expect(orderStatusLabel(tab(), NOW)).toBe('En tu cuenta');
+  it('mantiene avance recibido y muestra por separado que se paga al final', () => {
+    expect(orderStatusLabel(tab(), NOW)).toBe('Pedido recibido');
     expect(orderPayLabel(tab())).toBe('Se paga al final');
     expect(orderCompactPayLabel(tab())).toBe('Al final');
     expect(orderMetaLine(tab(), NOW)).toBe('Mesa 4 · Al final');
@@ -61,35 +61,34 @@ describe('pedido a la cuenta (pagar al final)', () => {
 
   it('entregado y sin pagar sigue en curso y pide la cuenta', () => {
     const delivered = tab({ estado: 'entregado' });
-    expect(orderStatusLabel(delivered, NOW)).toBe('Por pagar');
+    expect(orderStatusLabel(delivered, NOW)).toBe('Entregado');
     expect(isActiveOrder(delivered, NOW)).toBe(true);
     expect(orderCollapsedHint(delivered, NOW)).toMatch(/cuenta a tu mesero/);
   });
 
   it('ya pagada vuelve a leerse normal y deja de estar en curso al entregarse', () => {
-    const paid = tab({ estado: 'entregado', pago_pendiente: false });
+    const paid = tab({ estado: 'entregado', pago_pendiente: false, estado_pago: 'pagado', saldo_pendiente: '0.00' });
     expect(orderStatusLabel(paid, NOW)).toBe('Entregado');
     expect(orderPayLabel(paid)).toBe('Cuenta pagada');
     expect(isActiveOrder(paid, NOW)).toBe(false);
   });
 
-  it('sus pasos son los de una cuenta, no "Por cobrar"', () => {
+  it('su timeline muestra únicamente el avance operativo', () => {
     const steps = orderTrackSteps(tab({ estado: 'preparando' }), NOW);
     expect(steps.map((s) => s.label)).toEqual([
-      'Pedido enviado',
-      'En tu cuenta',
+      'Pedido recibido',
       'Preparando',
       'Listo',
       'Entregado',
     ]);
-    expect(steps.map((s) => s.state)).toEqual(['done', 'done', 'current', 'todo', 'todo']);
+    expect(steps.map((s) => s.state)).toEqual(['done', 'current', 'todo', 'todo']);
     expect(steps.some((s) => /por cobrar/i.test(s.label))).toBe(false);
   });
 
   it('un pedido normal no cambia', () => {
     const plain = order({ estado: 'por_cobrar', destino: 'para_llevar', espacio: null });
-    expect(orderStatusLabel(plain, NOW)).toBe('Por cobrar');
-    expect(orderTrackSteps(plain, NOW)[0]?.label).toBe('Por cobrar');
+    expect(orderStatusLabel(plain, NOW)).toBe('Pedido recibido');
+    expect(orderTrackSteps(plain, NOW)[0]?.label).toBe('Pedido recibido');
   });
 });
 

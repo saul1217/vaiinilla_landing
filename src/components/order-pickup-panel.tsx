@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { ORDER_STATUS_HINT } from '../lib/order-labels';
+import { orderOperationalStatus } from '../lib/order-labels';
 import {
   shouldShowPickupQr,
   shouldShowPickupSurface,
@@ -40,8 +41,9 @@ export function OrderPickupPanel({
 
   if (!showSurface && !showQr) return null;
 
-  const listo = order.estado === 'listo';
-  const atCounter = order.estado === 'por_cobrar' && order.metodo_pago !== 'stripe';
+  const state = orderOperationalStatus(order);
+  const listo = state === 'listo';
+  const atCounter = state === 'recibido' && order.metodo_pago !== 'stripe';
   // En mesa o cancha lo lleva el mesero: el código solo se muestra si te lo pide.
   const toSpace = order.destino === 'en_espacio';
   const hint = toSpace
