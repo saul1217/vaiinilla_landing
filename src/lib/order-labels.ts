@@ -1,4 +1,4 @@
-import type { OperationalOrderStatus, OrderDetail, OrderStatus } from '../types/api';
+import type { OperationalOrderStatus, OrderDetail, OrderStatus, PaymentStatus } from '../types/api';
 import { moneyToCents } from './money';
 import { piecesLabel, splitPieces } from './product-pieces';
 import {
@@ -96,10 +96,32 @@ export function isActiveOrderStatus(status: OrderStatus | OperationalOrderStatus
 
 /** El estado financiero viene del ledger; el booleano legado solo cubre respuestas anteriores. */
 export function isOrderPaid(order: Pick<OrderDetail, 'estado_pago' | 'saldo_pendiente' | 'pago_diferido' | 'pago_pendiente'>): boolean {
+  if (order.saldo_pendiente !== undefined) {
+    const saldo = moneyToCents(order.saldo_pendiente);
+    if (saldo !== 0n) return false;
+    return order.estado_pago === undefined || order.estado_pago === 'pagado' || order.estado_pago === 'sin_cargo';
+  }
   if (order.estado_pago) return order.estado_pago === 'pagado' || order.estado_pago === 'sin_cargo';
-  if (order.saldo_pendiente !== undefined) return (moneyToCents(order.saldo_pendiente) ?? 1n) <= 0n;
   if (order.pago_diferido && order.pago_pendiente !== undefined) return !order.pago_pendiente;
   return false;
+}
+
+function orderPaymentStatus(order: Pick<OrderDetail, 'estado_pago' | 'saldo_pendiente' | 'monto_pagado'>): PaymentStatus | undefined {
+  if (order.saldo_pendiente === undefined) return order.estado_pago;
+  const saldo = moneyToCents(order.saldo_pendiente);
+  if (saldo === null || saldo < 0n) {
+    return order.estado_pago === 'pagado' || order.estado_pago === 'sin_cargo'
+      ? 'pendiente'
+      : order.estado_pago;
+  }
+  if (saldo > 0n) {
+    if (order.estado_pago === 'reembolsado') return 'reembolsado';
+    const pagado = order.monto_pagado === undefined ? null : moneyToCents(order.monto_pagado);
+    return pagado !== null && pagado > 0n ? 'parcial' : 'pendiente';
+  }
+  if (order.estado_pago) return order.estado_pago;
+  const pagado = order.monto_pagado === undefined ? null : moneyToCents(order.monto_pagado);
+  return pagado !== null && pagado > 0n ? 'pagado' : undefined;
 }
 
 /** Va a la cuenta del espacio y conserva saldo pendiente. */
@@ -109,18 +131,29 @@ export function isUnpaidTab(order: Pick<OrderDetail, 'pago_diferido' | 'pago_pen
 
 export function orderPayLabel(order: OrderDetail): string {
   if (order.reserva && order.metodo_pago === 'efectivo') return 'Efectivo en caja';
-  if (isUnpaidTab(order)) return 'Se paga al final';
-  if (order.pago_diferido) return isOrderPaid(order) ? 'Cuenta pagada' : 'Se paga al final';
-  if (order.metodo_pago === 'saldo') return 'Pagado con saldo';
-  if (order.metodo_pago === 'stripe') return isOrderPaid(order) ? 'Pagado con tarjeta' : 'Tarjeta';
-  return 'Efectivo al recoger';
+  const status = orderPaymentStatus(order);
+  if (status === 'reembolsado') return 'Reembolsado';
+  if (status === 'parcial') return 'Pago parcial';
+  if (order.pago_diferido && !isOrderPaid(order)) return 'Pagas al final con tu cuenta';
+  if (status === 'sin_cargo') return 'Sin cargo';
+  if (isOrderPaid(order)) return 'Pagado';
+  return `Pago pendiente · ${paymentMethodLabel(order.metodo_pago)}`;
 }
 
 export function orderCompactPayLabel(order: OrderDetail): string {
-  if (isUnpaidTab(order)) return 'Al final';
-  if (order.metodo_pago === 'saldo') return 'Saldo';
-  if (order.metodo_pago === 'stripe') return 'Tarjeta';
-  return 'Efectivo';
+  const status = orderPaymentStatus(order);
+  if (status === 'reembolsado') return 'Reembolsado';
+  if (status === 'parcial') return 'Pago parcial';
+  if (order.pago_diferido && !isOrderPaid(order)) return 'Pagas al final';
+  if (status === 'sin_cargo') return 'Sin cargo';
+  if (isOrderPaid(order)) return 'Pagado';
+  return `Pago pendiente · ${paymentMethodLabel(order.metodo_pago)}`;
+}
+
+function paymentMethodLabel(method: OrderDetail['metodo_pago']): string {
+  if (method === 'stripe') return 'tarjeta';
+  if (method === 'saldo') return 'saldo';
+  return 'efectivo';
 }
 
 export function orderDestinationLabel(order: OrderDetail): string {
@@ -330,10 +363,15 @@ function tabTrackSteps(order: OrderDetail): OrderTrackStep[] {
 }
 
 /** Lo que el cliente debe en su cuenta abierta (pedidos a la cuenta aún sin cobrar). */
-export function openTab(orders: OrderDetail[]): { count: number; total: string } | null {
+export function openTab(orders: OrderDetail[]): { count: number; total: string | null } | null {
   const pending = orders.filter((order) => isUnpaidTab(order) && orderOperationalStatus(order) !== 'cancelado');
   if (pending.length === 0) return null;
-  const cents = pending.reduce((sum, order) => sum + (moneyToCents(order.saldo_pendiente ?? order.total) ?? 0n), 0n);
+  const balances = pending.map((order) => moneyToCents(order.saldo_pendiente ?? ''));
+  const validBalances = balances.filter((balance): balance is bigint => balance !== null && balance > 0n);
+  if (validBalances.length !== pending.length) {
+    return { count: pending.length, total: null };
+  }
+  const cents = validBalances.reduce((sum, balance) => sum + balance, 0n);
   const whole = cents / 100n;
   const rest = (cents % 100n).toString().padStart(2, '0');
   return { count: pending.length, total: `${whole}.${rest}` };

@@ -55,8 +55,8 @@ describe('order-labels Android tracking', () => {
     const cash = order({});
     expect(orderItemHeadline(cash)).toBe('1 Quiere keke');
     expect(orderHistoryHeadline(cash)).toBe('1× Quiere keke');
-    expect(orderMetaLine(cash)).toBe('Para llevar · Efectivo');
-    expect(orderCompactPayLabel(cash)).toBe('Efectivo');
+    expect(orderMetaLine(cash)).toBe('Para llevar · Pago pendiente · efectivo');
+    expect(orderCompactPayLabel(cash)).toBe('Pago pendiente · efectivo');
     expect(orderProgressFilled(cash)).toBe(1);
     expect(orderTrackSteps(cash).map((step) => step.label)).toEqual([
       'Pedido recibido',
@@ -82,7 +82,7 @@ describe('order-labels Android tracking', () => {
     expect(steps.map((step) => step.label)).toEqual(['Pedido recibido', 'Preparando', 'Listo', 'Entregado']);
     expect(steps[0]?.state).toBe('current');
     expect(orderProgressFilled(card)).toBe(1);
-    expect(orderMetaLine(card)).toBe('Para llevar · Tarjeta');
+    expect(orderMetaLine(card)).toBe('Para llevar · Pago pendiente · tarjeta');
   });
 
   it('no afirma que se pagó una cuenta diferida basándose en `cobrado` ni en el booleano legado', () => {
@@ -94,13 +94,65 @@ describe('order-labels Android tracking', () => {
       pago_diferido: true,
       pago_pendiente: false,
     });
-    expect(orderCompactPayLabel(tableOrder)).toBe('Al final');
+    expect(orderCompactPayLabel(tableOrder)).toBe('Pagas al final');
     expect(orderTrackSteps(tableOrder).map((step) => step.label)).toEqual([
       'Pedido recibido', 'Preparando', 'Listo', 'Entregado',
     ]);
     expect(orderTrackSteps(tableOrder)[0]?.hint).toContain('cuenta de mesa');
     expect(orderStatusLabel(tableOrder)).toBe('Pedido recibido');
-    expect(orderPayLabel(tableOrder)).toBe('Se paga al final');
+    expect(orderPayLabel(tableOrder)).toBe('Pagas al final con tu cuenta');
+  });
+
+  it('un saldo positivo manda sobre un estado_pago contradictorio y nunca se muestra como pagado', () => {
+    const contradictory = order({
+      estado: 'cobrado',
+      estado_operativo: 'listo',
+      estado_pago: 'pagado',
+      monto_pagado: '0.00',
+      saldo_pendiente: '73.70',
+    });
+
+    expect(isOrderPaid(contradictory)).toBe(false);
+    expect(orderStatusLabel(contradictory)).toBe('Listo');
+    expect(orderPayLabel(contradictory)).toBe('Pago pendiente · efectivo');
+    expect(orderTrackSteps(contradictory).map((step) => step.state)).toEqual(['done', 'done', 'current', 'todo']);
+  });
+
+  it('expone los estados financieros por separado en recibido, preparando, listo y entregado', () => {
+    const cases = [
+      { operativo: 'recibido' as const, label: 'Pedido recibido', pago: 'pendiente' as const, saldo: '73.70' },
+      { operativo: 'preparando' as const, label: 'Preparando', pago: 'pendiente' as const, saldo: '73.70' },
+      { operativo: 'listo' as const, label: 'Listo', pago: 'pendiente' as const, saldo: '73.70' },
+      { operativo: 'listo' as const, label: 'Listo', pago: 'pagado' as const, saldo: '0.00' },
+      { operativo: 'entregado' as const, label: 'Entregado', pago: 'pendiente' as const, saldo: '73.70', diferido: true },
+      { operativo: 'entregado' as const, label: 'Entregado', pago: 'pagado' as const, saldo: '0.00', diferido: true },
+    ];
+
+    for (const testCase of cases) {
+      const current = order({
+        estado: 'cobrado',
+        estado_operativo: testCase.operativo,
+        estado_pago: testCase.pago,
+        monto_pagado: testCase.pago === 'pagado' ? '73.70' : '0.00',
+        saldo_pendiente: testCase.saldo,
+        pago_diferido: testCase.diferido,
+        pago_pendiente: testCase.pago !== 'pagado',
+      });
+      expect(orderStatusLabel(current)).toBe(testCase.label);
+      const steps = orderTrackSteps(current);
+      if (testCase.operativo === 'entregado') {
+        expect(steps.every((step) => step.state === 'done')).toBe(true);
+      } else {
+        expect(steps.find((step) => step.state === 'current')?.label).toBe(testCase.label);
+      }
+      expect(orderPayLabel(current)).toBe(
+        testCase.diferido && testCase.pago === 'pendiente'
+          ? 'Pagas al final con tu cuenta'
+          : testCase.pago === 'pagado'
+            ? 'Pagado'
+            : 'Pago pendiente · efectivo',
+      );
+    }
   });
 
   it('no infiere un pago Stripe desde el estado operativo legado', () => {
@@ -115,7 +167,7 @@ describe('order-labels Android tracking', () => {
       },
     });
     expect(isOrderPaid(stripe)).toBe(false);
-    expect(orderPayLabel(stripe)).toBe('Tarjeta');
+    expect(orderPayLabel(stripe)).toBe('Pago pendiente · tarjeta');
     expect(isOrderPaid({ ...stripe, saldo_pendiente: '0.00' })).toBe(true);
   });
 

@@ -257,7 +257,12 @@ export interface OrderDetail {
   estado_pago?: PaymentStatus;
   metodo_pago: PaymentMethod;
   destino: OrderDestination;
+  /** Sesión exacta de la mesa/espacio; null en pedidos individuales. */
+  sesion_espacio_id?: string | null;
   espacio: OrderSpace | null;
+  sesion_espacio_estado?: 'abierta' | 'cerrada' | null;
+  sesion_espacio_inicio?: string | null;
+  sesion_espacio_cerrada_en?: string | null;
   subtotal: string;
   ahorro_combinado: string;
   cashback_otorgado: string;
@@ -321,6 +326,7 @@ export interface CreateOrderInput {
   metodo_pago: PaymentMethod;
   destino: OrderDestination;
   espacio_id: number | null;
+  sesion_espacio_id?: string;
   notas_cocina: string | null;
   items: CreateOrderItemInput[];
   /** Pagar al final: efectivo y en un espacio, solo si el negocio lo permite. */
@@ -441,6 +447,7 @@ export interface SharedTable {
   espacio: { id: number; nombre: string; tipo: string };
   /** Sesión activa de la mesa; la identidad local solo vale si coincide. */
   sesion_id: string;
+  sesion_inicio?: string | null;
   mi_alias: string;
   /** Quién soy en esta sesión; null si aún no me uní. */
   mi_participante: TableSelf | null;

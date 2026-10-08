@@ -9,23 +9,24 @@ import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { GuestLiveOrders } from '../components/guest-live-orders';
 import { GuestOrderSaveLink } from '../components/guest-order-save-link';
-import { GuestOrdersBanner } from '../components/guest-orders-banner';
 import { SharedTableCard } from '../components/shared-table-card';
+import { SessionOrdersCard } from '../components/session-orders';
 import { WaitingArcade } from '../arcade/waiting-arcade';
 import { LoadingSkeleton } from '../components/loading-skeleton';
 import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
-import { readGuestOrders } from '../lib/guest-orders';
 import { readGuest } from '../lib/guest-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { formatAmount } from '../lib/money';
 import { openTab } from '../lib/order-labels';
 import { readSpace, rememberSpace } from '../lib/space-session';
+import { clearClosedTableSession, observeTableSession } from '../lib/table-session-cleanup';
+import { groupOrdersBySession } from '../lib/session-orders';
 import { useGuestLiveOrders } from '../lib/use-guest-live-orders';
 import { useGuestSpaceToken } from '../lib/use-guest-space-token';
 import { usePwaInstall } from '../lib/pwa-install';
-import type { CatalogProduct, LegalVersions, PublicEstablishment } from '../types/api';
+import type { CatalogProduct, LegalVersions, PublicEstablishment, SharedTable } from '../types/api';
 
 export function GuestOrdersPage() {
   const { cart } = useCart();
@@ -36,20 +37,19 @@ export function GuestOrdersPage() {
   const [place, setPlace] = useState<PublicEstablishment | null>(null);
   const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
   const [legal, setLegal] = useState<LegalVersions | null>(null);
+  const [activeTable, setActiveTable] = useState<SharedTable | null>(null);
+  const [tableChecked, setTableChecked] = useState(false);
   const live = useGuestLiveOrders(slug ?? '');
-  // Lo guardado en este navegador también cuenta: con "Tu pedido #N" a la vista no se dice que no hay pedidos.
-  const savedHere = readGuestOrders().some((order) => order.slug === slug);
   const mesa = useGuestSpaceToken(slug);
   const guestName = readGuest()?.nombre ?? '';
   const qrToken = slug ? (readSpace(slug)?.qrToken ?? null) : null;
   const thumbImages = useMemo(() => catalogImageMap(catalogProducts), [catalogProducts]);
-  const liveTokens = useMemo(
-    () =>
-      new Set(
-        live.orders
-          .map((order) => order.seguimiento_token)
-          .filter((token): token is string => typeof token === 'string'),
-      ),
+  const liveSessionGroups = useMemo(
+    () => groupOrdersBySession(live.orders).filter((group) => group.sessionId !== activeTable?.sesion_id),
+    [activeTable?.sesion_id, live.orders],
+  );
+  const liveIndividualOrders = useMemo(
+    () => live.orders.filter((order) => !order.sesion_espacio_id),
     [live.orders],
   );
   const tab = openTab(live.orders);
@@ -82,12 +82,23 @@ export function GuestOrdersPage() {
     void api
       .currentTable(mesa.token)
       .then((table) => {
-        if (!active || !table) return;
+        if (!active) return;
+        if (!table) {
+          clearClosedTableSession(slug, readSpace(slug)?.espacioId);
+          return;
+        }
+        observeTableSession(table.sesion_id, {
+          slug,
+          espacioId: table.espacio.id,
+          nombre: table.espacio.nombre,
+          tipo: table.espacio.tipo,
+        });
         rememberSpace({
           slug,
           espacioId: table.espacio.id,
           nombre: table.espacio.nombre,
           tipo: table.espacio.tipo,
+          sesionId: table.sesion_id,
         });
       })
       .catch(() => undefined);
@@ -122,7 +133,9 @@ export function GuestOrdersPage() {
         {live.error ? <p className="alumno-error">{live.error}</p> : null}
         <SharedTableCard
           accessToken={mesa.token}
+          slug={slug}
           qrToken={qrToken}
+          onTableChange={(next) => { setActiveTable(next); setTableChecked(true); }}
           defaultAlias={guestName || undefined}
           legalNote={
             legal ? (
@@ -144,7 +157,7 @@ export function GuestOrdersPage() {
             void mesa.ensure().catch(() => undefined);
           }}
         />
-        {tab ? (
+        {tab && !live.orders.some((order) => order.sesion_espacio_id === activeTable?.sesion_id) ? (
           <section className="alumno-tab" aria-label="Tu cuenta">
             <div>
               <strong>Tu cuenta</strong>
@@ -153,12 +166,12 @@ export function GuestOrdersPage() {
                 cuenta a tu mesero.
               </span>
             </div>
-            <span className="alumno-tab__total">{formatAmount(tab.total)}</span>
+            <span className="alumno-tab__total">{tab.total === null ? 'Saldo no disponible' : formatAmount(tab.total)}</span>
           </section>
         ) : null}
         {live.orders.length === 0 && live.loading ? (
           <LoadingSkeleton shape="orders" label="Cargando pedidos…" />
-        ) : live.orders.length === 0 && savedHere ? null : live.orders.length === 0 ? (
+        ) : live.orders.length === 0 && (activeTable?.grupos.some((group) => group.pedidos.length > 0) || !tableChecked) ? null : live.orders.length === 0 ? (
           <div className="alumno-empty">
             <img src="/vaini/cutout-frente.png" alt="" />
             <p>Aún no hay pedidos en esta sesión.</p>
@@ -169,11 +182,18 @@ export function GuestOrdersPage() {
         ) : (
           <>
             <GuestLiveOrders
-              orders={live.orders}
+              orders={liveIndividualOrders}
               imageFor={(order) => orderThumbUrl(order, thumbImages, catalogProducts)}
               initialExpandedToken={nuevoToken}
             />
-            {live.orders
+            {liveSessionGroups.map((group) => (
+              <SessionOrdersCard
+                key={group.sessionId}
+                group={group}
+                initialExpanded={group.orders.some((order) => order.seguimiento_token === nuevoToken)}
+              />
+            ))}
+            {liveIndividualOrders
               .filter((order) => typeof order.seguimiento_token === 'string')
               .map((order) => (
                 <GuestOrderSaveLink
@@ -185,7 +205,6 @@ export function GuestOrdersPage() {
             <WaitingArcade />
           </>
         )}
-        <GuestOrdersBanner slug={slug} excludeTokens={liveTokens} />
         {pwa.offer && justOrdered ? (
           <section className="alumno-banner" aria-label="Instalar Vaiinilla">
             <p>

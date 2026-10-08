@@ -4,6 +4,8 @@ import { AlumnoPageHeader } from "../components/alumno-brand";
 import { AppShell } from "../components/app-shell";
 import { OrderTrackCard } from "../components/order-track-card";
 import { SharedTableCard } from "../components/shared-table-card";
+import { SessionOrdersCard } from "../components/session-orders";
+import { groupOrdersBySession } from "../lib/session-orders";
 import { readSpace } from "../lib/space-session";
 import { WaitingArcade } from "../arcade/waiting-arcade";
 import { useAuth } from "../context/auth-context";
@@ -27,6 +29,7 @@ import type {
   CatalogProduct,
   OrderDetail,
   PublicEstablishment,
+  SharedTable,
 } from "../types/api";
 import { LoadingSkeleton } from "../components/loading-skeleton";
 import { peekResource, resourceKeys, storeResource } from "../lib/resource-cache";
@@ -56,6 +59,8 @@ export function OrdersPage() {
   // Reclamo invitado → cuenta: tras pasarlos se vuelve a consultar para verlos aquí.
   const [claimKey, setClaimKey] = useState(0);
   const [tableKey, setTableKey] = useState(0);
+  const [activeTable, setActiveTable] = useState<SharedTable | null>(null);
+  const [tableChecked, setTableChecked] = useState(false);
   const [claim, setClaim] = useState<{
     state: "idle" | "busy" | "done" | "error";
     pedidos?: number;
@@ -136,8 +141,9 @@ export function OrdersPage() {
     }
     if (deskAutoSelected.current || expandedId || orders.length === 0) return;
     deskAutoSelected.current = true;
-    const firstActive = orders.find((item) => isActiveOrder(item));
-    setExpandedId(firstActive?.id ?? orders[0]?.id ?? null);
+    const individualOrders = orders.filter((item) => !item.sesion_espacio_id);
+    const firstActive = individualOrders.find((item) => isActiveOrder(item));
+    setExpandedId(firstActive?.id ?? individualOrders[0]?.id ?? null);
   }, [deskPane, expandedId, orders]);
 
   const selected = orders.find((order) => order.id === expandedId) ?? null;
@@ -145,8 +151,14 @@ export function OrdersPage() {
 
   if (ready && !user) return <GuestOrdersPage />;
 
-  const activeOrders = orders.filter((order) => isActiveOrder(order));
-  const pastOrders = orders.filter((order) => !isActiveOrder(order));
+  const sessionGroups = groupOrdersBySession(orders).filter((group) => group.sessionId !== activeTable?.sesion_id);
+  const individualOrders = orders.filter((order) => !order.sesion_espacio_id);
+  const activeOrders = individualOrders.filter((order) => isActiveOrder(order));
+  const pastOrders = individualOrders.filter((order) => !isActiveOrder(order));
+  // An order may remain operationally active after a forced session close.
+  // The session row is the source of truth for active vs historical display.
+  const activeSessionGroups = sessionGroups.filter((group) => group.sessionState === 'abierta');
+  const pastSessionGroups = sessionGroups.filter((group) => group.sessionState !== 'abierta');
   const tab = openTab(orders);
 
   function toggle(id: string) {
@@ -238,10 +250,12 @@ export function OrdersPage() {
         <SharedTableCard
           key={tableKey}
           accessToken={context?.access_token ?? null}
+          slug={place?.slug ?? placeGuess ?? undefined}
           qrToken={readSpace(place?.slug ?? placeGuess ?? "")?.qrToken ?? null}
-          onLeave={() => setTableKey((k) => k + 1)}
+          onTableChange={(next) => { setActiveTable(next); setTableChecked(true); }}
+          onLeave={() => { setTableKey((k) => k + 1); setActiveTable(null); setTableChecked(false); }}
         />
-        {tab ? (
+        {tab && !orders.some((order) => order.sesion_espacio_id === activeTable?.sesion_id) && activeSessionGroups.length === 0 ? (
           <section className="alumno-tab" aria-label="Tu cuenta">
             <div>
               <strong>Tu cuenta</strong>
@@ -249,21 +263,21 @@ export function OrdersPage() {
                 {tab.count === 1 ? "1 pedido" : `${tab.count} pedidos`} por pagar al final. Pide la cuenta a tu mesero.
               </span>
             </div>
-            <span className="alumno-tab__total">{formatAmount(tab.total)}</span>
+            <span className="alumno-tab__total">{tab.total === null ? "Saldo no disponible" : formatAmount(tab.total)}</span>
           </section>
         ) : null}
         {loading && orders.length === 0 && !error ? (
           <LoadingSkeleton shape="orders" label="Cargando pedidos…" />
         ) : null}
-        {orders.length === 0 && !error && !loading ? (
+        {orders.length === 0 && !error && !loading && tableChecked && !activeTable?.grupos.some((group) => group.pedidos.length > 0) ? (
           <div className="alumno-empty">
             <img src="/vaini/cutout-frente.png" alt="" />
             <p>Aún no hay pedidos en esta sesión.</p>
           </div>
-        ) : (
+        ) : orders.length === 0 ? null : (
           <div className="alumno-orders-desk">
             <div className="alumno-orders-desk__list">
-              {activeOrders.length > 0 ? (
+              {activeSessionGroups.length > 0 || activeOrders.length > 0 ? (
                 <section aria-labelledby="orders-live">
                   <h2
                     className="alumno-section-label alumno-section-label--live"
@@ -272,6 +286,13 @@ export function OrdersPage() {
                     En curso
                   </h2>
                   <div className="alumno-order-list alumno-arrive">
+                    {activeSessionGroups.map((group) => (
+                      <SessionOrdersCard
+                        key={group.sessionId}
+                        group={group}
+                        initialExpanded={group.orders.some((order) => order.id === expandedId)}
+                      />
+                    ))}
                     {activeOrders.map((order) => (
                       <OrderTrackCard
                         key={order.id}
@@ -320,6 +341,16 @@ export function OrdersPage() {
                             : null
                         }
                       />
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+              {pastSessionGroups.length > 0 ? (
+                <section aria-labelledby="orders-table-history">
+                  <h2 className="alumno-section-label" id="orders-table-history">Historial de mesas</h2>
+                  <div className="alumno-order-list alumno-arrive">
+                    {pastSessionGroups.map((group) => (
+                      <SessionOrdersCard key={group.sessionId} group={group} />
                     ))}
                   </div>
                 </section>

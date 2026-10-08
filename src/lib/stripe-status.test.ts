@@ -88,6 +88,14 @@ describe('stripe confirmation policy', () => {
       estado_pago: 'pendiente',
       saldo_pendiente: '123.60',
     })).toBe(false);
+    expect(isStripePaymentConfirmedByBackend({
+      ...paid,
+      saldo_pendiente: '1.00',
+    })).toBe(false);
+    expect(isStripePaymentConfirmedByBackend({
+      ...paid,
+      saldo_pendiente: 'invalid',
+    })).toBe(false);
     expect(stripePaymentCopy(stripeOrder('por_cobrar', 'pendiente_pago'))).toBe(STRIPE_COPY.waiting);
     expect(stripePaymentCopy(stripeOrder('cobrado', 'confirmado'))).toBe(STRIPE_COPY.waiting);
     expect(stripePaymentCopy(paid)).toBe(STRIPE_COPY.confirmed);

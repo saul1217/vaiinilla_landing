@@ -90,6 +90,7 @@ export function toCreateOrderInput(
   destination: OrderDestination = 'para_llevar',
   spaceId: number | null = null,
   payAtEnd = false,
+  tableSessionId?: string | null,
 ): CreateOrderInput {
   if (lines.length < 1 || lines.length > 50) {
     throw new Error('El pedido debe contener entre 1 y 50 líneas.');
@@ -110,6 +111,7 @@ export function toCreateOrderInput(
     metodo_pago: paymentMethod,
     destino: destination,
     espacio_id: destination === 'en_espacio' ? spaceId : null,
+    ...(destination === 'en_espacio' && tableSessionId ? { sesion_espacio_id: tableSessionId } : {}),
     notas_cocina: combinedKitchenNotes || null,
     ...(payAtEnd ? { pago_diferido: true } : {}),
     items: lines.map((line) => {

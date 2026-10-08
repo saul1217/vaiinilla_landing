@@ -12,6 +12,29 @@ export interface GuestOrderLink {
   folio: number;
   placeName: string;
   createdAt: number;
+  /** Evita tratar los enlaces de una mesa como pedidos individuales activos. */
+  sessionId?: string;
+  destination?: 'en_espacio' | 'para_llevar';
+}
+
+export function tagGuestOrderSession(token: string, sessionId: string): void {
+  try {
+    const next = readGuestOrders().map((order) =>
+      order.token === token ? { ...order, sessionId } : order,
+    );
+    localStorage.setItem(KEY, JSON.stringify(next.slice(0, MAX)));
+  } catch {
+    // El vínculo de seguimiento sigue disponible aunque no se pueda etiquetar localmente.
+  }
+}
+
+export function forgetGuestOrdersForSession(sessionId: string): void {
+  try {
+    const rest = readGuestOrders().filter((order) => order.sessionId !== sessionId);
+    localStorage.setItem(KEY, JSON.stringify(rest.slice(0, MAX)));
+  } catch {
+    // El token de soporte no se invalida en backend.
+  }
 }
 
 export function trackingPath(token: string): string {

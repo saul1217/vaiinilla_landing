@@ -123,6 +123,55 @@ const liveOrder = {
   ],
 };
 
+function tableOrder(folio: number, participantId: string, summary: string) {
+  return {
+    id: `table-${folio}`,
+    folio,
+    estado: 'preparando',
+    estado_operativo: 'preparando',
+    metodo_pago: 'efectivo',
+    pago_diferido: true,
+    destino: 'en_espacio',
+    sesion_espacio_id: 'session-67',
+    sesion_espacio_estado: 'abierta',
+    espacio: { id: 67, nombre: 'Mesa 67', tipo: 'mesa' },
+    total: '50.00',
+    items: [{
+      id: folio, producto_id: folio, nombre_producto: summary.replace(/^\d+× /, ''), cantidad: 1,
+      subtotal: '50.00', precio_digital_unitario: '50.00', opciones: [],
+    }],
+    creado_en: `2026-10-08T18:${String(folio).padStart(2, '0')}:00Z`,
+    actualizado_en: '2026-10-08T18:30:00Z',
+    usuario: { participante_id: participantId },
+  };
+}
+
+function sharedTableFixture() {
+  return {
+    espacio: { id: 67, nombre: 'Mesa 67', tipo: 'mesa' },
+    sesion_id: 'session-67',
+    sesion_inicio: '2026-10-08T18:00:00Z',
+    mi_alias: 'Kikin',
+    mi_participante: { id: 'kikin', alias: 'Kikin' },
+    cuenta_abierta: true,
+    participantes: [
+      { id: 'kikin', alias: 'Kikin', soy_yo: true, unido_en: null },
+      { id: 'david', alias: 'David', soy_yo: false, unido_en: null },
+    ],
+    grupos: [
+      { alias: 'Kikin', participante_id: 'kikin', soy_yo: true, total: '100.00', pagado: '0.00', pendiente: '100.00', pedidos: [
+        { id: 'table-33', folio: 33, estado: 'preparando', items_resumen: '1× Quesadilla', total: '50.00', pendiente_cobro: true, creado_en: '2026-10-08T18:33:00Z' },
+        { id: 'table-34', folio: 34, estado: 'preparando', items_resumen: '1× Agua', total: '50.00', pendiente_cobro: true, creado_en: '2026-10-08T18:34:00Z' },
+      ] },
+      { alias: 'David', participante_id: 'david', soy_yo: false, total: '50.00', pagado: '0.00', pendiente: '50.00', pedidos: [
+        { id: 'table-35', folio: 35, estado: 'preparando', items_resumen: '1× Hamburguesa', total: '50.00', pendiente_cobro: true, creado_en: '2026-10-08T18:35:00Z' },
+      ] },
+    ],
+    totales: { total: '150.00', pagado: '0.00', pendiente: '150.00' },
+    mi_parte: { total: '100.00', pagado: '0.00', pendiente: '100.00' },
+  };
+}
+
 function renderOrders(entry = "/cuenta/pedidos") {
   return render(
     <MemoryRouter initialEntries={[entry]}>
@@ -211,7 +260,7 @@ describe("OrdersPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("#42")).toBeInTheDocument();
     expect(screen.getByText(/1 quiere keke/i)).toBeInTheDocument();
-    expect(screen.getByText(/para llevar · efectivo/i)).toBeInTheDocument();
+    expect(screen.getByText(/para llevar · pago pendiente · efectivo/i)).toBeInTheDocument();
     expect(screen.getByText("$70")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /ver seguimiento/i }),
@@ -223,13 +272,61 @@ describe("OrdersPage", () => {
     });
   });
 
+  it('representa tres pedidos de una sesión en la única tarjeta de mesa confirmada por el backend', async () => {
+    listOrders.mockResolvedValue({ orders: [
+      tableOrder(33, 'kikin', '1× Quesadilla'),
+      tableOrder(34, 'kikin', '1× Agua'),
+      tableOrder(35, 'david', '1× Hamburguesa'),
+    ] });
+    currentTable.mockResolvedValue(sharedTableFixture());
+
+    renderOrders();
+
+    expect(await screen.findByRole('article', { name: 'Sesión activa de Mesa 67' })).toBeInTheDocument();
+    expect(screen.getByText('Kikin (tú)')).toBeInTheDocument();
+    expect(screen.getAllByText('David')).toHaveLength(2);
+    expect(screen.getByText('Tu parte por pagar').nextElementSibling).toHaveTextContent('$100');
+    expect(screen.getByText('Por pagar de la mesa').nextElementSibling).toHaveTextContent('$150');
+    expect(document.querySelectorAll('article.shared-table')).toHaveLength(1);
+    expect(document.querySelectorAll('article.alumno-session-order')).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: /ver seguimiento/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Pedir más' })).toHaveAttribute('href', '/e/demo-a');
+  });
+
+  it('no muestra el vacío cuando la cuenta activa tiene consumo de otras personas y GET /pedidos está vacío', async () => {
+    listOrders.mockResolvedValue({ orders: [] });
+    currentTable.mockResolvedValue(sharedTableFixture());
+
+    renderOrders();
+
+    expect(await screen.findByRole('article', { name: 'Sesión activa de Mesa 67' })).toBeInTheDocument();
+    expect(screen.queryByText(/aún no hay pedidos en esta sesión/i)).not.toBeInTheDocument();
+  });
+
+  it('mantiene en historial una sesión cerrada aunque el estado operativo del pedido siga activo', async () => {
+    listOrders.mockResolvedValue({ orders: [{
+      ...tableOrder(33, 'kikin', '1× Quesadilla'),
+      estado: 'preparando',
+      sesion_espacio_estado: 'cerrada',
+      sesion_espacio_inicio: '2026-10-08T18:00:00Z',
+      sesion_espacio_cerrada_en: '2026-10-08T19:00:00Z',
+    }] });
+    currentTable.mockResolvedValue(null);
+
+    renderOrders();
+
+    expect(await screen.findByRole('heading', { name: 'Historial de mesas' })).toBeInTheDocument();
+    expect(screen.getByRole('article', { name: 'Pedidos de Mesa 67' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'En curso' })).not.toBeInTheDocument();
+  });
+
   it("expande el seguimiento con timeline y pedido completo", async () => {
     const user = userEvent.setup();
     renderOrders();
     await user.click(
       await screen.findByRole("button", { name: /ver seguimiento/i }),
     );
-    expect(screen.getByText(/para llevar · efectivo/i)).toBeInTheDocument();
+    expect(screen.getByText(/para llevar · pago pendiente · efectivo/i)).toBeInTheDocument();
     expect(document.querySelectorAll(".alumno-timeline li")).toHaveLength(4);
     expect(
       document.querySelector(
