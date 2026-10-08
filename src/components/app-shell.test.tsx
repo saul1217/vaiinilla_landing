@@ -62,6 +62,26 @@ describe('AppShell', () => {
     expect(screen.queryByRole('link', { name: /cartera/i })).not.toBeInTheDocument();
   });
 
+  it('invitado de mesa sin llave guardada: el dock no manda a iniciar sesión', () => {
+    authState.user = null;
+    localStorage.setItem(
+      'vaiinilla.buyer.table-participant.v1',
+      JSON.stringify({ slug: 'demo-a', espacioId: 3, sesionId: 's-1', participanteId: 'p-1', alias: 'Ana' }),
+    );
+    render(
+      <MemoryRouter>
+        <AppShell tab="menu">
+          <main>contenido</main>
+        </AppShell>
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: /pedidos/i })).toHaveAttribute('href', '/cuenta/pedidos');
+    expect(screen.queryByRole('link', { name: /cartera/i })).not.toBeInTheDocument();
+    for (const link of screen.getAllByRole('link')) {
+      expect(link.getAttribute('href') ?? '').not.toMatch(/^\/cuenta\?next=/);
+    }
+  });
+
   it('tras "Comprar sin cuenta" (aún sin pedido) el dock no manda a iniciar sesión', () => {
     authState.user = null;
     sessionStorage.setItem('vaiinilla.buyer.guest-buy.v1', '1');
