@@ -26,9 +26,7 @@ import { isStripeCheckoutEnabled, offersCardPayment, STRIPE_UNAVAILABLE_COPY } f
 import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '../lib/stripe-session';
 import { readGuest } from '../lib/guest-session';
 import { clientSessionForPlace } from '../lib/client-session-for-place';
-import {
-  dropTableParticipantOnSessionChange,
-} from '../lib/table-participant';
+import { currentScannedTable, joinedScannedTable } from '../lib/scanned-table';
 import { rememberGuestOrder, trackingPath } from '../lib/guest-orders';
 import type { SpaceSession } from '../lib/space-session';
 import type {
@@ -112,7 +110,8 @@ export function CartPage() {
   const qrToken = scanned?.qrToken ?? null;
   const [tableAlias, setTableAlias] = useState<string | null>(null);
   useEffect(() => {
-    if (!qrToken) {
+    // Sin identidad de participante no hay nada que confirmar: no se consulta la mesa.
+    if (!qrToken || !scanned || !joinedScannedTable(scanned)) {
       setTableAlias(null);
       return;
     }
@@ -127,13 +126,16 @@ export function CartPage() {
           openClientSession: openClientSessionRef.current,
         });
         if (!active) return;
-        const table = await api.tableSession(client.access_token, qrToken);
+        const table = await currentScannedTable(client.access_token, scanned);
         if (!active) return;
-        // Sesión nueva: la identidad local se borra y se vuelve a pedir nombre.
-        dropTableParticipantOnSessionChange(table.sesion_id);
         // Solo el servidor confirma quién está unido. El displayName de la cuenta
         // no atribuye pedidos a un participante temporal.
-        setTableAlias(table.yo?.alias ?? null);
+        setTableAlias(table?.mi_alias ?? null);
+        // La mesa ya se cerró: el teléfono deja de mostrarla.
+        if (!table) {
+          setForHere(false);
+          setSpaceVersion((v) => v + 1);
+        }
       } catch {
         if (active) setTableAlias(null);
       }
@@ -141,7 +143,7 @@ export function CartPage() {
     return () => {
       active = false;
     };
-  }, [context, qrToken, slug, user, place]);
+  }, [context, qrToken, scanned, slug, user, place]);
   const guestNameValid = tableAlias ? true : guestName.trim().length >= 2;
   const whoHref =
     qrToken != null ? `/e/${slug}/m/${encodeURIComponent(qrToken)}/quien?next=${encodeURIComponent(`/e/${slug}/carrito`)}` : null;
@@ -377,11 +379,16 @@ export function CartPage() {
       }
       if (destination === 'en_espacio' && target?.tipo === 'mesa' && qrToken && whoHref) {
         // El estado local solo sirve para presentar la UI. Antes de crear el pedido
-        // confirmamos en backend que esta identidad ya pertenece a la sesión vigente.
-        const table = await api.tableSession(session.access_token, qrToken);
-        if (!table.yo || Number(table.espacio.id) !== Number(target.espacioId)) {
+        // confirmamos en backend que esta identidad sigue en la mesa abierta. Sin
+        // identidad se pide unirse; con la mesa liberada no se pide nada ni se reabre.
+        if (!joinedScannedTable(target)) {
           void navigate(whoHref);
           return;
+        }
+        if (!(await currentScannedTable(session.access_token, target))) {
+          setForHere(false);
+          setSpaceVersion((v) => v + 1);
+          throw new Error('Tu mesa ya no está abierta. Escanea el QR de la mesa para pedir.');
         }
       }
       const payload = toCreateOrderInput(
