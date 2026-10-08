@@ -16,7 +16,7 @@ export function AlumnoLockup({
   const content = (
     <>
       <img src="/brand/vaiinilla-mark.png" alt="" width="36" height="36" />
-      <span translate="no">Vaiinilla.</span>
+      <span translate="no">Vaiinilla</span>
     </>
   );
   if (!linked) {
