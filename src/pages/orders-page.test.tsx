@@ -211,7 +211,7 @@ describe("OrdersPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("#42")).toBeInTheDocument();
     expect(screen.getByText(/1 quiere keke/i)).toBeInTheDocument();
-    expect(screen.getByText(/para llevar · efectivo/i)).toBeInTheDocument();
+    expect(screen.getByText(/para llevar · pago pendiente · efectivo/i)).toBeInTheDocument();
     expect(screen.getByText("$70")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /ver seguimiento/i }),
@@ -229,7 +229,7 @@ describe("OrdersPage", () => {
     await user.click(
       await screen.findByRole("button", { name: /ver seguimiento/i }),
     );
-    expect(screen.getByText(/para llevar · efectivo/i)).toBeInTheDocument();
+    expect(screen.getByText(/para llevar · pago pendiente · efectivo/i)).toBeInTheDocument();
     expect(document.querySelectorAll(".alumno-timeline li")).toHaveLength(4);
     expect(
       document.querySelector(

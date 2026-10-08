@@ -1,4 +1,5 @@
 import type { OrderDetail, StripePaymentStatus } from '../types/api';
+import { moneyToCents } from './money';
 
 export const STRIPE_POLL_INTERVAL_MS = 3_000;
 export const STRIPE_POLL_TIMEOUT_MS = 90_000;
@@ -17,12 +18,13 @@ export const STRIPE_COPY = {
 } as const;
 
 export function isStripePaymentConfirmedByBackend(order: OrderDetail): boolean {
-  return (
-    order.metodo_pago === 'stripe' &&
-    order.pago?.payment_status === 'confirmado' &&
-    (order.estado_pago === 'pagado' ||
-      (order.saldo_pendiente !== undefined && order.saldo_pendiente === '0.00'))
-  );
+  if (order.metodo_pago !== 'stripe' || order.pago?.payment_status !== 'confirmado') return false;
+  if (order.saldo_pendiente !== undefined) {
+    const saldo = moneyToCents(order.saldo_pendiente);
+    if (saldo !== 0n) return false;
+    return order.estado_pago === undefined || order.estado_pago === 'pagado' || order.estado_pago === 'sin_cargo';
+  }
+  return order.estado_pago === 'pagado' || order.estado_pago === 'sin_cargo';
 }
 
 export function canRetryStripePayment(order: OrderDetail): boolean {

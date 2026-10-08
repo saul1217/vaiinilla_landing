@@ -249,7 +249,7 @@ export function OrdersPage() {
                 {tab.count === 1 ? "1 pedido" : `${tab.count} pedidos`} por pagar al final. Pide la cuenta a tu mesero.
               </span>
             </div>
-            <span className="alumno-tab__total">{formatAmount(tab.total)}</span>
+            <span className="alumno-tab__total">{tab.total === null ? "Saldo no disponible" : formatAmount(tab.total)}</span>
           </section>
         ) : null}
         {loading && orders.length === 0 && !error ? (

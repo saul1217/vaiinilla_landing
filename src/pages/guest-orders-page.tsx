@@ -153,7 +153,7 @@ export function GuestOrdersPage() {
                 cuenta a tu mesero.
               </span>
             </div>
-            <span className="alumno-tab__total">{formatAmount(tab.total)}</span>
+            <span className="alumno-tab__total">{tab.total === null ? 'Saldo no disponible' : formatAmount(tab.total)}</span>
           </section>
         ) : null}
         {live.orders.length === 0 && live.loading ? (
