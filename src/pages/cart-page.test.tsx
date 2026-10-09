@@ -307,7 +307,7 @@ describe('CartPage', () => {
     };
     const user = userEvent.setup();
     renderCart();
-    await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+    await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
     expect(await screen.findByRole('radio', { name: /pago en caja/i })).toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: /pago con stripe/i })).not.toBeInTheDocument();
   });
@@ -329,14 +329,14 @@ describe('CartPage', () => {
     };
     const user = userEvent.setup();
     renderCart();
-    expect(await screen.findByRole('button', { name: /^pagar$/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^continuar$/i })).toBeInTheDocument();
     expect(document.querySelector('.alumno-line__thumb--vaini img')).toHaveAttribute(
       'src',
       '/vaini/cutout-frente.png',
     );
     expect(screen.getByText('$120 c/u')).toBeInTheDocument();
     expect(screen.getByText('Total $120')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /^pagar$/i }));
+    await user.click(screen.getByRole('button', { name: /^continuar$/i }));
     expect(await screen.findByRole('heading', { name: /cómo quieres pagar/i })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /pago en caja/i })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /saldo vaiinilla/i })).toBeInTheDocument();
@@ -380,7 +380,7 @@ describe('CartPage', () => {
     });
     const user = userEvent.setup();
     renderCart();
-    await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+    await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
     await user.click(await screen.findByRole('radio', { name: /pago con stripe/i }));
     await user.click(screen.getByRole('button', { name: /^continuar con/i }));
     expect(await screen.findByText(/pedido creado/i)).toBeInTheDocument();
@@ -433,7 +433,7 @@ describe('CartPage', () => {
       cocina_en_linea: true,
     });
 
-    expect(await screen.findByRole('button', { name: /^pagar$/i })).toBeEnabled();
+    expect(await screen.findByRole('button', { name: /^continuar$/i })).toBeEnabled();
   });
 
   it('logueado sin entregados no fabrica historial ni cards de QA', async () => {
@@ -607,7 +607,7 @@ describe('CartPage', () => {
       const user = userEvent.setup();
       renderCart();
 
-      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
       expect(screen.queryByText(/cuenta login/i)).not.toBeInTheDocument();
       expect(screen.queryByRole('radio', { name: /saldo vaiinilla/i })).not.toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Términos' })).toHaveAttribute('href', 'https://vaiinilla.app/terminos');
@@ -632,7 +632,7 @@ describe('CartPage', () => {
     it('sin cuenta no ofrece tarjeta por ahora (solo caja o pagar al final)', async () => {
       const user = userEvent.setup();
       renderCart();
-      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
       expect(screen.queryByRole('radio', { name: /pago con stripe/i })).not.toBeInTheDocument();
       expect(screen.getByRole('radio', { name: /pago en caja/i })).toBeInTheDocument();
     });
@@ -643,7 +643,7 @@ describe('CartPage', () => {
       createOrder.mockResolvedValue({ id: 'ord-g2', folio: 23, estado: 'por_cobrar', metodo_pago: 'efectivo', destino: 'para_llevar', qr_token: 'qr', espacio: null, total: '240.00', items: [], invitado: true, seguimiento_token: SEGUIMIENTO });
       const user = userEvent.setup();
       renderCart();
-      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
       expect(screen.getByLabelText('Tu nombre')).toHaveValue('Lupita');
       await user.click(screen.getByRole('button', { name: /^continuar con/i }));
       expect(await screen.findByText(`Mis pedidos ?nuevo=${SEGUIMIENTO}`)).toBeInTheDocument();
@@ -685,7 +685,7 @@ describe('CartPage', () => {
       const user = userEvent.setup();
       renderCart();
 
-      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
       await user.click(screen.getByRole('button', { name: /^continuar con/i }));
 
       expect(await screen.findAllByText(/verifica tu correo antes de continuar/i)).not.toHaveLength(0);
@@ -721,7 +721,7 @@ describe('CartPage', () => {
       const user = userEvent.setup();
       renderCart();
 
-      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
       const confirmButton = screen.getByRole('button', { name: /^continuar con/i });
       await user.click(confirmButton);
       await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(2));
@@ -768,7 +768,7 @@ describe('CartPage', () => {
       const user = userEvent.setup();
       renderCart();
 
-      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
       await user.click(screen.getByRole('button', { name: /^continuar con/i }));
 
       // Un reintento silencioso con token fresco, sin pedir reenvío.
@@ -813,7 +813,7 @@ describe('CartPage', () => {
       const user = userEvent.setup();
       renderCart();
       expect(await screen.findByText(/en tu cancha/i)).toBeInTheDocument();
-      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
       const option = await screen.findByRole('radio', { name: /pagar al final/i });
       expect(screen.getByText(/paga todo junto al irte de tu cancha/i)).toBeInTheDocument();
       await user.click(option);
@@ -842,7 +842,7 @@ describe('CartPage', () => {
       createOrder.mockResolvedValue({ id: 'p9', metodo_pago: 'efectivo', qr_token: null });
       const user = userEvent.setup();
       renderCart();
-      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
       await user.click(await screen.findByRole('radio', { name: /pagar al final/i }));
       await user.click(screen.getByRole('radio', { name: /pago en caja/i }));
       await user.click(screen.getByRole('button', { name: /continuar con pago en caja/i }));
@@ -854,7 +854,7 @@ describe('CartPage', () => {
       setup({ permite: false, enEspacio: true });
       const user = userEvent.setup();
       renderCart();
-      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
       await screen.findByRole('heading', { name: /cómo quieres pagar/i });
       expect(screen.queryByRole('radio', { name: /pagar al final/i })).not.toBeInTheDocument();
     });
@@ -863,7 +863,7 @@ describe('CartPage', () => {
       setup({ permite: true, enEspacio: false });
       const user = userEvent.setup();
       renderCart();
-      await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
       await screen.findByRole('heading', { name: /cómo quieres pagar/i });
       expect(screen.queryByRole('radio', { name: /pagar al final/i })).not.toBeInTheDocument();
     });
@@ -886,7 +886,7 @@ describe('CartPage', () => {
     const user = userEvent.setup();
     renderCart();
 
-    await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+    await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
     await waitFor(() => expect(listReservations).toHaveBeenCalledWith('jwt'));
     await user.click(await screen.findByRole('radio', { name: /pago en caja/i }));
     await user.click(screen.getByRole('button', { name: /^continuar con/i }));
@@ -909,7 +909,7 @@ describe('CartPage', () => {
     };
     const user = userEvent.setup();
     renderCart();
-    await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+    await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
     await user.click(await screen.findByRole('radio', { name: /saldo vaiinilla/i }));
 
     expect((await screen.findAllByText(/Total \$100(\.00)?$/)).length).toBeGreaterThan(0);

@@ -526,7 +526,7 @@ export function CartPage() {
               canCheckout
                 ? operationalVerificationPending
                   ? 'Verificando…'
-                  : 'Pagar'
+                  : 'Continuar'
                 : 'Crea tu cuenta para pedir aquí'
             }
             payDisabled={
