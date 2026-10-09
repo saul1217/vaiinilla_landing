@@ -14,6 +14,7 @@ import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import { productImageUrl } from '../lib/catalog-images';
 import { resolveClientSession } from '../lib/client-session';
+import { trackingPath } from '../lib/guest-orders';
 import { guestSession } from '../lib/guest-session';
 import { createReservationsClient } from '../lib/reservations-client';
 import { formatAmount } from '../lib/money';
@@ -116,6 +117,7 @@ export function ReservationsPage() {
             client={client}
             slug={slug}
             cardOffered={offersCardPayment(place)}
+            guest={!user}
           />
         ) : error ? null : (
           <LoadingSkeleton shape="rows" label="Abriendo tu sesión…" />
@@ -139,11 +141,14 @@ export function ReservationsScreen({
   client,
   slug,
   cardOffered = false,
+  guest = false,
 }: {
   client: ReservationsClient;
   slug: string;
   /** Tarjeta: solo si el dueño la activó en su panel. */
   cardOffered?: boolean;
+  /** Sin cuenta: el pedido se sigue por su enlace de seguimiento, no en /cuenta. */
+  guest?: boolean;
 }) {
   const navigate = useNavigate();
   const [confirmCancel, setConfirmCancel] = useState<Reservation | null>(null);
@@ -165,6 +170,10 @@ export function ReservationsScreen({
       } catch {
         // Sin hoja de pago el detalle del pedido ofrece reintentar.
       }
+    }
+    if (guest) {
+      void navigate(order.seguimiento_token ? trackingPath(order.seguimiento_token) : `/e/${slug}`);
+      return;
     }
     void navigate(`/cuenta/pedidos/${order.id}`);
   }
@@ -646,7 +655,7 @@ function Summary({
         <p className="alumno-res__summary-price">
           <span aria-hidden="true">$</span>
           <RollingNumber value={price} />
-          <small>con efectivo o saldo</small>
+          <small>con efectivo</small>
         </p>
       ) : null}
       <p className="alumno-res__summary-note">
@@ -675,7 +684,6 @@ const PAY_OPTIONS: Array<{
   detail: string;
   price: 'card' | 'cash';
 }> = [
-  { method: 'saldo', title: 'Saldo', detail: 'Se paga al instante con tu cartera.', price: 'cash' },
   { method: 'stripe', title: 'Tarjeta', detail: 'Pago seguro con tu tarjeta.', price: 'card' },
   {
     method: 'efectivo',
