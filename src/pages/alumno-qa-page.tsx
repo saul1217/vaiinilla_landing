@@ -160,9 +160,6 @@ const CARD_LISTO = qaOrder({
   folio: 93,
   estado: "listo",
   metodo_pago: "stripe",
-  estado_pago: "pagado",
-  monto_pagado: "73.70",
-  saldo_pendiente: "0.00",
   qr_token: "QA94LISTO",
   pago: {
     payment_attempt_id: "qa-attempt-2",
@@ -562,7 +559,7 @@ export function AlumnoQaNewOrdersPage() {
                 {tab.count === 1 ? "1 pedido" : `${tab.count} pedidos`} por pagar al final. Pide la cuenta a tu mesero.
               </span>
             </div>
-            <span className="alumno-tab__total">{tab.total === null ? "Saldo no disponible" : formatAmount(tab.total)}</span>
+            <span className="alumno-tab__total">{formatAmount(tab.total)}</span>
           </section>
         ) : null}
         <h2 className="alumno-section-label alumno-section-label--live">En curso</h2>

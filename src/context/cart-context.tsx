@@ -3,7 +3,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -21,7 +20,6 @@ interface CartContextValue {
     optionIds: number[],
     quantity: number,
     notes?: string,
-    table?: { sessionId?: string | null; spaceId?: number | null },
   ) => void;
   updateQuantity: (productId: number, optionIds: number[], quantity: number, notes?: string) => void;
   removeLine: (productId: number, optionIds: number[], notes?: string) => void;
@@ -51,21 +49,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCart(persistCart(next));
   }, []);
 
-  useEffect(() => {
-    const invalidate = (event: Event) => {
-      const detail = (event as CustomEvent<{ slug: string; sessionId: string | null; spaceId: number }>).detail;
-      setCart((current) => {
-        if (!current || current.slug !== detail.slug) return current;
-        const matches = detail.sessionId
-          ? current.sessionId === detail.sessionId
-          : current.spaceId === detail.spaceId;
-        return matches ? persistCart(null) : current;
-      });
-    };
-    window.addEventListener('vaiinilla:table-cart-invalidated', invalidate);
-    return () => window.removeEventListener('vaiinilla:table-cart-invalidated', invalidate);
-  }, []);
-
   const addLine = useCallback(
     (
       slug: string,
@@ -74,7 +57,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       optionIds: number[],
       quantity: number,
       notes?: string,
-      table?: { sessionId?: string | null; spaceId?: number | null },
     ) => {
       const preview = previewForProduct(product, optionIds, 1);
       if (!preview) throw new Error('No se pudo calcular el precio de vista previa.');
@@ -91,9 +73,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       };
       setCart((current) => {
         const base: StoredCart =
-          current && current.slug === slug && (current.sessionId ?? null) === (table?.sessionId ?? null)
-            ? current
-            : { slug, establishmentName, sessionId: table?.sessionId ?? null, spaceId: table?.spaceId ?? null, lines: [] };
+          current && current.slug === slug ? current : { slug, establishmentName, lines: [] };
         const existing = base.lines.find((line) => sameLine(line, product.id, optionIds, cleanNotes));
         const lines = existing
           ? base.lines.map((line) =>
@@ -102,7 +82,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 : line,
             )
           : [...base.lines, incoming];
-        return persistCart({ slug, establishmentName, sessionId: table?.sessionId ?? null, spaceId: table?.spaceId ?? null, lines });
+        return persistCart({ slug, establishmentName, lines });
       });
     },
     [],

@@ -56,8 +56,8 @@ describe('mesa compartida', () => {
 
   it('a la cuenta y sin pagar no dice "Cobrado"', () => {
     const base = { id: null, folio: 1, items_resumen: '', total: '1.00', creado_en: null };
-    expect(tableOrderState({ ...base, estado: 'cobrado', pendiente_cobro: true })).toBe('Pedido recibido · en cuenta');
-    expect(tableOrderState({ ...base, estado: 'listo', pendiente_cobro: true })).toBe('Listo · en cuenta');
+    expect(tableOrderState({ ...base, estado: 'cobrado', pendiente_cobro: true })).toBe('En la cuenta');
+    expect(tableOrderState({ ...base, estado: 'listo', pendiente_cobro: true })).toBe('Listo');
     expect(tableOrderState({ ...base, estado: 'entregado', pendiente_cobro: false })).toBe('Entregado · pagado');
   });
 
@@ -75,7 +75,7 @@ describe('mesa compartida', () => {
     await user.click(screen.getByRole('button', { name: /unirme a la mesa/i }));
 
     expect(apiMock.joinTable).toHaveBeenCalledWith('jwt', 'qr-1', 'Ana');
-    expect(await screen.findByRole('article', { name: 'Sesión activa de Mesa 3' })).toBeInTheDocument();
+    expect(await screen.findByRole('article', { name: 'Mesa 3' })).toBeInTheDocument();
   });
 
   it('sin QR y sin mesa no muestra nada', async () => {
@@ -112,7 +112,7 @@ describe('mesa compartida', () => {
     await user.click(await screen.findByRole('button', { name: /salir de la mesa/i }));
 
     expect(apiMock.leaveTable).toHaveBeenCalledWith('jwt');
-    await waitFor(() => expect(screen.queryByRole('article', { name: 'Sesión activa de Mesa 3' })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('article', { name: 'Mesa 3' })).not.toBeInTheDocument());
   });
 
   it('esto lo pago yo: marca un pedido por cobrar de otra persona', async () => {
@@ -177,7 +177,7 @@ describe('mesa compartida', () => {
 
     expect(onEnsureToken).toHaveBeenCalledWith('Lupi');
     expect(apiMock.joinTable).toHaveBeenCalledWith('guest-jwt', 'qr-1', 'Lupi');
-    expect(await screen.findByRole('article', { name: 'Sesión activa de Mesa 3' })).toBeInTheDocument();
+    expect(await screen.findByRole('article', { name: 'Mesa 3' })).toBeInTheDocument();
   });
 
   it('sesión vencida avisa para renovarla sin borrar la mesa', async () => {
@@ -197,11 +197,11 @@ describe('mesa compartida', () => {
     const user = userEvent.setup();
     render(<SharedTableCard accessToken="jwt" qrToken={null} onUnauthorized={onUnauthorized} />);
 
-    expect(await screen.findByRole('article', { name: 'Sesión activa de Mesa 3' })).toBeInTheDocument();
+    expect(await screen.findByRole('article', { name: 'Mesa 3' })).toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: 'Esto lo pago yo' }));
 
     await waitFor(() => expect(onUnauthorized).toHaveBeenCalled());
     // La mesa que ya se veía no se borra por una operación fallida.
-    expect(screen.getByRole('article', { name: 'Sesión activa de Mesa 3' })).toBeInTheDocument();
+    expect(screen.getByRole('article', { name: 'Mesa 3' })).toBeInTheDocument();
   });
 });

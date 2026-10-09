@@ -27,7 +27,6 @@ import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '..
 import { readGuest } from '../lib/guest-session';
 import { clientSessionForPlace } from '../lib/client-session-for-place';
 import { currentScannedTable, joinedScannedTable } from '../lib/scanned-table';
-import { observeTableSession } from '../lib/table-session-cleanup';
 import { rememberGuestOrder, trackingPath } from '../lib/guest-orders';
 import type { SpaceSession } from '../lib/space-session';
 import type {
@@ -375,42 +374,23 @@ export function CartPage() {
         if (target) setRentalSpace(target);
       }
       const destination = here && target ? 'en_espacio' : 'para_llevar';
-      let tableSessionId: string | null = null;
       if (useTab && !canPayAtEnd(operational, destination === 'en_espacio')) {
         throw new Error('Este negocio ya no permite pagar al final. Elige otra forma de pago.');
       }
-      if (destination === 'en_espacio' && target?.tipo === 'mesa' && qrToken) {
+      if (destination === 'en_espacio' && target?.tipo === 'mesa' && qrToken && whoHref) {
         // El estado local solo sirve para presentar la UI. Antes de crear el pedido
-        // La cuenta solo sigue si esta identidad está unida y el backend confirma
-        // que la mesa permanece en la sesión abierta; el checkout nunca la reabre.
+        // confirmamos en backend que esta identidad sigue en la mesa abierta. Sin
+        // identidad se pide unirse; con la mesa liberada no se pide nada ni se reabre.
         if (!joinedScannedTable(target)) {
-          if (whoHref) {
-            void navigate(whoHref);
-            return;
-          }
-          throw new Error('Vuelve a escanear el QR de la mesa para continuar.');
+          void navigate(whoHref);
+          return;
         }
-        const table = await currentScannedTable(session.access_token, target);
-        if (!table) {
+        if (!(await currentScannedTable(session.access_token, target))) {
           setForHere(false);
           setSpaceVersion((v) => v + 1);
           throw new Error('Tu mesa ya no está abierta. Escanea el QR de la mesa para pedir.');
         }
-        const staleCart = observeTableSession(table.sesion_id, {
-          slug,
-          espacioId: table.espacio.id,
-          nombre: table.espacio.nombre,
-          tipo: table.espacio.tipo,
-          qrToken,
-        });
-        if (staleCart) {
-          reset();
-          setError('La sesión de la mesa cambió. El carrito anterior se vació; vuelve al menú para pedir en esta sesión.');
-          return;
-        }
-        tableSessionId = table.sesion_id;
       }
-      tableSessionId ??= destination === 'en_espacio' && target?.tipo === 'mesa' ? target.sesionId ?? null : null;
       const payload = toCreateOrderInput(
         lines,
         payment,
@@ -418,7 +398,6 @@ export function CartPage() {
         destination,
         destination === 'en_espacio' && target ? target.espacioId : null,
         useTab,
-        tableSessionId,
       );
       const fingerprint = orderFingerprint(payload);
       const key = idempotencyKeyFor(fingerprint);
@@ -432,7 +411,7 @@ export function CartPage() {
       }
       reset();
       // La mesa se conserva para pedir otra ronda sin volver a escanear.
-      if (destination === 'en_espacio' && target) rememberSpace({ ...target, sesionId: tableSessionId ?? undefined, pagaAlFinal: useTab });
+      if (destination === 'en_espacio' && target) rememberSpace({ ...target, pagaAlFinal: useTab });
       forgetIdempotencyKey(fingerprint);
       // La tarjeta se cobra en la pantalla del pedido (espera la confirmación de Stripe);
       // el resto va a Mis pedidos, con el arcade y el pedido nuevo ya abierto.
@@ -444,8 +423,6 @@ export function CartPage() {
           folio: order.folio,
           placeName: place.nombre,
           createdAt: Date.now(),
-          destination: order.destino,
-          ...(order.sesion_espacio_id ?? tableSessionId ? { sessionId: order.sesion_espacio_id ?? tableSessionId ?? undefined } : {}),
         });
         // Solo la tarjeta se termina en el seguimiento; lo demás abre Mis pedidos igual
         // que un registrado (el pedido se expande por su token). El fallback (cuenta a

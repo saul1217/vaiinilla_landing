@@ -18,7 +18,6 @@ import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
 import { usePickupQrToken } from '../lib/use-pickup-qr';
 import {
   isTerminalOrderStatus,
-  orderOperationalStatus,
   itemNameLabel,
   orderDestinationLabel,
   orderPayLabel,
@@ -118,7 +117,7 @@ export function OrderDetailPage() {
     const schedule = () => {
       timer = window.setTimeout(() => {
         const current = orderRef.current;
-        if (current && isTerminalOrderStatus(orderOperationalStatus(current))) {
+        if (current && isTerminalOrderStatus(current.estado)) {
           schedule();
           return;
         }

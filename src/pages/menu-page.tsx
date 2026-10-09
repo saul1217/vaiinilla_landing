@@ -12,7 +12,6 @@ import { productImageUrl } from '../lib/catalog-images';
 import { sortProductsForTodo } from '../lib/catalog-order';
 import { initialsFrom } from '../lib/initials';
 import { rememberPlace } from '../lib/last-place';
-import { readSpace } from '../lib/space-session';
 import { formatAmount } from '../lib/money';
 import { piecesLabel, splitPieces } from '../lib/product-pieces';
 import { NotFoundPage } from './not-found-page';
@@ -159,11 +158,7 @@ export function MenuPage() {
       setError(null);
       return false;
     }
-    const seated = readSpace(slug);
-    addLine(place.slug, place.nombre, selected, optionIds, quantity, notes, {
-      sessionId: seated?.sesionId ?? null,
-      spaceId: seated?.espacioId ?? null,
-    });
+    addLine(place.slug, place.nombre, selected, optionIds, quantity, notes);
     if (!keepOpen) setSelected(null);
     setError(null);
     return true;
@@ -173,11 +168,7 @@ export function MenuPage() {
 
   function confirmSwitchCart(close: () => void) {
     if (pendingAdd && place) {
-      const seated = readSpace(slug);
-      addLine(place.slug, place.nombre, pendingAdd.product, pendingAdd.optionIds, pendingAdd.quantity, pendingAdd.notes, {
-        sessionId: seated?.sesionId ?? null,
-        spaceId: seated?.espacioId ?? null,
-      });
+      addLine(place.slug, place.nombre, pendingAdd.product, pendingAdd.optionIds, pendingAdd.quantity, pendingAdd.notes);
     }
     setPendingAdd(null);
     setSwitchCart(null);

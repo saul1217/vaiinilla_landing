@@ -44,7 +44,7 @@ describe('mesa agrupada por participante', () => {
   it('dos tocayos salen por separado (por id, no por alias)', async () => {
     apiMock.currentTable.mockResolvedValue(table());
     render(<SharedTableCard accessToken="jwt" qrToken={null} />);
-    expect(await screen.findByRole('article', { name: 'Sesión activa de Mesa 3' })).toBeInTheDocument();
+    expect(await screen.findByRole('article', { name: 'Mesa 3' })).toBeInTheDocument();
     // Dos grupos "David": uno por cada participante.
     expect(screen.getAllByRole('heading', { name: 'David' })).toHaveLength(2);
   });

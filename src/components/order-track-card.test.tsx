@@ -23,9 +23,6 @@ function order(overrides: Partial<OrderDetail> = {}): OrderDetail {
     ahorro_combinado: "0.00",
     cashback_otorgado: "0.00",
     total: "16.50",
-    estado_pago: "pagado",
-    monto_pagado: "16.50",
-    saldo_pendiente: "0.00",
     version: 1,
     creado_en: "2026-09-18T12:00:00Z",
     actualizado_en: "2026-09-18T12:00:00Z",
@@ -78,25 +75,25 @@ describe("OrderTrackCard pickup", () => {
     vi.stubGlobal("cancelAnimationFrame", () => undefined);
   });
 
-  it("el estado legado cobrado se presenta como recibido, sin Recógelo ni QR", () => {
+  it("en cobrado expandido es timeline, sin Recógelo ni QR", () => {
     renderCard(order({ estado: "cobrado", folio: 94 }));
     expect(
       document.querySelector(".alumno-track-card__pill"),
-    ).toHaveTextContent("Pedido recibido");
+    ).toHaveTextContent("Cobrado");
     expect(document.querySelector(".alumno-pickup")).toBeNull();
     expect(
       document.querySelector(".alumno-track-card__status"),
-    ).toHaveTextContent(/Pedido recibido\s+El establecimiento recibió tu pedido/i);
+    ).toHaveTextContent(/Cobrado\s+Cocina recibió la comanda/i);
     expect(
       document.querySelector(
         ".alumno-timeline li.is-current .alumno-timeline__mark",
       )?.textContent,
-    ).toBe("1");
+    ).toBe("2");
     expect(
       document.querySelectorAll(".alumno-timeline li.is-done svg"),
-    ).toHaveLength(0);
+    ).toHaveLength(1);
     expect(
-      document.querySelector(".alumno-timeline li:nth-child(3)"),
+      document.querySelector(".alumno-timeline li:nth-child(4)"),
     ).toHaveTextContent(/recógelo en la barra/i);
     expect(
       (document.body.textContent?.match(/Recógelo en la barra/gi) ?? []).length,
@@ -182,11 +179,11 @@ describe("OrderTrackCard pickup", () => {
       document.querySelector(
         ".alumno-timeline li.is-current .alumno-timeline__mark",
       )?.textContent,
-    ).toBe("3");
+    ).toBe("4");
     // Solo trae artículos de caja: no pasa por cocina, así que Preparando queda omitido.
     expect(
       document.querySelectorAll(".alumno-timeline li.is-done svg"),
-    ).toHaveLength(1);
+    ).toHaveLength(2);
     expect(document.querySelector(".alumno-timeline li.is-skipped")).toHaveTextContent(/no aplica/i);
   });
 
@@ -208,7 +205,7 @@ describe("OrderTrackCard pickup", () => {
     expect(document.querySelector(".alumno-track-bar")).toBeTruthy();
     expect(
       document.querySelector(".alumno-track-card__status"),
-    ).toHaveTextContent(/Pedido recibido/i);
+    ).toHaveTextContent(/por cobrar/i);
     expect(
       screen.getByRole("button", { name: /ver seguimiento/i }),
     ).toBeInTheDocument();
@@ -375,7 +372,7 @@ describe('OrderTrackCard: la barra coincide con la lista', () => {
         />
       </MemoryRouter>,
     );
-    expect(nodes()).toEqual(['done', 'done', 'done', 'done']);
+    expect(nodes()).toEqual(['done', 'done', 'done', 'done', 'done']);
   });
 
   it('sin cocina: el icono de Preparando sale omitido, igual que en la lista', () => {
@@ -384,6 +381,6 @@ describe('OrderTrackCard: la barra coincide con la lista', () => {
         <OrderTrackCard order={order({ estado: 'listo' })} expanded={false} onToggle={() => undefined} />
       </MemoryRouter>,
     );
-    expect(nodes()).toEqual(['done', 'skipped', 'current', 'todo']);
+    expect(nodes()).toEqual(['done', 'done', 'skipped', 'current', 'todo']);
   });
 });

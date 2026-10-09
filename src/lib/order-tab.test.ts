@@ -51,52 +51,53 @@ function rental(overrides: Partial<OrderDetail> = {}): OrderDetail {
 }
 
 describe('pedido a la cuenta (pagar al final)', () => {
-  it('mantiene avance recibido y muestra por separado que se paga al final', () => {
-    expect(orderStatusLabel(tab(), NOW)).toBe('Pedido recibido');
-    expect(orderPayLabel(tab())).toBe('Pagas al final con tu cuenta');
-    expect(orderCompactPayLabel(tab())).toBe('Pagas al final');
-    expect(orderMetaLine(tab(), NOW)).toBe('Mesa 4 · Pagas al final');
+  it('no se lee como cobrado: está en la cuenta', () => {
+    expect(orderStatusLabel(tab(), NOW)).toBe('En tu cuenta');
+    expect(orderPayLabel(tab())).toBe('Se paga al final');
+    expect(orderCompactPayLabel(tab())).toBe('Al final');
+    expect(orderMetaLine(tab(), NOW)).toBe('Mesa 4 · Al final');
     expect(orderCollapsedHint(tab(), NOW)).toMatch(/Pagas al final/);
   });
 
   it('entregado y sin pagar sigue en curso y pide la cuenta', () => {
     const delivered = tab({ estado: 'entregado' });
-    expect(orderStatusLabel(delivered, NOW)).toBe('Entregado');
+    expect(orderStatusLabel(delivered, NOW)).toBe('Por pagar');
     expect(isActiveOrder(delivered, NOW)).toBe(true);
     expect(orderCollapsedHint(delivered, NOW)).toMatch(/cuenta a tu mesero/);
   });
 
   it('ya pagada vuelve a leerse normal y deja de estar en curso al entregarse', () => {
-    const paid = tab({ estado: 'entregado', pago_pendiente: false, estado_pago: 'pagado', saldo_pendiente: '0.00' });
+    const paid = tab({ estado: 'entregado', pago_pendiente: false });
     expect(orderStatusLabel(paid, NOW)).toBe('Entregado');
-    expect(orderPayLabel(paid)).toBe('Pagado');
+    expect(orderPayLabel(paid)).toBe('Cuenta pagada');
     expect(isActiveOrder(paid, NOW)).toBe(false);
   });
 
-  it('su timeline muestra únicamente el avance operativo', () => {
+  it('sus pasos son los de una cuenta, no "Por cobrar"', () => {
     const steps = orderTrackSteps(tab({ estado: 'preparando' }), NOW);
     expect(steps.map((s) => s.label)).toEqual([
-      'Pedido recibido',
+      'Pedido enviado',
+      'En tu cuenta',
       'Preparando',
       'Listo',
       'Entregado',
     ]);
-    expect(steps.map((s) => s.state)).toEqual(['done', 'current', 'todo', 'todo']);
+    expect(steps.map((s) => s.state)).toEqual(['done', 'done', 'current', 'todo', 'todo']);
     expect(steps.some((s) => /por cobrar/i.test(s.label))).toBe(false);
   });
 
   it('un pedido normal no cambia', () => {
     const plain = order({ estado: 'por_cobrar', destino: 'para_llevar', espacio: null });
-    expect(orderStatusLabel(plain, NOW)).toBe('Pedido recibido');
-    expect(orderTrackSteps(plain, NOW)[0]?.label).toBe('Pedido recibido');
+    expect(orderStatusLabel(plain, NOW)).toBe('Por cobrar');
+    expect(orderTrackSteps(plain, NOW)[0]?.label).toBe('Por cobrar');
   });
 });
 
 describe('tu cuenta abierta', () => {
   it('suma lo que está sin pagar y ni cuenta lo ya pagado ni lo cancelado', () => {
     const orders = [
-      tab({ id: 'a', total: '60.00', estado_pago: 'pendiente', monto_pagado: '0.00', saldo_pendiente: '60.00' }),
-      tab({ id: 'b', total: '30.50', estado: 'entregado', estado_pago: 'pendiente', monto_pagado: '0.00', saldo_pendiente: '30.50' }),
+      tab({ id: 'a', total: '60.00' }),
+      tab({ id: 'b', total: '30.50', estado: 'entregado' }),
       tab({ id: 'c', total: '99.00', pago_pendiente: false }),
       tab({ id: 'd', total: '10.00', estado: 'cancelado' }),
       order({ id: 'e', total: '45.00' }),
@@ -107,10 +108,6 @@ describe('tu cuenta abierta', () => {
   it('sin pedidos a la cuenta no hay cuenta', () => {
     expect(openTab([order()])).toBeNull();
     expect(openTab([])).toBeNull();
-  });
-
-  it('no sustituye el saldo ausente del backend por el total bruto del pedido', () => {
-    expect(openTab([tab({ total: '60.00' })])).toEqual({ count: 1, total: null });
   });
 });
 
@@ -146,7 +143,7 @@ describe('renta en Mis pedidos', () => {
     const r = rental({ estado: 'por_cobrar', metodo_pago: 'efectivo' });
     expect(orderPayLabel(r)).toBe('Efectivo en caja');
     expect(orderDestinationLabel(r)).toBe('Cancha 2');
-    expect(orderPayLabel(rental({ metodo_pago: 'saldo', estado_pago: 'pagado', monto_pagado: '300.00', saldo_pendiente: '0.00' }))).toBe('Pagado');
+    expect(orderPayLabel(rental({ metodo_pago: 'saldo' }))).toBe('Pagado con saldo');
   });
 
   it('una renta ya pagada no dice que Caja la procesará (aunque el backend marque caja inactiva)', () => {

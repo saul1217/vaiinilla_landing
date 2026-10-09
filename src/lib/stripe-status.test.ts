@@ -72,42 +72,18 @@ describe('stripe confirmation policy', () => {
     expect(canRetryStripePayment(processing)).toBe(false);
   });
 
-  it('requiere pago confirmado por el ledger y nunca infiere pago desde el estado operativo', () => {
+  it('éxito solo con cobrado o estados posteriores y confirmado', () => {
     expect(isStripePaymentConfirmedByBackend(stripeOrder('por_cobrar', 'confirmado'))).toBe(false);
-    expect(isStripePaymentConfirmedByBackend(stripeOrder('cobrado', 'confirmado'))).toBe(false);
-    expect(isStripePaymentConfirmedByBackend(stripeOrder('preparando', 'confirmado'))).toBe(false);
-    const paid = {
-      ...stripeOrder('cobrado', 'confirmado'),
-      estado_pago: 'pagado' as const,
-      monto_pagado: '123.60',
-      saldo_pendiente: '0.00',
-    };
-    expect(isStripePaymentConfirmedByBackend(paid)).toBe(true);
-    expect(isStripePaymentConfirmedByBackend({
-      ...stripeOrder('cobrado', 'confirmado'),
-      estado_pago: 'pendiente',
-      saldo_pendiente: '123.60',
-    })).toBe(false);
-    expect(isStripePaymentConfirmedByBackend({
-      ...paid,
-      saldo_pendiente: '1.00',
-    })).toBe(false);
-    expect(isStripePaymentConfirmedByBackend({
-      ...paid,
-      saldo_pendiente: 'invalid',
-    })).toBe(false);
+    expect(isStripePaymentConfirmedByBackend(stripeOrder('cobrado', 'confirmado'))).toBe(true);
+    expect(isStripePaymentConfirmedByBackend(stripeOrder('preparando', 'confirmado'))).toBe(true);
     expect(stripePaymentCopy(stripeOrder('por_cobrar', 'pendiente_pago'))).toBe(STRIPE_COPY.waiting);
-    expect(stripePaymentCopy(stripeOrder('cobrado', 'confirmado'))).toBe(STRIPE_COPY.waiting);
-    expect(stripePaymentCopy(paid)).toBe(STRIPE_COPY.confirmed);
+    expect(stripePaymentCopy(stripeOrder('cobrado', 'confirmado'))).toBe(STRIPE_COPY.confirmed);
   });
 
   it('nunca usa copy de caja para Stripe', () => {
     for (const status of ['pendiente_pago', 'processing', 'confirmado', 'fallido', 'cancelado'] as const) {
       const estado = status === 'confirmado' ? 'cobrado' : 'por_cobrar';
-      const copy = stripePaymentCopy({
-        ...stripeOrder(estado, status),
-        ...(status === 'confirmado' ? { estado_pago: 'pagado' as const, saldo_pendiente: '0.00' } : {}),
-      });
+      const copy = stripePaymentCopy(stripeOrder(estado, status));
       expect(stripeCopyIncludesCashInstructions(copy)).toBe(false);
       expect(copy).not.toContain(CASH_COUNTER_COPY);
     }
@@ -120,19 +96,13 @@ describe('stripe confirmation policy', () => {
   });
 
   it('el poll no marca éxito mientras processing', async () => {
-    const paid = {
-      ...stripeOrder('cobrado', 'confirmado'),
-      estado_pago: 'pagado' as const,
-      monto_pagado: '123.60',
-      saldo_pendiente: '0.00',
-    };
     const fetches = [
       stripeOrder('por_cobrar', 'processing'),
-      paid,
+      stripeOrder('cobrado', 'confirmado'),
     ];
     const result = await pollStripePaymentConfirmation({
       orderId: 'order-1',
-      fetchOrder: () => Promise.resolve(fetches.shift() ?? paid),
+      fetchOrder: () => Promise.resolve(fetches.shift() ?? stripeOrder('cobrado', 'confirmado')),
       wait: () => Promise.resolve(),
     });
     expect(result.timedOut).toBe(false);

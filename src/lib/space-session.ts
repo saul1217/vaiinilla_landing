@@ -13,8 +13,6 @@ export interface SpaceSession {
   pagaAlFinal?: boolean;
   /** Código del QR escaneado: con él el cliente se une a la mesa compartida. */
   qrToken?: string;
-  /** Id de la sesión que se confirmó en backend; separa rondas en la misma mesa. */
-  sesionId?: string;
 }
 
 interface StoredSpace extends SpaceSession {

@@ -343,7 +343,7 @@ describe('seguimiento sin cuenta', () => {
     // Ticket completo, igual que una cuenta registrada: artículos, total y pago.
     expect(await screen.findByText(/2 × Torta/)).toBeInTheDocument();
     expect(screen.getAllByText('$120').length).toBeGreaterThan(0);
-    expect(screen.getByText(/Pago pendiente · efectivo/)).toBeInTheDocument();
+    expect(screen.getByText(/Efectivo al recoger/)).toBeInTheDocument();
   });
 
   it('con tarjeta sin pagar en el dispositivo donde se pidió, muestra el formulario de tarjeta', async () => {

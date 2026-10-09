@@ -2,7 +2,6 @@ import { api } from './api';
 import type { SharedTable } from '../types/api';
 import { forgetSpace, type SpaceSession } from './space-session';
 import { dropTableParticipantOnSessionChange, forgetTableParticipant, readTableParticipant } from './table-participant';
-import { clearClosedTableSession } from './table-session-cleanup';
 
 /** Este dispositivo ya se unió a la mesa escaneada: guardó su identidad de participante. */
 export function joinedScannedTable(space: SpaceSession): boolean {
@@ -21,7 +20,6 @@ export async function currentScannedTable(accessToken: string, space: SpaceSessi
     dropTableParticipantOnSessionChange(table.sesion_id);
     return table;
   }
-  clearClosedTableSession(space.slug, space.espacioId);
   forgetSpace();
   forgetTableParticipant();
   return null;

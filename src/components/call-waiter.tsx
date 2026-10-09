@@ -23,13 +23,9 @@ type View = "idle" | "reasons" | "open" | "unavailable";
 
 export function CallWaiter({
   order,
-  space,
-  allowAccountRequest = false,
   client: injected,
 }: {
-  order?: OrderDetail;
-  space?: { id: number; nombre: string } | null;
-  allowAccountRequest?: boolean;
+  order: OrderDetail;
   client?: BuyerCallClient;
 }) {
   const client = useMemo(() => {
@@ -37,9 +33,9 @@ export function CallWaiter({
     const token = readStoredClientContext()?.context.access_token;
     return token ? createBuyerCallClient(token) : null;
   }, [injected]);
-  const espacioId = order?.espacio?.id ?? space?.id ?? 0;
+  const espacioId = order.espacio?.id ?? 0;
   // Solo un pedido en mesa puede llamar: los demás no consultan al backend.
-  const callable = order ? canCallWaiter(order) : Boolean(space);
+  const callable = canCallWaiter(order);
   const [call, setCall] = useState<TableCall | null>(null);
   const [view, setView] = useState<View>("idle");
   const [busy, setBusy] = useState(false);
@@ -88,7 +84,7 @@ export function CallWaiter({
     setBusy(true);
     setError(null);
     try {
-      const next = await client.call(espacioId, reason, order?.id ?? null);
+      const next = await client.call(espacioId, reason, order.id);
       setCall(next);
       setView("open");
       navigator.vibrate?.(20);
@@ -165,7 +161,7 @@ export function CallWaiter({
         <div className="alumno-callwaiter__reasons" data-morph-in>
           <p>¿Qué necesitas?</p>
           {CALL_REASONS.filter(
-            (reason) => reason.value !== "cuenta" || order?.pago_diferido || allowAccountRequest,
+            (reason) => reason.value !== "cuenta" || order.pago_diferido,
           ).map((reason) => (
             <button
               key={reason.value}

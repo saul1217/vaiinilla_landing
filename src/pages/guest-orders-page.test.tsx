@@ -5,7 +5,6 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
-import { readGuestOrders, rememberGuestOrder } from '../lib/guest-orders';
 import type { SharedTable, TrackedOrder } from '../types/api';
 import { GuestOrdersPage } from './guest-orders-page';
 
@@ -194,7 +193,6 @@ describe('pedidos del invitado', () => {
       'vaiinilla.buyer.space.v1',
       JSON.stringify({ slug: 'padel', espacioId: 5, nombre: 'Mesa 5', tipo: 'mesa', qrToken: 'qr-5' }),
     );
-    currentTable.mockResolvedValueOnce(null).mockResolvedValue(mesa());
     joinTable.mockResolvedValue(mesa());
     const user = userEvent.setup();
     renderPage();
@@ -205,7 +203,7 @@ describe('pedidos del invitado', () => {
     await user.click(screen.getByRole('button', { name: /unirme a la mesa/i }));
 
     expect(joinTable).toHaveBeenCalledWith('guest-jwt', 'qr-5', 'Lupi');
-    expect(await screen.findByText('Lupi (tú)')).toBeInTheDocument();
+    expect(await screen.findByRole('article', { name: 'Mesa 5' })).toBeInTheDocument();
     // Dos invitados en la misma mesa: solo alias, cada quien ve al otro.
     expect(screen.getByText('Lupi (tú)')).toBeInTheDocument();
     expect(screen.getAllByText('Beto').length).toBeGreaterThan(0);
@@ -215,7 +213,7 @@ describe('pedidos del invitado', () => {
   it('cerrar y reabrir la pestaña: sigue dentro de la mesa y el espacio se restaura', async () => {
     currentTable.mockResolvedValue(mesa());
     const first = renderPage();
-    expect(await first.findByText('Lupi (tú)')).toBeInTheDocument();
+    expect(await first.findByRole('article', { name: 'Mesa 5' })).toBeInTheDocument();
     first.unmount();
 
     // Cerrar la pestaña borra la sesión (espacio y JWT); la llave queda.
@@ -224,38 +222,12 @@ describe('pedidos del invitado', () => {
     renderPage();
 
     // La participación vive en el servidor: la mesa se ve sin volver a escanear.
-    expect(await screen.findByText('Lupi (tú)')).toBeInTheDocument();
+    expect(await screen.findByRole('article', { name: 'Mesa 5' })).toBeInTheDocument();
     // Y el espacio se restaura para que el pedido se ligue igual.
     await waitFor(() => {
       const raw = localStorage.getItem('vaiinilla.buyer.space.v1');
       expect(raw).toContain('"espacioId":5');
     });
-  });
-
-  it('al cerrarse la sesión, no revive como activa para el invitado y limpia su estado local', async () => {
-    localStorage.setItem('vaiinilla.buyer.space.v1', JSON.stringify({
-      slug: 'padel', espacioId: 5, nombre: 'Mesa 5', tipo: 'mesa', qrToken: 'qr-5', sesionId: 'ses-5',
-    }));
-    localStorage.setItem('vaiinilla.buyer.table-participant.v1', JSON.stringify({
-      slug: 'padel', espacioId: 5, sesionId: 'ses-5', participanteId: 'p-lupi', alias: 'Lupi',
-    }));
-    rememberGuestOrder({ token: TOKEN, slug: 'padel', folio: 7, placeName: 'Pádel', createdAt: Date.now(), destination: 'en_espacio', sessionId: 'ses-5' });
-    currentTable.mockResolvedValue(null);
-    listGuestOrders.mockResolvedValue([]);
-
-    const first = renderPage();
-
-    expect(await screen.findByText(/aún no hay pedidos en esta sesión/i)).toBeInTheDocument();
-    await waitFor(() => {
-      expect(localStorage.getItem('vaiinilla.buyer.space.v1')).toBeNull();
-      expect(readGuestOrders()).toEqual([]);
-    });
-    expect(screen.queryByText('Lupi (tú)')).not.toBeInTheDocument();
-
-    first.unmount();
-    renderPage();
-    expect(await screen.findByText(/aún no hay pedidos en esta sesión/i)).toBeInTheDocument();
-    expect(screen.queryByText('Lupi (tú)')).not.toBeInTheDocument();
   });
 
   it('sin establecimiento muestra vacío con salida al menú', async () => {

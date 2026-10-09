@@ -7,7 +7,6 @@ import { useBuyerSession } from '../context/buyer-session';
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { clientSessionForPlace } from '../lib/client-session-for-place';
-import { observeTableSession } from '../lib/table-session-cleanup';
 import {
   dropTableParticipantOnSessionChange,
   rememberTableParticipant,
@@ -65,13 +64,6 @@ export function TableWhoPage() {
       const table = await api.tableSession(client.access_token, qrToken);
       // Sesión nueva (mesa cerrada y reabierta): la identidad local ya no vale.
       dropTableParticipantOnSessionChange(table.sesion_id);
-      observeTableSession(table.sesion_id, {
-        slug,
-        espacioId: table.espacio.id,
-        nombre: table.espacio.nombre,
-        tipo: table.espacio.tipo,
-        qrToken,
-      });
       setSession(table);
       setShowList(false);
       setShowAdd(table.participantes.length === 0);
@@ -99,13 +91,6 @@ export function TableWhoPage() {
 
   function finishWith(table: SharedTable) {
     dropTableParticipantOnSessionChange(table.sesion_id);
-    observeTableSession(table.sesion_id, {
-      slug,
-      espacioId: table.espacio.id,
-      nombre: table.espacio.nombre,
-      tipo: table.espacio.tipo,
-      qrToken,
-    });
     const mine = table.mi_participante;
     if (mine) {
       rememberTableParticipant({

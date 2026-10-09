@@ -128,9 +128,9 @@ describe('tarjeta de seguimiento: renta y cuenta', () => {
         pago: null,
       }),
     );
-    expect(screen.getAllByText('Pedido recibido').length).toBeGreaterThan(0);
-    expect(screen.getByText(/Mesa 4 · Pagas al final/)).toBeInTheDocument();
-    expect(screen.getAllByText('Pedido recibido').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('En tu cuenta').length).toBeGreaterThan(0);
+    expect(screen.getByText(/Mesa 4 · Al final/)).toBeInTheDocument();
+    expect(screen.getByText('Pedido enviado')).toBeInTheDocument();
     expect(screen.queryByText('Por cobrar')).not.toBeInTheDocument();
   });
 });

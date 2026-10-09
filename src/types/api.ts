@@ -7,16 +7,6 @@ export type OrderStatus =
   | 'cancelado'
   | 'no_recogido'
   | 'expirado';
-/** Avance de preparación/entrega separado de la cobranza. */
-export type OperationalOrderStatus =
-  | 'recibido'
-  | 'preparando'
-  | 'listo'
-  | 'entregado'
-  | 'cancelado'
-  | 'no_recogido'
-  | 'expirado';
-export type PaymentStatus = 'pendiente' | 'parcial' | 'pagado' | 'reembolsado' | 'sin_cargo';
 
 export type PaymentMethod = 'stripe' | 'efectivo' | 'saldo';
 export type EstablishmentKind =
@@ -260,24 +250,13 @@ export interface OrderDetail {
   folio: number;
   fecha_operativa: string;
   estado: OrderStatus;
-  /** Ausente en backends anteriores; nunca se infiere desde `estado` cuando viene presente. */
-  estado_operativo?: OperationalOrderStatus;
-  estado_pago?: PaymentStatus;
   metodo_pago: PaymentMethod;
   destino: OrderDestination;
-  /** Sesión exacta de la mesa/espacio; null en pedidos individuales. */
-  sesion_espacio_id?: string | null;
   espacio: OrderSpace | null;
-  sesion_espacio_estado?: 'abierta' | 'cerrada' | null;
-  sesion_espacio_inicio?: string | null;
-  sesion_espacio_cerrada_en?: string | null;
   subtotal: string;
   ahorro_combinado: string;
   cashback_otorgado: string;
   total: string;
-  monto_pagado?: string;
-  monto_reembolsado?: string;
-  saldo_pendiente?: string;
   version: number;
   creado_en: string;
   actualizado_en: string;
@@ -334,7 +313,6 @@ export interface CreateOrderInput {
   metodo_pago: PaymentMethod;
   destino: OrderDestination;
   espacio_id: number | null;
-  sesion_espacio_id?: string;
   notas_cocina: string | null;
   items: CreateOrderItemInput[];
   /** Pagar al final: efectivo y en un espacio, solo si el negocio lo permite. */
@@ -407,12 +385,8 @@ export interface SharedTableOrder {
   id: string | null;
   folio: number;
   estado: OrderStatus;
-  estado_operativo?: OperationalOrderStatus;
-  estado_pago?: PaymentStatus;
   items_resumen: string;
   total: string;
-  monto_pagado?: string;
-  saldo_pendiente?: string;
   pendiente_cobro: boolean;
   creado_en: string | null;
   /** "Esto lo pago yo": alias de quien dijo que lo paga. */
@@ -455,7 +429,6 @@ export interface SharedTable {
   espacio: { id: number; nombre: string; tipo: string };
   /** Sesión activa de la mesa; la identidad local solo vale si coincide. */
   sesion_id: string;
-  sesion_inicio?: string | null;
   mi_alias: string;
   /** Quién soy en esta sesión; null si aún no me uní. */
   mi_participante: TableSelf | null;

@@ -15,7 +15,8 @@ const QR_FIELD_KEYS = [
   'pickup_code',
 ] as const;
 
-const RECOVER_STATES = ['recibido', 'preparando', 'listo', 'entregado'] as const;
+const PICKUP_SURFACE_STATES: OrderDetail['estado'][] = ['listo'];
+const RECOVER_STATES: OrderDetail['estado'][] = ['cobrado', 'preparando', 'listo', 'entregado'];
 
 function storageKey(orderId: string): string {
   return `${STORAGE_PREFIX}${orderId}`;
@@ -79,8 +80,7 @@ export function persistPickupQrFromOrder(order: OrderDetail): string | null {
 }
 
 export function shouldShowPickupSurface(order: OrderDetail): boolean {
-  const status = order.estado_operativo ?? (order.estado === 'listo' ? 'listo' : 'recibido');
-  if (status !== 'listo') return false;
+  if (!PICKUP_SURFACE_STATES.includes(order.estado)) return false;
   if (order.metodo_pago === 'stripe' && !isStripePaymentConfirmedByBackend(order)) return false;
   return true;
 }
@@ -93,8 +93,7 @@ export function shouldShowPickupQr(order: OrderDetail, token: string | null | un
 }
 
 export function shouldRecoverPickupQr(order: OrderDetail): boolean {
-  const status = order.estado_operativo ?? (order.estado === 'por_cobrar' || order.estado === 'cobrado' ? 'recibido' : order.estado);
-  if (!RECOVER_STATES.includes(status as (typeof RECOVER_STATES)[number])) return false;
+  if (!RECOVER_STATES.includes(order.estado)) return false;
   if (order.metodo_pago === 'stripe' && !isStripePaymentConfirmedByBackend(order)) return false;
   return true;
 }

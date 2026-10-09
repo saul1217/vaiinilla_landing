@@ -220,9 +220,6 @@ describe('OrderDetailPage', () => {
       folio: 42,
       estado: 'listo',
       metodo_pago: 'saldo',
-      estado_pago: 'pagado',
-      monto_pagado: '70.00',
-      saldo_pendiente: '0.00',
       destino: 'en_espacio',
       espacio: { id: 4, nombre: 'Mesa 4', tipo: 'mesa' },
       total: '70.00',
@@ -240,7 +237,7 @@ describe('OrderDetailPage', () => {
     expect(document.querySelector('.alumno-card--ticket .alumno-pickup')).toBeNull();
     expect(document.querySelector('.alumno-track-card__status')).toBeNull();
     expect(document.querySelector('.alumno-detail-split .alumno-card--ticket')).not.toBeNull();
-    expect(screen.getAllByText(/pagado/i)).toHaveLength(2);
+    expect(screen.getByText(/pagado con saldo/i)).toBeInTheDocument();
     expect(screen.getAllByText(/mesa 4/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/1 × burrito/i)).toBeInTheDocument();
     expect(screen.getAllByText('$70').length).toBeGreaterThan(0);
@@ -275,9 +272,6 @@ describe('OrderDetailPage', () => {
       stripeOrder({
         folio: 1,
         estado: 'listo',
-        estado_pago: 'pagado',
-        monto_pagado: '123.60',
-        saldo_pendiente: '0.00',
         qr_token: undefined,
         pago: {
           payment_attempt_id: 'attempt-1',
@@ -367,9 +361,6 @@ describe('OrderDetailPage', () => {
     getOrder.mockResolvedValue(
       stripeOrder({
         estado: 'cobrado',
-        estado_pago: 'pagado',
-        monto_pagado: '123.60',
-        saldo_pendiente: '0.00',
         pago: {
           payment_attempt_id: 'attempt-1',
           payment_intent_id: 'pi_test_001',
