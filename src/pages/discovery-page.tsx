@@ -335,6 +335,20 @@ export function DiscoveryPage() {
                     {selected.sitio_web_url ? <SocialLink href={selected.sitio_web_url} label="Sitio web" kind="website" /> : null}
                   </div>
                 ) : null}
+                {selected.videos_local?.length ? (
+                  <div className="alumno-place-videos">
+                    <p className="alumno-place-kicker">Videos del local</p>
+                    <ul>
+                      {selected.videos_local.map((video, index) => (
+                        <li key={`${index}-${video.url}`}>
+                          <a href={video.url} target="_blank" rel="noopener noreferrer">
+                            {video.titulo}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
                 <button className="alumno-btn alumno-btn--lime" type="button" onClick={openPicker}>
                   Entrar al menú
                 </button>

@@ -23,8 +23,11 @@ export function openingTitle(kind: Kind | null | undefined): string {
   return `Abriendo tu ${spaceNoun(kind)}`;
 }
 
-/** "El pedido se entrega en tu mesa", "…en tu asiento"… */
-export function deliveredAtLabel(kind: Kind | null | undefined): string {
+/** "El pedido se entrega en tu mesa", "Se te llevará a tu Cancha 1"… */
+export function deliveredAtLabel(kind: Kind | null | undefined, spaceName?: string | null): string {
+  if (kind === 'cancha' && spaceName) {
+    return `Se te llevará a tu ${spaceName}`;
+  }
   return `El pedido se entrega en tu ${spaceNoun(kind)}`;
 }
 

@@ -20,6 +20,7 @@ const {
   createGuest,
   renewGuest,
   getLegalVersions,
+  currentTable,
   tableSession,
   openClientSession,
   firebaseIdToken,
@@ -34,6 +35,7 @@ const {
   createGuest: vi.fn(),
   renewGuest: vi.fn(),
   getLegalVersions: vi.fn(),
+  currentTable: vi.fn(),
   tableSession: vi.fn(),
   openClientSession: vi.fn(),
   firebaseIdToken: vi.fn(),
@@ -51,6 +53,7 @@ vi.mock('../lib/api', () => ({
     createGuest: (...args: unknown[]) => createGuest(...args) as Promise<unknown>,
     renewGuest: (...args: unknown[]) => renewGuest(...args) as Promise<unknown>,
     getLegalVersions: (...args: unknown[]) => getLegalVersions(...args) as Promise<unknown>,
+    currentTable: (...args: unknown[]) => currentTable(...args) as Promise<unknown>,
     tableSession: (...args: unknown[]) => tableSession(...args) as Promise<unknown>,
     apiUrl: '/api/v1',
   },
@@ -110,6 +113,14 @@ function renderCart() {
   );
 }
 
+// Lo que el servidor devuelve de la mesa de Kikin (GET /mesas/actual).
+const mesaDeKikin = {
+  espacio: { id: 5, nombre: 'Mesa 5', tipo: 'mesa' },
+  sesion_id: '81f42715-e218-4e69-a7f6-8d4017a6f3d4',
+  mi_alias: 'Kikin',
+  mi_participante: { id: '9c42b167-4785-4f6c-ac30-b11ad86c58a6', alias: 'Kikin' },
+};
+
 describe('CartPage con participante de mesa', () => {
   beforeEach(() => {
     sessionStorage.clear();
@@ -150,6 +161,7 @@ describe('CartPage con participante de mesa', () => {
       invitado: { nombre: '', llave: 'L'.repeat(43) },
     });
     renewGuest.mockRejectedValue(new Error('sin llave'));
+    currentTable.mockReset().mockResolvedValue(mesaDeKikin);
     tableSession.mockReset().mockResolvedValue({
       espacio: { id: 5, nombre: 'Mesa 5', tipo: 'mesa' },
       sesion_id: '81f42715-e218-4e69-a7f6-8d4017a6f3d4',
@@ -169,8 +181,8 @@ describe('CartPage con participante de mesa', () => {
     );
     const user = userEvent.setup();
     renderCart();
-    await waitFor(() => expect(tableSession).toHaveBeenCalledWith('guest-jwt', 'qr-5'));
-    await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+    await waitFor(() => expect(currentTable).toHaveBeenCalledWith('guest-jwt'));
+    await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
     expect(await screen.findByText(/pides como kikin/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /cambiar/i })).toHaveAttribute(
       'href',
@@ -216,8 +228,8 @@ describe('CartPage con participante de mesa', () => {
     });
     const user = userEvent.setup();
     renderCart();
-    await waitFor(() => expect(tableSession).toHaveBeenCalledWith('guest-jwt', 'qr-5'));
-    await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+    await waitFor(() => expect(currentTable).toHaveBeenCalledWith('guest-jwt'));
+    await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
     expect(await screen.findByText(/pides como kikin/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^continuar con/i }));
     await waitFor(() => expect(createOrder).toHaveBeenCalled());
@@ -249,13 +261,13 @@ describe('CartPage con participante de mesa', () => {
     const user = userEvent.setup();
     renderCart();
 
-    await waitFor(() => expect(tableSession).toHaveBeenCalled());
-    await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+    await waitFor(() => expect(currentTable).toHaveBeenCalled());
+    await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
     await user.click(await screen.findByRole('button', { name: /continuar con pago en caja/i }));
 
     expect(await screen.findByText('Elegir participante')).toBeInTheDocument();
+    expect(tableSession).toHaveBeenCalled();
     expect(createOrder).not.toHaveBeenCalled();
-    expect(screen.queryByText(/pides como kikin/i)).not.toBeInTheDocument();
     expect(localStorage.getItem('vaiinilla.buyer.table-participant.v1')).toContain('Kikin');
   });
 
@@ -268,29 +280,65 @@ describe('CartPage con participante de mesa', () => {
       'vaiinilla.buyer.table-participant.v1',
       JSON.stringify({ slug: 'demo-a', espacioId: 5, sesionId: 'ses-vieja', participanteId: 'p-x', alias: 'X' }),
     );
-    tableSession.mockResolvedValue({
-      espacio: { id: 5, nombre: 'Mesa 5', tipo: 'mesa' },
-      sesion_id: 'ses-nueva',
-      participantes: [],
-      yo: null,
-    });
     const user = userEvent.setup();
     renderCart();
-    await waitFor(() => expect(tableSession).toHaveBeenCalled());
-    expect(localStorage.getItem('vaiinilla.buyer.table-participant.v1')).toBeNull();
-    await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+    await waitFor(() => expect(currentTable).toHaveBeenCalled());
+    await waitFor(() => expect(localStorage.getItem('vaiinilla.buyer.table-participant.v1')).toBeNull());
+    await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
     expect(await screen.findByRole('link', { name: 'Elegir participante' })).toHaveAttribute(
       'href',
       '/e/demo-a/m/qr-5/quien?next=%2Fe%2Fdemo-a%2Fcarrito',
     );
   });
 
+  it('la mesa se libera entre cargar el carrito y pedir: no se crea el pedido y se olvida la mesa', async () => {
+    localStorage.setItem(
+      'vaiinilla.buyer.space.v1',
+      JSON.stringify({ slug: 'demo-a', espacioId: 5, nombre: 'Mesa 5', tipo: 'mesa', qrToken: 'qr-5', guardadoEn: Date.now() }),
+    );
+    localStorage.setItem(
+      'vaiinilla.buyer.table-participant.v1',
+      JSON.stringify({ slug: 'demo-a', espacioId: 5, sesionId: '81f42715-e218-4e69-a7f6-8d4017a6f3d4', participanteId: '9c42b167-4785-4f6c-ac30-b11ad86c58a6', alias: 'Kikin' }),
+    );
+    let liberada = false;
+    currentTable.mockImplementation(() => Promise.resolve(liberada ? null : mesaDeKikin));
+    const user = userEvent.setup();
+    renderCart();
+    await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
+    expect(await screen.findByText(/pides como kikin/i)).toBeInTheDocument();
+    liberada = true;
+    await user.click(await screen.findByRole('button', { name: /continuar con pago en caja/i }));
+    expect((await screen.findAllByText(/tu mesa ya no está abierta/i)).length).toBeGreaterThan(0);
+    expect(createOrder).not.toHaveBeenCalled();
+    expect(localStorage.getItem('vaiinilla.buyer.table-participant.v1')).toBeNull();
+    expect(localStorage.getItem('vaiinilla.buyer.space.v1')).toBeNull();
+  });
+
+  it('mesa liberada antes de entrar: el teléfono olvida la mesa y su identidad, sin reabrirla', async () => {
+    localStorage.setItem(
+      'vaiinilla.buyer.space.v1',
+      JSON.stringify({ slug: 'demo-a', espacioId: 5, nombre: 'Mesa 5', tipo: 'mesa', qrToken: 'qr-5', guardadoEn: Date.now() }),
+    );
+    localStorage.setItem(
+      'vaiinilla.buyer.table-participant.v1',
+      JSON.stringify({ slug: 'demo-a', espacioId: 5, sesionId: 'ses-vieja', participanteId: 'p-x', alias: 'X' }),
+    );
+    currentTable.mockResolvedValue(null);
+    const user = userEvent.setup();
+    renderCart();
+    await waitFor(() => expect(localStorage.getItem('vaiinilla.buyer.table-participant.v1')).toBeNull());
+    expect(localStorage.getItem('vaiinilla.buyer.space.v1')).toBeNull();
+    await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
+    expect(screen.queryByRole('link', { name: 'Elegir participante' })).not.toBeInTheDocument();
+  });
+
   it('sin mesa (para llevar) sigue pidiendo el nombre como antes', async () => {
     const user = userEvent.setup();
     renderCart();
-    await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+    await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
     expect(await screen.findByLabelText('Tu nombre')).toBeInTheDocument();
     expect(screen.queryByText(/pides como/i)).not.toBeInTheDocument();
+    expect(currentTable).not.toHaveBeenCalled();
     expect(tableSession).not.toHaveBeenCalled();
     // Sin nombre no continúa (regresión del flujo de invitado).
     expect(screen.getByRole('button', { name: /^continuar con/i })).toBeDisabled();

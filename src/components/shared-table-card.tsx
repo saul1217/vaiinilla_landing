@@ -3,7 +3,7 @@ import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { formatAmount } from '../lib/money';
 import { orderedGroups, tableGroupKey, tableOrderState, tablePersonKey } from '../lib/shared-table';
-import { dropTableParticipantOnSessionChange } from '../lib/table-participant';
+import { dropTableParticipantOnSessionChange, forgetTableParticipant } from '../lib/table-participant';
 import { forgetSpace } from '../lib/space-session';
 import { spaceNoun } from '../lib/space-words';
 import type { SharedTable } from '../types/api';
@@ -54,7 +54,8 @@ export function SharedTableCard({
     try {
       const next = await api.currentTable(token);
       // La sesión cambió (mesa cerrada / nueva sesión): la identidad local ya no vale.
-      dropTableParticipantOnSessionChange(next?.sesion_id ?? null);
+      if (next) dropTableParticipantOnSessionChange(next.sesion_id);
+      else forgetTableParticipant();
       setTable(next);
     } catch (cause) {
       // Una consulta fallida no borra la mesa que ya se ve; la siguiente lo intenta otra vez.

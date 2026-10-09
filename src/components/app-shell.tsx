@@ -7,6 +7,7 @@ import { useCart } from '../context/cart-context';
 import { isGuestBuy } from '../lib/guest-explore';
 import { readGuest } from '../lib/guest-session';
 import { lastPlaceSlug } from '../lib/last-place';
+import { readTableParticipant } from '../lib/table-participant';
 import { canAnimate, createSpring } from '../lib/spring';
 
 // A touch of overshoot that never leaves the bar (BOUNCY overshoots ~40%).
@@ -133,7 +134,8 @@ export function BottomNav({ tab }: { tab: Exclude<AlumnoTab, 'none'> }) {
   // Con llave de invitado, la misma app que un registrado menos Cartera (el saldo
   // es personal de cuenta): Menú, Pedidos y Carrito. Sin llave, Pedidos invita a entrar.
   // Invitado desde que eligió "Comprar sin cuenta", no solo tras su primer pedido.
-  const guest = !user && (readGuest() !== null || isGuestBuy());
+  // Quien ocupó un lugar en una mesa también lo es, aunque la llave ya se haya olvidado.
+  const guest = !user && (readGuest() !== null || isGuestBuy() || readTableParticipant() !== null);
   const ordersHref = user || guest ? '/cuenta/pedidos' : `/cuenta?next=/cuenta/pedidos`;
   const walletHref = user ? '/cuenta/saldo' : `/cuenta?next=/cuenta/saldo`;
   const menuActive = tab === 'menu' || location.pathname === '/pedir';

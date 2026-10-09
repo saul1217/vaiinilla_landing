@@ -172,9 +172,17 @@ export function orderCollapsedHint(order: OrderDetail, now: Date = new Date()): 
     if (!step) return '';
     return rentalStepHint(step, order.reserva, order.metodo_pago, paymentFailed(order), now);
   }
-  if (isUnpaidTab(order) && order.estado === 'cobrado') return 'Cocina recibió tu pedido. Pagas al final.';
+  const courtName =
+    order.destino === 'en_espacio' && (order.espacio?.tipo === 'cancha' || /cancha/i.test(order.espacio?.nombre ?? ''))
+      ? order.espacio?.nombre ?? 'cancha'
+      : null;
+  if (isUnpaidTab(order) && order.estado === 'cobrado') {
+    return courtName
+      ? `Cocina recibió tu pedido. Se te llevará a tu ${courtName}. Pagas al final.`
+      : 'Cocina recibió tu pedido. Pagas al final.';
+  }
   if (isUnpaidTab(order) && order.estado === 'entregado') return 'Pídele la cuenta a tu mesero para pagar.';
-  return orderCollapsedStatusHint(order.estado);
+  return orderCollapsedStatusHint(order.estado, courtName);
 }
 
 function paymentFailed(order: OrderDetail): boolean {
@@ -207,7 +215,12 @@ export type OrderTrackStep = {
   state: 'done' | 'current' | 'todo' | 'skipped';
 };
 
-export function orderCollapsedStatusHint(status: OrderStatus): string {
+export function orderCollapsedStatusHint(status: OrderStatus, courtName?: string | null): string {
+  if (courtName) {
+    if (status === 'preparando') return `Tu comida se está preparando. Se te llevará a tu ${courtName}.`;
+    if (status === 'listo') return `¡Listo! Se te llevará a tu ${courtName}.`;
+    if (status === 'cobrado') return `Cocina recibió tu pedido. Se te llevará a tu ${courtName}.`;
+  }
   if (status === 'listo') return '';
   return ORDER_STATUS_HINT[status];
 }
@@ -238,25 +251,33 @@ function flowTrackSteps(order: OrderDetail): OrderTrackStep[] {
   const stripe = order.metodo_pago === 'stripe';
   const flowIndex = orderFlowIndex(order.estado);
   const delivered = order.estado === 'entregado';
+  const courtName =
+    order.destino === 'en_espacio' && (order.espacio?.tipo === 'cancha' || /cancha/i.test(order.espacio?.nombre ?? ''))
+      ? order.espacio?.nombre ?? 'cancha'
+      : null;
   const keys = stripe
     ? ['pago_confirmado', 'cobrado', 'preparando', 'listo', 'entregado']
     : ['por_cobrar', 'cobrado', 'preparando', 'listo', 'entregado'];
   const labels = stripe
     ? ['Pago confirmado', 'Cobrado', 'Preparando', 'Listo', 'Entregado']
     : ['Por cobrar', 'Cobrado', 'Preparando', 'Listo', 'Entregado'];
-  const listoHint = order.estado === 'listo' ? '' : ORDER_STATUS_HINT.listo;
+  const listoHint = courtName
+    ? `Se te llevará a tu ${courtName}.`
+    : order.estado === 'listo'
+      ? ''
+      : ORDER_STATUS_HINT.listo;
   const hints = stripe
     ? [
         PAYMENT_CONFIRMED_HINT,
-        ORDER_STATUS_HINT.cobrado,
-        ORDER_STATUS_HINT.preparando,
+        courtName ? `Cocina recibió la comanda. Se te llevará a tu ${courtName}.` : ORDER_STATUS_HINT.cobrado,
+        courtName ? `Tu comida se está preparando. Se te llevará a tu ${courtName}.` : ORDER_STATUS_HINT.preparando,
         listoHint,
         ORDER_STATUS_HINT.entregado,
       ]
     : [
         ORDER_STATUS_HINT.por_cobrar,
-        ORDER_STATUS_HINT.cobrado,
-        ORDER_STATUS_HINT.preparando,
+        courtName ? `Cocina recibió la comanda. Se te llevará a tu ${courtName}.` : ORDER_STATUS_HINT.cobrado,
+        courtName ? `Tu comida se está preparando. Se te llevará a tu ${courtName}.` : ORDER_STATUS_HINT.preparando,
         listoHint,
         ORDER_STATUS_HINT.entregado,
       ];
@@ -295,15 +316,35 @@ function tabTrackSteps(order: OrderDetail): OrderTrackStep[] {
   const flowIndex = orderFlowIndex(order.estado);
   const delivered = order.estado === 'entregado';
   const paid = !order.pago_pendiente;
+  const courtName =
+    order.destino === 'en_espacio' && (order.espacio?.tipo === 'cancha' || /cancha/i.test(order.espacio?.nombre ?? ''))
+      ? order.espacio?.nombre ?? 'cancha'
+      : null;
   const rows: Omit<OrderTrackStep, 'state'>[] = [
     { key: 'enviado', label: 'Pedido enviado', hint: 'Pagas al final, con toda tu cuenta.' },
     {
       key: 'cobrado',
       label: paid ? 'Cobrado' : 'En tu cuenta',
-      hint: paid ? 'Tu cuenta ya se pagó.' : ORDER_STATUS_HINT.cobrado,
+      hint: paid
+        ? 'Tu cuenta ya se pagó.'
+        : courtName
+          ? `Cocina recibió la comanda. Se te llevará a tu ${courtName}.`
+          : ORDER_STATUS_HINT.cobrado,
     },
-    { key: 'preparando', label: 'Preparando', hint: ORDER_STATUS_HINT.preparando },
-    { key: 'listo', label: 'Listo', hint: order.estado === 'listo' ? '' : 'Tu mesero te lo lleva.' },
+    {
+      key: 'preparando',
+      label: 'Preparando',
+      hint: courtName
+        ? `Tu comida se está preparando. Se te llevará a tu ${courtName}.`
+        : ORDER_STATUS_HINT.preparando,
+    },
+    {
+      key: 'listo',
+      label: 'Listo',
+      hint: order.estado === 'listo'
+        ? (courtName ? `Se te llevará a tu ${courtName}.` : '')
+        : (courtName ? `Se te llevará a tu ${courtName}.` : 'Tu mesero te lo lleva.'),
+    },
     { key: 'entregado', label: 'Entregado', hint: ORDER_STATUS_HINT.entregado },
   ];
   return rows.map((row, index) => {

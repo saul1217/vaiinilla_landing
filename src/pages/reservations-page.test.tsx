@@ -93,7 +93,7 @@ describe('ReservationsScreen', () => {
     expect(screen.getByText(/se libera 13:40/i)).toBeInTheDocument();
   });
 
-  it('elige hora y duración, aparta y paga con saldo; el pedido de renta abre su pantalla', async () => {
+  it('elige hora y duración, aparta y paga en efectivo; el pedido de renta abre su pantalla', async () => {
     const user = userEvent.setup();
     const client = makeClient({
       pay: vi.fn(() =>
@@ -119,12 +119,39 @@ describe('ReservationsScreen', () => {
     );
     const sheet = await screen.findByRole('dialog', { name: /paga tu cancha/i });
     expect(within(sheet).getByText(/apartada por 9:5\d/i)).toBeInTheDocument();
-    expect(within(sheet).getAllByText('$330', { selector: 'b' })).toHaveLength(2);
+    expect(within(sheet).getAllByText('$330', { selector: 'b' })).toHaveLength(1);
     expect(within(sheet).getByText('$300', { selector: 'b' })).toBeInTheDocument();
 
-    await user.click(within(sheet).getByRole('button', { name: /saldo/i }));
-    await waitFor(() => expect(client.pay).toHaveBeenCalledWith('r1', 'saldo', expect.any(String)));
+    await user.click(within(sheet).getByRole('button', { name: /efectivo en caja/i }));
+    await waitFor(() => expect(client.pay).toHaveBeenCalledWith('r1', 'efectivo', expect.any(String)));
     expect(await screen.findByText('Pedido de renta')).toBeInTheDocument();
+  });
+
+  it('un invitado que paga en efectivo sigue su pedido por el enlace de seguimiento, sin pedir cuenta', async () => {
+    const user = userEvent.setup();
+    const client = makeClient({
+      pay: vi.fn(() =>
+        Promise.resolve({
+          reservation: reservation({ state: 'confirmada' }),
+          order: { id: 'p9', qr_token: null, seguimiento_token: 'seg-9' } as unknown as ReservationPayment['order'],
+        }),
+      ),
+    });
+    render(
+      <MemoryRouter initialEntries={['/e/padel/canchas']}>
+        <Routes>
+          <Route path="/e/:slug/canchas" element={<ReservationsScreen client={client} slug="padel" guest />} />
+          <Route path="/seguimiento/:token" element={<p>Seguimiento de invitado</p>} />
+          <Route path="/cuenta/pedidos/:id" element={<p>Pedido de renta</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('radio', { name: '09:00' }));
+    await user.click(await screen.findByRole('button', { name: /apartar cancha/i }));
+    const sheet = await screen.findByRole('dialog', { name: /paga tu cancha/i });
+    await user.click(within(sheet).getByRole('button', { name: /efectivo en caja/i }));
+    expect(await screen.findByText('Seguimiento de invitado')).toBeInTheDocument();
+    expect(screen.queryByText('Pedido de renta')).not.toBeInTheDocument();
   });
 
   it('al aparecer el resumen lo trae a la vista (en el teléfono queda bajo la barra de navegación)', async () => {
@@ -151,28 +178,21 @@ describe('ReservationsScreen', () => {
     await user.click(await screen.findByRole('radio', { name: '09:00' }));
     await user.click(await screen.findByRole('button', { name: /apartar cancha/i }));
     const sheet = await screen.findByRole('dialog', { name: /paga tu cancha/i });
-    expect(within(sheet).getByRole('button', { name: /saldo/i })).toBeInTheDocument();
+    expect(within(sheet).getByRole('button', { name: /efectivo en caja/i })).toBeInTheDocument();
+    expect(within(sheet).queryByRole('button', { name: /saldo/i })).not.toBeInTheDocument();
     expect(within(sheet).queryByRole('button', { name: /tarjeta/i })).not.toBeInTheDocument();
   });
 
-  it('sin cuenta ve horarios y precios; apartar explica que pide cuenta y no aparta', async () => {
+  it('sin cuenta ve horarios y precios, y puede apartar sin que le pidan cuenta', async () => {
     const user = userEvent.setup();
     const client = makeClient();
-    render(
-      <MemoryRouter initialEntries={['/e/padel/canchas']}>
-        <Routes>
-          <Route path="/e/:slug/canchas" element={<ReservationsScreen client={client} slug="padel" needsAccount />} />
-          <Route path="/cuenta" element={<p>Pantalla de cuenta</p>} />
-        </Routes>
-      </MemoryRouter>,
-    );
-    expect(await screen.findAllByText('$330 / hora')).toHaveLength(2);
+    renderScreen(client, false);
+    expect((await screen.findAllByText('$330 / hora')).length).toBeGreaterThan(0);
     await user.click(await screen.findByRole('button', { name: /rentar ahora/i }));
     await user.click(screen.getByRole('button', { name: /apartar cancha/i }));
-    const sheet = await screen.findByRole('dialog', { name: /aparta con tu cuenta/i });
-    expect(client.create).not.toHaveBeenCalled();
-    await user.click(within(sheet).getByRole('button', { name: /entrar o crear cuenta/i }));
-    expect(await screen.findByText('Pantalla de cuenta')).toBeInTheDocument();
+    await waitFor(() => expect(client.create).toHaveBeenCalled());
+    expect(vi.mocked(client.create).mock.calls[0]?.[0]).toEqual({ courtId: 7, start: null, durationMinutes: 60 });
+    expect(screen.queryByRole('dialog', { name: /aparta con tu cuenta/i })).not.toBeInTheDocument();
   });
 
   it('"Rentar ahora" aparta sin hora de inicio', async () => {
@@ -191,7 +211,7 @@ describe('ReservationsScreen', () => {
     renderScreen(makeClient());
     await user.click(await screen.findByRole('radio', { name: /cancha 2/i }));
     expect(screen.queryByRole('button', { name: /rentar ahora/i })).not.toBeInTheDocument();
-    expect(await screen.findByRole('radio', { name: '09:00' })).toBeDisabled();
+    expect(await screen.findByRole('radio', { name: /09:00/ })).toBeDisabled();
     expect(screen.getByRole('radio', { name: '14:00' })).toBeEnabled();
   });
 

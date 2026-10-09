@@ -18,6 +18,7 @@ describe('vocabulario del lugar', () => {
   it('arma los textos de la pantalla', () => {
     expect(openingTitle('asiento')).toBe('Abriendo tu asiento');
     expect(deliveredAtLabel('cancha')).toBe('El pedido se entrega en tu cancha');
+    expect(deliveredAtLabel('cancha', 'Cancha 3')).toBe('Se te llevará a tu Cancha 3');
     expect(deliveredAtLabel(undefined)).toBe('El pedido se entrega en tu mesa');
   });
 });

@@ -41,6 +41,17 @@ export function rememberGuestOrder(link: GuestOrderLink): void {
   }
 }
 
+/** Un pedido ya entregado sale de "Tu pedido #N" del menú; el historial de "Mis pedidos" no se toca. */
+export function forgetGuestOrderByToken(token: string): void {
+  try {
+    const list = readGuestOrders();
+    if (!list.some((o) => o.token === token)) return;
+    localStorage.setItem(KEY, JSON.stringify(list.filter((o) => o.token !== token)));
+  } catch {
+    // Nada que borrar.
+  }
+}
+
 /** Tras reclamar a la cuenta, los enlaces de esos negocios ya viven ahí. */
 export function forgetGuestOrdersBySlugs(slugs: string[]): void {
   if (slugs.length === 0) return;

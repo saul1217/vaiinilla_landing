@@ -239,7 +239,6 @@ export function OrdersPage() {
           key={tableKey}
           accessToken={context?.access_token ?? null}
           qrToken={readSpace(place?.slug ?? placeGuess ?? "")?.qrToken ?? null}
-          defaultAlias={user?.displayName || user?.email?.split('@')[0] || undefined}
           onLeave={() => setTableKey((k) => k + 1)}
         />
         {tab ? (

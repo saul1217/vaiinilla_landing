@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { PedidoChargeOverlay } from '../components/pedido-charge-overlay';
@@ -353,6 +353,22 @@ export function OrderDetailPage() {
                 order.id === id && tableSnapshot?.orderId === order.id ? tableSnapshot.table : null
               }
             />
+            {order.reserva ? (
+              <div className="alumno-res-order-action">
+                <Link
+                  to={cart?.slug ? `/e/${cart.slug}` : lastPlaceSlug() ? `/e/${lastPlaceSlug()}` : '/pedir'}
+                  className="alumno-btn alumno-btn--lime"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', textDecoration: 'none' }}
+                >
+                  <span>Pedir comida a {order.espacio?.nombre ?? 'tu cancha'}</span>
+                </Link>
+                <p className="alumno-muted" style={{ textAlign: 'center', fontSize: '0.85rem', marginTop: '6px', marginBottom: 0 }}>
+                  {order.espacio?.nombre
+                    ? `Tu comida se te llevará a tu ${order.espacio.nombre}.`
+                    : 'Tu comida se te llevará a tu cancha.'}
+                </p>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </main>
@@ -379,6 +395,11 @@ export function OrderTicketView({
           <p className="alumno-muted">
             Pedido #{order.folio} · {orderPayLabel(order)} · {orderDestinationLabel(order)}
           </p>
+          {order.destino === 'en_espacio' && (order.espacio?.tipo === 'cancha' || /cancha/i.test(order.espacio?.nombre ?? '')) ? (
+            <p style={{ margin: '4px 0 0 0', fontWeight: 800, color: 'var(--lime, #84cc16)' }}>
+              Se te llevará a tu {order.espacio?.nombre ?? 'cancha'}
+            </p>
+          ) : null}
         </div>
         <div className="alumno-ticket-head__total">
           <p className="alumno-wallet-balance">{formatAmount(order.total)}</p>

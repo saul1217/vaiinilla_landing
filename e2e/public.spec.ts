@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test('la landing de marketing conserva soporte y manda a pedir, no al panel', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: /más tiempo/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /pide sin fila/i })).toBeVisible();
   await expect(page.getByRole('link', { name: /^pedir$/i }).first()).toHaveAttribute('href', '/pedir');
   await expect(page.getByRole('link', { name: /ya tengo cuenta/i }).first()).toHaveAttribute(
     'href',
