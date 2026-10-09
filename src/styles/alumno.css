@@ -6908,16 +6908,81 @@ html[data-theme='amoled'] .alumno-res__court.is-on {
   font-weight: 800;
 }
 
+.alumno-res__now--busy {
+  background: color-mix(in srgb, var(--surface) 80%, var(--bg));
+  border: 1px dashed var(--line);
+  cursor: default;
+  opacity: 0.9;
+}
+
+.alumno-res__now--busy:active {
+  transform: none;
+}
+
+.alumno-res__now-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--coral, #f43f5e) 15%, transparent);
+  color: var(--coral, #e11d48);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.alumno-res__block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.alumno-res__hours-count {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.alumno-res__shifts {
+  display: grid;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.alumno-res__shift {
+  display: grid;
+  gap: 8px;
+}
+
+.alumno-res__shift-title {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .alumno-res__hours {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
   gap: 8px;
 }
 
 .alumno-res__hour {
-  min-height: 44px;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 4px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 14px;
   background: var(--surface);
   color: var(--text);
   font: inherit;
@@ -6946,11 +7011,35 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   color: var(--ink);
 }
 
+.alumno-res__hour.is-busy,
 .alumno-res__hour:disabled {
-  color: color-mix(in srgb, var(--muted) 60%, transparent);
-  background: var(--bg);
-  text-decoration: line-through;
+  color: color-mix(in srgb, var(--muted) 70%, transparent);
+  background: color-mix(in srgb, var(--surface) 50%, var(--bg));
+  border-color: color-mix(in srgb, var(--line) 60%, transparent);
   cursor: default;
+  text-decoration: none;
+}
+
+.alumno-res__hour-time {
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.alumno-res__hour-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--muted) 85%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.alumno-res-order-action {
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--lime) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--lime) 30%, transparent);
 }
 
 .alumno-res__summary {

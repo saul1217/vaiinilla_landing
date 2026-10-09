@@ -183,7 +183,7 @@ describe('ReservationsScreen', () => {
     renderScreen(makeClient());
     await user.click(await screen.findByRole('radio', { name: /cancha 2/i }));
     expect(screen.queryByRole('button', { name: /rentar ahora/i })).not.toBeInTheDocument();
-    expect(await screen.findByRole('radio', { name: '09:00' })).toBeDisabled();
+    expect(await screen.findByRole('radio', { name: /09:00/ })).toBeDisabled();
     expect(screen.getByRole('radio', { name: '14:00' })).toBeEnabled();
   });
 

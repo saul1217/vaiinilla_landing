@@ -18,6 +18,7 @@ import { guestSession } from '../lib/guest-session';
 import { createReservationsClient } from '../lib/reservations-client';
 import { formatAmount } from '../lib/money';
 import { rememberPickupQrToken } from '../lib/pickup-qr';
+import { rememberSpace } from '../lib/space-session';
 import { savePendingStripeOrderId } from '../lib/stripe-pending';
 import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '../lib/stripe-session';
 import { useHeightMorph } from '../lib/use-height-morph';
@@ -151,6 +152,12 @@ export function ReservationsScreen({
     const order = payment.order;
     if (!order) return;
     rememberPickupQrToken(order.id, order.qr_token);
+    rememberSpace({
+      slug,
+      espacioId: payment.reservation.courtId,
+      nombre: payment.reservation.courtName ?? `Cancha ${payment.reservation.courtId}`,
+      tipo: 'cancha',
+    });
     if (method === 'stripe') {
       try {
         rememberStripeCheckoutSession(order.id, stripeSessionFromCreatedOrder(order));
@@ -195,8 +202,15 @@ export function ReservationsScreen({
           {court && hasProfile(court) ? <CourtProfileCard key={`p-${court.id}`} court={court} /> : null}
           {court?.rentable ? (
             <>
-              {canRentNow(day, court) ? (
-                <RentNowCard key="now" selected={state.rentNow} onClick={vm.selectRentNow} />
+              {day.date === day.today ? (
+                <RentNowCard
+                  key="now"
+                  selected={state.rentNow}
+                  available={canRentNow(day, court)}
+                  busyUntilMs={busyUntil(court, day.now)}
+                  timeZone={day.timeZone}
+                  onClick={vm.selectRentNow}
+                />
               ) : null}
               <HourGrid
                 day={day}
@@ -416,7 +430,35 @@ function Lightbox({ src, alt, onClose }: { src: string; alt: string; onClose: ()
   );
 }
 
-function RentNowCard({ selected, onClick }: { selected: boolean; onClick: () => void }) {
+function RentNowCard({
+  selected,
+  available,
+  busyUntilMs,
+  timeZone,
+  onClick,
+}: {
+  selected: boolean;
+  available: boolean;
+  busyUntilMs: number | null;
+  timeZone: string;
+  onClick: () => void;
+}) {
+  if (!available) {
+    return (
+      <div className="alumno-res__now alumno-res__now--busy" role="status" aria-label="Rentar ahora no disponible">
+        <span>
+          <strong>Rentar ahora</strong>
+          <small>
+            {busyUntilMs !== null
+              ? `Ocupada ahora mismo · Se libera a las ${formatHour(busyUntilMs, timeZone)}.`
+              : 'Fuera de horario para rentar de inmediato.'}
+          </small>
+        </span>
+        <span className="alumno-res__now-badge">Ocupada</span>
+      </div>
+    );
+  }
+
   return (
     <button
       type="button"
@@ -433,6 +475,18 @@ function RentNowCard({ selected, onClick }: { selected: boolean; onClick: () => 
   );
 }
 
+function getShift(startMs: number, zone: string): 'Mañana' | 'Tarde' | 'Noche' {
+  try {
+    const hourStr = new Intl.DateTimeFormat('es-MX', { timeZone: zone, hour: 'numeric', hour12: false }).format(startMs);
+    const h = parseInt(hourStr, 10);
+    if (h >= 6 && h < 12) return 'Mañana';
+    if (h >= 12 && h < 19) return 'Tarde';
+    return 'Noche';
+  } catch {
+    return 'Tarde';
+  }
+}
+
 function HourGrid({
   day,
   court,
@@ -445,27 +499,76 @@ function HourGrid({
   onSelect: (start: number) => void;
 }) {
   const starts = useMemo(() => startTimes(day), [day]);
+  const availableCount = useMemo(
+    () => starts.filter((s) => isStartAvailable(day, court, s)).length,
+    [day, court, starts],
+  );
+
+  const shifts = useMemo(() => {
+    const shiftMap = new Map<'Mañana' | 'Tarde' | 'Noche', number[]>();
+    for (const start of starts) {
+      const shift = getShift(start, day.timeZone);
+      if (!shiftMap.has(shift)) shiftMap.set(shift, []);
+      shiftMap.get(shift)!.push(start);
+    }
+    const order: Array<'Mañana' | 'Tarde' | 'Noche'> = ['Mañana', 'Tarde', 'Noche'];
+    return order
+      .filter((name) => shiftMap.has(name) && shiftMap.get(name)!.length > 0)
+      .map((name) => ({ name, items: shiftMap.get(name)! }));
+  }, [starts, day.timeZone]);
+
+  const shiftIcons = {
+    Mañana: '🌅',
+    Tarde: '☀️',
+    Noche: '🌙',
+  };
+
   return (
     <section aria-labelledby="res-hours" className="alumno-res__block">
-      <h2 id="res-hours">{day.date === day.today ? 'O aparta una hora de hoy' : 'Elige la hora'}</h2>
+      <div className="alumno-res__block-head">
+        <h2 id="res-hours">{day.date === day.today ? 'Horarios de apartado' : 'Elige la hora'}</h2>
+        {starts.length > 0 && (
+          <span className="alumno-res__hours-count">
+            {availableCount > 0 ? `${availableCount} disponibles` : 'Sin horarios disponibles'}
+          </span>
+        )}
+      </div>
       {starts.length === 0 ? <p className="alumno-muted">Ya no quedan horarios este día.</p> : null}
-      <div className="alumno-res__hours" role="radiogroup" aria-label="Hora de inicio">
-        {starts.map((start) => {
-          const free = isStartAvailable(day, court, start);
-          return (
-            <button
-              key={start}
-              type="button"
-              role="radio"
-              aria-checked={start === selected}
-              disabled={!free}
-              className={start === selected ? 'alumno-res__hour is-on' : 'alumno-res__hour'}
-              onClick={() => onSelect(start)}
-            >
-              {formatHour(start, day.timeZone)}
-            </button>
-          );
-        })}
+
+      <div className="alumno-res__shifts">
+        {shifts.map(({ name, items }) => (
+          <div key={name} className="alumno-res__shift">
+            <h3 className="alumno-res__shift-title">
+              <span aria-hidden="true">{shiftIcons[name]}</span> {name}
+            </h3>
+            <div className="alumno-res__hours" role="radiogroup" aria-label={`Horarios de la ${name.toLowerCase()}`}>
+              {items.map((start) => {
+                const free = isStartAvailable(day, court, start);
+                const isSelected = start === selected;
+                return (
+                  <button
+                    key={start}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    disabled={!free}
+                    className={[
+                      'alumno-res__hour',
+                      isSelected ? 'is-on' : '',
+                      !free ? 'is-busy' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    onClick={() => onSelect(start)}
+                  >
+                    <span className="alumno-res__hour-time">{formatHour(start, day.timeZone)}</span>
+                    {!free && <span className="alumno-res__hour-badge">Apartado</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );

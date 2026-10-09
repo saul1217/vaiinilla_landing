@@ -800,7 +800,9 @@ export function CartFilledView({
             <h2>{forHere && space ? space.nombre : 'Para llevar'}</h2>
             <p className="alumno-muted">
               {forHere && space
-                ? `${deliveredAtLabel(space?.tipo)}. Toca para cambiar a para llevar.`
+                ? space.tipo === 'cancha'
+                  ? `El pedido se entrega en tu cancha (se te llevará a tu ${space.nombre}). Toca para cambiar a para llevar.`
+                  : `${deliveredAtLabel(space?.tipo)}. Toca para cambiar a para llevar.`
                 : space
                   ? `Toca para pedir en ${space.nombre}.`
                   : 'Recoges en mostrador cuando esté listo.'}
