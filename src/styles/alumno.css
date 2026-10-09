@@ -1054,6 +1054,28 @@ html[data-theme='amoled'] .alumno-antojo img {
   margin: 14px 0 16px;
 }
 
+.alumno-place-videos {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 16px;
+}
+
+.alumno-place-videos ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.alumno-place-videos a {
+  color: var(--alumno-lime, #b4e04d);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .alumno-social-link {
   display: inline-grid;
   place-items: center;

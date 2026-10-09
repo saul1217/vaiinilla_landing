@@ -63,6 +63,31 @@ describe('DiscoveryPage', () => {
     expect(screen.getByRole('button', { name: /abrir menú/i })).toBeInTheDocument();
   });
 
+  it('muestra los videos del local como enlaces que abren en otra pestaña', async () => {
+    listEstablishments.mockResolvedValue({
+      establishments: [
+        {
+          id: '1',
+          nombre: 'Cafetería Demo A',
+          slug: 'demo-a',
+          identificador_cliente_etiqueta: 'Matrícula',
+          identificador_cliente_obligatorio: true,
+          videos_local: [{ titulo: 'Así preparamos el café', url: 'https://www.youtube.com/watch?v=abc' }],
+        },
+      ],
+      cursor: null,
+    });
+    render(
+      <MemoryRouter>
+        <DiscoveryPage />
+      </MemoryRouter>,
+    );
+    const video = await screen.findByRole('link', { name: 'Así preparamos el café' });
+    expect(video).toHaveAttribute('href', 'https://www.youtube.com/watch?v=abc');
+    expect(video).toHaveAttribute('target', '_blank');
+    expect(video).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
   it('abre el picker de establecimientos sin pedir splash ni cuenta', async () => {
     sessionStorage.clear();
     render(
