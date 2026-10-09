@@ -319,6 +319,14 @@ describe('seguimiento sin cuenta', () => {
     expect(await screen.findByText('Estado listo · QR v1.qr')).toBeInTheDocument();
   });
 
+  it('un pedido entregado sale de "Tu pedido #N" del menú, pero su seguimiento sigue abierto', async () => {
+    rememberGuestOrder({ token: TOKEN, slug: 'padel', folio: 21, placeName: 'Pádel', createdAt: Date.now() });
+    getTracking.mockResolvedValue(order({ estado: 'entregado', qr_token: 'v1.qr' }));
+    renderAt(`/seguimiento/${TOKEN}`);
+    expect(await screen.findByText('Estado entregado · QR v1.qr')).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem('vaiinilla.buyer.guest-orders.v1') ?? '[]')).toEqual([]);
+  });
+
   it('muestra el pedido completo: artículos, total y método de pago', async () => {
     getTracking.mockResolvedValue(
       order({

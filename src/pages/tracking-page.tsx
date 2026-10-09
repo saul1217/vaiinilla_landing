@@ -14,7 +14,7 @@ import { OrderTicketView } from './order-detail-page';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import { buyerEntryPath } from '../lib/buyer-entry';
-import { readGuestOrders, trackingUrl } from '../lib/guest-orders';
+import { forgetGuestOrderByToken, readGuestOrders, trackingUrl } from '../lib/guest-orders';
 import { useGuestSpaceToken } from '../lib/use-guest-space-token';
 import { isStorageAvailable } from '../lib/storage-available';
 import { isActiveOrder } from '../lib/order-labels';
@@ -74,6 +74,7 @@ export function TrackingPage() {
         failures = 0;
         setOrder(next);
         setError(null);
+        if (next.estado === 'entregado' && !isActiveOrder(next)) forgetGuestOrderByToken(token);
         // Se lee sin consumir: React puede montar dos veces y la sesión se perdería.
         const session = peekStripeCheckoutSession(next.id);
         if (session) setStripeSession(session);

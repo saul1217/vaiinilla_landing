@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/auth-context';
 import { api } from './api';
 import { errorMessage, VaiinillaApiError } from './api-error';
+import { forgetGuestOrderByToken } from './guest-orders';
 import { forgetGuest, readGuest } from './guest-session';
 import { isActiveOrder } from './order-labels';
 import type { TrackedOrder } from '../types/api';
@@ -41,6 +42,11 @@ export function useGuestLiveOrders(slug: string): GuestLiveOrdersState {
       try {
         const next = await api.listGuestOrders(slug, llave);
         if (!active) return;
+        for (const order of next) {
+          if (order.estado === 'entregado' && !isActiveOrder(order) && order.seguimiento_token) {
+            forgetGuestOrderByToken(order.seguimiento_token);
+          }
+        }
         // La misma regla que /cuenta/pedidos: rentas y cuentas abiertas cuentan.
         setOrders(next.filter((order) => isActiveOrder(order)));
         setError(null);
