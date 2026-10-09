@@ -155,24 +155,16 @@ describe('ReservationsScreen', () => {
     expect(within(sheet).queryByRole('button', { name: /tarjeta/i })).not.toBeInTheDocument();
   });
 
-  it('sin cuenta ve horarios y precios; apartar explica que pide cuenta y no aparta', async () => {
+  it('sin cuenta ve horarios y precios, y puede apartar sin que le pidan cuenta', async () => {
     const user = userEvent.setup();
     const client = makeClient();
-    render(
-      <MemoryRouter initialEntries={['/e/padel/canchas']}>
-        <Routes>
-          <Route path="/e/:slug/canchas" element={<ReservationsScreen client={client} slug="padel" needsAccount />} />
-          <Route path="/cuenta" element={<p>Pantalla de cuenta</p>} />
-        </Routes>
-      </MemoryRouter>,
-    );
-    expect(await screen.findAllByText('$330 / hora')).toHaveLength(2);
+    renderScreen(client, false);
+    expect((await screen.findAllByText('$330 / hora')).length).toBeGreaterThan(0);
     await user.click(await screen.findByRole('button', { name: /rentar ahora/i }));
     await user.click(screen.getByRole('button', { name: /apartar cancha/i }));
-    const sheet = await screen.findByRole('dialog', { name: /aparta con tu cuenta/i });
-    expect(client.create).not.toHaveBeenCalled();
-    await user.click(within(sheet).getByRole('button', { name: /entrar o crear cuenta/i }));
-    expect(await screen.findByText('Pantalla de cuenta')).toBeInTheDocument();
+    await waitFor(() => expect(client.create).toHaveBeenCalled());
+    expect(vi.mocked(client.create).mock.calls[0]?.[0]).toEqual({ courtId: 7, start: null, durationMinutes: 60 });
+    expect(screen.queryByRole('dialog', { name: /aparta con tu cuenta/i })).not.toBeInTheDocument();
   });
 
   it('"Rentar ahora" aparta sin hora de inicio', async () => {

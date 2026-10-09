@@ -54,6 +54,12 @@ export interface ApiErrorEnvelope {
   error: ApiErrorBody;
 }
 
+/** Video del local: enlace https que la ficha pública muestra a los clientes. */
+export interface StoreVideo {
+  titulo: string;
+  url: string;
+}
+
 export interface PublicEstablishment {
   /** Tarjeta: solo si el dueño la activó en su panel. Ausente (backend viejo) = no se ofrece. */
   acepta_tarjeta?: boolean;
@@ -79,6 +85,8 @@ export interface PublicEstablishment {
   tiktok_url?: string | null;
   whatsapp_url?: string | null;
   sitio_web_url?: string | null;
+  /** Videos del local (hasta 5). Ausente (backend viejo) = no hay videos. */
+  videos_local?: StoreVideo[];
 }
 
 export interface CatalogCategory {
@@ -408,10 +416,13 @@ export interface TableSelf {
   alias: string;
 }
 
-/** GET /mesas/espacio/:token (rol cliente): sesión activa de la mesa y quién soy. */
+/**
+ * GET /mesas/espacio/:token (rol cliente): sesión activa de la mesa y quién soy.
+ * Solo lectura: `sesion_id` es null y `participantes` va vacío si la mesa aún no tiene sesión.
+ */
 export interface TableSession {
   espacio: { id: number; nombre: string; tipo: string };
-  sesion_id: string;
+  sesion_id: string | null;
   participantes: TableParticipant[];
   yo: TableSelf | null;
 }

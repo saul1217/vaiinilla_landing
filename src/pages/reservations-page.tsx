@@ -85,7 +85,7 @@ export function ReservationsPage() {
     };
   }, [context, ready, slug, user]);
 
-  // Sin cuenta se ven días, horarios y precios con la sesión de invitado; apartar pide cuenta.
+  // Sin cuenta se usa la sesión de invitado: ve días, horarios y precios, y también puede apartar.
   useEffect(() => {
     if (!ready || user) return;
     let active = true;
@@ -103,12 +103,7 @@ export function ReservationsPage() {
     };
   }, [ready, slug, user]);
 
-  const guest = ready && !user;
-  const client = useMemo(() => {
-    if (!token) return null;
-    const base = createReservationsClient(token);
-    return guest ? { ...base, list: () => Promise.resolve([]) } : base;
-  }, [guest, token]);
+  const client = useMemo(() => (token ? createReservationsClient(token) : null), [token]);
 
   return (
     <AppShell tab="menu">
@@ -120,7 +115,6 @@ export function ReservationsPage() {
             client={client}
             slug={slug}
             cardOffered={offersCardPayment(place)}
-            needsAccount={guest}
           />
         ) : error ? null : (
           <LoadingSkeleton shape="rows" label="Abriendo tu sesión…" />
@@ -144,18 +138,14 @@ export function ReservationsScreen({
   client,
   slug,
   cardOffered = false,
-  needsAccount = false,
 }: {
   client: ReservationsClient;
   slug: string;
   /** Tarjeta: solo si el dueño la activó en su panel. */
   cardOffered?: boolean;
-  /** Invitado: ve horarios y precios, pero apartar pide cuenta. */
-  needsAccount?: boolean;
 }) {
   const navigate = useNavigate();
   const [confirmCancel, setConfirmCancel] = useState<Reservation | null>(null);
-  const [askAccount, setAskAccount] = useState(false);
 
   function onPaid(payment: ReservationPayment, method: ReservationPaymentMethod) {
     const order = payment.order;
@@ -229,7 +219,7 @@ export function ReservationsScreen({
                     day={day}
                     court={court}
                     start={start}
-                    onReserve={() => (needsAccount ? setAskAccount(true) : void vm.reserve())}
+                    onReserve={() => void vm.reserve()}
                   />
                 </>
               ) : null}
@@ -265,17 +255,6 @@ export function ReservationsScreen({
           cardOffered={cardOffered}
           onPay={(method) => void vm.pay(method)}
           onClosed={vm.dismissPayment}
-        />
-      ) : null}
-
-      {askAccount ? (
-        <ConfirmSheet
-          title="Aparta con tu cuenta"
-          message="La cancha queda a tu nombre: con tu cuenta ves la reserva, la pagas, la cancelas y pides comida a la cancha."
-          confirmLabel="Entrar o crear cuenta"
-          dismissLabel="Seguir viendo horarios"
-          onConfirm={() => void navigate(`/cuenta?next=${encodeURIComponent(`/e/${slug}/canchas`)}`)}
-          onClosed={() => setAskAccount(false)}
         />
       ) : null}
 

@@ -81,7 +81,7 @@ export function TableWhoPage() {
   // Yo según el servidor; si no me reconoce pero el dispositivo era alguien de la
   // lista, se ofrece continuar igual (reingreso con otra sesión de cliente).
   const stored =
-    session != null ? tableParticipantFor(slug, session.espacio.id, session.sesion_id) : null;
+    session?.sesion_id ? tableParticipantFor(slug, session.espacio.id, session.sesion_id) : null;
   const listedSelf =
     !session?.yo && stored
       ? (session?.participantes.find((p) => p.id === stored.participanteId) ?? null)

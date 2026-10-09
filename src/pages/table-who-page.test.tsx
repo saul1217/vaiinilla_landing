@@ -121,6 +121,17 @@ describe('TableWhoPage', () => {
     expect(screen.getByRole('button', { name: /agregarme a la mesa/i })).toBeInTheDocument();
   });
 
+  it('mesa sin sesión abierta: sin lista, directo al alta con alias', async () => {
+    tableSession.mockResolvedValue(session({ sesion_id: null, participantes: [], yo: null }));
+    const user = userEvent.setup();
+    renderWho();
+    expect(await screen.findByRole('heading', { name: /quién eres/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Jesús' })).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText('Tu nombre'), 'Kikin');
+    await user.click(screen.getByRole('button', { name: /^entrar$/i }));
+    expect(joinTable).toHaveBeenCalledWith('client-jwt', 'qr-1', { alias: 'Kikin' });
+  });
+
   it('con yo ofrece continuar y "No soy" muestra la lista', async () => {
     tableSession.mockResolvedValue(session({ yo: { id: 'p-jesus', alias: 'Jesús' } }));
     const user = userEvent.setup();
