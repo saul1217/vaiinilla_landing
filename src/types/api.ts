@@ -54,6 +54,12 @@ export interface ApiErrorEnvelope {
   error: ApiErrorBody;
 }
 
+/** Video del local: enlace https que la ficha pública muestra a los clientes. */
+export interface StoreVideo {
+  titulo: string;
+  url: string;
+}
+
 export interface PublicEstablishment {
   /** Tarjeta: solo si el dueño la activó en su panel. Ausente (backend viejo) = no se ofrece. */
   acepta_tarjeta?: boolean;
@@ -79,6 +85,8 @@ export interface PublicEstablishment {
   tiktok_url?: string | null;
   whatsapp_url?: string | null;
   sitio_web_url?: string | null;
+  /** Videos del local (hasta 5). Ausente (backend viejo) = no hay videos. */
+  videos_local?: StoreVideo[];
 }
 
 export interface CatalogCategory {
