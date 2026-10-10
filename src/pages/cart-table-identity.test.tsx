@@ -275,6 +275,18 @@ describe('CartPage con participante de mesa', () => {
     expect(screen.queryByRole('link', { name: 'Elegir participante' })).not.toBeInTheDocument();
   });
 
+  it('cancha escaneada: no ofrece elegir participante (eso abriría la cancha sin renta)', async () => {
+    localStorage.setItem(
+      'vaiinilla.buyer.space.v1',
+      JSON.stringify({ slug: 'demo-a', espacioId: 4, nombre: 'Cancha 01', tipo: 'cancha', qrToken: 'qr-4', guardadoEn: Date.now() }),
+    );
+    const user = userEvent.setup();
+    renderCart();
+    await user.click(await screen.findByRole('button', { name: /^pagar$/i }));
+    expect(screen.queryByRole('link', { name: 'Elegir participante' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/primero elige quién eres/i)).not.toBeInTheDocument();
+  });
+
   it('sin mesa (para llevar) sigue pidiendo el nombre como antes', async () => {
     const user = userEvent.setup();
     renderCart();

@@ -20,7 +20,7 @@ import { lastPlaceSlug } from '../lib/last-place';
 import { orderHistoryHeadline } from '../lib/order-labels';
 import { rememberPickupQrToken } from '../lib/pickup-qr';
 import { activeRentalSpace, forgetSpace, readSpace, rememberSpace } from '../lib/space-session';
-import { deliveredAtLabel, spaceNoun } from '../lib/space-words';
+import { deliveredAtLabel, isSharableSpace, spaceNoun } from '../lib/space-words';
 import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
 import { isStripeCheckoutEnabled, offersCardPayment, STRIPE_UNAVAILABLE_COPY } from '../lib/stripe-public';
 import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '../lib/stripe-session';
@@ -145,8 +145,9 @@ export function CartPage() {
     };
   }, [context, qrToken, scanned, slug, user, place]);
   const guestNameValid = tableAlias ? true : guestName.trim().length >= 2;
+  // Elegir participante es de mesas compartidas: una cancha no se comparte así (se renta).
   const whoHref =
-    qrToken != null ? `/e/${slug}/m/${encodeURIComponent(qrToken)}/quien?next=${encodeURIComponent(`/e/${slug}/carrito`)}` : null;
+    qrToken != null && isSharableSpace(scanned?.tipo) ? `/e/${slug}/m/${encodeURIComponent(qrToken)}/quien?next=${encodeURIComponent(`/e/${slug}/carrito`)}` : null;
   const [legal, setLegal] = useState<LegalVersions | null>(null);
   useEffect(() => {
     if (!guest || legal) return;
