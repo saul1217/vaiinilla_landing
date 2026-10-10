@@ -11,14 +11,27 @@ permissions:
   issues: write
   pull-requests: write
   id-token: write
+  actions: read
 jobs:
   claude:
     if: |
       (github.event_name == 'issues' && contains(github.event.issue.body, '@claude')) ||
       (github.event_name != 'issues' && contains(github.event.comment.body, '@claude'))
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          base_branch: develop
+          claude_args: |
+            --allowedTools "Edit,Write,Read,Glob,Grep,Bash(git:*),Bash(npm:*),Bash(npx:*),Bash(node:*),Bash(gh pr create:*),Bash(gh pr merge:*),Bash(gh pr view:*),Bash(gh pr list:*)"
+            --append-system-prompt "Reglas del repo: trabaja siempre a partir de la rama develop. Nunca hagas push a main ni abras PRs hacia main. Al terminar una corrección: 1) corre npm ci (si hace falta) y npm test; 2) si todas las pruebas pasan, haz push de tu rama y abre un PR con 'gh pr create --base develop', y luego fusiónalo con 'gh pr merge --squash --delete-branch'; 3) si alguna prueba falla, no fusiones: deja el PR abierto y explica en el issue qué falló. Responde siempre en el issue con el número de PR, el commit fusionado en develop y el resultado de las pruebas."
