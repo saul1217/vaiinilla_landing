@@ -60,7 +60,13 @@ const INITIAL: ReservationsState = {
   notice: null,
 };
 
+/** La lista cargada solo vale si es de la fecha que el cliente eligió. */
+function dayMatchesSelection(state: ReservationsState): boolean {
+  return !state.day || state.day.date === (state.selectedDate ?? state.day.today);
+}
+
 export function selectedCourt(state: ReservationsState): CourtSchedule | null {
+  if (!dayMatchesSelection(state)) return null;
   return state.day?.courts.find((court) => court.id === state.selectedCourtId) ?? null;
 }
 
@@ -90,13 +96,18 @@ export function useReservations(
     if (alive.current) setState((current) => ({ ...current, ...next }));
   }, []);
 
-  const refresh = useCallback(async () => {
-    const date = stateRef.current.selectedDate ?? undefined;
+  const requestSeq = useRef(0);
+
+  const refresh = useCallback(async (dateOverride?: string | null) => {
+    // `selectDate` aún no se renderiza cuando refresca: la fecha viaja explícita.
+    const date = (dateOverride !== undefined ? dateOverride : stateRef.current.selectedDate) ?? undefined;
+    const seq = ++requestSeq.current;
     const [dayResult, mineResult] = await Promise.allSettled([
       clientRef.current.day(date),
       clientRef.current.list(),
     ]);
-    if (!alive.current) return;
+    // Una respuesta más vieja que otra ya pedida no reemplaza la lista del día elegido.
+    if (!alive.current || seq !== requestSeq.current) return;
     setState((current) => {
       const day = dayResult.status === 'fulfilled' ? dayResult.value : null;
       const courtId =
@@ -139,14 +150,15 @@ export function useReservations(
   const selectDate = useCallback(
     (date: string) => {
       const today = stateRef.current.day?.today;
+      const selectedDate = date === today ? null : date;
       patch({
-        selectedDate: date === today ? null : date,
+        selectedDate,
         selectedStart: null,
         rentNow: false,
         selectedDuration: null,
         loading: true,
       });
-      void refresh();
+      void refresh(selectedDate);
     },
     [patch, refresh],
   );
