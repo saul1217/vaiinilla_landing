@@ -116,7 +116,7 @@ export function parseCourtDay(raw: unknown): CourtDay {
     opensAt: instant(d.abre, 'abre'),
     closesAt: instant(d.cierra, 'cierra'),
     blockMinutes: typeof d.bloque_min === 'number' ? d.bloque_min : 30,
-    durations: durations.length > 0 ? durations : [60, 90, 120],
+    durations: durations.length > 0 ? durations : [90, 180, 270, 360],
     daysAhead: typeof d.dias_adelanto === 'number' ? d.dias_adelanto : 14,
     holdMinutes: typeof d.apartado_min === 'number' ? d.apartado_min : 10,
     now: instant(d.ahora, 'ahora'),
