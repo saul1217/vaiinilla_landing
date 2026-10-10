@@ -84,6 +84,17 @@ function renderScreen(client: ReservationsClient, cardOffered = true) {
 describe('ReservationsScreen', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('con turnos de 1 h 30 muestra el precio del turno, no el de la hora', async () => {
+    const client = makeClient();
+    client.day = vi.fn(() => {
+      const d = day([court(7, 'Cancha 1')]);
+      return Promise.resolve({ ...d, durations: [90, 180, 270, 360] });
+    });
+    renderScreen(client);
+    expect(await screen.findByText('$495 / 1 h 30')).toBeInTheDocument();
+    expect(screen.queryByText('$330 / hora')).not.toBeInTheDocument();
+  });
+
   it('muestra las canchas con su precio al cliente y cuándo se liberan', async () => {
     renderScreen(makeClient());
     expect(await screen.findByRole('radio', { name: /cancha 1/i })).toBeInTheDocument();
