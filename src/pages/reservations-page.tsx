@@ -56,6 +56,13 @@ import { offersCardPayment } from '../lib/stripe-public';
 import type { PublicEstablishment } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
 
+/** Precio del turno más corto: "$600 / 1 h 30" (pádel va por turnos), o "$330 / hora". */
+function turnPriceLabel(day: CourtDay, pricePerHour: string): string {
+  const turn = day.durations.length > 0 ? Math.min(...day.durations) : 60;
+  if (turn === 60) return `${formatAmount(pricePerHour)} / hora`;
+  return `${formatAmount(amountFor(pricePerHour, turn) ?? pricePerHour)} / ${durationLabel(turn)}`;
+}
+
 export function ReservationsPage() {
   const { slug = '' } = useParams();
   const { user, ready } = useAuth();
@@ -367,9 +374,7 @@ function CourtStrip({
               onClick={() => onSelect(court.id)}
             >
               <strong>{court.name}</strong>
-              {court.customerPricePerHour ? (
-                <span>{formatAmount(court.customerPricePerHour.cashOrBalance)} / hora</span>
-              ) : null}
+              {court.customerPricePerHour ? <span>{turnPriceLabel(day, court.customerPricePerHour.cashOrBalance)}</span> : null}
               <span className="alumno-res__status">
                 <i className={looksFree ? 'is-free' : 'is-busy'} aria-hidden="true" />
                 {until !== null

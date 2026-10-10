@@ -126,16 +126,27 @@ export function CartPage() {
           openClientSession: openClientSessionRef.current,
         });
         if (!active) return;
-        const table = await currentScannedTable(client.access_token, scanned);
+        const activeTable = await currentScannedTable(client.access_token, scanned);
+        if (!active) return;
+        // currentScannedTable limpia la identidad local si cambió la sesión. En ese
+        // caso, no reutilizamos una identidad que el backend aún no confirmó.
+        if (!activeTable || !joinedScannedTable(scanned)) {
+          setTableAlias(null);
+          if (!activeTable) {
+            setForHere(false);
+            setSpaceVersion((v) => v + 1);
+          }
+          return;
+        }
+        const table = await api.tableSession(client.access_token, qrToken);
         if (!active) return;
         // Solo el servidor confirma quién está unido. El displayName de la cuenta
         // no atribuye pedidos a un participante temporal.
-        setTableAlias(table?.mi_alias ?? null);
-        // La mesa ya se cerró: el teléfono deja de mostrarla.
-        if (!table) {
-          setForHere(false);
-          setSpaceVersion((v) => v + 1);
-        }
+        setTableAlias(
+          table.sesion_id === activeTable.sesion_id && Number(table.espacio.id) === Number(scanned.espacioId)
+            ? table.yo?.alias ?? null
+            : null,
+        );
       } catch {
         if (active) setTableAlias(null);
       }
@@ -391,6 +402,13 @@ export function CartPage() {
           setSpaceVersion((v) => v + 1);
           throw new Error('Tu mesa ya no está abierta. Escanea el QR de la mesa para pedir.');
         }
+        // /mesas/actual confirma que la sesión sigue abierta; este endpoint confirma
+        // que el backend reconoce al participante local antes de crear el pedido.
+        const table = await api.tableSession(session.access_token, qrToken);
+        if (!table.yo || Number(table.espacio.id) !== Number(target.espacioId)) {
+          void navigate(whoHref);
+          return;
+        }
       }
       const payload = toCreateOrderInput(
         lines,
@@ -534,7 +552,7 @@ export function CartPage() {
               canCheckout
                 ? operationalVerificationPending
                   ? 'Verificando…'
-                  : 'Pagar'
+                  : 'Continuar'
                 : 'Crea tu cuenta para pedir aquí'
             }
             payDisabled={
