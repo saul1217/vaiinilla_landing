@@ -126,16 +126,27 @@ export function CartPage() {
           openClientSession: openClientSessionRef.current,
         });
         if (!active) return;
-        const table = await currentScannedTable(client.access_token, scanned);
+        const activeTable = await currentScannedTable(client.access_token, scanned);
+        if (!active) return;
+        // currentScannedTable limpia la identidad local si cambió la sesión. En ese
+        // caso, no reutilizamos una identidad que el backend aún no confirmó.
+        if (!activeTable || !joinedScannedTable(scanned)) {
+          setTableAlias(null);
+          if (!activeTable) {
+            setForHere(false);
+            setSpaceVersion((v) => v + 1);
+          }
+          return;
+        }
+        const table = await api.tableSession(client.access_token, qrToken);
         if (!active) return;
         // Solo el servidor confirma quién está unido. El displayName de la cuenta
         // no atribuye pedidos a un participante temporal.
-        setTableAlias(table?.mi_alias ?? null);
-        // La mesa ya se cerró: el teléfono deja de mostrarla.
-        if (!table) {
-          setForHere(false);
-          setSpaceVersion((v) => v + 1);
-        }
+        setTableAlias(
+          table.sesion_id === activeTable.sesion_id && Number(table.espacio.id) === Number(scanned.espacioId)
+            ? table.yo?.alias ?? null
+            : null,
+        );
       } catch {
         if (active) setTableAlias(null);
       }
