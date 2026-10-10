@@ -13,8 +13,14 @@ const OPEN: Record<string, number> = {
   '2026-10-24': Date.parse('2026-10-24T13:00:00Z'),
 };
 
-function courtDay(date: string): CourtDay {
+function opensAtOf(date: string): number {
   const opensAt = OPEN[date];
+  if (opensAt === undefined) throw new Error(`Sin hora de apertura para ${date}`);
+  return opensAt;
+}
+
+function courtDay(date: string): CourtDay {
+  const opensAt = opensAtOf(date);
   return {
     date,
     today: TODAY,
@@ -25,7 +31,7 @@ function courtDay(date: string): CourtDay {
     durations: [60, 90],
     daysAhead: 14,
     holdMinutes: 10,
-    now: OPEN[TODAY] + HOUR,
+    now: opensAtOf(TODAY) + HOUR,
     courts: [
       {
         id: 2,
@@ -122,7 +128,7 @@ describe('cambio de día y apartar', () => {
 
     act(() => result.current.selectDate(TOMORROW));
     await waitFor(() => expect(result.current.state.day?.date).toBe(TOMORROW));
-    const start = OPEN[TOMORROW] + 3 * HOUR;
+    const start = opensAtOf(TOMORROW) + 3 * HOUR;
     act(() => result.current.selectStart(start));
     act(() => result.current.selectDuration(90));
     await act(() => result.current.reserve());
