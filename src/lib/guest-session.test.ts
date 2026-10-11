@@ -48,7 +48,7 @@ describe('guest-session', () => {
     localStorage.setItem('vaiinilla.buyer.guest.v1', JSON.stringify({ nombre: 'Lupi', llave: 'L'.repeat(43) }));
     renewGuest.mockResolvedValue({ access_token: 'jwt', expires_in: 900, contexto: {}, invitado: { nombre: 'Lupi' } });
     await guestSession('demo-a');
-    expect(renewGuest).toHaveBeenCalledWith('demo-a', 'L'.repeat(43));
+    expect(renewGuest).toHaveBeenCalledWith('demo-a', 'L'.repeat(43), {});
     expect(createGuest).not.toHaveBeenCalled();
   });
 
@@ -62,13 +62,35 @@ describe('guest-session', () => {
       invitado: { nombre: '', llave: 'K'.repeat(43) },
     });
     await guestSession('demo-a');
-    expect(renewGuest).toHaveBeenCalledWith('demo-a', 'L'.repeat(43));
+    expect(renewGuest).toHaveBeenCalledWith('demo-a', 'L'.repeat(43), {});
     expect(createGuest).toHaveBeenCalledWith({
       slug: 'demo-a',
       terminosVersion: 't-1',
       privacidadVersion: 'p-1',
     });
     expect(JSON.stringify(createGuest.mock.calls[0]?.[0] ?? {})).not.toContain('"nombre"');
+  });
+
+  it('manda espacio_token al dar de alta y renueva después con la entrada guardada', async () => {
+    createGuest.mockResolvedValue({
+      access_token: 'jwt',
+      expires_in: 900,
+      contexto: {},
+      invitado: { nombre: '', llave: 'L'.repeat(43) },
+      entrada: { token: 'ent_1', vence_en: new Date(Date.now() + 3600_000).toISOString() },
+    });
+    await guestSession('demo-a', undefined, { espacioToken: 'esp_abc' });
+    expect(createGuest).toHaveBeenCalledWith(expect.objectContaining({ espacioToken: 'esp_abc' }));
+    renewGuest.mockResolvedValue({ access_token: 'jwt', expires_in: 900, contexto: {}, invitado: { nombre: '' } });
+    await guestSession('demo-a');
+    expect(renewGuest).toHaveBeenCalledWith('demo-a', 'L'.repeat(43), { entradaToken: 'ent_1' });
+  });
+
+  it('con sesión previa, escanear renueva con el espacio_token', async () => {
+    localStorage.setItem('vaiinilla.buyer.guest.v1', JSON.stringify({ nombre: 'Lupi', llave: 'L'.repeat(43) }));
+    renewGuest.mockResolvedValue({ access_token: 'jwt', expires_in: 900, contexto: {}, invitado: { nombre: 'Lupi' } });
+    await guestSession('demo-a', undefined, { espacioToken: 'esp_xyz' });
+    expect(renewGuest).toHaveBeenCalledWith('demo-a', 'L'.repeat(43), { espacioToken: 'esp_xyz' });
   });
 
   it('con el mismo nombre renueva; con otro da de alta', async () => {
