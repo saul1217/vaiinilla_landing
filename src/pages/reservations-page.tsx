@@ -42,6 +42,7 @@ import {
   dayChipLabel,
   dayLongLabel,
   durationLabel,
+  isClosedNow,
   formatHour,
   listedReservations,
   isStartAvailable,
@@ -229,6 +230,7 @@ export function ReservationsScreen({
                   selected={state.rentNow}
                   available={canRentNow(day, court)}
                   busyUntilMs={busyUntil(court, day.now)}
+                  closed={isClosedNow(day)}
                   timeZone={day.timeZone}
                   onClick={vm.selectRentNow}
                 />
@@ -363,13 +365,14 @@ function CourtStrip({
   onSelect: (id: number) => void;
 }) {
   const isToday = day.date === day.today;
+  const closed = isClosedNow(day);
   return (
     <div className="alumno-res__courts" role="radiogroup" aria-label="Cancha">
       {day.courts
         .filter((court) => court.rentable)
         .map((court) => {
           const until = isToday ? busyUntil(court, day.now) : null;
-          const looksFree = isToday ? until === null : court.busy.length === 0;
+          const looksFree = !closed && (isToday ? until === null : court.busy.length === 0);
           const selected = court.id === selectedId;
           return (
             <button
@@ -384,13 +387,15 @@ function CourtStrip({
               {court.customerPricePerHour ? <span>{turnPriceLabel(day, court.customerPricePerHour.cashOrBalance)}</span> : null}
               <span className="alumno-res__status">
                 <i className={looksFree ? 'is-free' : 'is-busy'} aria-hidden="true" />
-                {until !== null
-                  ? `Se libera ${formatHour(until, day.timeZone)}`
-                  : isToday
-                    ? 'Libre ahora'
-                    : court.busy.length === 0
-                      ? 'Libre todo el día'
-                      : 'Con horarios ocupados'}
+                {closed
+                  ? `Cerrado · abre a las ${formatHour(day.opensAt, day.timeZone)}`
+                  : until !== null
+                    ? `Se libera ${formatHour(until, day.timeZone)}`
+                    : isToday
+                      ? 'Libre ahora'
+                      : court.busy.length === 0
+                        ? 'Libre todo el día'
+                        : 'Con horarios ocupados'}
               </span>
             </button>
           );
@@ -455,12 +460,14 @@ function RentNowCard({
   selected,
   available,
   busyUntilMs,
+  closed,
   timeZone,
   onClick,
 }: {
   selected: boolean;
   available: boolean;
   busyUntilMs: number | null;
+  closed: boolean;
   timeZone: string;
   onClick: () => void;
 }) {
@@ -470,12 +477,12 @@ function RentNowCard({
         <span>
           <strong>Rentar ahora</strong>
           <small>
-            {busyUntilMs !== null
+            {!closed && busyUntilMs !== null
               ? `Ocupada ahora mismo · Se libera a las ${formatHour(busyUntilMs, timeZone)}.`
               : 'Fuera de horario para rentar de inmediato.'}
           </small>
         </span>
-        <span className="alumno-res__now-badge">Ocupada</span>
+        <span className="alumno-res__now-badge">{closed ? 'Cerrado' : 'Ocupada'}</span>
       </div>
     );
   }

@@ -9,6 +9,7 @@ import {
   dayChipLabel,
   dayLongLabel,
   durationLabel,
+  isClosedNow,
   isFree,
   isStartAvailable,
   listedReservations,
@@ -92,6 +93,13 @@ describe('horarios de una cancha', () => {
     expect(canRentNow(d, court([[90, 200]]))).toBe(false);
     expect(canRentNow(d, court([], { rentable: false }))).toBe(false);
     expect(canRentNow(day(100, { date: '2026-10-01' }), court())).toBe(false);
+  });
+
+  it('fuera de horario hoy está cerrado; dentro, no', () => {
+    expect(isClosedNow(day(100))).toBe(false);
+    expect(isClosedNow(day(-10))).toBe(true);
+    expect(isClosedNow(day(16 * 60))).toBe(true);
+    expect(isClosedNow(day(-10, { date: '2026-10-01' }))).toBe(false);
   });
 
   it('el monto es precio × minutos / 60 con la mitad hacia arriba', () => {

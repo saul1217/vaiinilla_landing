@@ -242,6 +242,13 @@ export function isStartAvailable(day: CourtDay, court: CourtSchedule, start: num
   return availableDurations(day, court, start).length > 0;
 }
 
+/** Hoy y ahora no cabe ni la duración más corta dentro del horario del lugar (antes de abrir o tras cerrar). */
+export function isClosedNow(day: CourtDay): boolean {
+  if (day.date !== day.today) return false;
+  const shortest = (day.durations.length > 0 ? Math.min(...day.durations) : day.blockMinutes) * MINUTE;
+  return day.now < day.opensAt || day.now + shortest > day.closesAt;
+}
+
 /** ¿La cancha está libre ahora mismo por al menos la duración más corta? ("Rentar ahora"). */
 export function canRentNow(day: CourtDay, court: CourtSchedule): boolean {
   return day.date === day.today && court.rentable && isStartAvailable(day, court, day.now);
