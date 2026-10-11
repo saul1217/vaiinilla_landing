@@ -334,12 +334,12 @@ export const RESERVATION_STATE_LABEL: Record<ReservationStatus, string> = {
   en_curso: 'En juego',
   terminada: 'Terminada',
   cancelada: 'Cancelada',
-  expirada: 'Cancelada por tiempo de espera',
+  expirada: 'Vencida',
   conflicto: 'Revisar con el personal',
 };
 
 /** Aviso de una reserva vencida (tarjeta y respuestas 409 al pagar o cancelar). */
-export const EXPIRED_NOTICE = 'Venció sin pagarse: pasaron los 10 minutos para pagarla.';
+export const EXPIRED_NOTICE = 'Venció sin pagarse.';
 
 export const PAID_NOTICE: Record<ReservationPaymentMethod, string> = {
   saldo: '¡Listo! Tu cancha quedó pagada.',

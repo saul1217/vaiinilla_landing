@@ -54,7 +54,7 @@ describe('seguimiento de una renta', () => {
   it('cancelada, vencida o en conflicto no tiene paso y se explica', () => {
     for (const [estado, label] of [
       ['cancelada', 'Cancelada'],
-      ['expirada', 'Cancelada por tiempo de espera'],
+      ['expirada', 'Vencida'],
       ['conflicto', 'Revisar con el personal'],
     ] as const) {
       const o = order(reserva({ estado }));

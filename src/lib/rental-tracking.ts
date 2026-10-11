@@ -53,7 +53,7 @@ export function isLiveRental(
 
 const FALLEN_LABEL: Partial<Record<OrderReservation['estado'], string>> = {
   cancelada: 'Cancelada',
-  expirada: 'Cancelada por tiempo de espera',
+  expirada: 'Vencida',
   conflicto: 'Revisar con el personal',
 };
 
