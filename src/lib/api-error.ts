@@ -27,6 +27,8 @@ const friendlyMessages: Record<string, string> = {
   ORDER_INVALID_STATE: 'El pedido ya cambió de estado.',
 };
 
+export const RATE_LIMIT_MESSAGE = 'Hay demasiados intentos en poco tiempo. Espera un momento y vuelve a intentar.';
+
 export class VaiinillaApiError extends Error {
   readonly status: number;
   readonly code: string;
@@ -34,7 +36,13 @@ export class VaiinillaApiError extends Error {
   readonly retryAfter?: number;
 
   constructor(status: number, body: ApiErrorBody, retryAfter?: number) {
-    super(friendlyMessages[body.code] ?? body.message ?? 'No fue posible completar la operación.');
+    // Todo 429 pide esperar, salvo el límite de reservas sin cuenta, que pide iniciar sesión.
+    super(
+      (status === 429 && body.code !== 'GUEST_RESERVATION_LIMIT' ? RATE_LIMIT_MESSAGE : undefined) ??
+        friendlyMessages[body.code] ??
+        body.message ??
+        'No fue posible completar la operación.',
+    );
     this.name = 'VaiinillaApiError';
     this.status = status;
     this.code = body.code;

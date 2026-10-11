@@ -256,6 +256,7 @@ describe('ReservationsScreen', () => {
 
   it.each([
     [429, 'GUEST_RESERVATION_LIMIT', /límite de reservas sin cuenta.*GUEST_RESERVATION_LIMIT/i],
+    [429, 'RATE_LIMITED', /espera un momento y vuelve a intentar.*RATE_LIMITED/i],
     [500, 'INTERNAL_ERROR', /problema del servicio.*INTERNAL_ERROR/i],
     [0, 'BACKEND_UNAVAILABLE', /servicio no está disponible.*BACKEND_UNAVAILABLE/i],
     [403, 'ENTRY_TOKEN_INVALID', /inicia sesión o crea tu cuenta para reservar/i],
