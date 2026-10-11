@@ -1,7 +1,7 @@
 // Estado de la pantalla de canchas: horario del día, selección, apartar y pagar. Espejo de
 // ReservationsViewModel (Android). El cliente HTTP se inyecta para poder probarlo sin red.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { errorMessage } from './api-error';
+import { VaiinillaApiError, errorMessage } from './api-error';
 import { createIdempotencyKey } from './idempotency';
 import {
   PAID_NOTICE,
@@ -40,6 +40,8 @@ export interface ReservationsState {
   pending: Reservation | null;
   working: boolean;
   error: string | null;
+  /** El servidor negó apartar (403): un invitado sin escaneo reciente debe entrar o crear cuenta. */
+  denied: boolean;
   notice: string | null;
 }
 
@@ -57,6 +59,7 @@ const INITIAL: ReservationsState = {
   pending: null,
   working: false,
   error: null,
+  denied: false,
   notice: null,
 };
 
@@ -198,14 +201,14 @@ export function useReservations(
   );
 
   const selectDuration = useCallback((minutes: number) => patch({ selectedDuration: minutes }), [patch]);
-  const dismissMessages = useCallback(() => patch({ error: null, notice: null }), [patch]);
+  const dismissMessages = useCallback(() => patch({ error: null, denied: false, notice: null }), [patch]);
 
   /** Aparta la cancha y abre la elección del pago. */
   const reserve = useCallback(async () => {
     const current = stateRef.current;
     const court = selectedCourt(current);
     if (!canReserve(current) || !court || current.selectedDuration === null) return;
-    patch({ working: true, error: null, notice: null });
+    patch({ working: true, error: null, denied: false, notice: null });
     try {
       const reservation = await clientRef.current.create(
         {
@@ -224,7 +227,10 @@ export function useReservations(
         mine: [reservation, ...now.mine.filter((r) => r.id !== reservation.id)],
       }));
     } catch (cause) {
-      patch({ working: false, error: errorMessage(cause) });
+      const denied = cause instanceof VaiinillaApiError && cause.status === 403;
+      // Nunca en silencio: el mensaje del servidor lleva su código para poder reportarlo.
+      const code = cause instanceof VaiinillaApiError && cause.code ? ` (${cause.code})` : '';
+      patch({ working: false, denied, error: `${errorMessage(cause)}${code}` });
     }
     await refresh();
   }, [patch, refresh]);

@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CourtDay, CourtSchedule, Reservation, ReservationPayment } from '../lib/reservations';
 import type { ReservationsClient } from '../lib/use-reservations';
+import { VaiinillaApiError } from '../lib/api-error';
 import { ReservationsScreen } from './reservations-page';
 
 const MIN = 60_000;
@@ -234,6 +235,23 @@ describe('ReservationsScreen', () => {
     await user.click(await screen.findByRole('button', { name: /apartar cancha/i }));
     expect(await screen.findByText(/ya lo tomaron/i)).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: /paga tu cancha/i })).not.toBeInTheDocument();
+  });
+
+  it('un invitado sin escaneo (403) ve junto al botón que debe iniciar sesión o crear cuenta', async () => {
+    const user = userEvent.setup();
+    const denied = new VaiinillaApiError(403, { code: 'FORBIDDEN', message: 'Prohibido' });
+    const client = makeClient({ create: vi.fn(() => Promise.reject(denied)) });
+    render(
+      <MemoryRouter initialEntries={['/e/padel/canchas']}>
+        <Routes>
+          <Route path="/e/:slug/canchas" element={<ReservationsScreen client={client} slug="padel" guest />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('radio', { name: '09:00' }));
+    await user.click(await screen.findByRole('button', { name: /apartar cancha/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/inicia sesión o crea tu cuenta para reservar/i);
+    expect(screen.getByRole('link', { name: /iniciar sesión o crear cuenta/i })).toBeInTheDocument();
   });
 
   it('retoma el pago de una reserva apartada y cancela con confirmación', async () => {

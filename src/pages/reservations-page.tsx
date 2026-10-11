@@ -2,7 +2,7 @@
 // Espejo de ReservationsScreen (Android). La renta se paga primero; sin pagar no se puede pedir
 // comida en la cancha. Pagar crea un pedido de renta normal y se sigue en su pantalla de pedido.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { MotionSheet } from '../components/motion-sheet';
@@ -194,11 +194,15 @@ export function ReservationsScreen({
   const bodyRef = useRef<HTMLDivElement>(null);
   useHeightMorph(bodyRef, `${court?.id}:${start !== null}:${state.pending?.id ?? ''}`);
 
+  // Con el resumen a la vista el error de apartar sale junto al botón, no fuera de pantalla arriba.
+  const inlineError = Boolean(court?.rentable && start !== null);
   const mine = state.mine.filter((r) => isLiveReservation(r.state) || r.state === 'conflicto');
 
   return (
     <div className="alumno-res" data-slug={slug}>
-      {state.error ? <Banner message={state.error} tone="coral" onDismiss={vm.dismissMessages} /> : null}
+      {state.error && !(inlineError && !state.pending) ? (
+        <Banner message={state.error} tone="coral" onDismiss={vm.dismissMessages} />
+      ) : null}
       {state.notice ? <Banner message={state.notice} tone="lime" onDismiss={vm.dismissMessages} /> : null}
 
       {!day ? (
@@ -245,10 +249,12 @@ export function ReservationsScreen({
                   />
                   <Summary
                     key="summary"
+                    slug={slug}
                     state={state}
                     day={day}
                     court={court}
                     start={start}
+                    guest={guest}
                     onReserve={() => void vm.reserve()}
                   />
                 </>
@@ -618,16 +624,20 @@ function DurationRow({
 }
 
 function Summary({
+  slug,
   state,
   day,
   court,
   start,
+  guest,
   onReserve,
 }: {
+  slug: string;
   state: ReservationsState;
   day: CourtDay;
   court: CourtSchedule;
   start: number;
+  guest: boolean;
   onReserve: () => void;
 }) {
   const minutes = state.selectedDuration;
@@ -666,6 +676,20 @@ function Summary({
       <p className="alumno-res__summary-note">
         Se aparta {day.holdMinutes} minutos mientras pagas. Si cancelas, lo pagado no se devuelve.
       </p>
+      {state.error ? (
+        <div className="alumno-error" role="alert">
+          <p>
+            {guest && state.denied
+              ? 'Inicia sesión o crea tu cuenta para reservar. También puedes escanear el NFC o QR del lugar para apartar sin cuenta.'
+              : state.error}
+          </p>
+          {guest && state.denied ? (
+            <p>
+              <Link to={`/cuenta?next=${encodeURIComponent(`/e/${slug}/canchas`)}`}>Iniciar sesión o crear cuenta</Link>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <button
         type="button"
         className={state.working ? 'alumno-btn alumno-btn--lime is-working' : 'alumno-btn alumno-btn--lime'}
