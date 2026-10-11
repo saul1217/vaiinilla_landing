@@ -838,7 +838,7 @@ html[data-theme='amoled'] .alumno-antojo img {
   justify-content: center;
   gap: 7px;
   justify-self: start;
-  min-height: 36px;
+  min-height: 44px;
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -5558,6 +5558,9 @@ html[data-theme='light'] .alumno-codesheet__slots > span.is-filled {
 .alumno-codesheet__cancel {
   display: block;
   margin: 10px auto 0;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 16px;
 }
 
 /* ---------- Cart lines (Android CartLineRow / QuantityStepper parity), phone layout ---------- */
