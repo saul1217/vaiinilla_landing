@@ -7052,6 +7052,19 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   border-radius: 26px;
 }
 
+/* En móvil la barra inferior es fija (≈73 px + zona segura): el resumen y "Apartar cancha"
+   se anclan justo por encima de ella mientras se desplaza, y vuelven a su sitio al llegar abajo.
+   En horizontal bajo (poca altura) no se ancla: taparía casi toda la pantalla. */
+@media (max-width: 767px) and (min-height: 560px) {
+  .alumno-res__summary {
+    position: sticky;
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+    z-index: 10;
+    background: var(--bg);
+    box-shadow: 0 -8px 20px color-mix(in srgb, var(--bg) 85%, transparent);
+  }
+}
+
 .alumno-res__summary p {
   margin: 0;
 }
