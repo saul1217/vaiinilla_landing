@@ -94,3 +94,40 @@ describe('cambiar tienda con carrito', () => {
     expect(readCart()).toBeNull();
   });
 });
+
+describe('cambiar tienda y recargar la página', () => {
+  it('con sesión y carrito, tras recargar nada vuelve a fijar la tienda y Menú apunta a /pedir', async () => {
+    const { writeStoredClientContext } = await import('./client-session');
+    // 1) sesión de cliente y 2) un producto de la tienda
+    rememberPlace('cafeteria-usagi');
+    writeStoredClientContext(context, 'cafeteria-usagi');
+    writeCart({
+      slug: 'cafeteria-usagi',
+      establishmentName: 'USAGI',
+      lines: [{ productId: 1, quantity: 1, optionIds: [], productName: 'Agua' } as never],
+    });
+
+    // 3) "Cambiar tienda"
+    leavePlace();
+
+    // 4) recarga: los módulos se vuelven a cargar y solo queda lo guardado en el dispositivo
+    vi.resetModules();
+    const lastPlace = await import('./last-place');
+    const cartStorage = await import('./cart-storage');
+    const clientSession = await import('./client-session');
+
+    listAccesses.mockResolvedValue([
+      { rol: 'cliente', establecimiento: { slug: 'cafeteria-usagi' }, identificador_cliente: null },
+    ]);
+    await clientSession.resolveClientSession({
+      user,
+      context: clientSession.readStoredClientContext()?.context ?? null,
+      openClientSession: vi.fn().mockResolvedValue(context),
+    });
+    lastPlace.rememberPlaceFromSession('cafeteria-usagi');
+
+    // 5) Menú (cart?.slug ?? lastPlaceSlug() en BottomNav) cae en /pedir
+    const placeSlug = cartStorage.readCart()?.slug ?? lastPlace.lastPlaceSlug();
+    expect(placeSlug ? `/e/${placeSlug}` : '/pedir').toBe('/pedir');
+  });
+});

@@ -1,4 +1,5 @@
 import { clearCart } from './cart-storage';
+import { clearStoredClientContext } from './client-session';
 import { releasePlace } from './last-place';
 import { forgetSpace } from './space-session';
 import { forgetTableParticipant } from './table-participant';
@@ -14,4 +15,6 @@ export function leavePlace(): void {
   forgetSpace();
   forgetTableParticipant();
   clearCart();
+  // El contexto guardado es de la tienda anterior: no debe rearmar nada al recargar.
+  clearStoredClientContext();
 }
