@@ -2,7 +2,7 @@
 // enlace de QR o NFC, o el código de 4 dígitos de la mesa) se convierte en a dónde ir.
 import { api } from './api';
 import { rememberPlace } from './last-place';
-import { forgetGuestEntry, guestSession, readGuest } from './guest-session';
+import { forgetGuestEntry, guestSession } from './guest-session';
 import { rememberSpace } from './space-session';
 
 export type EntryTarget = { kind: 'space'; token: string } | { kind: 'store'; slug: string };
@@ -52,9 +52,9 @@ export async function enterSpace(
     // El backend acepta el token o el código para unirse a la mesa compartida.
     qrToken: token,
   });
-  // Escanear de nuevo es una prueba nueva: un invitado que ya tenía sesión la renueva
-  // con este token (no solo cuando se crea una sesión nueva).
-  if (token.startsWith('esp_') && readGuest()) {
+  // El escaneo es la única ocasión en que se manda el espacio_token: crea o renueva la
+  // sesión de invitado con él. Después solo se usa la entrada que devuelve el servidor.
+  if (token.startsWith('esp_')) {
     forgetGuestEntry();
     await guestSession(resolved.establecimiento_slug, undefined, { espacioToken: token }).catch(() => undefined);
   }

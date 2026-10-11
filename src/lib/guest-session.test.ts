@@ -86,6 +86,21 @@ describe('guest-session', () => {
     expect(renewGuest).toHaveBeenCalledWith('demo-a', 'L'.repeat(43), { entradaToken: 'ent_1' });
   });
 
+  it('con la entrada vencida no reutiliza el qrToken guardado: renueva sin prueba', async () => {
+    localStorage.setItem('vaiinilla.buyer.guest.v1', JSON.stringify({ nombre: 'Lupi', llave: 'L'.repeat(43) }));
+    localStorage.setItem(
+      'vaiinilla.buyer.guest.entry.v1',
+      JSON.stringify({ slug: 'demo-a', token: 'ent_old', venceEn: new Date(Date.now() - 1000).toISOString() }),
+    );
+    localStorage.setItem(
+      'vaiinilla.buyer.space.v1',
+      JSON.stringify({ slug: 'demo-a', espacioId: 1, nombre: 'Cancha 1', qrToken: 'esp_viejo', guardadoEn: Date.now() }),
+    );
+    renewGuest.mockResolvedValue({ access_token: 'jwt', expires_in: 900, contexto: {}, invitado: { nombre: 'Lupi' } });
+    await guestSession('demo-a');
+    expect(renewGuest).toHaveBeenCalledWith('demo-a', 'L'.repeat(43), {});
+  });
+
   it('con sesión previa, escanear renueva con el espacio_token', async () => {
     localStorage.setItem('vaiinilla.buyer.guest.v1', JSON.stringify({ nombre: 'Lupi', llave: 'L'.repeat(43) }));
     renewGuest.mockResolvedValue({ access_token: 'jwt', expires_in: 900, contexto: {}, invitado: { nombre: 'Lupi' } });

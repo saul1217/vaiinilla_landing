@@ -4,7 +4,6 @@
 // Contrato: vaiinilla_back docs/compra-sin-cuenta.md.
 import { api } from './api';
 import { writeStoredClientContext } from './client-session';
-import { readSpace } from './space-session';
 import type { ClientContextResponse, GuestSessionResponse } from '../types/api';
 
 const KEY = 'vaiinilla.buyer.guest.v1';
@@ -34,7 +33,7 @@ function saveGuest(guest: StoredGuest) {
 }
 
 // Prueba de escaneo del NFC/QR (QA-009): `entrada.token` llega con la sesión y vale hasta
-// `vence_en`; mientras no llegue, la prueba es el `espacio_token` del QR escaneado.
+// `vence_en`; vencida, no hay prueba hasta escanear otra vez.
 const ENTRY_KEY = 'vaiinilla.buyer.guest.entry.v1';
 
 interface StoredEntry {
@@ -74,10 +73,10 @@ function saveEntry(slug: string, entrada: GuestSessionResponse['entrada']) {
 }
 
 function entryProof(slug: string): { espacioToken?: string; entradaToken?: string } {
+  // Nunca se reutiliza el qrToken guardado: el espacio_token solo se manda justo tras
+  // escanear (options.espacioToken); vencida la entrada, hay que escanear de nuevo.
   const entry = readEntry(slug);
-  if (entry) return { entradaToken: entry.token };
-  const scanned = readSpace(slug)?.qrToken;
-  return scanned && scanned.startsWith('esp_') ? { espacioToken: scanned } : {};
+  return entry ? { entradaToken: entry.token } : {};
 }
 
 export function forgetGuest() {
