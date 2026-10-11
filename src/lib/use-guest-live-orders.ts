@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/auth-context';
 import { api } from './api';
 import { errorMessage, VaiinillaApiError } from './api-error';
+import { isSettledOrder } from './guest-order-check';
 import { forgetGuestOrderByToken } from './guest-orders';
 import { forgetGuest, readGuest } from './guest-session';
 import { isActiveOrder } from './order-labels';
@@ -43,7 +44,8 @@ export function useGuestLiveOrders(slug: string): GuestLiveOrdersState {
         const next = await api.listGuestOrders(slug, llave);
         if (!active) return;
         for (const order of next) {
-          if (order.estado === 'entregado' && !isActiveOrder(order) && order.seguimiento_token) {
+          const done = order.estado === 'entregado' || isSettledOrder(order);
+          if (done && !isActiveOrder(order) && order.seguimiento_token) {
             forgetGuestOrderByToken(order.seguimiento_token);
           }
         }
