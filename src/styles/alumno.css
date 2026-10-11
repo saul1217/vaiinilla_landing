@@ -53,8 +53,10 @@ body[data-shell='alumno'] {
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
-  overflow-x: hidden;
-  overflow-y: auto;
+  /* Never a scroll container: with overflow-y: auto the body stops being the viewport's
+     scroller and any position: sticky inside the page (QA-025) never sticks. */
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 .alumno {
@@ -6614,7 +6616,8 @@ html[data-theme='amoled'] .alumno-seg__chip.is-on {
 .alumno-res {
   display: grid;
   gap: 18px;
-  padding-bottom: 32px;
+  /* Clears the fixed bottom bar (≈69 px + 10 px offset) plus the safe area at the end of the page. */
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
 }
 
 .alumno-res__flow {

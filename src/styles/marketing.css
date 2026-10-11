@@ -14,8 +14,8 @@
   transition: color 180ms ease;
 }
 .nav__quiet { font-size: 0.82rem; color: var(--ink-soft); }
-.nav__account { font-size: 0.88rem; color: var(--ink-soft); }
-.nav__staff { font-size: 0.78rem; font-weight: 600; color: var(--muted); }
+.nav__account { font-size: 0.88rem; color: var(--ink-soft); display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; }
+.nav__staff { font-size: 0.78rem; font-weight: 600; color: var(--muted); display: inline-flex; align-items: center; min-height: 44px; }
 .nav__quiet:hover, .nav__account:hover { color: var(--lime-dark); }
 .nav__staff:hover { color: var(--ink); }
 .nav__account-short { display: none; }
@@ -32,7 +32,8 @@
   .nav__logo img { width: 36px; height: 36px; }
 }
 
-.text-link { display: inline-flex; gap: 10px; align-items: center; font-weight: 700; font-size: .95rem; border-bottom: 1px solid var(--ink); padding-bottom: 3px; transition: color 180ms ease, border-color 180ms ease; }
+.text-link::before { content: ''; position: absolute; inset: -9px -6px; }
+.text-link { position: relative; display: inline-flex; gap: 10px; align-items: center; font-weight: 700; font-size: .95rem; border-bottom: 1px solid var(--ink); padding-bottom: 3px; transition: color 180ms ease, border-color 180ms ease; }
 .text-link:hover { color: var(--lime-dark); border-color: var(--lime-dark); }
 .status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #36c66d; box-shadow: 0 0 0 4px rgba(54, 198, 109, .13); }
 
@@ -182,9 +183,10 @@
   .steps__track::-webkit-scrollbar { display: none; }
   .step-card { flex: 0 0 min(84%, 340px); padding: 22px; scroll-snap-align: start; }
   .step-card__phone { --dw: 206px; margin-top: 22px; }
-  .steps__dots { position: relative; display: flex; justify-content: center; gap: 8px; margin-top: 18px; }
-  .steps__dots button { width: 10px; height: 10px; padding: 0; border: 0; border-radius: 50%; background: rgba(23,24,23,.18); cursor: pointer; }
-  .steps__indicator { position: absolute; top: 0; left: calc(50% - 23px); width: 10px; height: 10px; border-radius: 99px; background: var(--ink); pointer-events: none; will-change: transform; }
+  .steps__dots { position: relative; display: flex; justify-content: center; gap: 0; margin-top: 8px; }
+  .steps__dots button { position: relative; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+  .steps__dots button::before { content: ''; position: absolute; top: 17px; left: 17px; width: 10px; height: 10px; border-radius: 50%; background: rgba(23,24,23,.18); }
+  .steps__indicator { position: absolute; top: 17px; left: var(--dots-left, calc(50% - 49px)); width: 10px; height: 10px; border-radius: 99px; background: var(--ink); pointer-events: none; will-change: transform; }
 }
 @media (max-width: 560px) {
   .steps__track { margin-inline: -18px; padding-inline: 18px; scroll-padding-inline: 18px; }
@@ -262,7 +264,7 @@
 .footer__tag, .footer__app { color: var(--ink-soft); font-size: .82rem; }
 .footer__tag { max-width: 36ch; }
 .footer__links { display: flex; gap: 18px; flex-wrap: wrap; }
-.footer__app { transition: color 180ms ease; }
+.footer__app { transition: color 180ms ease; display: inline-flex; align-items: center; min-height: 44px; }
 .footer__app:hover, .footer__app:focus-visible { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 .footer__app.active, .footer__app[aria-current='page'] { color: var(--ink); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 650px) {
