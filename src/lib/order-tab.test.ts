@@ -146,11 +146,16 @@ describe('renta en Mis pedidos', () => {
     expect(orderPayLabel(rental({ metodo_pago: 'saldo' }))).toBe('Pagado con saldo');
   });
 
-  it('una renta ya pagada no dice que Caja la procesará (aunque el backend marque caja inactiva)', () => {
+  it('una renta, pagada o por pagar en efectivo, no dice que Caja la procesará (aunque el backend marque caja inactiva)', () => {
     const paid = rental({ motivo_pendiente_operativo: 'caja_inactiva' });
     expect(orderOperationalHint(paid)).toBeNull();
     const unpaid = rental({ estado: 'por_cobrar', metodo_pago: 'efectivo', motivo_pendiente_operativo: 'caja_inactiva' });
-    expect(orderOperationalHint(unpaid)).toMatch(/Caja lo procesará/);
+    expect(orderOperationalHint(unpaid)).toBeNull();
+  });
+
+  it('un pedido que no es renta sí conserva el aviso de Caja inactiva', () => {
+    const { reserva: _reserva, ...rest } = rental({ estado: 'por_cobrar', motivo_pendiente_operativo: 'caja_inactiva' });
+    expect(orderOperationalHint({ ...rest, reserva: null })).toMatch(/Caja lo procesará/);
   });
 
   it('una renta no es un pedido para avisar que llegaste', () => {
