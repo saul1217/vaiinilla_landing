@@ -222,6 +222,8 @@ export interface OrderReservation {
   fin: string;
   duracion_min: number;
   estado: ReservationState;
+  /** Fin del apartado (10 min) mientras la reserva espera pago. */
+  expira_en?: string | null;
 }
 
 export interface OrderItemOption {

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { OrderDetail, OrderReservation } from '../types/api';
 import {
+  formatHoldCountdown,
   isLiveRental,
+  rentalHoldRemainingMs,
   rentalScheduleLabel,
   rentalStateLabel,
   rentalStep,
@@ -93,5 +95,27 @@ describe('seguimiento de una renta', () => {
     for (const step of ['por_pagar', 'reservada', 'en_juego', 'terminada'] as const) {
       expect(rentalStepHint(step, r, 'efectivo', false, NOW)).not.toMatch(/cocina|comanda|llevar/i);
     }
+  });
+});
+
+describe('apartado de una renta por pagar', () => {
+  const hold = reserva({ estado: 'pendiente_pago', expira_en: '2026-09-30T18:40:00' });
+
+  it('mientras corre dice hasta qué hora está apartado y cuenta el tiempo', () => {
+    expect(rentalHoldRemainingMs(order(hold, 'por_cobrar'), NOW)).toBe(10 * 60 * 1000);
+    expect(formatHoldCountdown(9 * 60 * 1000 + 5000)).toBe('09:05');
+    expect(rentalStepHint('por_pagar', hold, 'efectivo', false, NOW)).toMatch(/apartado hasta las 18:40/);
+  });
+
+  it('al vencer avisa y ya no pide pagar en caja', () => {
+    const later = new Date('2026-09-30T18:40:01');
+    expect(rentalStepHint('por_pagar', hold, 'efectivo', false, later)).toBe('El apartado venció; vuelve a elegir horario.');
+    expect(rentalStateLabel(order(hold, 'por_cobrar'), later)).toBe('Apartado vencido');
+  });
+
+  it('sin apartado corriendo (confirmada o sin dato) no hay contador', () => {
+    expect(rentalHoldRemainingMs(order(reserva({ expira_en: '2026-09-30T18:40:00' })), NOW)).toBeNull();
+    expect(rentalHoldRemainingMs(order(reserva({ estado: 'pendiente_pago' }), 'por_cobrar'), NOW)).toBeNull();
+    expect(rentalHoldRemainingMs(order(null), NOW)).toBeNull();
   });
 });

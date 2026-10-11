@@ -57,10 +57,33 @@ const FALLEN_LABEL: Partial<Record<OrderReservation['estado'], string>> = {
   conflicto: 'Revisar con el personal',
 };
 
+/** Milisegundos que le quedan al apartado; `null` si no hay apartado corriendo (ya pagada o sin dato). */
+export function rentalHoldRemainingMs(
+  order: Pick<OrderDetail, 'reserva' | 'estado'>,
+  now: Date = new Date(),
+): number | null {
+  const reserva = order.reserva;
+  if (!reserva || DEAD_ORDER.includes(order.estado) || reserva.estado !== 'pendiente_pago') return null;
+  const until = reserva.expira_en ? Date.parse(reserva.expira_en) : NaN;
+  if (Number.isNaN(until)) return null;
+  return until - now.getTime();
+}
+
+/** "09:05" o "1:05:09" si falta más de una hora; sin negativos. */
+export function formatHoldCountdown(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = String(total % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${String(m).padStart(2, '0')}:${sec}`;
+}
+
 export function rentalStateLabel(
   order: Pick<OrderDetail, 'reserva' | 'estado'>,
   now: Date = new Date(),
 ): string {
+  const left = rentalHoldRemainingMs(order, now);
+  if (left !== null && left <= 0) return 'Apartado vencido';
   const step = rentalStep(order, now);
   if (step) return RENTAL_STEPS.find((item) => item.key === step)?.label ?? '';
   return (order.reserva && FALLEN_LABEL[order.reserva.estado]) ?? 'Cancelada';
@@ -97,14 +120,21 @@ export function rentalStepHint(
   now: Date = new Date(),
 ): string {
   switch (step) {
-    case 'por_pagar':
-      if (method === 'efectivo') return 'Paga en caja para confirmar tu horario.';
+    case 'por_pagar': {
+      const left = rentalHoldRemainingMs({ reserva, estado: 'por_cobrar' }, now);
+      if (left !== null && left <= 0) return 'El apartado venció; vuelve a elegir horario.';
+      if (method === 'efectivo') {
+        return left !== null
+          ? `Tu horario está apartado hasta las ${HOUR.format(new Date(reserva.expira_en as string))}. Paga en caja para confirmarlo.`
+          : 'Paga en caja para confirmar tu horario.';
+      }
       if (method === 'stripe') {
         return paymentFailed
           ? 'El pago no se completó. Reintenta para no perder el horario.'
           : 'Termina el pago con tarjeta para confirmar tu horario.';
       }
       return 'Estamos confirmando tu pago.';
+    }
     case 'reservada': {
       const start = new Date(reserva.inicio);
       const day = rentalDay(start, now);
