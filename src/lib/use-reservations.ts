@@ -230,7 +230,12 @@ export function useReservations(
       const denied = cause instanceof VaiinillaApiError && cause.status === 403;
       // Nunca en silencio: el mensaje del servidor lleva su código para poder reportarlo.
       const code = cause instanceof VaiinillaApiError && cause.code ? ` (${cause.code})` : '';
-      patch({ working: false, denied, error: `${errorMessage(cause)}${code}` });
+      // Un 5xx sin mensaje útil del servidor también se explica: el botón nunca vuelve sin avisar.
+      const serverFailure =
+        cause instanceof VaiinillaApiError && cause.status >= 500
+          ? 'No pudimos apartar la cancha por un problema del servicio. Inténtalo de nuevo en un momento.'
+          : null;
+      patch({ working: false, denied, error: `${serverFailure ?? errorMessage(cause)}${code}` });
     }
     await refresh();
   }, [patch, refresh]);

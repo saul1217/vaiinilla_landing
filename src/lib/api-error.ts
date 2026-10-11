@@ -21,6 +21,9 @@ const friendlyMessages: Record<string, string> = {
   REAUTHENTICATION_REQUIRED: 'Confirma tu acceso otra vez para eliminar la cuenta.',
   INSUFFICIENT_BALANCE: 'No tienes saldo suficiente para este pedido.',
   PRODUCT_NOT_FOUND: 'Un producto del carrito ya no está disponible.',
+  ACCOUNT_REQUIRED: 'Para apartar una cancha necesitas iniciar sesión o crear tu cuenta.',
+  ENTRY_TOKEN_INVALID: 'El escaneo del lugar ya no es válido. Escanea de nuevo el NFC o QR, o inicia sesión.',
+  GUEST_RESERVATION_LIMIT: 'Llegaste al límite de reservas sin cuenta. Inicia sesión o crea tu cuenta para seguir apartando.',
   ORDER_INVALID_STATE: 'El pedido ya cambió de estado.',
 };
 

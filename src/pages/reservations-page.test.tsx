@@ -254,6 +254,27 @@ describe('ReservationsScreen', () => {
     expect(screen.getByRole('link', { name: /iniciar sesión o crear cuenta/i })).toBeInTheDocument();
   });
 
+  it.each([
+    [429, 'GUEST_RESERVATION_LIMIT', /límite de reservas sin cuenta.*GUEST_RESERVATION_LIMIT/i],
+    [500, 'INTERNAL_ERROR', /problema del servicio.*INTERNAL_ERROR/i],
+    [0, 'BACKEND_UNAVAILABLE', /servicio no está disponible.*BACKEND_UNAVAILABLE/i],
+    [403, 'ENTRY_TOKEN_INVALID', /inicia sesión o crea tu cuenta para reservar/i],
+  ])('apartar con error %i (%s) muestra un aviso junto al botón', async (status, code, text) => {
+    const user = userEvent.setup();
+    const failure = new VaiinillaApiError(status, { code, message: 'x' });
+    const client = makeClient({ create: vi.fn(() => Promise.reject(failure)) });
+    render(
+      <MemoryRouter initialEntries={['/e/padel/canchas']}>
+        <Routes>
+          <Route path="/e/:slug/canchas" element={<ReservationsScreen client={client} slug="padel" guest />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('radio', { name: '09:00' }));
+    await user.click(await screen.findByRole('button', { name: /apartar cancha/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(text);
+  });
+
   it('retoma el pago de una reserva apartada y cancela con confirmación', async () => {
     const user = userEvent.setup();
     const pending = reservation();
