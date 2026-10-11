@@ -125,7 +125,7 @@ export function rentalStepHint(
       if (left !== null && left <= 0) return 'El apartado venció; vuelve a elegir horario.';
       if (method === 'efectivo') {
         return left !== null
-          ? `Tu horario está apartado hasta las ${HOUR.format(new Date(reserva.expira_en as string))}. Paga en caja para confirmarlo.`
+          ? `Tu cancha está apartada. Paga en caja al llegar, antes de las ${HOUR.format(new Date(reserva.expira_en as string))}.`
           : 'Paga en caja para confirmar tu horario.';
       }
       if (method === 'stripe') {

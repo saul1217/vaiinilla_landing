@@ -104,7 +104,7 @@ describe('apartado de una renta por pagar', () => {
   it('mientras corre dice hasta qué hora está apartado y cuenta el tiempo', () => {
     expect(rentalHoldRemainingMs(order(hold, 'por_cobrar'), NOW)).toBe(10 * 60 * 1000);
     expect(formatHoldCountdown(9 * 60 * 1000 + 5000)).toBe('09:05');
-    expect(rentalStepHint('por_pagar', hold, 'efectivo', false, NOW)).toMatch(/apartado hasta las 18:40/);
+    expect(rentalStepHint('por_pagar', hold, 'efectivo', false, NOW)).toMatch(/Tu cancha está apartada\. Paga en caja al llegar, antes de las 18:40/);
   });
 
   it('al vencer avisa y ya no pide pagar en caja', () => {
