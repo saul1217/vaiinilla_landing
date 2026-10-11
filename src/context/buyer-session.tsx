@@ -18,7 +18,7 @@ import {
   readStoredClientContext,
   writeStoredClientContext,
 } from '../lib/client-session';
-import { rememberPlace } from '../lib/last-place';
+import { rememberPlaceFromSession } from '../lib/last-place';
 import type { ClientContextResponse, PublicEstablishment } from '../types/api';
 import { useAuth } from './auth-context';
 
@@ -81,7 +81,7 @@ export function BuyerSessionProvider({ children }: { children: ReactNode }) {
         const next = await api.createClientContext(firebaseToken, establishment.slug, clientId);
         tokenRef.current = next.access_token;
         writeStoredClientContext(next, establishment.slug);
-        rememberPlace(establishment.slug);
+        rememberPlaceFromSession(establishment.slug);
         setContext(next);
         return next;
       } finally {
