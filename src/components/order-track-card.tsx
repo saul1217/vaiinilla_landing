@@ -1,4 +1,4 @@
-import { Fragment, useLayoutEffect, useRef, type CSSProperties, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, type CSSProperties, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatAmount } from '../lib/money';
 import { resolvePickupQrToken, shouldShowPickupSurface } from '../lib/pickup-qr';
@@ -15,7 +15,7 @@ import {
   orderStatusLabel,
   orderTrackSteps,
 } from '../lib/order-labels';
-import { RENTAL_STEPS, rentalStep } from '../lib/rental-tracking';
+import { RENTAL_STEPS, formatHoldCountdown, rentalHoldRemainingMs, rentalStep } from '../lib/rental-tracking';
 import type { OrderDetail } from '../types/api';
 import { useHeightMorph } from '../lib/use-height-morph';
 import { ArrivalButton } from './arrival-button';
@@ -52,22 +52,36 @@ export function OrderTrackCard({
   callWaiter?: boolean;
 }) {
   const rental = Boolean(order.reserva);
-  const rentalCurrent = rental ? rentalStep(order) : null;
+  const holdTicking = rentalHoldRemainingMs(order) !== null;
+  const [now, setNow] = useState(() => new Date());
+  // El contador del apartado avanza solo; al vencer se detiene y la tarjeta pasa a "venció".
+  useEffect(() => {
+    if (!holdTicking) return;
+    setNow(new Date());
+    const timer = window.setInterval(() => {
+      const next = new Date();
+      setNow(next);
+      if ((rentalHoldRemainingMs(order, next) ?? 0) <= 0) window.clearInterval(timer);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [holdTicking, order]);
+  const holdLeft = rentalHoldRemainingMs(order, now);
+  const rentalCurrent = rental ? rentalStep(order, now) : null;
   const barIcons = rental ? RENTAL_ICONS : TRACK_ICONS;
   const filled = rental
     ? RENTAL_STEPS.findIndex((item) => item.key === rentalCurrent) + 1
     : orderProgressFilled(order);
-  const steps = orderTrackSteps(order);
+  const steps = orderTrackSteps(order, now);
   const inFlow = rental ? rentalCurrent !== null : ORDER_FLOW.includes(order.estado);
   const active = isActiveOrder(order);
-  const statusLabel = orderStatusLabel(order);
+  const statusLabel = orderStatusLabel(order, now);
   const showBar = inFlow;
   const cardRef = useRef<HTMLElement>(null);
   // Una foto que no carga vuelve a la mascota en vez de dejar el ícono de imagen rota.
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const pickupTokenResolved = pickupToken ?? resolvePickupQrToken(order);
   const showPickup = shouldShowPickupSurface(order);
-  const collapsedStatusHint = orderCollapsedHint(order);
+  const collapsedStatusHint = orderCollapsedHint(order, now);
   const operationalHint = orderCancelReason(order) ?? orderOperationalHint(order);
   useHeightMorph(cardRef, expanded);
 
@@ -174,6 +188,17 @@ export function OrderTrackCard({
           {operationalHint ? ` ${operationalHint}` : collapsedStatusHint ? ` ${collapsedStatusHint}` : null}
         </p>
       )}
+      {holdLeft !== null ? (
+        <p className="alumno-track-card__status alumno-track-card__hold" role="timer" aria-live="off">
+          {holdLeft > 0 ? (
+            <>
+              Vence en <strong>{formatHoldCountdown(holdLeft)}</strong>
+            </>
+          ) : (
+            <strong>El apartado venció; vuelve a elegir horario.</strong>
+          )}
+        </p>
+      ) : null}
       {orderRejectedItemsHint(order) ? (
         <p className="alumno-track-card__status alumno-track-card__rejected">{orderRejectedItemsHint(order)}</p>
       ) : null}

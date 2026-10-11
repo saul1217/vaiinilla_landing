@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CourtDay, CourtSchedule, Reservation, ReservationPayment } from '../lib/reservations';
 import type { ReservationsClient } from '../lib/use-reservations';
+import { VaiinillaApiError } from '../lib/api-error';
 import { ReservationsScreen } from './reservations-page';
 
 const MIN = 60_000;
@@ -93,6 +94,28 @@ describe('ReservationsScreen', () => {
     renderScreen(client);
     expect(await screen.findByText('$495 / 1 h 30')).toBeInTheDocument();
     expect(screen.queryByText('$330 / hora')).not.toBeInTheDocument();
+  });
+
+  it('al cambiar de día muestra "Cargando horarios…" y no los datos del día anterior ni el vacío falso (QA-035)', async () => {
+    const user = userEvent.setup();
+    let release: (value: CourtDay) => void = () => {};
+    const client = makeClient();
+    const first = vi.fn(() => Promise.resolve(day([court(7, 'Cancha 1')])));
+    client.day = first;
+    renderScreen(client);
+    await screen.findByRole('radio', { name: '09:00' });
+
+    client.day = vi.fn(() => new Promise<CourtDay>((resolve) => (release = resolve)));
+    await user.click(screen.getByRole('radio', { name: /mañana/i }));
+
+    expect(await screen.findByText('Cargando horarios…', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: '09:00' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/ya no quedan horarios/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /cancha 1/i })).not.toBeInTheDocument();
+
+    release({ ...day([court(7, 'Cancha 1')]), date: '2026-10-01' });
+    expect(await screen.findByRole('radio', { name: /cancha 1/i })).toBeInTheDocument();
+    expect(screen.queryByText('Cargando horarios…', { selector: 'p' })).not.toBeInTheDocument();
   });
 
   it('muestra las canchas con su precio al cliente y cuándo se liberan', async () => {
@@ -234,6 +257,45 @@ describe('ReservationsScreen', () => {
     await user.click(await screen.findByRole('button', { name: /apartar cancha/i }));
     expect(await screen.findByText(/ya lo tomaron/i)).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: /paga tu cancha/i })).not.toBeInTheDocument();
+  });
+
+  it('un invitado sin escaneo (403) ve junto al botón que debe iniciar sesión o crear cuenta', async () => {
+    const user = userEvent.setup();
+    const denied = new VaiinillaApiError(403, { code: 'FORBIDDEN', message: 'Prohibido' });
+    const client = makeClient({ create: vi.fn(() => Promise.reject(denied)) });
+    render(
+      <MemoryRouter initialEntries={['/e/padel/canchas']}>
+        <Routes>
+          <Route path="/e/:slug/canchas" element={<ReservationsScreen client={client} slug="padel" guest />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('radio', { name: '09:00' }));
+    await user.click(await screen.findByRole('button', { name: /apartar cancha/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/inicia sesión o crea tu cuenta para reservar/i);
+    expect(screen.getByRole('link', { name: /iniciar sesión o crear cuenta/i })).toBeInTheDocument();
+  });
+
+  it.each([
+    [429, 'GUEST_RESERVATION_LIMIT', /límite de reservas sin cuenta.*GUEST_RESERVATION_LIMIT/i],
+    [429, 'RATE_LIMITED', /espera un momento y vuelve a intentar.*RATE_LIMITED/i],
+    [500, 'INTERNAL_ERROR', /problema del servicio.*INTERNAL_ERROR/i],
+    [0, 'BACKEND_UNAVAILABLE', /servicio no está disponible.*BACKEND_UNAVAILABLE/i],
+    [403, 'ENTRY_TOKEN_INVALID', /inicia sesión o crea tu cuenta para reservar/i],
+  ])('apartar con error %i (%s) muestra un aviso junto al botón', async (status, code, text) => {
+    const user = userEvent.setup();
+    const failure = new VaiinillaApiError(status, { code, message: 'x' });
+    const client = makeClient({ create: vi.fn(() => Promise.reject(failure)) });
+    render(
+      <MemoryRouter initialEntries={['/e/padel/canchas']}>
+        <Routes>
+          <Route path="/e/:slug/canchas" element={<ReservationsScreen client={client} slug="padel" guest />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('radio', { name: '09:00' }));
+    await user.click(await screen.findByRole('button', { name: /apartar cancha/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(text);
   });
 
   it('retoma el pago de una reserva apartada y cancela con confirmación', async () => {

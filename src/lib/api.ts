@@ -144,6 +144,9 @@ export const api = {
     nombre?: string;
     terminosVersion: string;
     privacidadVersion: string;
+    /** Token del QR/NFC escaneado: prueba de presencia para apartar canchas. */
+    espacioToken?: string;
+    entradaToken?: string;
   }): Promise<GuestSessionResponse> {
     const body: Record<string, unknown> = {
       establecimiento_slug: input.slug,
@@ -152,6 +155,8 @@ export const api = {
     };
     // Sin nombre: invitado anónimo para la mesa (el alias del participante es lo visible).
     if (input.nombre !== undefined && input.nombre.trim() !== '') body.nombre = input.nombre;
+    if (input.entradaToken) body.entrada_token = input.entradaToken;
+    else if (input.espacioToken) body.espacio_token = input.espacioToken;
     return (
       await request<GuestSessionResponse>('/publico/invitados', {
         method: 'POST',
@@ -161,11 +166,18 @@ export const api = {
   },
 
   /** Otra sesión de invitado (15 min) con la llave del dispositivo. */
-  async renewGuest(slug: string, llave: string): Promise<GuestSessionResponse> {
+  async renewGuest(
+    slug: string,
+    llave: string,
+    proof: { espacioToken?: string; entradaToken?: string } = {},
+  ): Promise<GuestSessionResponse> {
+    const body: Record<string, unknown> = { establecimiento_slug: slug, llave };
+    if (proof.entradaToken) body.entrada_token = proof.entradaToken;
+    else if (proof.espacioToken) body.espacio_token = proof.espacioToken;
     return (
       await request<GuestSessionResponse>('/publico/invitados/sesiones', {
         method: 'POST',
-        body: { establecimiento_slug: slug, llave },
+        body,
       })
     ).data;
   },

@@ -53,8 +53,10 @@ body[data-shell='alumno'] {
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
-  overflow-x: hidden;
-  overflow-y: auto;
+  /* Never a scroll container: with overflow-y: auto the body stops being the viewport's
+     scroller and any position: sticky inside the page (QA-025) never sticks. */
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 .alumno {
@@ -836,7 +838,7 @@ html[data-theme='amoled'] .alumno-antojo img {
   justify-content: center;
   gap: 7px;
   justify-self: start;
-  min-height: 36px;
+  min-height: 44px;
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -5556,6 +5558,9 @@ html[data-theme='light'] .alumno-codesheet__slots > span.is-filled {
 .alumno-codesheet__cancel {
   display: block;
   margin: 10px auto 0;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 16px;
 }
 
 /* ---------- Cart lines (Android CartLineRow / QuantityStepper parity), phone layout ---------- */
@@ -6614,7 +6619,8 @@ html[data-theme='amoled'] .alumno-seg__chip.is-on {
 .alumno-res {
   display: grid;
   gap: 18px;
-  padding-bottom: 32px;
+  /* Clears the fixed bottom bar (≈69 px + 10 px offset) plus the safe area at the end of the page. */
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
 }
 
 .alumno-res__flow {
@@ -7050,6 +7056,19 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   padding: 20px;
   border: 1px solid var(--line);
   border-radius: 26px;
+}
+
+/* En móvil la barra inferior es fija (≈73 px + zona segura): el resumen y "Apartar cancha"
+   se anclan justo por encima de ella mientras se desplaza, y vuelven a su sitio al llegar abajo.
+   En horizontal bajo (poca altura) no se ancla: taparía casi toda la pantalla. */
+@media (max-width: 767px) and (min-height: 560px) {
+  .alumno-res__summary {
+    position: sticky;
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+    z-index: 10;
+    background: var(--bg);
+    box-shadow: 0 -8px 20px color-mix(in srgb, var(--bg) 85%, transparent);
+  }
 }
 
 .alumno-res__summary p {
@@ -7812,4 +7831,10 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   .alumno-ticket-table__mine strong:first-child {
     color: #111 !important;
   }
+}
+
+.alumno-res__expired {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--alumno-muted, #8a8a8a);
 }

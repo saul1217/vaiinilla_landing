@@ -16,7 +16,8 @@ import { LoadingSkeleton } from '../components/loading-skeleton';
 import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
-import { readGuestOrders } from '../lib/guest-orders';
+import { isGoneTracking, isSettledOrder } from '../lib/guest-order-check';
+import { forgetGuestOrderByToken, readGuestOrders } from '../lib/guest-orders';
 import { readGuest } from '../lib/guest-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { formatAmount } from '../lib/money';
@@ -55,6 +56,28 @@ export function GuestOrdersPage() {
   const tab = openTab(live.orders);
   const pwa = usePwaInstall();
   const justOrdered = nuevoToken !== null;
+  const [gone, setGone] = useState(false);
+  const nuevoVisible = nuevoToken !== null && liveTokens.has(nuevoToken);
+
+  // El enlace ?nuevo=<token> se comprueba: si el pedido ya no existe o se canceló, se avisa.
+  useEffect(() => {
+    setGone(false);
+    if (!nuevoToken || nuevoVisible) return;
+    let active = true;
+    void (async () => {
+      try {
+        const order = await api.getTracking(nuevoToken);
+        if (!active || !isSettledOrder(order)) return;
+      } catch (cause) {
+        if (!active || !isGoneTracking(cause)) return;
+      }
+      forgetGuestOrderByToken(nuevoToken);
+      setGone(true);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [nuevoToken, nuevoVisible]);
 
   useEffect(() => {
     if (!slug) return;
@@ -120,6 +143,11 @@ export function GuestOrdersPage() {
         <AlumnoPageHeader title="Mis pedidos" />
         {place?.nombre ? <p className="alumno-place-name">{place.nombre}</p> : null}
         {live.error ? <p className="alumno-error">{live.error}</p> : null}
+        {gone ? (
+          <p className="alumno-banner" role="status">
+            Este pedido ya no está disponible.
+          </p>
+        ) : null}
         <SharedTableCard
           accessToken={mesa.token}
           qrToken={qrToken}
@@ -158,7 +186,7 @@ export function GuestOrdersPage() {
         ) : null}
         {live.orders.length === 0 && live.loading ? (
           <LoadingSkeleton shape="orders" label="Cargando pedidos…" />
-        ) : live.orders.length === 0 && savedHere ? null : live.orders.length === 0 ? (
+        ) : live.orders.length === 0 && savedHere && !gone ? null : live.orders.length === 0 ? (
           <div className="alumno-empty">
             <img src="/vaini/cutout-frente.png" alt="" />
             <p>Aún no hay pedidos en esta sesión.</p>

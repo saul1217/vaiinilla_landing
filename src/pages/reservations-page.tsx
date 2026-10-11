@@ -2,7 +2,7 @@
 // Espejo de ReservationsScreen (Android). La renta se paga primero; sin pagar no se puede pedir
 // comida en la cancha. Pagar crea un pedido de renta normal y se sigue en su pantalla de pedido.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { MotionSheet } from '../components/motion-sheet';
@@ -31,6 +31,7 @@ import {
   type ReservationsState,
 } from '../lib/use-reservations';
 import {
+  EXPIRED_NOTICE,
   RESERVATION_STATE_LABEL,
   addDays,
   amountFor,
@@ -41,8 +42,9 @@ import {
   dayChipLabel,
   dayLongLabel,
   durationLabel,
+  isClosedNow,
   formatHour,
-  isLiveReservation,
+  listedReservations,
   isStartAvailable,
   localDate,
   startTimes,
@@ -194,11 +196,17 @@ export function ReservationsScreen({
   const bodyRef = useRef<HTMLDivElement>(null);
   useHeightMorph(bodyRef, `${court?.id}:${start !== null}:${state.pending?.id ?? ''}`);
 
-  const mine = state.mine.filter((r) => isLiveReservation(r.state) || r.state === 'conflicto');
+  // Con el resumen a la vista el error de apartar sale junto al botón, no fuera de pantalla arriba.
+  const inlineError = Boolean(court?.rentable && start !== null);
+  // Al cambiar de día, `day` sigue siendo el anterior hasta que llega la respuesta: no se muestra como actual.
+  const switching = Boolean(day) && state.loading && day!.date !== (state.selectedDate ?? day!.today);
+  const mine = listedReservations(state.mine, day?.now ?? Date.now());
 
   return (
     <div className="alumno-res" data-slug={slug}>
-      {state.error ? <Banner message={state.error} tone="coral" onDismiss={vm.dismissMessages} /> : null}
+      {state.error && !(inlineError && !state.pending) ? (
+        <Banner message={state.error} tone="coral" onDismiss={vm.dismissMessages} />
+      ) : null}
       {state.notice ? <Banner message={state.notice} tone="lime" onDismiss={vm.dismissMessages} /> : null}
 
       {!day ? (
@@ -214,7 +222,16 @@ export function ReservationsScreen({
       ) : (
         <div className="alumno-res__flow alumno-arrive" ref={bodyRef}>
           <DateStrip day={day} selected={state.selectedDate ?? day.today} onSelect={vm.selectDate} />
-          <CourtStrip day={day} selectedId={state.selectedCourtId} onSelect={vm.selectCourt} />
+          {switching ? (
+            <>
+              <p className="alumno-muted" aria-hidden="true">
+                Cargando horarios…
+              </p>
+              <LoadingSkeleton shape="rows" label="Cargando horarios…" />
+            </>
+          ) : (
+            <CourtStrip day={day} selectedId={state.selectedCourtId} onSelect={vm.selectCourt} />
+          )}
           {court && hasProfile(court) ? <CourtProfileCard key={`p-${court.id}`} court={court} /> : null}
           {court?.rentable ? (
             <>
@@ -224,6 +241,7 @@ export function ReservationsScreen({
                   selected={state.rentNow}
                   available={canRentNow(day, court)}
                   busyUntilMs={busyUntil(court, day.now)}
+                  closed={isClosedNow(day)}
                   timeZone={day.timeZone}
                   onClick={vm.selectRentNow}
                 />
@@ -245,10 +263,12 @@ export function ReservationsScreen({
                   />
                   <Summary
                     key="summary"
+                    slug={slug}
                     state={state}
                     day={day}
                     court={court}
                     start={start}
+                    guest={guest}
                     onReserve={() => void vm.reserve()}
                   />
                 </>
@@ -356,13 +376,14 @@ function CourtStrip({
   onSelect: (id: number) => void;
 }) {
   const isToday = day.date === day.today;
+  const closed = isClosedNow(day);
   return (
     <div className="alumno-res__courts" role="radiogroup" aria-label="Cancha">
       {day.courts
         .filter((court) => court.rentable)
         .map((court) => {
           const until = isToday ? busyUntil(court, day.now) : null;
-          const looksFree = isToday ? until === null : court.busy.length === 0;
+          const looksFree = !closed && (isToday ? until === null : court.busy.length === 0);
           const selected = court.id === selectedId;
           return (
             <button
@@ -377,13 +398,15 @@ function CourtStrip({
               {court.customerPricePerHour ? <span>{turnPriceLabel(day, court.customerPricePerHour.cashOrBalance)}</span> : null}
               <span className="alumno-res__status">
                 <i className={looksFree ? 'is-free' : 'is-busy'} aria-hidden="true" />
-                {until !== null
-                  ? `Se libera ${formatHour(until, day.timeZone)}`
-                  : isToday
-                    ? 'Libre ahora'
-                    : court.busy.length === 0
-                      ? 'Libre todo el día'
-                      : 'Con horarios ocupados'}
+                {closed
+                  ? `Cerrado · abre a las ${formatHour(day.opensAt, day.timeZone)}`
+                  : until !== null
+                    ? `Se libera ${formatHour(until, day.timeZone)}`
+                    : isToday
+                      ? 'Libre ahora'
+                      : court.busy.length === 0
+                        ? 'Libre todo el día'
+                        : 'Con horarios ocupados'}
               </span>
             </button>
           );
@@ -448,12 +471,14 @@ function RentNowCard({
   selected,
   available,
   busyUntilMs,
+  closed,
   timeZone,
   onClick,
 }: {
   selected: boolean;
   available: boolean;
   busyUntilMs: number | null;
+  closed: boolean;
   timeZone: string;
   onClick: () => void;
 }) {
@@ -463,12 +488,12 @@ function RentNowCard({
         <span>
           <strong>Rentar ahora</strong>
           <small>
-            {busyUntilMs !== null
+            {!closed && busyUntilMs !== null
               ? `Ocupada ahora mismo · Se libera a las ${formatHour(busyUntilMs, timeZone)}.`
               : 'Fuera de horario para rentar de inmediato.'}
           </small>
         </span>
-        <span className="alumno-res__now-badge">Ocupada</span>
+        <span className="alumno-res__now-badge">{closed ? 'Cerrado' : 'Ocupada'}</span>
       </div>
     );
   }
@@ -618,16 +643,20 @@ function DurationRow({
 }
 
 function Summary({
+  slug,
   state,
   day,
   court,
   start,
+  guest,
   onReserve,
 }: {
+  slug: string;
   state: ReservationsState;
   day: CourtDay;
   court: CourtSchedule;
   start: number;
+  guest: boolean;
   onReserve: () => void;
 }) {
   const minutes = state.selectedDuration;
@@ -666,6 +695,20 @@ function Summary({
       <p className="alumno-res__summary-note">
         Se aparta {day.holdMinutes} minutos mientras pagas. Si cancelas, lo pagado no se devuelve.
       </p>
+      {state.error ? (
+        <div className="alumno-error" role="alert">
+          <p>
+            {guest && state.denied
+              ? 'Inicia sesión o crea tu cuenta para reservar. También puedes escanear el NFC o QR del lugar para apartar sin cuenta.'
+              : state.error}
+          </p>
+          {guest && state.denied ? (
+            <p>
+              <Link to={`/cuenta?next=${encodeURIComponent(`/e/${slug}/canchas`)}`}>Iniciar sesión o crear cuenta</Link>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <button
         type="button"
         className={state.working ? 'alumno-btn alumno-btn--lime is-working' : 'alumno-btn alumno-btn--lime'}
@@ -844,6 +887,11 @@ function MyReservation({
       <p>
         {dayLongLabel(date, today)} · {formatHour(reservation.start, zone)} – {formatHour(reservation.end, zone)}
       </p>
+      {reservation.state === 'expirada' ? (
+        <p className="alumno-res__expired" role="status">
+          {EXPIRED_NOTICE}
+        </p>
+      ) : (
       <div className="alumno-res__actions">
         {reservation.state === 'pendiente_pago' ? (
           <button type="button" className="alumno-res__small is-filled" onClick={onPay}>
@@ -856,6 +904,7 @@ function MyReservation({
           </button>
         ) : null}
       </div>
+      )}
     </article>
   );
 }

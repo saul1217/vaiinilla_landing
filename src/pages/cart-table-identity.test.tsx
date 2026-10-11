@@ -234,7 +234,7 @@ describe('CartPage con participante de mesa', () => {
     await user.click(screen.getByRole('button', { name: /^continuar con/i }));
     await waitFor(() => expect(createOrder).toHaveBeenCalled());
     // Reusa la llave del dispositivo en vez de dar de alta otro invitado…
-    expect(renewGuest).toHaveBeenCalledWith('demo-a', 'L'.repeat(43));
+    expect(renewGuest).toHaveBeenCalledWith('demo-a', 'L'.repeat(43), {});
     expect(createGuest).not.toHaveBeenCalled();
     expect(createOrder.mock.calls[0]?.[1]).not.toHaveProperty('comensal_grupo');
     // …y aunque se diera de alta, el alias jamás va como nombre de invitado.

@@ -34,8 +34,10 @@ export const ORDER_STATUS_HINT: Record<OrderStatus, string> = {
 };
 
 export function orderOperationalHint(
-  order: Pick<OrderDetail, 'motivo_pendiente_operativo'> & Partial<Pick<OrderDetail, 'estado'>>,
+  order: Pick<OrderDetail, 'motivo_pendiente_operativo'> & Partial<Pick<OrderDetail, 'estado' | 'reserva'>>,
 ): string | null {
+  // Una renta no pasa por caja ni cocina: solo le sirve el aviso de pagar al llegar o el de vencida.
+  if (order.reserva) return null;
   // Un pedido ya entregado (una renta pagada se da por entregada) o caído no espera a nadie.
   if (order.estado && TERMINAL.includes(order.estado)) return null;
   if (order.motivo_pendiente_operativo === 'caja_inactiva') {

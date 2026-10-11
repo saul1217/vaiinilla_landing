@@ -21,8 +21,13 @@ const friendlyMessages: Record<string, string> = {
   REAUTHENTICATION_REQUIRED: 'Confirma tu acceso otra vez para eliminar la cuenta.',
   INSUFFICIENT_BALANCE: 'No tienes saldo suficiente para este pedido.',
   PRODUCT_NOT_FOUND: 'Un producto del carrito ya no está disponible.',
+  ACCOUNT_REQUIRED: 'Para apartar una cancha necesitas iniciar sesión o crear tu cuenta.',
+  ENTRY_TOKEN_INVALID: 'El escaneo del lugar ya no es válido. Escanea de nuevo el NFC o QR, o inicia sesión.',
+  GUEST_RESERVATION_LIMIT: 'Llegaste al límite de reservas sin cuenta. Inicia sesión o crea tu cuenta para seguir apartando.',
   ORDER_INVALID_STATE: 'El pedido ya cambió de estado.',
 };
+
+export const RATE_LIMIT_MESSAGE = 'Hay demasiados intentos en poco tiempo. Espera un momento y vuelve a intentar.';
 
 export class VaiinillaApiError extends Error {
   readonly status: number;
@@ -31,7 +36,13 @@ export class VaiinillaApiError extends Error {
   readonly retryAfter?: number;
 
   constructor(status: number, body: ApiErrorBody, retryAfter?: number) {
-    super(friendlyMessages[body.code] ?? body.message ?? 'No fue posible completar la operación.');
+    // Todo 429 pide esperar, salvo el límite de reservas sin cuenta, que pide iniciar sesión.
+    super(
+      (status === 429 && body.code !== 'GUEST_RESERVATION_LIMIT' ? RATE_LIMIT_MESSAGE : undefined) ??
+        friendlyMessages[body.code] ??
+        body.message ??
+        'No fue posible completar la operación.',
+    );
     this.name = 'VaiinillaApiError';
     this.status = status;
     this.code = body.code;

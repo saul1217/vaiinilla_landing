@@ -1,5 +1,32 @@
-import { describe, expect, it } from 'vitest';
-import { parseEntry } from './space-entry';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { api } from './api';
+import { VaiinillaApiError } from './api-error';
+import { guestSession } from './guest-session';
+import { enterSpace, parseEntry } from './space-entry';
+
+vi.mock('./api', () => ({ api: { resolveSpace: vi.fn() } }));
+vi.mock('./guest-session', () => ({ guestSession: vi.fn(), forgetGuestEntry: vi.fn() }));
+
+describe('entrar con un QR o NFC cuando hay límite', () => {
+  beforeEach(() => {
+    vi.mocked(api.resolveSpace).mockResolvedValue({
+      establecimiento_slug: 'padel',
+      espacio_id: 's1',
+      espacio_nombre: 'Cancha 1',
+      espacio_tipo: 'cancha',
+    } as never);
+  });
+
+  it('un 429 al abrir la sesión de invitado se avisa para esperar y reintentar', async () => {
+    vi.mocked(guestSession).mockRejectedValue(new VaiinillaApiError(429, { code: 'RATE_LIMITED', message: 'x' }));
+    await expect(enterSpace('esp_abc')).rejects.toThrow(/espera un momento y vuelve a intentar/i);
+  });
+
+  it('otro fallo de la sesión no bloquea la entrada', async () => {
+    vi.mocked(guestSession).mockRejectedValue(new VaiinillaApiError(500, { code: 'X', message: 'x' }));
+    await expect(enterSpace('esp_abc')).resolves.toMatchObject({ destination: '/e/padel' });
+  });
+});
 
 describe('lo que se lee en un QR, una etiqueta NFC o el teclado', () => {
   it('el enlace de una mesa da su token (con o sin /e)', () => {

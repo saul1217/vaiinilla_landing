@@ -9,14 +9,17 @@ import {
   dayChipLabel,
   dayLongLabel,
   durationLabel,
+  isClosedNow,
   isFree,
   isStartAvailable,
+  listedReservations,
   parseCourtDay,
   parseReservation,
   parseReservationPayment,
   startTimes,
   type CourtDay,
   type CourtSchedule,
+  type Reservation,
 } from './reservations';
 
 const MIN = 60_000;
@@ -90,6 +93,13 @@ describe('horarios de una cancha', () => {
     expect(canRentNow(d, court([[90, 200]]))).toBe(false);
     expect(canRentNow(d, court([], { rentable: false }))).toBe(false);
     expect(canRentNow(day(100, { date: '2026-10-01' }), court())).toBe(false);
+  });
+
+  it('fuera de horario hoy está cerrado; dentro, no', () => {
+    expect(isClosedNow(day(100))).toBe(false);
+    expect(isClosedNow(day(-10))).toBe(true);
+    expect(isClosedNow(day(16 * 60))).toBe(true);
+    expect(isClosedNow(day(-10, { date: '2026-10-01' }))).toBe(false);
   });
 
   it('el monto es precio × minutos / 60 con la mitad hacia arriba', () => {
@@ -186,5 +196,31 @@ describe('lectura del contrato', () => {
 
   it('un estado desconocido se trata como conflicto, no como pagada', () => {
     expect(parseReservation({ id: 'r', espacio: { id: 1 }, inicio: '2026-10-01T14:00:00Z', fin: '2026-10-01T15:00:00Z' }).state).toBe('conflicto');
+  });
+});
+
+describe('listedReservations', () => {
+  const make = (id: string, state: Reservation['state'], start: number) =>
+    ({ id, state, start, end: start + 60 * MIN }) as Reservation;
+  const now = T0;
+
+  it('muestra solo la expirada más reciente que aún no empieza', () => {
+    const mine = [
+      make('old', 'expirada', now + MIN),
+      make('new', 'expirada', now + 5 * MIN),
+      make('past', 'expirada', now - MIN),
+    ];
+    expect(listedReservations(mine, now).map((r) => r.id)).toEqual(['new']);
+  });
+
+  it('conserva pendiente_pago, confirmada, en_curso y conflicto', () => {
+    const mine = [
+      make('a', 'pendiente_pago', now + MIN),
+      make('b', 'confirmada', now + MIN),
+      make('c', 'en_curso', now - MIN),
+      make('d', 'conflicto', now + MIN),
+      make('e', 'cancelada', now + MIN),
+    ];
+    expect(listedReservations(mine, now).map((r) => r.id)).toEqual(['a', 'b', 'c', 'd']);
   });
 });

@@ -647,7 +647,7 @@ describe('CartPage', () => {
       expect(screen.getByLabelText('Tu nombre')).toHaveValue('Lupita');
       await user.click(screen.getByRole('button', { name: /^continuar con/i }));
       expect(await screen.findByText(`Mis pedidos ?nuevo=${SEGUIMIENTO}`)).toBeInTheDocument();
-      expect(renewGuest).toHaveBeenCalledWith('demo-a', 'L'.repeat(43));
+      expect(renewGuest).toHaveBeenCalledWith('demo-a', 'L'.repeat(43), {});
       expect(createGuest).not.toHaveBeenCalled();
     });
 

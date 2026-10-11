@@ -1,6 +1,6 @@
 // "How it works" steps: a grid on wide screens, a swipeable row on phones with one
 // indicator that springs to the step in view.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { SNAPPY, createSpring } from '../lib/spring';
 import { PhoneShot } from './phone-shot';
 
@@ -12,7 +12,8 @@ export interface Step {
   statusColor: string;
 }
 
-const DOT_GAP = 18;
+// Each dot is a 44 px touch target; the 10 px dot sits 17 px in from its button's edge.
+const DOT_GAP = 44;
 
 export function StepsCarousel({ steps }: { steps: readonly Step[] }) {
   const trackRef = useRef<HTMLOListElement>(null);
@@ -77,7 +78,12 @@ export function StepsCarousel({ steps }: { steps: readonly Step[] }) {
         ))}
       </ol>
       <div className="steps__dots" role="tablist" aria-label="Pasos">
-        <span ref={indicatorRef} className="steps__indicator" aria-hidden="true" />
+        <span
+          ref={indicatorRef}
+          className="steps__indicator"
+          style={{ '--dots-left': `calc(50% - ${steps.length * (DOT_GAP / 2) - 17}px)` } as CSSProperties}
+          aria-hidden="true"
+        />
         {steps.map((step, index) => (
           <button
             key={step.title}

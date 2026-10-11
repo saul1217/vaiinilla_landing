@@ -1,7 +1,7 @@
 import type { User } from 'firebase/auth';
 import { api } from './api';
 import { firebaseIdToken } from './firebase';
-import { forgetPlace, lastPlaceSlug, rememberPlace } from './last-place';
+import { forgetPlace, lastPlaceSlug, rememberPlaceFromSession } from './last-place';
 import type { ClientContextResponse, PublicEstablishment, SessionAccess } from '../types/api';
 
 const STORAGE_KEY = 'vaiinilla.buyer.client-context.v1';
@@ -104,11 +104,11 @@ export async function resolveClientSession(input: {
         input.context &&
         input.context.contexto.establecimiento_id === place.id
       ) {
-        rememberPlace(place.slug);
+        rememberPlaceFromSession(place.slug);
         return { context: input.context, slug: place.slug, place };
       }
       const context = await input.openClientSession(input.user, place);
-      rememberPlace(place.slug);
+      rememberPlaceFromSession(place.slug);
       return { context, slug: place.slug, place };
     }
   }

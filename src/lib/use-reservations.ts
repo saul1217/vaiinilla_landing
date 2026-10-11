@@ -1,9 +1,10 @@
 // Estado de la pantalla de canchas: horario del día, selección, apartar y pagar. Espejo de
 // ReservationsViewModel (Android). El cliente HTTP se inyecta para poder probarlo sin red.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { errorMessage } from './api-error';
+import { VaiinillaApiError, errorMessage } from './api-error';
 import { createIdempotencyKey } from './idempotency';
 import {
+  EXPIRED_NOTICE,
   PAID_NOTICE,
   availableDurations,
   isStartAvailable,
@@ -40,6 +41,8 @@ export interface ReservationsState {
   pending: Reservation | null;
   working: boolean;
   error: string | null;
+  /** El servidor negó apartar (403): un invitado sin escaneo reciente debe entrar o crear cuenta. */
+  denied: boolean;
   notice: string | null;
 }
 
@@ -57,10 +60,17 @@ const INITIAL: ReservationsState = {
   pending: null,
   working: false,
   error: null,
+  denied: false,
   notice: null,
 };
 
+/** La lista cargada solo vale si es de la fecha que el cliente eligió. */
+function dayMatchesSelection(state: ReservationsState): boolean {
+  return !state.day || state.day.date === (state.selectedDate ?? state.day.today);
+}
+
 export function selectedCourt(state: ReservationsState): CourtSchedule | null {
+  if (!dayMatchesSelection(state)) return null;
   return state.day?.courts.find((court) => court.id === state.selectedCourtId) ?? null;
 }
 
@@ -90,13 +100,18 @@ export function useReservations(
     if (alive.current) setState((current) => ({ ...current, ...next }));
   }, []);
 
-  const refresh = useCallback(async () => {
-    const date = stateRef.current.selectedDate ?? undefined;
+  const requestSeq = useRef(0);
+
+  const refresh = useCallback(async (dateOverride?: string | null) => {
+    // `selectDate` aún no se renderiza cuando refresca: la fecha viaja explícita.
+    const date = (dateOverride !== undefined ? dateOverride : stateRef.current.selectedDate) ?? undefined;
+    const seq = ++requestSeq.current;
     const [dayResult, mineResult] = await Promise.allSettled([
       clientRef.current.day(date),
       clientRef.current.list(),
     ]);
-    if (!alive.current) return;
+    // Una respuesta más vieja que otra ya pedida no reemplaza la lista del día elegido.
+    if (!alive.current || seq !== requestSeq.current) return;
     setState((current) => {
       const day = dayResult.status === 'fulfilled' ? dayResult.value : null;
       const courtId =
@@ -139,14 +154,15 @@ export function useReservations(
   const selectDate = useCallback(
     (date: string) => {
       const today = stateRef.current.day?.today;
+      const selectedDate = date === today ? null : date;
       patch({
-        selectedDate: date === today ? null : date,
+        selectedDate,
         selectedStart: null,
         rentNow: false,
         selectedDuration: null,
         loading: true,
       });
-      void refresh();
+      void refresh(selectedDate);
     },
     [patch, refresh],
   );
@@ -186,14 +202,14 @@ export function useReservations(
   );
 
   const selectDuration = useCallback((minutes: number) => patch({ selectedDuration: minutes }), [patch]);
-  const dismissMessages = useCallback(() => patch({ error: null, notice: null }), [patch]);
+  const dismissMessages = useCallback(() => patch({ error: null, denied: false, notice: null }), [patch]);
 
   /** Aparta la cancha y abre la elección del pago. */
   const reserve = useCallback(async () => {
     const current = stateRef.current;
     const court = selectedCourt(current);
     if (!canReserve(current) || !court || current.selectedDuration === null) return;
-    patch({ working: true, error: null, notice: null });
+    patch({ working: true, error: null, denied: false, notice: null });
     try {
       const reservation = await clientRef.current.create(
         {
@@ -212,7 +228,15 @@ export function useReservations(
         mine: [reservation, ...now.mine.filter((r) => r.id !== reservation.id)],
       }));
     } catch (cause) {
-      patch({ working: false, error: errorMessage(cause) });
+      const denied = cause instanceof VaiinillaApiError && cause.status === 403;
+      // Nunca en silencio: el mensaje del servidor lleva su código para poder reportarlo.
+      const code = cause instanceof VaiinillaApiError && cause.code ? ` (${cause.code})` : '';
+      // Un 5xx sin mensaje útil del servidor también se explica: el botón nunca vuelve sin avisar.
+      const serverFailure =
+        cause instanceof VaiinillaApiError && cause.status >= 500
+          ? 'No pudimos apartar la cancha por un problema del servicio. Inténtalo de nuevo en un momento.'
+          : null;
+      patch({ working: false, denied, error: `${serverFailure ?? errorMessage(cause)}${code}` });
     }
     await refresh();
   }, [patch, refresh]);
@@ -244,15 +268,14 @@ export function useReservations(
       } catch (cause) {
         const msg = errorMessage(cause);
         const isExpired =
+          (cause instanceof VaiinillaApiError && cause.status === 409) ||
           msg.toLowerCase().includes('venció') ||
           msg.toLowerCase().includes('expir') ||
           msg.toLowerCase().includes('tiempo');
         patch({
           working: false,
           pending: isExpired ? null : stateRef.current.pending,
-          error: isExpired
-            ? 'Tiempo de espera agotado: se apartó pero no se completó el pago dentro de los 10 minutos. Tu apartado fue cancelado; por favor elige el horario nuevamente.'
-            : msg,
+          error: isExpired ? EXPIRED_NOTICE : msg,
         });
       }
       await refresh();
@@ -274,7 +297,10 @@ export function useReservations(
           mine: now.mine.map((r) => (r.id === cancelled.id ? cancelled : r)),
         }));
       } catch (cause) {
-        patch({ working: false, error: errorMessage(cause) });
+        patch({
+          working: false,
+          error: cause instanceof VaiinillaApiError && cause.status === 409 ? EXPIRED_NOTICE : errorMessage(cause),
+        });
       }
       await refresh();
     },

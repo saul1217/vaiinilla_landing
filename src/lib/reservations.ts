@@ -78,6 +78,19 @@ export function isLiveReservation(state: ReservationStatus): boolean {
   return state === 'pendiente_pago' || state === 'confirmada' || state === 'en_curso';
 }
 
+/**
+ * Reservas que se listan en "Mis reservas": las vivas y en conflicto, más solo la expirada
+ * más reciente y solo mientras su horario no haya empezado, para no llenar la lista de vencidas.
+ */
+export function listedReservations(mine: Reservation[], now: number): Reservation[] {
+  let expired: Reservation | null = null;
+  for (const r of mine) {
+    if (r.state !== 'expirada' || r.start <= now) continue;
+    if (!expired || r.start > expired.start) expired = r;
+  }
+  return mine.filter((r) => isLiveReservation(r.state) || r.state === 'conflicto' || r === expired);
+}
+
 // ---------- Lectura del contrato ----------
 
 type Json = Record<string, unknown>;
@@ -229,6 +242,13 @@ export function isStartAvailable(day: CourtDay, court: CourtSchedule, start: num
   return availableDurations(day, court, start).length > 0;
 }
 
+/** Hoy y ahora no cabe ni la duración más corta dentro del horario del lugar (antes de abrir o tras cerrar). */
+export function isClosedNow(day: CourtDay): boolean {
+  if (day.date !== day.today) return false;
+  const shortest = (day.durations.length > 0 ? Math.min(...day.durations) : day.blockMinutes) * MINUTE;
+  return day.now < day.opensAt || day.now + shortest > day.closesAt;
+}
+
 /** ¿La cancha está libre ahora mismo por al menos la duración más corta? ("Rentar ahora"). */
 export function canRentNow(day: CourtDay, court: CourtSchedule): boolean {
   return day.date === day.today && court.rentable && isStartAvailable(day, court, day.now);
@@ -314,9 +334,12 @@ export const RESERVATION_STATE_LABEL: Record<ReservationStatus, string> = {
   en_curso: 'En juego',
   terminada: 'Terminada',
   cancelada: 'Cancelada',
-  expirada: 'Cancelada por tiempo de espera',
+  expirada: 'Vencida',
   conflicto: 'Revisar con el personal',
 };
+
+/** Aviso de una reserva vencida (tarjeta y respuestas 409 al pagar o cancelar). */
+export const EXPIRED_NOTICE = 'Venció sin pagarse.';
 
 export const PAID_NOTICE: Record<ReservationPaymentMethod, string> = {
   saldo: '¡Listo! Tu cancha quedó pagada.',

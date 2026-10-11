@@ -222,6 +222,8 @@ export interface OrderReservation {
   fin: string;
   duracion_min: number;
   estado: ReservationState;
+  /** Fin del apartado mientras la reserva espera pago; lo fija el backend según el método de pago. */
+  expira_en?: string | null;
 }
 
 export interface OrderItemOption {
@@ -443,6 +445,8 @@ export interface SharedTable {
 export interface GuestSessionResponse extends ClientContextResponse {
   /** `llave` solo llega en el alta: es lo único que identifica al invitado. */
   invitado: { nombre: string; llave?: string };
+  /** Prueba de escaneo (QA-009): con `token` el invitado aparta canchas hasta `vence_en`. */
+  entrada?: { token: string; vence_en: string | null } | null;
 }
 
 /** Pedido visto por su enlace de seguimiento; `qr_token` llega ya pagado. */

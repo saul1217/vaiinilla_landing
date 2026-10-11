@@ -18,6 +18,7 @@ import {
   verificationWasSent,
 } from '../lib/verification';
 import { lastPlaceSlug } from '../lib/last-place';
+import { leavePlace } from '../lib/switch-place';
 import { THEME_OPTIONS } from '../lib/theme';
 import { walletQrUrl } from '../lib/env';
 import { useCart } from '../context/cart-context';
@@ -91,9 +92,15 @@ function useRegistrationPending(user: User | null, paused: boolean): boolean {
 function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
   const { user, signOut } = useAuth();
   const { preference, setPreference } = useTheme();
-  const { cart } = useCart();
+  const { cart, reset: resetCart } = useCart();
   const { context, openClientSession } = useBuyerSession();
   const navigate = useNavigate();
+  const onChangePlace = () => {
+    leavePlace();
+    resetCart();
+    window.scrollTo({ top: 0 });
+    void navigate('/pedir');
+  };
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [qr, setQr] = useState<string | null>(null);
   const [allowsBalance, setAllowsBalance] = useState(true);
@@ -275,7 +282,7 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
                 </button>
               ))}
             </div>
-            <button className="alumno-setting" type="button" onClick={() => void navigate('/pedir')}>
+            <button className="alumno-setting" type="button" onClick={onChangePlace}>
               Cambiar tienda
             </button>
             <button className="alumno-setting" type="button" onClick={onSignOut}>

@@ -1,7 +1,9 @@
 // Entrar a un lugar desde la ventana "Escanear QR · Código · NFC": lo que se lee (un
 // enlace de QR o NFC, o el código de 4 dígitos de la mesa) se convierte en a dónde ir.
 import { api } from './api';
+import { VaiinillaApiError } from './api-error';
 import { rememberPlace } from './last-place';
+import { forgetGuestEntry, guestSession } from './guest-session';
 import { rememberSpace } from './space-session';
 
 export type EntryTarget = { kind: 'space'; token: string } | { kind: 'store'; slug: string };
@@ -51,6 +53,15 @@ export async function enterSpace(
     // El backend acepta el token o el código para unirse a la mesa compartida.
     qrToken: token,
   });
+  // El escaneo es la única ocasión en que se manda el espacio_token: crea o renueva la
+  // sesión de invitado con él. Después solo se usa la entrada que devuelve el servidor.
+  if (token.startsWith('esp_')) {
+    forgetGuestEntry();
+    await guestSession(resolved.establecimiento_slug, undefined, { espacioToken: token }).catch((cause: unknown) => {
+      // Un límite (429) se avisa para esperar y reintentar; otro fallo no bloquea la entrada.
+      if (cause instanceof VaiinillaApiError && cause.status === 429) throw cause;
+    });
+  }
   return {
     destination: `/e/${resolved.establecimiento_slug}`,
     tipo: resolved.espacio_tipo,
