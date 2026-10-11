@@ -43,7 +43,7 @@ import {
   dayLongLabel,
   durationLabel,
   formatHour,
-  isLiveReservation,
+  listedReservations,
   isStartAvailable,
   localDate,
   startTimes,
@@ -197,7 +197,7 @@ export function ReservationsScreen({
 
   // Con el resumen a la vista el error de apartar sale junto al botón, no fuera de pantalla arriba.
   const inlineError = Boolean(court?.rentable && start !== null);
-  const mine = state.mine.filter((r) => isLiveReservation(r.state) || r.state === 'conflicto');
+  const mine = listedReservations(state.mine, day?.now ?? Date.now());
 
   return (
     <div className="alumno-res" data-slug={slug}>

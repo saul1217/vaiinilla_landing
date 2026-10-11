@@ -78,6 +78,19 @@ export function isLiveReservation(state: ReservationStatus): boolean {
   return state === 'pendiente_pago' || state === 'confirmada' || state === 'en_curso';
 }
 
+/**
+ * Reservas que se listan en "Mis reservas": las vivas y en conflicto, más solo la expirada
+ * más reciente y solo mientras su horario no haya empezado, para no llenar la lista de vencidas.
+ */
+export function listedReservations(mine: Reservation[], now: number): Reservation[] {
+  let expired: Reservation | null = null;
+  for (const r of mine) {
+    if (r.state !== 'expirada' || r.start <= now) continue;
+    if (!expired || r.start > expired.start) expired = r;
+  }
+  return mine.filter((r) => isLiveReservation(r.state) || r.state === 'conflicto' || r === expired);
+}
+
 // ---------- Lectura del contrato ----------
 
 type Json = Record<string, unknown>;

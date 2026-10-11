@@ -11,12 +11,14 @@ import {
   durationLabel,
   isFree,
   isStartAvailable,
+  listedReservations,
   parseCourtDay,
   parseReservation,
   parseReservationPayment,
   startTimes,
   type CourtDay,
   type CourtSchedule,
+  type Reservation,
 } from './reservations';
 
 const MIN = 60_000;
@@ -186,5 +188,31 @@ describe('lectura del contrato', () => {
 
   it('un estado desconocido se trata como conflicto, no como pagada', () => {
     expect(parseReservation({ id: 'r', espacio: { id: 1 }, inicio: '2026-10-01T14:00:00Z', fin: '2026-10-01T15:00:00Z' }).state).toBe('conflicto');
+  });
+});
+
+describe('listedReservations', () => {
+  const make = (id: string, state: Reservation['state'], start: number) =>
+    ({ id, state, start, end: start + 60 * MIN }) as Reservation;
+  const now = T0;
+
+  it('muestra solo la expirada más reciente que aún no empieza', () => {
+    const mine = [
+      make('old', 'expirada', now + MIN),
+      make('new', 'expirada', now + 5 * MIN),
+      make('past', 'expirada', now - MIN),
+    ];
+    expect(listedReservations(mine, now).map((r) => r.id)).toEqual(['new']);
+  });
+
+  it('conserva pendiente_pago, confirmada, en_curso y conflicto', () => {
+    const mine = [
+      make('a', 'pendiente_pago', now + MIN),
+      make('b', 'confirmada', now + MIN),
+      make('c', 'en_curso', now - MIN),
+      make('d', 'conflicto', now + MIN),
+      make('e', 'cancelada', now + MIN),
+    ];
+    expect(listedReservations(mine, now).map((r) => r.id)).toEqual(['a', 'b', 'c', 'd']);
   });
 });
