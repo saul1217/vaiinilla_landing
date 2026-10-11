@@ -31,6 +31,7 @@ import {
   type ReservationsState,
 } from '../lib/use-reservations';
 import {
+  EXPIRED_NOTICE,
   RESERVATION_STATE_LABEL,
   addDays,
   amountFor,
@@ -868,6 +869,11 @@ function MyReservation({
       <p>
         {dayLongLabel(date, today)} · {formatHour(reservation.start, zone)} – {formatHour(reservation.end, zone)}
       </p>
+      {reservation.state === 'expirada' ? (
+        <p className="alumno-res__expired" role="status">
+          {EXPIRED_NOTICE}
+        </p>
+      ) : (
       <div className="alumno-res__actions">
         {reservation.state === 'pendiente_pago' ? (
           <button type="button" className="alumno-res__small is-filled" onClick={onPay}>
@@ -880,6 +886,7 @@ function MyReservation({
           </button>
         ) : null}
       </div>
+      )}
     </article>
   );
 }

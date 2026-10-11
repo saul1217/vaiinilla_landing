@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { VaiinillaApiError, errorMessage } from './api-error';
 import { createIdempotencyKey } from './idempotency';
 import {
+  EXPIRED_NOTICE,
   PAID_NOTICE,
   availableDurations,
   isStartAvailable,
@@ -267,15 +268,14 @@ export function useReservations(
       } catch (cause) {
         const msg = errorMessage(cause);
         const isExpired =
+          (cause instanceof VaiinillaApiError && cause.status === 409) ||
           msg.toLowerCase().includes('venció') ||
           msg.toLowerCase().includes('expir') ||
           msg.toLowerCase().includes('tiempo');
         patch({
           working: false,
           pending: isExpired ? null : stateRef.current.pending,
-          error: isExpired
-            ? 'Tiempo de espera agotado: se apartó pero no se completó el pago dentro de los 10 minutos. Tu apartado fue cancelado; por favor elige el horario nuevamente.'
-            : msg,
+          error: isExpired ? EXPIRED_NOTICE : msg,
         });
       }
       await refresh();
@@ -297,7 +297,10 @@ export function useReservations(
           mine: now.mine.map((r) => (r.id === cancelled.id ? cancelled : r)),
         }));
       } catch (cause) {
-        patch({ working: false, error: errorMessage(cause) });
+        patch({
+          working: false,
+          error: cause instanceof VaiinillaApiError && cause.status === 409 ? EXPIRED_NOTICE : errorMessage(cause),
+        });
       }
       await refresh();
     },

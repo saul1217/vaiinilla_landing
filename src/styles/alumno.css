@@ -7832,3 +7832,9 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
     color: #111 !important;
   }
 }
+
+.alumno-res__expired {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--alumno-muted, #8a8a8a);
+}

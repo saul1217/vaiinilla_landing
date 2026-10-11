@@ -318,6 +318,9 @@ export const RESERVATION_STATE_LABEL: Record<ReservationStatus, string> = {
   conflicto: 'Revisar con el personal',
 };
 
+/** Aviso de una reserva vencida (tarjeta y respuestas 409 al pagar o cancelar). */
+export const EXPIRED_NOTICE = 'Venció sin pagarse: pasaron los 10 minutos para pagarla.';
+
 export const PAID_NOTICE: Record<ReservationPaymentMethod, string> = {
   saldo: '¡Listo! Tu cancha quedó pagada.',
   stripe: 'Completa el pago con tarjeta para confirmar tu cancha.',
