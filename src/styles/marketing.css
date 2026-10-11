@@ -33,8 +33,8 @@
 }
 
 .text-link::before { content: ''; position: absolute; inset: -9px -6px; }
-.text-link { position: relative; display: inline-flex; gap: 10px; align-items: center; font-weight: 700; font-size: .95rem; border-bottom: 1px solid var(--ink); padding-bottom: 3px; transition: color 180ms ease, border-color 180ms ease; }
-.text-link:hover { color: var(--lime-dark); border-color: var(--lime-dark); }
+.text-link { position: relative; display: inline-flex; gap: 10px; align-items: center; font-weight: 700; font-size: .95rem; min-height: 44px; min-width: 44px; text-decoration: underline; text-decoration-color: var(--ink); text-underline-offset: 6px; transition: color 180ms ease, text-decoration-color 180ms ease; }
+.text-link:hover { color: var(--lime-dark); text-decoration-color: var(--lime-dark); }
 .status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #36c66d; box-shadow: 0 0 0 4px rgba(54, 198, 109, .13); }
 
 /* Home: mobile-first. The first phone screen shows the promise, the button and the product. */
@@ -264,7 +264,7 @@
 .footer__tag, .footer__app { color: var(--ink-soft); font-size: .82rem; }
 .footer__tag { max-width: 36ch; }
 .footer__links { display: flex; gap: 18px; flex-wrap: wrap; }
-.footer__app { transition: color 180ms ease; display: inline-flex; align-items: center; min-height: 44px; }
+.footer__app { transition: color 180ms ease; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; }
 .footer__app:hover, .footer__app:focus-visible { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 .footer__app.active, .footer__app[aria-current='page'] { color: var(--ink); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 650px) {
