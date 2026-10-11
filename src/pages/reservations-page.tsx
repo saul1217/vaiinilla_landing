@@ -198,6 +198,8 @@ export function ReservationsScreen({
 
   // Con el resumen a la vista el error de apartar sale junto al botón, no fuera de pantalla arriba.
   const inlineError = Boolean(court?.rentable && start !== null);
+  // Al cambiar de día, `day` sigue siendo el anterior hasta que llega la respuesta: no se muestra como actual.
+  const switching = Boolean(day) && state.loading && day!.date !== (state.selectedDate ?? day!.today);
   const mine = listedReservations(state.mine, day?.now ?? Date.now());
 
   return (
@@ -220,7 +222,16 @@ export function ReservationsScreen({
       ) : (
         <div className="alumno-res__flow alumno-arrive" ref={bodyRef}>
           <DateStrip day={day} selected={state.selectedDate ?? day.today} onSelect={vm.selectDate} />
-          <CourtStrip day={day} selectedId={state.selectedCourtId} onSelect={vm.selectCourt} />
+          {switching ? (
+            <>
+              <p className="alumno-muted" aria-hidden="true">
+                Cargando horarios…
+              </p>
+              <LoadingSkeleton shape="rows" label="Cargando horarios…" />
+            </>
+          ) : (
+            <CourtStrip day={day} selectedId={state.selectedCourtId} onSelect={vm.selectCourt} />
+          )}
           {court && hasProfile(court) ? <CourtProfileCard key={`p-${court.id}`} court={court} /> : null}
           {court?.rentable ? (
             <>

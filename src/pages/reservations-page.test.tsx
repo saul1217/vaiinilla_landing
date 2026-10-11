@@ -96,6 +96,28 @@ describe('ReservationsScreen', () => {
     expect(screen.queryByText('$330 / hora')).not.toBeInTheDocument();
   });
 
+  it('al cambiar de día muestra "Cargando horarios…" y no los datos del día anterior ni el vacío falso (QA-035)', async () => {
+    const user = userEvent.setup();
+    let release: (value: CourtDay) => void = () => {};
+    const client = makeClient();
+    const first = vi.fn(() => Promise.resolve(day([court(7, 'Cancha 1')])));
+    client.day = first;
+    renderScreen(client);
+    await screen.findByRole('radio', { name: '09:00' });
+
+    client.day = vi.fn(() => new Promise<CourtDay>((resolve) => (release = resolve)));
+    await user.click(screen.getByRole('radio', { name: /mañana/i }));
+
+    expect(await screen.findByText('Cargando horarios…', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: '09:00' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/ya no quedan horarios/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /cancha 1/i })).not.toBeInTheDocument();
+
+    release({ ...day([court(7, 'Cancha 1')]), date: '2026-10-01' });
+    expect(await screen.findByRole('radio', { name: /cancha 1/i })).toBeInTheDocument();
+    expect(screen.queryByText('Cargando horarios…', { selector: 'p' })).not.toBeInTheDocument();
+  });
+
   it('muestra las canchas con su precio al cliente y cuándo se liberan', async () => {
     renderScreen(makeClient());
     expect(await screen.findByRole('radio', { name: /cancha 1/i })).toBeInTheDocument();
