@@ -227,7 +227,7 @@ describe("OrderTrackCard pickup", () => {
     nav.className = "alumno-nav";
     document.body.appendChild(nav);
     const style = window.getComputedStyle.bind(window);
-    vi.spyOn(window, "getComputedStyle").mockImplementation((el) => {
+    const computed = vi.spyOn(window, "getComputedStyle").mockImplementation((el) => {
       if (el instanceof Element && el.classList.contains("alumno-nav")) {
         return { position: "fixed" } as CSSStyleDeclaration;
       }
@@ -272,6 +272,7 @@ describe("OrderTrackCard pickup", () => {
     expect(scrollBy.mock.calls[0]?.[0]?.top).toBeGreaterThan(40);
 
     rects.mockRestore();
+    computed.mockRestore();
     nav.remove();
   });
 
@@ -282,7 +283,7 @@ describe("OrderTrackCard pickup", () => {
     nav.className = "alumno-nav";
     document.body.appendChild(nav);
     const style = window.getComputedStyle.bind(window);
-    vi.spyOn(window, "getComputedStyle").mockImplementation((el) => {
+    const computed = vi.spyOn(window, "getComputedStyle").mockImplementation((el) => {
       if (el instanceof Element && el.classList.contains("alumno-nav")) {
         return { position: "fixed" } as CSSStyleDeclaration;
       }
@@ -310,6 +311,7 @@ describe("OrderTrackCard pickup", () => {
     expect(scrollBy.mock.calls[0]?.[0]?.top).toBeGreaterThan(40);
 
     rects.mockRestore();
+    computed.mockRestore();
     nav.remove();
   });
 
