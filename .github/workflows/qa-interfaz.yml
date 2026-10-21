@@ -1,9 +1,12 @@
-# Copiar a .github/workflows/qa-interfaz.yml (la automatización no puede escribir en esa carpeta).
 name: qa-interfaz
 on:
   deployment_status:
   workflow_dispatch:
     inputs:
+      base_url:
+        description: 'URL a probar (por defecto, el alias de develop de landing en Vercel)'
+        type: string
+        default: 'https://vaiinilla-landing-git-develop-saul1217s-projects.vercel.app'
       update_snapshots:
         description: 'Regenerar referencias (solo si la corrida anterior NO fue bloqueada por datos)'
         type: boolean
@@ -26,7 +29,7 @@ jobs:
     container: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27 # misma versión que @playwright/test
     env:
       PLAYWRIGHT_CONTAINER: '1'
-      E2E_BASE_URL: ${{ github.event.deployment_status.environment_url }}
+      E2E_BASE_URL: ${{ github.event.deployment_status.environment_url || inputs.base_url || 'https://vaiinilla-landing-git-develop-saul1217s-projects.vercel.app' }}
       E2E_CLIENTE_EMAIL: ${{ secrets.E2E_CLIENTE_EMAIL }}
       E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
     steps:
