@@ -256,13 +256,35 @@ describe('buyer API client', () => {
 
   it('pide el correo de verificación con el ID token de Firebase', async () => {
     server.use(
-      http.post(`${baseUrl}/publico/correos/verificacion`, ({ request }) => {
+      http.post(`${baseUrl}/publico/correos/verificacion`, async ({ request }) => {
         expect(request.headers.get('Authorization')).toBe('Bearer firebase-token');
+        await expect(request.json()).resolves.toEqual({ continue_url: `${window.location.origin}/cuenta` });
         return HttpResponse.json({ data: { aceptado: true }, meta: {}, error: null }, { status: 202 });
       }),
     );
     await expect(api.sendVerificationEmail('firebase-token')).resolves.toEqual({ aceptado: true });
   });
+
+  it('reintenta sin la URL de retorno si el backend rechaza el campo', async () => {
+    const bodies: string[] = [];
+    server.use(
+      http.post(`${baseUrl}/publico/correos/verificacion`, async ({ request }) => {
+        const text = await request.text();
+        bodies.push(text);
+        if (text) {
+          return HttpResponse.json(
+            { data: null, meta: {}, error: { code: 'VALIDATION_ERROR', message: 'x' } },
+            { status: 422 },
+          );
+        }
+        return HttpResponse.json({ data: { aceptado: true }, meta: {}, error: null }, { status: 202 });
+      }),
+    );
+    await expect(api.sendVerificationEmail('firebase-token')).resolves.toEqual({ aceptado: true });
+    expect(bodies).toHaveLength(2);
+    expect(bodies[1]).toBe('');
+  });
+
   it('elimina la cuenta con Idempotency-Key UUID y la confirmación que exige el backend', async () => {
     server.use(
       http.delete(`${baseUrl}/identidad/cuenta`, async ({ request }) => {

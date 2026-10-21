@@ -32,6 +32,18 @@ export function isFirebaseConfigReady(config: FirebaseClientConfig): boolean {
   return Boolean(config.apiKey && config.authDomain && config.projectId && config.appId);
 }
 
+/**
+ * Landing a la que regresa el enlace del correo de verificación: VITE_APP_URL si el ambiente la
+ * define; si no, el origen desde el que se abrió la landing (develop → sand-user, prod → vaiinilla.app).
+ */
+export function verificationReturnUrl(
+  envUrl: string | undefined = import.meta.env.VITE_APP_URL,
+  origin: string = window.location.origin,
+): string {
+  const base = (envUrl?.trim() || origin).replace(/\/$/, '');
+  return `${base}/cuenta`;
+}
+
 export function walletQrUrl(userId: string): string {
   return `https://vaiinilla.app/u/${userId.trim()}`;
 }

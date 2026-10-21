@@ -124,6 +124,7 @@ describe('AccountPage', () => {
       </MemoryRouter>,
     );
     expect(await screen.findByRole('heading', { name: /configuración/i })).toBeInTheDocument();
+    expect(screen.getByText('Ana Pérez · ana@example.test')).toBeInTheDocument();
     expect(await screen.findByAltText(/código qr para recargar saldo en caja/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sistema/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /claro/i })).toBeInTheDocument();

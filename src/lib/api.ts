@@ -1,6 +1,6 @@
 import { VaiinillaApiError } from './api-error';
 import { createIdempotencyKey } from './idempotency';
-import { resolveApiUrl } from './env';
+import { resolveApiUrl, verificationReturnUrl } from './env';
 import type {
   ApiEnvelope,
   ClaimGuestOrdersResponse,
@@ -219,12 +219,22 @@ export const api = {
 
   /** Correo de verificación: el backend genera el enlace y lo envía (202 aunque sea asíncrono). */
   async sendVerificationEmail(firebaseToken: string): Promise<{ aceptado: boolean }> {
-    return (
-      await request<{ aceptado: boolean }>('/publico/correos/verificacion', {
+    const send = (body?: { continue_url: string }) =>
+      request<{ aceptado: boolean }>('/publico/correos/verificacion', {
         method: 'POST',
         token: firebaseToken,
-      })
-    ).data;
+        body,
+      });
+    try {
+      // El enlace debe regresar a esta landing y no al panel que use la plantilla por defecto.
+      return (await send({ continue_url: verificationReturnUrl() })).data;
+    } catch (cause) {
+      // Un backend que aún no acepta el campo no debe bloquear el registro.
+      if (cause instanceof VaiinillaApiError && (cause.status === 400 || cause.status === 422)) {
+        return (await send()).data;
+      }
+      throw cause;
+    }
   },
 
   async registerIdentity(
