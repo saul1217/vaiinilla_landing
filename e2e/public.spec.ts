@@ -13,9 +13,10 @@ test('la landing de marketing conserva soporte y manda a pedir, no al panel', as
     'href',
     'https://app.vaiinilla.app',
   );
-  await expect(page.getByText(/próximamente/i).first()).toBeVisible();
+  // En móvil las insignias de la barra se ocultan (marketing.css, .nav__actions .store-badges): se comprueba una visible.
+  await expect(page.getByText(/próximamente/i).filter({ visible: true }).first()).toBeVisible();
   await expect(page.getByRole('heading', { name: /el menú del lugar/i })).toBeVisible();
-  await expect(page.getByText(/cualquier negocio de comida/i).first()).toBeVisible();
+  await expect(page.getByText(/cualquier negocio de comida/i).filter({ visible: true }).first()).toBeVisible();
 });
 
 test('Pedir en la landing entra al app del comprador', async ({ page }) => {
