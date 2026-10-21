@@ -22,6 +22,7 @@
     "vite.phone.config.ts",
     "eslint.config.js",
     "playwright.config.ts",
-    "playwright.stack.config.ts"
+    "playwright.stack.config.ts",
+    "playwright.ui.config.ts"
   ]
 }

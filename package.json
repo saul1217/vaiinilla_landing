@@ -14,7 +14,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:stack": "playwright test -c playwright.stack.config.ts"
+    "test:e2e:stack": "playwright test -c playwright.stack.config.ts",
+    "test:ui": "playwright test -c playwright.ui.config.ts",
+    "lhci": "npx --yes @lhci/cli@0.15.x autorun --config=lighthouserc.json"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.10.0",
@@ -27,6 +29,7 @@
     "react-router-dom": "^7.12.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^9.39.2",
     "@playwright/test": "^1.56.1",
     "@testing-library/jest-dom": "^6.9.1",
