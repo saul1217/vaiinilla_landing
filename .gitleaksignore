@@ -1,0 +1,41 @@
+# Clasificados por QA_SEGURIDAD 2026-10-20 (falsos positivos)
+# nombre de clave de sessionStorage/localStorage
+cfcd84450f4a2de8b008729f78289ce416c30c66:src/lib/verification.ts:generic-api-key:4
+# nombre de clave de sessionStorage/localStorage
+f86abd783f6ccd4789058e0ec6c21569b44936a2:src/lib/guest-orders.ts:generic-api-key:5
+# nombre de clave de sessionStorage/localStorage
+f86abd783f6ccd4789058e0ec6c21569b44936a2:src/lib/guest-session.ts:generic-api-key:9
+# apiKey web pública de Firebase vaiinilla-b3a70 (develop); restringida por referrer en QA-055
+68b223749bb2711d0f5aba75c8dad070a6016734:.env.development:gcp-api-key:10
+# nombre de clave de sessionStorage/localStorage
+c25249f58456e7dc1cde8de96d55bda983a0001d:src/arcade/skate/storage.js:generic-api-key:2
+# Stripe publishable key de prueba ficticia (fixture pk_test_)
+f8cc908ad2c7e88c44f1da05482ee8f2d0f0bfdf:src/pages/order-detail-page.test.tsx:generic-api-key:278
+# Stripe publishable key de prueba ficticia (fixture pk_test_)
+6119b12dacddaa371e27e2bde51b81d6adc6ad4e:src/pages/order-detail-page.test.tsx:generic-api-key:194
+# Stripe publishable key de prueba ficticia (fixture pk_test_)
+1e0d9574cb0a19e1f8339163047455f43f71fe1b:src/pages/order-detail-page.test.tsx:generic-api-key:271
+# Stripe publishable key de prueba ficticia (fixture pk_test_)
+dcbe34f9e6103fe631135161c800187f5663c6d8:src/components/stripe-payment-panel.test.tsx:generic-api-key:36
+# Stripe publishable key de prueba ficticia (fixture pk_test_)
+dcbe34f9e6103fe631135161c800187f5663c6d8:src/lib/api.test.ts:generic-api-key:165
+# Stripe publishable key de prueba ficticia (fixture pk_test_)
+dcbe34f9e6103fe631135161c800187f5663c6d8:src/lib/stripe-session.test.ts:generic-api-key:14
+# Stripe publishable key de prueba ficticia (fixture pk_test_)
+dcbe34f9e6103fe631135161c800187f5663c6d8:src/pages/cart-page.test.tsx:generic-api-key:182
+# nombre de clave de sessionStorage/localStorage
+dcbe34f9e6103fe631135161c800187f5663c6d8:src/lib/guest-explore.ts:generic-api-key:1
+# nombre de clave de sessionStorage/localStorage
+dcbe34f9e6103fe631135161c800187f5663c6d8:src/lib/guest-explore.ts:generic-api-key:2
+# Stripe publishable key de prueba ficticia (fixture pk_test_)
+dcbe34f9e6103fe631135161c800187f5663c6d8:src/pages/order-detail-page.test.tsx:generic-api-key:142
+# Stripe publishable key de prueba ficticia (fixture pk_test_)
+dcbe34f9e6103fe631135161c800187f5663c6d8:src/pages/order-detail-page.test.tsx:generic-api-key:207
+# nombre de clave de sessionStorage/localStorage
+ec9abf7fac66e1c64f09c9bf5add432f37cc46db:src/lib/guest-explore.ts:generic-api-key:1
+# nombre de clave de sessionStorage/localStorage
+ec9abf7fac66e1c64f09c9bf5add432f37cc46db:src/lib/idempotency.ts:generic-api-key:1
+# apiKey web pública de Firebase vaiinilla-b3a70 (develop); restringida por referrer en QA-055
+d225a833b1fffe00c16ee1cd0794a455e8b7166c:src/lib/env.ts:gcp-api-key:15
+# apiKey web pública de Firebase **vaiinilla-produc** (prod); pública por diseño, pero falta restringirla (referrers/APIs)
+d225a833b1fffe00c16ee1cd0794a455e8b7166c:src/lib/env.ts:gcp-api-key:25
