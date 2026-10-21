@@ -24,6 +24,15 @@ export function useSheetMotion(onClosed: () => void) {
     return () => animation.cancel();
   }, []);
 
+  // Al abrir, el foco entra al panel; al cerrar vuelve al control que abrió la hoja.
+  useLayoutEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    ref.current?.focus({ preventScroll: true });
+    return () => {
+      if (opener && opener !== document.body && opener.isConnected) opener.focus({ preventScroll: true });
+    };
+  }, []);
+
   useEffect(() => {
     const { overflow } = document.body.style;
     document.body.style.overflow = 'hidden';

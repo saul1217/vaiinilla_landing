@@ -257,7 +257,7 @@ html[data-theme='amoled'] .alumno-avatar {
   background: var(--surface);
   color: var(--text);
   border-radius: 999px;
-  min-height: 38px;
+  min-height: 44px;
   padding: 8px 14px;
   font-weight: 700;
   font-size: 0.85rem;
@@ -2247,6 +2247,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   gap: 6px;
   width: 100%;
   margin-top: 4px;
+  min-height: 44px;
   padding: 12px 8px 10px;
   border: 0;
   background: transparent;
@@ -2309,7 +2310,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   letter-spacing: 0.05em;
   text-transform: uppercase;
   white-space: nowrap;
-  color: rgba(244, 241, 231, 0.42);
+  color: rgba(244, 241, 231, 0.72);
 }
 
 .alumno-timeline li.is-done strong,
@@ -2325,13 +2326,13 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
 
 .alumno-timeline li.is-skipped strong {
   text-decoration: line-through;
-  opacity: 0.55;
+  opacity: 0.75;
 }
 
 .alumno-timeline__hint {
   justify-self: end;
   max-width: 150px;
-  color: rgba(244, 241, 231, 0.45);
+  color: rgba(244, 241, 231, 0.72);
   font-size: 0.6875rem;
   font-weight: 500;
   line-height: 1.2;
@@ -2427,6 +2428,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   .alumno-track-card.is-open .alumno-track-card__toggle {
     margin-top: 0;
     padding: 8px 8px 6px;
+    min-height: 44px;
   }
 
   .alumno-pickup__qr-pad {
@@ -4158,6 +4160,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   font-size: 1.05rem;
   text-decoration: none;
   margin: 0;
+  min-height: 44px;
 }
 
 .alumno-lockup img {
@@ -4684,6 +4687,10 @@ html[data-theme='amoled'] .alumno-lockup img,
   overflow: clip;
   display: block;
   padding-top: 0;
+}
+
+.alumno-motion-panel:focus {
+  outline: none;
 }
 
 .alumno-psheet .alumno-motion-panel {
@@ -5659,8 +5666,8 @@ html[data-theme='light'] .alumno-codesheet__slots > span.is-filled {
 }
 
 .alumno-paysheet__close {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   border: 0;
@@ -6578,7 +6585,7 @@ html[data-theme='amoled'] .alumno-seg__pill {
   position: relative;
   z-index: 1;
   flex: 0 0 auto;
-  min-height: 38px;
+  min-height: 44px;
   padding: 8px 16px;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -7266,7 +7273,7 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 }
 
 .alumno-res__small {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 18px;
   border: 1px solid var(--line);
   border-radius: 999px;
