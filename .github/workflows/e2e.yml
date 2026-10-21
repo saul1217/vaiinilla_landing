@@ -5,17 +5,28 @@ on:
     branches: [develop]
 permissions:
   contents: read
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   e2e:
+    # Los PR de forks no reciben secretos.
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     # Los secretos viven solo en este Environment; nunca llaves de servicio
     # de Supabase ni secretos de producción.
     environment: develop-e2e
+    # Toca develop: una corrida a la vez en todos los repos; las demás esperan en cola.
+    concurrency:
+      group: develop-e2e
+      cancel-in-progress: false
     env:
       E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
       E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }} # cuenta dedicada, contraseña única
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
