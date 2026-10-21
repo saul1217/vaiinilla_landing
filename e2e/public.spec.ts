@@ -53,11 +53,11 @@ test('discovery y menú públicos responden contra el backend de development', a
   });
 });
 
-test('guest cart de Venecia y /__qa usan fotos reales del catálogo', async ({ page }) => {
+test('guest cart de ci-vaiinilla y /__qa usan fotos reales del catálogo', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/__qa/carrito-lleno');
   // El nombre sale también en el «Del menú» lateral: se acota a las líneas del carrito.
-  await expect(page.locator('.alumno-line__copy strong', { hasText: 'fruti Lupis' }).first()).toBeVisible();
+  await expect(page.locator('.alumno-line__copy strong', { hasText: 'CI Bebida de prueba' }).first()).toBeVisible();
   await expect(page.locator('.alumno-line__thumb:not(.alumno-line__thumb--vaini)')).toHaveCount(2);
   await expect(page.locator('.alumno-line__thumb:not(.alumno-line__thumb--vaini)').first()).toHaveAttribute(
     'src',
@@ -67,7 +67,7 @@ test('guest cart de Venecia y /__qa usan fotos reales del catálogo', async ({ p
   await page.goto('/__qa/carrito');
   await expect(page.getByRole('heading', { name: /pedidos anteriores/i })).toBeVisible();
   await expect(page.locator('.alumno-history-row img')).toHaveCount(0);
-  await expect(page.getByText('1× fruti Lupis')).toBeVisible();
+  await expect(page.getByText('1× CI Bebida de prueba')).toBeVisible();
   await expect(page.getByText('#76 · Entregado')).toBeVisible();
   await expect(page.locator('.alumno-cart-peek__row > img')).toHaveCount(2);
 
