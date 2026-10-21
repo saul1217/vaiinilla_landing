@@ -1,0 +1,33 @@
+# Copiar a .github/workflows/qa-interfaz.yml (la automatización no puede escribir en esa carpeta).
+name: qa-interfaz
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      update_snapshots:
+        description: 'Regenerar referencias (solo si la corrida anterior NO fue bloqueada por datos)'
+        type: boolean
+        default: false
+jobs:
+  ui:
+    if: github.event_name == 'workflow_dispatch' || github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.63.0-noble # misma versión que @playwright/test
+    env:
+      PLAYWRIGHT_CONTAINER: '1'
+      E2E_BASE_URL: ${{ github.event.deployment_status.environment_url }}
+      E2E_CLIENTE_EMAIL: ${{ secrets.E2E_CLIENTE_EMAIL }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.deployment.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      # Sembrar el establecimiento de CI con /dev/test-setup de la API de develop antes de correr.
+      - run: npx playwright test -c playwright.ui.config.ts ${{ inputs.update_snapshots && '--update-snapshots' || '' }}
+      - run: npx --yes @lhci/cli@0.15.x autorun --config=lighthouserc.json --collect.url="$E2E_BASE_URL/pedir" --collect.url="$E2E_BASE_URL/e/ci-canchas/canchas" --collect.url="$E2E_BASE_URL/e/ci-tienda"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: playwright-report, path: playwright-report }

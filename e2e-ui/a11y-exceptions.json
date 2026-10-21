@@ -1,0 +1,4 @@
+{
+  "_doc": "Excepciones de axe: cada una requiere un ticket (owner/repo#N). Solo se bloquean violaciones serious y critical.",
+  "exceptions": []
+}

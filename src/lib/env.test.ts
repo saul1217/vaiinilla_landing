@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isFirebaseConfigReady, parseAppEnvironment, resolveApiUrl, walletQrUrl } from './env';
+import { isFirebaseConfigReady, parseAppEnvironment, resolveApiUrl, verificationReturnUrl, walletQrUrl } from './env';
 
 describe('env', () => {
   it('toma el API de VITE_API_URL sin la diagonal final', () => {
@@ -24,6 +24,14 @@ describe('env', () => {
     expect(
       isFirebaseConfigReady({ apiKey: 'k', authDomain: 'x.firebaseapp.com', projectId: 'x', appId: '1:1:web:x' }),
     ).toBe(true);
+  });
+
+  it('el enlace de verificación regresa a la landing del ambiente, sin URLs fijas', () => {
+    expect(verificationReturnUrl(undefined, 'https://sand-user.vaiinilla.app')).toBe(
+      'https://sand-user.vaiinilla.app/cuenta',
+    );
+    expect(verificationReturnUrl('https://vaiinilla.app/', 'https://otro.test')).toBe('https://vaiinilla.app/cuenta');
+    expect(verificationReturnUrl('  ', 'https://vaiinilla.app')).toBe('https://vaiinilla.app/cuenta');
   });
 
   it('codifica el QR de recarga en el dominio público', () => {

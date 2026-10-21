@@ -219,7 +219,15 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
   return (
     <AppShell tab="wallet">
       <main id="main-content" className="alumno-main">
-        <AlumnoPageHeader kicker="Cuenta" title="Configuración" lead={user?.email ?? undefined} />
+        <AlumnoPageHeader
+          kicker="Cuenta"
+          title="Configuración"
+          lead={
+            [wallet?.cliente.nombre?.trim() || user?.displayName?.trim(), user?.email]
+              .filter(Boolean)
+              .join(' · ') || undefined
+          }
+        />
         {error ? <p className="alumno-error">{error}</p> : null}
         {user && !verified ? (
           <section className="alumno-banner" aria-label="Verifica tu correo">

@@ -108,6 +108,7 @@ describe('verificación de correo al crear cuenta', () => {
     await user.click(await screen.findByRole('button', { name: 'Ya verifiqué mi correo' }));
 
     expect(await screen.findByText(/Aún no vemos tu correo verificado/)).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(/Aún no vemos tu correo verificado/);
     expect(mocks.registerIdentity).not.toHaveBeenCalled();
   });
 

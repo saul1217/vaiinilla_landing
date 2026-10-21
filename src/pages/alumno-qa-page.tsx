@@ -32,10 +32,10 @@ function qaOrder(overrides: Partial<OrderDetail>): OrderDetail {
     metodo_pago: "efectivo",
     destino: "para_llevar",
     espacio: null,
-    subtotal: "73.70",
+    subtotal: "95.33",
     ahorro_combinado: "0.00",
     cashback_otorgado: "0.00",
-    total: "73.70",
+    total: "95.33",
     version: 1,
     creado_en: "2026-09-17T12:00:00Z",
     actualizado_en: "2026-09-17T12:00:00Z",
@@ -44,12 +44,12 @@ function qaOrder(overrides: Partial<OrderDetail>): OrderDetail {
     items: [
       {
         id: 1,
-        producto_id: 1,
-        nombre_producto: "Quiere keke",
+        producto_id: 284,
+        nombre_producto: "CI Tacos de prueba",
         estacion_preparacion: "cocina",
         cantidad: 1,
-        precio_digital_unitario: "73.70",
-        subtotal: "73.70",
+        precio_digital_unitario: "95.33",
+        subtotal: "95.33",
         opciones: [],
       },
     ],
@@ -70,7 +70,7 @@ const MESA = qaOrder({
   items: [
     {
       id: 1,
-      producto_id: 1,
+      producto_id: 284,
       nombre_producto: "Chocolate artesanal de temporada con descripción especialmente larga para revisar el ajuste en pantallas pequeñas sin cortar el nombre del producto",
       estacion_preparacion: "cocina",
       cantidad: 1,
@@ -172,16 +172,16 @@ const PAST_LUPIS = qaOrder({
   id: "qa-76",
   folio: 76,
   estado: "entregado",
-  total: "22.00",
+  total: "45.00",
   items: [
     {
       id: 1,
-      producto_id: 2,
-      nombre_producto: "fruti Lupis",
+      producto_id: 285,
+      nombre_producto: "CI Bebida de prueba",
       estacion_preparacion: "caja",
       cantidad: 1,
-      precio_digital_unitario: "22.00",
-      subtotal: "22.00",
+      precio_digital_unitario: "45.00",
+      subtotal: "45.00",
       opciones: [],
     },
   ],
@@ -217,16 +217,16 @@ function qaProduct(
 }
 
 const PEEK_LUPIS = qaProduct(
-  2,
-  "fruti Lupis",
-  "22.00",
+  285,
+  "CI Bebida de prueba",
+  "45.00",
   "caja",
   QA_PHOTO_POZOLE,
 );
 const PEEK_KEKE = qaProduct(
-  1,
-  "Quiere keke",
-  "73.70",
+  284,
+  "CI Tacos de prueba",
+  "95.33",
   "cocina",
   QA_PHOTO_TACOS,
 );
@@ -254,20 +254,20 @@ export function AlumnoQaCartPage() {
 }
 
 const FILL_LUPIS: CartLine = {
-  productId: 2,
+  productId: 285,
   quantity: 2,
   optionIds: [],
-  productName: "fruti Lupis",
-  unitPreview: "22.00",
+  productName: "CI Bebida de prueba",
+  unitPreview: "45.00",
   imageUrl: QA_PHOTO_POZOLE,
 };
 
 const FILL_KEKE: CartLine = {
-  productId: 1,
+  productId: 284,
   quantity: 1,
   optionIds: [],
-  productName: "Quiere keke",
-  unitPreview: "73.70",
+  productName: "CI Tacos de prueba",
+  unitPreview: "95.33",
   imageUrl: QA_PHOTO_TACOS,
 };
 
@@ -360,7 +360,7 @@ export function AlumnoQaOrdersPage() {
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
         <AlumnoPageHeader title="Mis pedidos" />
-        <p className="alumno-place-name">Venecia</p>
+        <p className="alumno-place-name">ci-vaiinilla</p>
         <div className="alumno-orders-desk">
           <div className="alumno-orders-desk__list">
             <section aria-labelledby="qa-orders-live">
@@ -461,7 +461,7 @@ export function AlumnoQaTableOrderPage() {
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
         <AlumnoPageHeader title="Mis pedidos" />
-        <p className="alumno-place-name">Venecia · Mesa 4</p>
+        <p className="alumno-place-name">ci-vaiinilla · Mesa 4</p>
         <div className="alumno-detail-split">
           <OrderTrackCard
             order={MESA}

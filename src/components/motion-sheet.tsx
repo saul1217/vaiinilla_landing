@@ -22,7 +22,7 @@ export function MotionSheet({
   return (
     <section className={className} aria-labelledby={labelledBy} role="dialog" aria-modal="true">
       <div className="alumno-motion-backdrop" aria-hidden="true" onClick={close} />
-      <div ref={ref as React.RefObject<HTMLDivElement>} className="alumno-motion-panel">
+      <div ref={ref as React.RefObject<HTMLDivElement>} className="alumno-motion-panel" tabIndex={-1}>
         {children(close, dragHandle)}
       </div>
     </section>

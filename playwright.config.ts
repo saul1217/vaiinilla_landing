@@ -2,13 +2,15 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
+  // Las pruebas de e2e/stack corren aparte contra el stack local de CI (playwright.stack.config.ts).
+  testIgnore: '**/stack/**',
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   reporter: 'list',
   use: {
     baseURL: 'http://127.0.0.1:4173',
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
   },
   webServer: {
     command: 'node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4173',

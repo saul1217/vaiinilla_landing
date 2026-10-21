@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { MotionSheet } from './motion-sheet';
@@ -38,5 +39,31 @@ describe('MotionSheet: la X dentro de la zona de arrastre', () => {
 
     fireEvent.pointerDown(screen.getByTestId('hero'), { pointerId: 1, pointerType: 'touch', button: 0 });
     expect(capture).toHaveBeenCalled();
+  });
+});
+
+describe('MotionSheet: foco', () => {
+  it('Escape cierra la hoja y el foco vuelve al control que la abrió', () => {
+    function Host() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Abrir
+          </button>
+          {open ? <Sheet onClosed={() => setOpen(false)} /> : null}
+        </>
+      );
+    }
+    render(<Host />);
+    const opener = screen.getByRole('button', { name: 'Abrir' });
+    opener.focus();
+    fireEvent.click(opener);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(opener).not.toHaveFocus();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(opener).toHaveFocus();
   });
 });

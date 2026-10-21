@@ -1,0 +1,63 @@
+name: qa-interfaz
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'URL a probar (por defecto, el alias de develop de landing en Vercel)'
+        type: string
+        default: 'https://vaiinilla-landing-git-develop-saul1217s-projects.vercel.app'
+      update_snapshots:
+        description: 'Regenerar referencias (solo si la corrida anterior NO fue bloqueada por datos)'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: qa-interfaz-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  ui:
+    if: github.event_name == 'workflow_dispatch' || github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    # Usa secretos de cuentas de CI: solo desde el Environment.
+    environment: develop-e2e
+    # Toca develop: una corrida a la vez en todos los repos; las demás esperan en cola.
+    concurrency:
+      group: develop-e2e
+      cancel-in-progress: false
+    container: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27 # misma versión que @playwright/test
+    env:
+      PLAYWRIGHT_CONTAINER: '1'
+      E2E_BASE_URL: ${{ github.event.deployment_status.environment_url || inputs.base_url || 'https://vaiinilla-landing-git-develop-saul1217s-projects.vercel.app' }}
+      E2E_CLIENTE_EMAIL: ${{ secrets.E2E_CLIENTE_EMAIL }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.deployment.sha || github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with: { node-version: 22 }
+      - run: npm ci
+      # Sembrar el establecimiento de CI con /dev/test-setup de la API de develop antes de correr.
+      - name: Pruebas de interfaz
+        env:
+          UPDATE_SNAPSHOTS: ${{ inputs.update_snapshots }}
+        shell: bash
+        run: |
+          args=()
+          if [ "$UPDATE_SNAPSHOTS" = "true" ]; then args+=(--update-snapshots); fi
+          npx playwright test -c playwright.ui.config.ts "${args[@]}"
+      - run: npx --yes @lhci/cli@0.15.x autorun --config=lighthouserc.json --collect.url="$E2E_BASE_URL/pedir" --collect.url="$E2E_BASE_URL/e/ci-canchas/canchas" --collect.url="$E2E_BASE_URL/e/ci-tienda"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        # Solo si falla, 7 días. Solo el reporte HTML: nunca storageState ni archivos de sesión.
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            !**/storageState*.json
+            !**/.auth/**
+          retention-days: 7
+          if-no-files-found: ignore

@@ -1,4 +1,25 @@
 import { expect, test, type Page } from '@playwright/test';
+import { assertCiStoreSeeded, CI_CART_URL_RE, CI_MENU_URL, CI_PLACE_NAME, CI_PLACE_NAME_RE, CI_SLUG } from './ci-store';
+
+// El selector de lugar ya no tiene botón «Continuar»: con la tienda de CI listada aparece «Entrar al menú».
+async function waitForDiscovery(page: Page) {
+  await expect(page.getByRole('heading', { name: /dónde comes hoy/i })).toBeVisible();
+  await page.getByRole('textbox', { name: /buscar establecimiento/i }).fill(CI_PLACE_NAME);
+  await expect(page.getByRole('radiogroup', { name: /establecimientos/i }).getByRole('radio').first()).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByRole('button', { name: /entrar al menú/i })).toBeVisible();
+}
+
+async function waitForCiMenu(page: Page) {
+  await expect(page.getByRole('heading', { level: 1, name: CI_PLACE_NAME_RE })).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.alumno-grid button').first()).toBeVisible({ timeout: 20_000 });
+}
+
+async function openFirstProduct(page: Page) {
+  await page.locator('.alumno-grid button').first().click();
+  await expect(page.locator('.alumno-sheet.alumno-psheet')).toBeVisible();
+}
 
 async function metrics(page: Page) {
   return page.evaluate(() => {
@@ -9,7 +30,7 @@ async function metrics(page: Page) {
     const cart = document.querySelector('.alumno-cart-layout');
     const splash = document.querySelector('.alumno-splash');
     const sheet = document.querySelector('.alumno-sheet');
-    const dialog = document.querySelector('.alumno-sheet__dialog');
+    const dialog = document.querySelector('.alumno-sheet .alumno-motion-panel');
     const brand = document.querySelector('.alumno-nav__brand');
     const utility = document.querySelector('.alumno-deskhead__utility');
     const utilityActions = document.querySelector('.alumno-deskhead__utility .alumno-top__actions');
@@ -66,12 +87,15 @@ async function authMetrics(page: Page) {
 }
 
 test.describe('alumno responsive', () => {
+  test.beforeAll(async ({ request }) => {
+    await assertCiStoreSeeded(request);
+  });
+
   test('móvil 390: shell completo, nav compacta y menú de 2 columnas', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.addInitScript(() => sessionStorage.setItem('vaiinilla.buyer.guest-explore.v1', '1'));
     await page.goto('/pedir');
-    await expect(page.getByRole('heading', { name: /dónde comes hoy/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /continuar/i })).toBeVisible({ timeout: 20_000 });
+    await waitForDiscovery(page);
     const discovery = await metrics(page);
     expect(discovery.alumnoMax).toBe('none');
     expect(discovery.alumnoWidth).toBe(390);
@@ -81,13 +105,11 @@ test.describe('alumno responsive', () => {
     expect(discovery.brandDisplay).toBe('none');
     expect(discovery.hasDevice).toBe(false);
 
-    await page.goto('/e/demo-a');
-    await expect(page.getByRole('heading', { name: /cafetería demo a/i })).toBeVisible({
-      timeout: 20_000,
-    });
+    await page.goto(CI_MENU_URL);
+    await waitForCiMenu(page);
     const menu = await metrics(page);
     expect(menu.menuCols).toBe(2);
-    await page.getByRole('button', { name: /chocolate frío/i }).click();
+    await openFirstProduct(page);
     const sheet = await metrics(page);
     expect(sheet.sheetMax).toBe('none');
     expect(sheet.dialogWidth).toBe(menu.clientWidth);
@@ -96,10 +118,8 @@ test.describe('alumno responsive', () => {
   test('tablet 850: top bar full-bleed y menú 3 columnas', async ({ page }) => {
     await page.setViewportSize({ width: 850, height: 1024 });
     await page.addInitScript(() => sessionStorage.setItem('vaiinilla.buyer.guest-explore.v1', '1'));
-    await page.goto('/e/demo-a');
-    await expect(page.getByRole('heading', { name: /cafetería demo a/i })).toBeVisible({
-      timeout: 20_000,
-    });
+    await page.goto(CI_MENU_URL);
+    await waitForCiMenu(page);
     const menu = await metrics(page);
     expect(menu.alumnoWidth).toBe(850);
     expect(menu.navWidth).toBe(850);
@@ -113,41 +133,43 @@ test.describe('alumno responsive', () => {
 
     for (const width of [1280, 1440]) {
       await page.setViewportSize({ width, height: 900 });
-      await page.goto('/e/demo-a');
-      await expect(page.getByRole('heading', { name: /cafetería demo a/i })).toBeVisible({
-        timeout: 20_000,
-      });
+      await page.goto(CI_MENU_URL);
+      await waitForCiMenu(page);
       const menu = await metrics(page);
       expect(menu.alumnoWidth).toBe(width);
       expect(menu.navWidth).toBe(232);
       expect(menu.navPos).toBe('fixed');
       expect(menu.menuCols).toBe(width >= 1440 ? 5 : 4);
 
-      await page.getByRole('button', { name: /chocolate frío/i }).click();
+      await openFirstProduct(page);
       const sheet = await metrics(page);
       expect(sheet.sheetMax).toBe('none');
-      expect(sheet.dialogWidth).toBeGreaterThan(700);
-      expect(sheet.dialogWidth).toBeLessThanOrEqual(960);
+      // Desde 768 px la ficha es un modal centrado de min(540px, 100vw − 48px) (alumno.css, @media min-width: 768px),
+      // no una hoja de pantalla completa como en el teléfono.
+      expect(sheet.dialogWidth).toBeGreaterThan(480);
+      expect(sheet.dialogWidth).toBeLessThanOrEqual(540);
+      expect(sheet.dialogWidth).toBeLessThan(width / 2);
       await page.getByRole('button', { name: /cerrar/i }).click();
     }
 
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto('/e/demo-a');
-    await expect(page.getByRole('heading', { name: /cafetería demo a/i })).toBeVisible({
-      timeout: 20_000,
-    });
-    await page.getByRole('button', { name: /chocolate frío/i }).click();
-    await page.getByRole('button', { name: 'Comprar sin cuenta', exact: true }).click();
-    await expect(page).toHaveURL(/\/e\/demo-a\/carrito$/);
+    await page.goto(CI_MENU_URL);
+    await waitForCiMenu(page);
+    await openFirstProduct(page);
+    // «Comprar sin cuenta» ya solo vive en /cuenta; con la exploración de invitado la ficha agrega directo.
+    await page.getByRole('button', { name: /^agregar/i }).click();
+    await page.locator('.alumno-top__actions').getByRole('link', { name: 'Carrito' }).click();
+    await expect(page).toHaveURL(CI_CART_URL_RE);
     await expect(page.getByRole('heading', { name: /tu pedido/i })).toBeVisible();
     const cart = await metrics(page);
     expect(cart.cartCols).toBe(2);
 
     const pay = await page.evaluate(() => {
       const sheet = document.createElement('div');
-      sheet.className = 'alumno-sheet alumno-sheet--pay';
+      // Mismas clases que la hoja de pago real (cart-page.tsx): el panel es .alumno-codesheet__panel.
+      sheet.className = 'alumno-sheet alumno-codesheet alumno-paysheet';
       const panel = document.createElement('div');
-      panel.className = 'alumno-sheet__panel';
+      panel.className = 'alumno-codesheet__panel';
       sheet.appendChild(panel);
       document.body.appendChild(sheet);
       const style = getComputedStyle(panel);
@@ -158,8 +180,7 @@ test.describe('alumno responsive', () => {
     expect(pay.maxWidth).toBe('560px');
 
     await page.goto('/pedir');
-    await expect(page.getByRole('heading', { name: /dónde comes hoy/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /continuar/i })).toBeVisible({ timeout: 20_000 });
+    await waitForDiscovery(page);
     const discovery = await metrics(page);
     expect(discovery.discoveryCols).toBe(2);
 
@@ -169,7 +190,7 @@ test.describe('alumno responsive', () => {
     expect(splash.splashCols).toBeLessThanOrEqual(1);
     expect(splash.hasAlumnoNav).toBe(false);
 
-    await page.goto('/demo-a/m/bad-token');
+    await page.goto(`/${CI_SLUG}/m/bad-token`);
     await expect(page.getByRole('link', { name: /elegir lugar/i })).toBeVisible({ timeout: 20_000 });
   });
 
@@ -188,7 +209,7 @@ test.describe('alumno responsive', () => {
   test('acciones de cabecera y acceso son utilizables en tablet y escritorio', async ({ page }) => {
     for (const width of [768, 1024, 1280, 1440]) {
       await page.setViewportSize({ width, height: 900 });
-      await page.goto('/e/demo-a');
+      await page.goto(CI_MENU_URL);
 
       const actions = page.locator('.alumno-top__actions');
       await expect(actions.getByRole('link', { name: 'Carrito' })).toBeVisible();
@@ -196,9 +217,9 @@ test.describe('alumno responsive', () => {
       expect(header.utilityDisplay).toBe('grid');
       expect(header.utilityActionSearchGap).toBe(8);
       await actions.getByRole('link', { name: 'Carrito' }).click();
-      await expect(page).toHaveURL(/\/e\/demo-a\/carrito$/);
+      await expect(page).toHaveURL(CI_CART_URL_RE);
 
-      await page.goto('/e/demo-a');
+      await page.goto(CI_MENU_URL);
       await expect(actions.getByRole('link', { name: 'Cuenta' })).toBeVisible();
       await actions.getByRole('link', { name: 'Cuenta' }).click();
       await expect(page).toHaveURL(/\/cuenta$/);

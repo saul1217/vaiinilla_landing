@@ -499,7 +499,7 @@ export function AuthScreens({
           </h1>
           <p>{splashContext?.line ?? 'Pide, sigue tu pedido y paga desde un solo lugar.'}</p>
         </div>
-        {error ? <p className="alumno-error">{error}</p> : null}
+        {error ? <p className="alumno-error" role="alert">{error}</p> : null}
         <div className="alumno-splash__actions">
           <button
             className="alumno-btn alumno-btn--lime alumno-splash__google"
@@ -573,7 +573,7 @@ export function AuthScreens({
             Revisa tu correo {email.trim().toLowerCase()} y abre el enlace de verificación. Después toca
             «Ya verifiqué mi correo».
           </p>
-          {error ? <p className="alumno-error">{error}</p> : null}
+          {error ? <p className="alumno-error" role="alert">{error}</p> : null}
           {notice ? <p className="alumno-ok">{notice}</p> : null}
           <button
             className="alumno-btn alumno-btn--lime"
@@ -591,7 +591,7 @@ export function AuthScreens({
         <>
           <p className="alumno-lead">Abre Google Authenticator y captura el código de 6 dígitos.</p>
           <form onSubmit={(event) => void verifyTotp(event)}>
-            {error ? <p className="alumno-error">{error}</p> : null}
+            {error ? <p className="alumno-error" role="alert">{error}</p> : null}
             <label className="alumno-field">
               Código de 6 dígitos
               <input
@@ -620,7 +620,7 @@ export function AuthScreens({
             void (mode === 'google-legal' ? confirmGoogleLegal(event) : onPassword(event))
           }
         >
-          {error ? <p className="alumno-error">{error}</p> : null}
+          {error ? <p className="alumno-error" role="alert">{error}</p> : null}
           {notice ? <p className="alumno-ok">{notice}</p> : null}
           {mode !== 'google-legal' ? (
             <>

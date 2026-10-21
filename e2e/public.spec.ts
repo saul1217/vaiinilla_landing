@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { assertCiStoreSeeded, CI_MENU_URL, CI_PLACE_NAME, CI_PLACE_NAME_RE } from './ci-store';
 
 test('la landing de marketing conserva soporte y manda a pedir, no al panel', async ({ page }) => {
   await page.goto('/');
@@ -12,9 +13,10 @@ test('la landing de marketing conserva soporte y manda a pedir, no al panel', as
     'href',
     'https://app.vaiinilla.app',
   );
-  await expect(page.getByText(/próximamente/i).first()).toBeVisible();
+  // En móvil las insignias de la barra se ocultan (marketing.css, .nav__actions .store-badges): se comprueba una visible.
+  await expect(page.getByText(/próximamente/i).filter({ visible: true }).first()).toBeVisible();
   await expect(page.getByRole('heading', { name: /el menú del lugar/i })).toBeVisible();
-  await expect(page.getByText(/cualquier negocio de comida/i).first()).toBeVisible();
+  await expect(page.getByText(/cualquier negocio de comida/i).filter({ visible: true }).first()).toBeVisible();
 });
 
 test('Pedir en la landing entra al app del comprador', async ({ page }) => {
@@ -36,19 +38,26 @@ test('soporte sigue publicando el correo oficial', async ({ page }) => {
 });
 
 test('discovery y menú públicos responden contra el backend de development', async ({ page }) => {
+  await assertCiStoreSeeded(page.request);
   await page.goto('/pedir');
   await expect(page.getByRole('heading', { name: /dónde comes hoy/i })).toBeVisible();
-  await expect(page.getByRole('button', { name: /continuar/i })).toBeVisible({ timeout: 20_000 });
-  await page.goto('/e/demo-a');
-  await expect(page.getByRole('heading', { name: /cafetería demo a/i })).toBeVisible({
+  // Ya no existe el botón «Continuar»: con la tienda de CI listada se ofrece «Entrar al menú».
+  await page.getByRole('textbox', { name: /buscar establecimiento/i }).fill(CI_PLACE_NAME);
+  await expect(page.getByRole('radiogroup', { name: /establecimientos/i }).getByRole('radio').first()).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByRole('button', { name: /entrar al menú/i })).toBeVisible();
+  await page.goto(CI_MENU_URL);
+  await expect(page.getByRole('heading', { level: 1, name: CI_PLACE_NAME_RE })).toBeVisible({
     timeout: 20_000,
   });
 });
 
-test('guest cart de Venecia y /__qa usan fotos reales del catálogo', async ({ page }) => {
+test('guest cart de ci-vaiinilla y /__qa usan fotos reales del catálogo', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/__qa/carrito-lleno');
-  await expect(page.getByText('fruti Lupis')).toBeVisible();
+  // El nombre sale también en el «Del menú» lateral: se acota a las líneas del carrito.
+  await expect(page.locator('.alumno-line__copy strong', { hasText: 'CI Bebida de prueba' }).first()).toBeVisible();
   await expect(page.locator('.alumno-line__thumb:not(.alumno-line__thumb--vaini)')).toHaveCount(2);
   await expect(page.locator('.alumno-line__thumb:not(.alumno-line__thumb--vaini)').first()).toHaveAttribute(
     'src',
@@ -58,11 +67,11 @@ test('guest cart de Venecia y /__qa usan fotos reales del catálogo', async ({ p
   await page.goto('/__qa/carrito');
   await expect(page.getByRole('heading', { name: /pedidos anteriores/i })).toBeVisible();
   await expect(page.locator('.alumno-history-row img')).toHaveCount(0);
-  await expect(page.getByText('1× fruti Lupis')).toBeVisible();
+  await expect(page.getByText('1× CI Bebida de prueba')).toBeVisible();
   await expect(page.getByText('#76 · Entregado')).toBeVisible();
   await expect(page.locator('.alumno-cart-peek__row > img')).toHaveCount(2);
 
-  await page.goto('/e/venecia-tienda/carrito');
+  await page.goto(`${CI_MENU_URL}/carrito`);
   await expect(page.getByRole('heading', { name: /tu pedido/i })).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('.alumno-cart-peek__row img').first()).toHaveAttribute(
     'src',

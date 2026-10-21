@@ -30,7 +30,7 @@ vi.mock('../context/cart-context', () => ({
       slug: 'demo-a',
       establishmentName: 'Demo A',
       lines: [
-        { productId: 2, quantity: 2, optionIds: [], productName: 'fruti Lupis', unitPreview: '22.00' },
+        { productId: 285, quantity: 2, optionIds: [], productName: 'CI Bebida de prueba', unitPreview: '45.00' },
       ],
     },
   }),
@@ -50,9 +50,9 @@ describe('AlumnoQaCartPage', () => {
     expect(document.querySelector('.alumno-antojo__hug')).toHaveAttribute('src', '/vaini/mascot-question.webp');
     expect(document.querySelector('.alumno-antojo__q-face')).toBeNull();
     expect(document.querySelector('.alumno-antojo__vaini')).toBeNull();
-    expect(screen.getByText('1× fruti Lupis')).toBeInTheDocument();
+    expect(screen.getByText('1× CI Bebida de prueba')).toBeInTheDocument();
     expect(screen.getByText('#76 · Entregado')).toBeInTheDocument();
-    expect(screen.getByText('1× Quiere keke')).toBeInTheDocument();
+    expect(screen.getByText('1× CI Tacos de prueba')).toBeInTheDocument();
     expect(screen.getByText('#68 · Entregado')).toBeInTheDocument();
     const peekThumbs = [...document.querySelectorAll('.alumno-cart-peek__row > img')];
     expect(peekThumbs.map((node) => node.getAttribute('src'))).toEqual([
@@ -73,14 +73,14 @@ describe('AlumnoQaFilledCartPage', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Tu pedido' })).toBeInTheDocument();
-    expect(screen.getAllByText('fruti Lupis').length).toBeGreaterThan(0);
-    expect(screen.getByText('$22 c/u')).toBeInTheDocument();
-    expect(screen.getByText('$44')).toBeInTheDocument();
-    expect(screen.getAllByText('Quiere keke').length).toBeGreaterThan(0);
-    expect(screen.getByText('$73.70 c/u')).toBeInTheDocument();
-    expect(screen.getByText('Total $117.70')).toBeInTheDocument();
+    expect(screen.getAllByText('CI Bebida de prueba').length).toBeGreaterThan(0);
+    expect(screen.getByText('$45 c/u')).toBeInTheDocument();
+    expect(screen.getByText('$90')).toBeInTheDocument();
+    expect(screen.getAllByText('CI Tacos de prueba').length).toBeGreaterThan(0);
+    expect(screen.getByText('$95.33 c/u')).toBeInTheDocument();
+    expect(screen.getByText('Total $185.33')).toBeInTheDocument();
     expect(document.querySelector('.alumno-cart-layout__pay .alumno-cart-layout__total')).toHaveTextContent(
-      'Total $117.70',
+      'Total $185.33',
     );
     expect(document.querySelector('.alumno-cart-layout__pay .alumno-sticky-pay')).toBeTruthy();
     expect(document.querySelectorAll('.alumno-line')).toHaveLength(2);
@@ -108,7 +108,7 @@ describe('AlumnoQaOrdersPage', () => {
     Element.prototype.scrollIntoView = vi.fn();
   });
 
-  it('resuelve thumbs de Venecia por catálogo cuando el fixture no trae foto', () => {
+  it('resuelve thumbs de ci-vaiinilla por catálogo cuando el fixture no trae foto', () => {
     render(
       <MemoryRouter>
         <ThemeProvider>
@@ -255,7 +255,7 @@ describe('AlumnoQaOrdersPage', () => {
 });
 
 describe('AlumnoQaOrderDetailPage', () => {
-  it('usa la foto live de Venecia en la card de seguimiento', () => {
+  it('usa la foto live de ci-vaiinilla en la card de seguimiento', () => {
     render(
       <MemoryRouter>
         <ThemeProvider>

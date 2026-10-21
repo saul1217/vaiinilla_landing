@@ -3,12 +3,13 @@ import type { ProxyOptions } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-const developmentApiOrigin = 'https://vaiinillaback-development.up.railway.app';
+// E2E_API_ORIGIN apunta el proxy al backend del stack de CI (QA-044) en lugar de development.
+const developmentApiOrigin = process.env.E2E_API_ORIGIN || 'https://vaiinillaback-development.up.railway.app';
 const apiProxy: Record<string, ProxyOptions> = {
   '/api': {
     target: developmentApiOrigin,
     changeOrigin: true,
-    secure: true,
+    secure: developmentApiOrigin.startsWith('https:'),
     // El navegador manda Origin: localhost en los POST y el CORS de development no lo
     // permite; para el backend la petición viene del proxy, así que se quita.
     configure: (proxy) => {
