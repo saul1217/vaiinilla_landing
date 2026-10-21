@@ -39,3 +39,9 @@ ec9abf7fac66e1c64f09c9bf5add432f37cc46db:src/lib/idempotency.ts:generic-api-key:
 d225a833b1fffe00c16ee1cd0794a455e8b7166c:src/lib/env.ts:gcp-api-key:15
 # apiKey web pública de Firebase **vaiinilla-produc** (prod); pública por diseño, pero falta restringirla (referrers/APIs)
 d225a833b1fffe00c16ee1cd0794a455e8b7166c:src/lib/env.ts:gcp-api-key:25
+# QA_SEGURIDAD 2026-10-20: mismos falsos positivos (nombres de clave de storage y apiKeys web públicas de Firebase), con el fingerprint que da gitleaks 8.18.4
+c4dc5176a544623a5a2c67544d789b76549e8d01:src/lib/verification.ts:generic-api-key:4
+9de5cf59c6b1c58b085b3200a7ce702d5dac0415:src/lib/guest-orders.ts:generic-api-key:5
+9de5cf59c6b1c58b085b3200a7ce702d5dac0415:src/lib/guest-session.ts:generic-api-key:9
+ac9f4364e5ac5d4ee694acdbc0849ace13f37fc7:.env.development:gcp-api-key:10
+d225a833b1fffe00c16ee1cd0794a455e8b7166c:src/lib/env.ts:generic-api-key:25
