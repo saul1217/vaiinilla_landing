@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { CI_CART_URL_RE, CI_MENU_URL, CI_PLACE_NAME, CI_PLACE_NAME_RE, CI_SLUG } from './ci-store';
+import { assertCiStoreSeeded, CI_CART_URL_RE, CI_MENU_URL, CI_PLACE_NAME, CI_PLACE_NAME_RE, CI_SLUG } from './ci-store';
 
 // El selector de lugar ya no tiene botón «Continuar»: con la tienda de CI listada aparece «Entrar al menú».
 async function waitForDiscovery(page: Page) {
@@ -87,6 +87,10 @@ async function authMetrics(page: Page) {
 }
 
 test.describe('alumno responsive', () => {
+  test.beforeAll(async ({ request }) => {
+    await assertCiStoreSeeded(request);
+  });
+
   test('móvil 390: shell completo, nav compacta y menú de 2 columnas', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.addInitScript(() => sessionStorage.setItem('vaiinilla.buyer.guest-explore.v1', '1'));

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { CI_MENU_URL, CI_PLACE_NAME, CI_PLACE_NAME_RE } from './ci-store';
+import { assertCiStoreSeeded, CI_MENU_URL, CI_PLACE_NAME, CI_PLACE_NAME_RE } from './ci-store';
 
 test('la landing de marketing conserva soporte y manda a pedir, no al panel', async ({ page }) => {
   await page.goto('/');
@@ -37,6 +37,7 @@ test('soporte sigue publicando el correo oficial', async ({ page }) => {
 });
 
 test('discovery y menú públicos responden contra el backend de development', async ({ page }) => {
+  await assertCiStoreSeeded(page.request);
   await page.goto('/pedir');
   await expect(page.getByRole('heading', { name: /dónde comes hoy/i })).toBeVisible();
   // Ya no existe el botón «Continuar»: con la tienda de CI listada se ofrece «Entrar al menú».
