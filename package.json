@@ -13,7 +13,8 @@
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:stack": "playwright test -c playwright.stack.config.ts"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.10.0",

@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
+  // Las pruebas de e2e/stack corren aparte contra el stack local de CI (playwright.stack.config.ts).
+  testIgnore: '**/stack/**',
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,

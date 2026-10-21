@@ -1,6 +1,7 @@
 import { FirebaseError, getApp, getApps, initializeApp } from 'firebase/app';
 import {
   browserLocalPersistence,
+  connectAuthEmulator,
   createUserWithEmailAndPassword,
   EmailAuthProvider,
   getAuth,
@@ -45,6 +46,9 @@ function getConfiguredAuth(): Auth {
   if (!authInstance) {
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     authInstance = getAuth(app);
+    // Solo el E2E contra el stack de CI define esta variable (emulador de Auth, nunca un ambiente real).
+    const emulatorUrl = import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_URL?.trim();
+    if (emulatorUrl) connectAuthEmulator(authInstance, emulatorUrl, { disableWarnings: true });
     persistenceReady = setPersistence(authInstance, browserLocalPersistence);
   }
   return authInstance;
