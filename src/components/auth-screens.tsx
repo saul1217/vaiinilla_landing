@@ -10,6 +10,7 @@ import {
   firebaseIdToken,
   googleSignIn,
   passwordSignIn,
+  refreshEmailVerified,
   sendPasswordReset,
 } from '../lib/firebase';
 import { enableGuestBuy, enableGuestExplore } from '../lib/guest-explore';
@@ -28,7 +29,7 @@ import { AlumnoBack, AlumnoLockup, AlumnoLogo } from './alumno-brand';
 import { SignupSteps } from './signup-steps';
 import { StaffNotice } from './staff-notice';
 
-type AuthMode = 'splash' | 'entrar' | 'alta' | 'totp' | 'google-legal' | 'staff';
+type AuthMode = 'splash' | 'entrar' | 'alta' | 'totp' | 'google-legal' | 'verificar' | 'staff';
 
 interface AuthCopy {
   kicker: string;
@@ -97,6 +98,19 @@ const AUTH_COPY = {
     panelKicker: 'Registro',
     panelTitle: 'Crear cuenta',
   },
+  verificar: {
+    kicker: 'Nueva cuenta',
+    headline: (
+      <>
+        Revisa tu correo.
+        <br />
+        <span className="alumno-auth__accent">Y entras.</span>
+      </>
+    ),
+    lead: 'Te mandamos un enlace para confirmar tu correo.',
+    panelKicker: 'Registro',
+    panelTitle: 'Verifica tu correo',
+  },
   staff: {
     kicker: 'Equipo',
     headline: (
@@ -158,6 +172,7 @@ export function AuthScreens({
   const [legal, setLegal] = useState<LegalVersions | null>(null);
   const [resolver, setResolver] = useState<MultiFactorResolver | null>(null);
   const [pendingGoogleUser, setPendingGoogleUser] = useState<User | null>(unregisteredUser);
+  const [pendingVerifyUser, setPendingVerifyUser] = useState<User | null>(null);
   const [totpCode, setTotpCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -244,11 +259,17 @@ export function AuthScreens({
         if (!legalesOk || !legal) {
           throw new Error('Acepta los términos y la privacidad vigentes para crear tu cuenta.');
         }
+        onFlowChange?.(true);
         const created = await createPasswordAccount(email, password, nombre);
-        await finish(created);
-        // La cuenta plena (saldo y tarjeta) pide correo verificado: se manda aquí;
-        // si falla, /cuenta lo reenvía. En caja se puede pedir como invitado.
-        await sendVerificationEmail(created).catch(() => undefined);
+        // El backend exige correo verificado para el alta: primero se manda el correo
+        // y la identidad se da de alta hasta que el usuario confirma (confirmVerified).
+        setPendingVerifyUser(created);
+        const sent = await sendVerificationEmail(created).then(
+          () => true,
+          () => false,
+        );
+        setNotice(sent ? null : 'No pudimos enviar el correo. Toca "Reenviar correo".');
+        setMode('verificar');
         return;
       }
       onFlowChange?.(true);
@@ -316,6 +337,40 @@ export function AuthScreens({
       await sendVerificationEmail(pendingGoogleUser).catch(() => undefined);
     } catch (cause) {
       onFlowChange?.(false);
+      setError(firebaseAuthMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Tras abrir el enlace del correo: ya verificado, se da de alta en el backend y entra. */
+  async function confirmVerified() {
+    if (!pendingVerifyUser) return;
+    setBusy(true);
+    setError(null);
+    try {
+      if (!(await refreshEmailVerified(pendingVerifyUser))) {
+        setError('Aún no vemos tu correo verificado. Abre el enlace que te enviamos e intenta de nuevo.');
+        return;
+      }
+      await finish(pendingVerifyUser, nombre);
+      setPendingVerifyUser(null);
+    } catch (cause) {
+      setError(firebaseAuthMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resendVerification() {
+    if (!pendingVerifyUser) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await sendVerificationEmail(pendingVerifyUser);
+      setNotice('Te reenviamos el correo de verificación.');
+    } catch (cause) {
       setError(firebaseAuthMessage(cause));
     } finally {
       setBusy(false);
@@ -392,6 +447,10 @@ export function AuthScreens({
     }
     // Sin aceptar términos no hay alta: la sesión de Firebase no puede quedar abierta a medias.
     if (mode === 'google-legal') void signOut().finally(() => onFlowChange?.(false));
+    if (mode === 'verificar') {
+      void signOut().finally(() => onFlowChange?.(false));
+      setPendingVerifyUser(null);
+    }
     setPendingGoogleUser(null);
     setMode('splash');
   }
@@ -508,6 +567,26 @@ export function AuthScreens({
     <AuthSplit mode={mode} onBack={mode === 'staff' ? undefined : goBack} copy={copy}>
       {mode === 'staff' ? (
         <StaffNotice accesses={staff} onContinueAsClient={leave} />
+      ) : mode === 'verificar' ? (
+        <>
+          <p className="alumno-lead">
+            Revisa tu correo {email.trim().toLowerCase()} y abre el enlace de verificación. Después toca
+            «Ya verifiqué mi correo».
+          </p>
+          {error ? <p className="alumno-error">{error}</p> : null}
+          {notice ? <p className="alumno-ok">{notice}</p> : null}
+          <button
+            className="alumno-btn alumno-btn--lime"
+            type="button"
+            disabled={busy}
+            onClick={() => void confirmVerified()}
+          >
+            {busy ? 'Comprobando…' : 'Ya verifiqué mi correo'}
+          </button>
+          <button className="alumno-btn" type="button" disabled={busy} onClick={() => void resendVerification()}>
+            Reenviar correo
+          </button>
+        </>
       ) : mode === 'totp' ? (
         <>
           <p className="alumno-lead">Abre Google Authenticator y captura el código de 6 dígitos.</p>

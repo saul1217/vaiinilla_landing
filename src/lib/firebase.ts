@@ -127,6 +127,14 @@ export async function firebaseIdToken(user: User): Promise<string> {
   return user.getIdToken();
 }
 
+/** Relee la cuenta y fuerza un token nuevo (con el claim de correo verificado). */
+export async function refreshEmailVerified(user: User): Promise<boolean> {
+  await user.reload();
+  if (!user.emailVerified) return false;
+  await user.getIdToken(true);
+  return true;
+}
+
 export async function googleSignIn(): Promise<PasswordSignInResult> {
   const auth = await readyAuth();
   const hadBrowserSession = hasBrowserSession();

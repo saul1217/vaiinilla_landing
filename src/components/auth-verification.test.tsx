@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { VaiinillaApiError } from '../lib/api-error';
 import { AuthScreens } from './auth-screens';
 
 const mocks = vi.hoisted(() => ({
@@ -12,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   sendVerificationEmail: vi.fn(),
   createPasswordAccount: vi.fn(),
   firebaseIdToken: vi.fn(),
+  refreshEmailVerified: vi.fn(),
 }));
 
 vi.mock('../lib/api', () => ({
@@ -35,6 +37,7 @@ vi.mock('../lib/firebase', () => ({
   googleSignIn: vi.fn(),
   sendPasswordReset: vi.fn(),
   firebaseIdToken: mocks.firebaseIdToken,
+  refreshEmailVerified: mocks.refreshEmailVerified,
 }));
 
 vi.mock('../context/auth-context', () => ({
@@ -75,27 +78,48 @@ describe('verificación de correo al crear cuenta', () => {
       .mockReset()
       .mockResolvedValue({ email: 'nuevo@example.test', emailVerified: false });
     mocks.sendVerificationEmail.mockReset().mockResolvedValue({ aceptado: true });
+    mocks.refreshEmailVerified.mockReset().mockResolvedValue(true);
   });
 
-  it('al crear la cuenta dispara el correo y entra a la app', async () => {
+  it('manda el correo primero y da de alta en el backend solo tras verificar', async () => {
+    mocks.listAccesses.mockRejectedValue(
+      new VaiinillaApiError(401, { code: 'IDENTITY_NOT_REGISTERED', message: 'x' }),
+    );
     const user = userEvent.setup();
     renderAuth();
     await signup(user);
 
+    expect(await screen.findByText('Verifica tu correo')).toBeInTheDocument();
     expect(mocks.sendVerificationEmail).toHaveBeenCalledWith('firebase-token');
     expect(mocks.sendVerificationEmail).toHaveBeenCalledTimes(1);
     expect(sessionStorage.getItem('vaiinilla.buyer.verification-sent.v1')).toBe('1');
+    expect(mocks.registerIdentity).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Ya verifiqué mi correo' }));
     expect(await screen.findByText('vista de cliente')).toBeInTheDocument();
+    expect(mocks.registerIdentity).toHaveBeenCalledTimes(1);
   });
 
-  it('si el envío falla, la cuenta igual entra y /cuenta lo reenvía', async () => {
-    mocks.sendVerificationEmail.mockRejectedValue(new Error('Resend caído'));
+  it('si aún no verifica, no da de alta ni entra', async () => {
+    mocks.refreshEmailVerified.mockResolvedValue(false);
+    const user = userEvent.setup();
+    renderAuth();
+    await signup(user);
+    await user.click(await screen.findByRole('button', { name: 'Ya verifiqué mi correo' }));
+
+    expect(await screen.findByText(/Aún no vemos tu correo verificado/)).toBeInTheDocument();
+    expect(mocks.registerIdentity).not.toHaveBeenCalled();
+  });
+
+  it('si el envío falla, muestra la pantalla y deja reenviar', async () => {
+    mocks.sendVerificationEmail.mockRejectedValueOnce(new Error('Resend caído'));
     const user = userEvent.setup();
     renderAuth();
     await signup(user);
 
-    // No bloquea el alta: entra igual y el aviso no se marca como enviado.
-    expect(await screen.findByText('vista de cliente')).toBeInTheDocument();
+    expect(await screen.findByText(/No pudimos enviar el correo/)).toBeInTheDocument();
     expect(sessionStorage.getItem('vaiinilla.buyer.verification-sent.v1')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Reenviar correo' }));
+    expect(mocks.sendVerificationEmail).toHaveBeenCalledTimes(2);
   });
 });
