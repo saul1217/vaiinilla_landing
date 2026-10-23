@@ -68,14 +68,31 @@ const firebaseAuthMessages: Record<string, string> = {
   'auth/popup-closed-by-user': 'Cerraste la ventana de Google antes de terminar.',
   'auth/user-mismatch': 'Elige la misma cuenta de Google con la que entraste.',
   'auth/popup-blocked': 'El navegador bloqueó la ventana de Google. Permite ventanas emergentes.',
+  'auth/email-already-in-use': 'Este correo ya tiene una cuenta. Inicia sesión o recupera tu contraseña.',
+  'auth/weak-password': 'La contraseña es muy débil. Usa al menos 8 caracteres.',
+  'auth/missing-password': 'Escribe tu contraseña.',
+  'auth/missing-email': 'Escribe tu correo.',
+  'auth/user-disabled': 'Esta cuenta está deshabilitada. Solicita ayuda a soporte.',
+  'auth/requires-recent-login': 'Confirma tu acceso otra vez para continuar.',
+  'auth/expired-action-code': 'El enlace ya venció. Pide uno nuevo.',
+  'auth/invalid-action-code': 'El enlace no es válido o ya se usó. Pide uno nuevo.',
+  'auth/code-expired': 'El código venció. Pide uno nuevo.',
+  'auth/internal-error': 'Ocurrió un problema en el servicio de acceso. Inténtalo de nuevo en un momento.',
   'auth/account-exists-with-different-credential':
     'Ese correo ya existe con otro método de acceso. Entra con correo y contraseña.',
 };
+
+const FIREBASE_GENERIC_MESSAGE = 'No pudimos completar el acceso. Inténtalo de nuevo.';
 
 export function firebaseAuthMessage(error: unknown): string {
   if (error && typeof error === 'object' && 'code' in error) {
     const code = String(error.code);
     if (firebaseAuthMessages[code]) return firebaseAuthMessages[code];
+    if (code.startsWith('auth/')) return FIREBASE_GENERIC_MESSAGE;
+  }
+  // Nunca se muestra el texto técnico del SDK: «Firebase: Error (auth/...)».
+  if (error instanceof Error && /^Firebase:|\(auth\/[\w-]+\)/.test(error.message)) {
+    return FIREBASE_GENERIC_MESSAGE;
   }
   return errorMessage(error);
 }

@@ -22,6 +22,8 @@ export interface SignupStepsProps {
   busy: boolean;
   configured: boolean;
   error: string | null;
+  /** El correo ya tiene cuenta (Firebase lo avisa al crear): se muestra en el paso del correo. */
+  emailTaken?: boolean;
   onEmail: (value: string) => void;
   onPassword: (value: string) => void;
   onNombre: (value: string) => void;
@@ -30,6 +32,7 @@ export interface SignupStepsProps {
   onSubmit: (event: FormEvent) => void;
   onExit: () => void;
   onLogin: () => void;
+  onRecover?: () => void;
 }
 
 export function SignupSteps(props: SignupStepsProps) {
@@ -56,6 +59,13 @@ export function SignupSteps(props: SignupStepsProps) {
     const id = window.setTimeout(() => inputRef.current?.focus(), 320);
     return () => window.clearTimeout(id);
   }, [step]);
+
+  useEffect(() => {
+    if (props.emailTaken) {
+      setDirection(-1);
+      setStep(0);
+    }
+  }, [props.emailTaken]);
 
   function go(next: number) {
     setTried(false);
@@ -193,6 +203,22 @@ export function SignupSteps(props: SignupStepsProps) {
             </p>
           ) : null}
           {props.error ? <p className="alumno-error">{props.error}</p> : null}
+          {props.emailTaken && current.key === 'email' ? (
+            <div className="alumno-error" role="alert">
+              <p>Este correo ya tiene una cuenta. Inicia sesión o recupera tu contraseña.</p>
+              <button className="alumno-link" type="button" onClick={props.onLogin}>
+                Iniciar sesión
+              </button>
+              {props.onRecover ? (
+                <>
+                  {' · '}
+                  <button className="alumno-link" type="button" onClick={props.onRecover}>
+                    Recuperar contraseña
+                  </button>
+                </>
+              ) : null}
+            </div>
+          ) : null}
         </section>
 
         <footer className="alumno-signup__dock">

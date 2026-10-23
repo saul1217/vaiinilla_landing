@@ -139,6 +139,10 @@ const AUTH_COPY = {
   },
 } as const satisfies Record<Exclude<AuthMode, 'splash'>, AuthCopy>;
 
+function isEmailInUse(cause: unknown): boolean {
+  return Boolean(cause) && typeof cause === 'object' && (cause as { code?: unknown }).code === 'auth/email-already-in-use';
+}
+
 export function AuthScreens({
   next = '/pedir',
   allowExplore = false,
@@ -178,6 +182,7 @@ export function AuthScreens({
   const [notice, setNotice] = useState<string | null>(null);
   const [staff, setStaff] = useState<SessionAccess[]>([]);
   const [busy, setBusy] = useState(false);
+  const [emailTaken, setEmailTaken] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string | null; password?: string | null }>({});
 
   useEffect(() => {
@@ -247,6 +252,7 @@ export function AuthScreens({
   async function onPassword(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    setEmailTaken(false);
     if (!configured) return;
     if (mode === 'entrar') {
       const problems = { email: emailProblem(email), password: passwordProblem(password) };
@@ -282,7 +288,9 @@ export function AuthScreens({
       if (result.user) await finish(result.user);
     } catch (cause) {
       onFlowChange?.(false);
-      setError(firebaseAuthMessage(cause));
+      // Correo ya registrado: se vuelve al paso del correo con opciones, sin perder lo capturado.
+      if (mode === 'alta' && isEmailInUse(cause)) setEmailTaken(true);
+      else setError(firebaseAuthMessage(cause));
     } finally {
       setBusy(false);
     }
@@ -546,7 +554,11 @@ export function AuthScreens({
         busy={busy}
         configured={configured}
         error={error}
-        onEmail={setEmail}
+        emailTaken={emailTaken}
+        onEmail={(value) => {
+          setEmailTaken(false);
+          setEmail(value);
+        }}
         onPassword={setPassword}
         onNombre={setNombre}
         onTerms={setAcceptedTerms}
@@ -555,7 +567,13 @@ export function AuthScreens({
         onExit={goBack}
         onLogin={() => {
           setError(null);
+          setEmailTaken(false);
           setMode('entrar');
+        }}
+        onRecover={() => {
+          setEmailTaken(false);
+          setMode('entrar');
+          void onForgot();
         }}
       />
     );

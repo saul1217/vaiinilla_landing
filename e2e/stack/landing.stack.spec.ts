@@ -43,6 +43,41 @@ test('registro con correo: el enlace del emulador verifica y recién entonces se
   expect(requests).toEqual(['correo', 'alta']);
 });
 
+test('registro con un correo que ya tiene cuenta: aviso amigable en el paso del correo (QA-053)', async ({
+  page,
+}) => {
+  const email = `e2e-dup-${Date.now().toString(36)}@example.test`;
+  const register = async () => {
+    await page.goto('/cuenta');
+    await page.getByRole('button', { name: /crear cuenta con correo/i }).click();
+    await page.getByLabel('Correo').fill(email);
+    await page.getByRole('button', { name: /^continuar$/i }).click();
+    await page.getByLabel('Contraseña', { exact: true }).fill('Contrasena-E2E-1');
+    await page.getByRole('button', { name: /^continuar$/i }).click();
+    await page.getByLabel('Nombre').fill('Persona E2E');
+    await page.getByRole('button', { name: /^continuar$/i }).click();
+    await page.getByLabel('Acepto los términos y condiciones').check();
+    await page.getByLabel('Acepto el aviso de privacidad').check();
+    await page.getByRole('button', { name: /^crear cuenta$/i }).click();
+  };
+
+  await register();
+  await expect(page.getByRole('heading', { name: /verifica tu correo/i })).toBeVisible({ timeout: 20_000 });
+
+  // Segundo intento con el mismo correo: Firebase responde email-already-in-use.
+  await page.context().clearCookies();
+  await page.evaluate(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+  await register();
+
+  await expect(page.getByText(/este correo ya tiene una cuenta/i)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByLabel('Correo')).toHaveValue(email);
+  await expect(page.getByRole('button', { name: 'Recuperar contraseña' })).toBeVisible();
+  await expect(page.getByText(/firebase: error/i)).toBeHidden();
+});
+
 test('pedido en mesa: el invitado pide, paga en caja y lo ve en Mis pedidos', async ({ page }) => {
   await placeTableOrder(page);
   await expect(page.getByRole('heading', { name: /mis pedidos/i })).toBeVisible();
