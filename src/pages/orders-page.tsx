@@ -68,6 +68,11 @@ export function OrdersPage() {
   const pwa = usePwaInstall();
   const thumbImages = catalogImageMap(catalogProducts);
 
+  // Mis pedidos es una pantalla nueva: abre arriba, con el título visible.
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, []);
+
   useEffect(() => {
     if (!ready) return;
     if (!user) {

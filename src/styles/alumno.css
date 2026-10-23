@@ -3657,11 +3657,15 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     position: sticky;
     top: 28px;
     min-height: 0;
-    height: 100%;
+    /* Se ajusta al contenido (sin hueco vacío) y solo hace scroll si no cabe. */
+    align-self: start;
+    height: auto;
+    max-height: calc(100dvh - 56px);
+    overflow-y: auto;
   }
 
   .alumno-orders-desk__detail .alumno-track-card {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-height: 0;
     height: auto;
     display: flex;

@@ -115,9 +115,16 @@ describe('texto', () => {
   it('días, duraciones y cuenta atrás', () => {
     expect(addDays('2026-09-30', 1)).toBe('2026-10-01');
     expect(addDays('2026-12-31', 1)).toBe('2027-01-01');
-    expect(dayChipLabel('2026-09-30', '2026-09-30')).toBe('Hoy');
-    expect(dayChipLabel('2026-10-01', '2026-09-30')).toBe('Mañana');
+    expect(dayChipLabel('2026-09-30', '2026-09-30')).toBe('Hoy · mié 30 sep');
+    expect(dayChipLabel('2026-10-01', '2026-09-30')).toBe('Mañana · jue 1 oct');
     expect(dayChipLabel('2026-10-03', '2026-09-30')).toBe('sáb 3 oct');
+    expect(dayChipLabel('2026-10-24', '2026-10-22')).toBe('sáb 24 oct');
+    expect(dayChipLabel('2026-10-23', '2026-10-22')).toBe('Mañana · vie 23 oct');
+    for (const d of ['2026-10-22', '2026-10-23', '2026-10-24']) {
+      const label = dayChipLabel(d, '2026-10-22');
+      expect(label).toBe(label.trim());
+      expect(label).not.toMatch(/\s{2,}/);
+    }
     expect(dayLongLabel('2026-10-03', '2026-09-30')).toBe('sábado 3 de octubre');
     expect(durationLabel(60)).toBe('1 h');
     expect(durationLabel(90)).toBe('1 h 30');

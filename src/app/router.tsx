@@ -27,6 +27,13 @@ import {
 export function AppRouter() {
   return (
     <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
+  );
+}
+
+export function AppRoutes() {
+  return (
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/soporte" element={<SupportPage />} />
@@ -41,6 +48,7 @@ export function AppRouter() {
         <Route path="/seguimiento/:token" element={<TrackingPage />} />
         <Route path="/cuenta" element={<AccountPage />} />
         <Route path="/cuenta/pedidos" element={<OrdersPage />} />
+        <Route path="/cuenta/reservas" element={<Navigate to="/cuenta/pedidos" replace />} />
         <Route path="/cuenta/pedidos/:id" element={<OrderDetailPage />} />
         <Route path="/cuenta/saldo" element={<WalletPage />} />
         <Route path="/u/:id" element={<WalletQrPage />} />
@@ -59,6 +67,5 @@ export function AppRouter() {
         <Route path="/cafeterias" element={<Navigate to="/pedir" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
-    </BrowserRouter>
   );
 }
