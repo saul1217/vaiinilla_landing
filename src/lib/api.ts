@@ -245,6 +245,17 @@ export const api = {
     throw lastError;
   },
 
+  /**
+   * Correo de recuperación de contraseña: lo envía el backend con la marca de Vaiinilla (Resend),
+   * no la plantilla de Firebase. Responde 202 exista o no la cuenta (anti-enumeración).
+   */
+  async sendPasswordRecoveryEmail(email: string): Promise<void> {
+    await request<{ aceptado: boolean }>('/publico/correos/recuperacion', {
+      method: 'POST',
+      body: { email: email.trim().toLowerCase() },
+    });
+  },
+
   async registerIdentity(
     firebaseToken: string,
     input: IdentityRegistrationInput,

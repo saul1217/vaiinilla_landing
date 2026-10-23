@@ -11,7 +11,6 @@ import {
   googleSignIn,
   passwordSignIn,
   refreshEmailVerified,
-  sendPasswordReset,
 } from '../lib/firebase';
 import { enableGuestBuy, enableGuestExplore } from '../lib/guest-explore';
 import { emailProblem, passwordProblem } from '../lib/auth-validation';
@@ -415,8 +414,9 @@ export function AuthScreens({
     setBusy(true);
     try {
       const target = email.trim().toLowerCase();
-      await sendPasswordReset(target);
-      setNotice(`Te enviamos un enlace a ${target}`);
+      await api.sendPasswordRecoveryEmail(target);
+      // Mismo aviso exista o no la cuenta (el backend responde 202 en ambos casos).
+      setNotice('Si la cuenta existe, te enviamos un enlace para cambiar tu contraseña. Revisa tu correo.');
     } catch (cause) {
       setError(firebaseAuthMessage(cause));
     } finally {

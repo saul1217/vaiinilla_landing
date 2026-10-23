@@ -10,7 +10,6 @@ import {
   onAuthStateChanged,
   reauthenticateWithCredential,
   reauthenticateWithPopup,
-  sendPasswordResetEmail,
   setPersistence,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -185,11 +184,6 @@ export async function reauthenticateForDeletion(user: User, password: string): P
     throw error;
   }
   return { token: await user.getIdToken(true) };
-}
-
-export async function sendPasswordReset(email: string): Promise<void> {
-  const auth = await readyAuth();
-  await sendPasswordResetEmail(auth, email.trim().toLowerCase());
 }
 
 export async function firebaseSignOut(): Promise<void> {
