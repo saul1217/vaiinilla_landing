@@ -250,9 +250,10 @@ export const api = {
    * no la plantilla de Firebase. Responde 202 exista o no la cuenta (anti-enumeración).
    */
   async sendPasswordRecoveryEmail(email: string): Promise<void> {
+    // `continue_url` hace que el enlace regrese a esta web (/acceso/recuperar), no al panel.
     await request<{ aceptado: boolean }>('/publico/correos/recuperacion', {
       method: 'POST',
-      body: { email: email.trim().toLowerCase() },
+      body: { email: email.trim().toLowerCase(), continue_url: verificationReturnUrl() },
     });
   },
 

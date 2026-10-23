@@ -11,6 +11,13 @@ const completeTotpSignIn = vi.fn();
 const sendVerificationEmail = vi.fn();
 const listAccesses = vi.fn();
 const registerIdentity = vi.fn();
+const getMyWallet = vi.fn(() =>
+  Promise.resolve({
+    cliente: { usuario_id: 'u1', nombre: 'Ana Pérez', identificador_cliente: 'A01234' },
+    wallet: { id: 'w1', usuario_id: 'u1', establecimiento_id: 'e1', saldo: '10.00', actualizado_en: null },
+    movimientos: [],
+  }),
+);
 const authState: {
   user: {
     email: string;
@@ -39,11 +46,7 @@ vi.mock('../lib/api', () => ({
       identificador_cliente_etiqueta: 'Cliente',
       identificador_cliente_obligatorio: false,
     }),
-    getMyWallet: vi.fn().mockResolvedValue({
-      cliente: { usuario_id: 'u1', nombre: 'Ana Pérez', identificador_cliente: 'A01234' },
-      wallet: { id: 'w1', usuario_id: 'u1', establecimiento_id: 'e1', saldo: '10.00', actualizado_en: null },
-      movimientos: [],
-    }),
+    getMyWallet: () => getMyWallet() as Promise<unknown>,
     deleteIdentity: vi.fn(),
     sendVerificationEmail: (...args: unknown[]) => sendVerificationEmail(...args) as Promise<unknown>,
   },
@@ -226,6 +229,50 @@ describe('AccountPage', () => {
 
     expect(sendVerificationEmail).toHaveBeenCalledWith('token');
     expect(await screen.findByText(/listo, revisa tu bandeja/i)).toBeInTheDocument();
+  });
+
+  it('muestra el nombre del registro aunque llegue después de crear la cuenta (QA-043)', async () => {
+    const recien = {
+      email: 'nuevo@example.test',
+      displayName: '',
+      emailVerified: false,
+      reload: vi.fn(() => {
+        recien.displayName = 'Nuevo Cliente';
+        return Promise.resolve();
+      }),
+    };
+    authState.user = recien;
+    // Sin lugar elegido aún no hay cartera: el nombre sale de la cuenta de Firebase.
+    getMyWallet.mockReturnValueOnce(new Promise<never>(() => undefined));
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <AccountPage />
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/Nuevo Cliente · nuevo@example\.test/)).toBeInTheDocument();
+  });
+
+  it('«Ya lo verifiqué» sin verificar se anuncia como alerta (QA-043)', async () => {
+    authState.user = {
+      email: 'nuevo@example.test',
+      displayName: 'Nuevo',
+      emailVerified: false,
+      reload: () => Promise.resolve(),
+    };
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <AccountPage />
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: /ya lo verifiqué/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/aún no lo vemos verificado/i);
   });
 
   it('si el correo se mandó al crear la cuenta, lo confirma', async () => {

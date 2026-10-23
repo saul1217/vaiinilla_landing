@@ -289,6 +289,19 @@ describe('buyer API client', () => {
     expect(bodies[2]).toBe('');
   });
 
+  it('pide la recuperación con la URL de retorno de esta web para que el enlace no vaya al panel (QA-043)', async () => {
+    server.use(
+      http.post(`${baseUrl}/publico/correos/recuperacion`, async ({ request }) => {
+        await expect(request.json()).resolves.toEqual({
+          email: 'persona@example.test',
+          continue_url: `${window.location.origin}/cuenta`,
+        });
+        return HttpResponse.json({ data: { aceptado: true }, meta: {}, error: null }, { status: 202 });
+      }),
+    );
+    await expect(api.sendPasswordRecoveryEmail(' Persona@Example.test ')).resolves.toBeUndefined();
+  });
+
   it('elimina la cuenta con Idempotency-Key UUID y la confirmación que exige el backend', async () => {
     server.use(
       http.delete(`${baseUrl}/identidad/cuenta`, async ({ request }) => {

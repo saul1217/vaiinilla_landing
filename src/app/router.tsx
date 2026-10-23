@@ -4,6 +4,7 @@ import { AccountPage } from '../pages/account-page';
 import { CartPage } from '../pages/cart-page';
 import { ReservationsPage } from '../pages/reservations-page';
 import { DiscoveryPage } from '../pages/discovery-page';
+import { EmailVerificationPage, PasswordResetPage } from '../pages/email-action-page';
 import { HomePage } from '../pages/home-page';
 import { MenuPage } from '../pages/menu-page';
 import { NotFoundPage } from '../pages/not-found-page';
@@ -47,6 +48,9 @@ export function AppRoutes() {
         <Route path="/:slug/m/:token/quien" element={<TableWhoPage />} />
         <Route path="/seguimiento/:token" element={<TrackingPage />} />
         <Route path="/cuenta" element={<AccountPage />} />
+        <Route path="/acceso" element={<Navigate to="/cuenta" replace />} />
+        <Route path="/acceso/verificar" element={<EmailVerificationPage />} />
+        <Route path="/acceso/recuperar" element={<PasswordResetPage />} />
         <Route path="/cuenta/pedidos" element={<OrdersPage />} />
         <Route path="/cuenta/reservas" element={<Navigate to="/cuenta/pedidos" replace />} />
         <Route path="/cuenta/pedidos/:id" element={<OrderDetailPage />} />

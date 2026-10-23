@@ -110,9 +110,29 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
   const [verifyBusy, setVerifyBusy] = useState(false);
   const [verifyNotice, setVerifyNotice] = useState<string | null>(null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
+  // «Ya lo verifiqué» sin verificar todavía: es un aviso que debe anunciarse (QA-043).
+  const [stillUnverified, setStillUnverified] = useState(false);
+  // El nombre del registro llega con `updateProfile` después de crear la cuenta: el
+  // `user` en memoria puede no traerlo hasta recargarlo (QA-043).
+  const [profileName, setProfileName] = useState(() => user?.displayName?.trim() || null);
 
   useEffect(() => {
     setVerified(user?.emailVerified ?? true);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    setProfileName(user.displayName?.trim() || null);
+    void Promise.resolve()
+      .then(() => user.reload())
+      .catch(() => undefined)
+      .then(() => {
+        if (active) setProfileName(user.displayName?.trim() || null);
+      });
+    return () => {
+      active = false;
+    };
   }, [user]);
 
   // Firebase cachea el verificado: al volver a la app (o al entrar) se pregunta
@@ -184,6 +204,7 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
     setVerifyBusy(true);
     setVerifyError(null);
     setVerifyNotice(null);
+    setStillUnverified(false);
     try {
       await api.sendVerificationEmail(await firebaseIdToken(user));
       markVerificationSent();
@@ -201,9 +222,7 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
     setVerifyError(null);
     try {
       const ok = await refreshVerification();
-      if (!ok) {
-        setVerifyNotice('Aún no lo vemos verificado. Abre el enlace del correo e inténtalo de nuevo.');
-      }
+      setStillUnverified(!ok);
     } catch (cause) {
       setVerifyError(errorMessage(cause));
     } finally {
@@ -223,7 +242,7 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
           kicker="Cuenta"
           title="Configuración"
           lead={
-            [wallet?.cliente.nombre?.trim() || user?.displayName?.trim(), user?.email]
+            [wallet?.cliente.nombre?.trim() || profileName, user?.email]
               .filter(Boolean)
               .join(' · ') || undefined
           }
@@ -244,7 +263,16 @@ function SettingsScreen({ onSignOut }: { onSignOut: () => void }) {
               y tus pedidos pasarán a tu cuenta al verificarla. Revisa tu bandeja (y el spam).
             </p>
             {verifyNotice ? <p className="alumno-muted">{verifyNotice}</p> : null}
-            {verifyError ? <p className="alumno-error">{verifyError}</p> : null}
+            {stillUnverified ? (
+              <p className="alumno-error" role="alert">
+                Aún no lo vemos verificado. Abre el enlace del correo e inténtalo de nuevo.
+              </p>
+            ) : null}
+            {verifyError ? (
+              <p className="alumno-error" role="alert">
+                {verifyError}
+              </p>
+            ) : null}
             <div className="alumno-tracking__actions">
               <button
                 className="alumno-btn alumno-btn--lime"

@@ -1,6 +1,8 @@
 import { FirebaseError, getApp, getApps, initializeApp } from 'firebase/app';
 import {
+  applyActionCode,
   browserLocalPersistence,
+  confirmPasswordReset,
   connectAuthEmulator,
   createUserWithEmailAndPassword,
   EmailAuthProvider,
@@ -16,6 +18,7 @@ import {
   signOut,
   TotpMultiFactorGenerator,
   updateProfile,
+  verifyPasswordResetCode,
   type Auth,
   type MultiFactorError,
   type MultiFactorResolver,
@@ -124,6 +127,24 @@ export async function createPasswordAccount(
     endBrowserSession();
     throw error;
   }
+}
+
+/** Aplica el código del enlace de verificación (`/acceso/verificar`). */
+export async function applyEmailVerificationCode(code: string): Promise<void> {
+  const auth = await readyAuth();
+  await applyActionCode(auth, code);
+  if (auth.currentUser) await auth.currentUser.reload();
+}
+
+/** Comprueba el código de recuperación y devuelve el correo de la cuenta. */
+export async function inspectPasswordResetCode(code: string): Promise<string> {
+  const auth = await readyAuth();
+  return verifyPasswordResetCode(auth, code);
+}
+
+export async function applyPasswordReset(code: string, password: string): Promise<void> {
+  const auth = await readyAuth();
+  await confirmPasswordReset(auth, code, password);
 }
 
 export async function firebaseIdToken(user: User): Promise<string> {
