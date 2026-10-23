@@ -110,3 +110,19 @@ test('«Mis pedidos» del invitado se limpia cuando el pedido ya no existe (QA-0
   await page.goto(`/e/${slug}`);
   await expect(page.getByRole('link', { name: /tu pedido #\d+/i })).toHaveCount(0);
 });
+
+test('Olvidé mi contraseña manda continue_url con sand-user, no el panel ni el preview (QA-057)', async ({ page }) => {
+  const bodies: Record<string, unknown>[] = [];
+  await page.route('**/publico/correos/recuperacion', (route) => {
+    bodies.push(route.request().postDataJSON() as Record<string, unknown>);
+    return route.fulfill({ status: 202, json: { data: { aceptado: true } } });
+  });
+
+  await page.goto('/cuenta');
+  await page.getByRole('button', { name: /iniciar sesión/i }).click();
+  await page.getByLabel(/correo/i).fill(' Persona@Example.test ');
+  await page.getByRole('button', { name: /¿la olvidaste\?/i }).click();
+
+  await expect(page.getByText(/si la cuenta existe, te enviamos un enlace/i)).toBeVisible();
+  expect(bodies).toEqual([{ email: 'persona@example.test', continue_url: 'https://sand-user.vaiinilla.app/cuenta' }]);
+});
