@@ -258,7 +258,10 @@ describe('buyer API client', () => {
     server.use(
       http.post(`${baseUrl}/publico/correos/verificacion`, async ({ request }) => {
         expect(request.headers.get('Authorization')).toBe('Bearer firebase-token');
-        await expect(request.json()).resolves.toEqual({ continue_url: `${window.location.origin}/cuenta` });
+        await expect(request.json()).resolves.toEqual({
+          continue_url: `${window.location.origin}/cuenta`,
+          idioma: 'es',
+        });
         return HttpResponse.json({ data: { aceptado: true }, meta: {}, error: null }, { status: 202 });
       }),
     );
@@ -281,8 +284,9 @@ describe('buyer API client', () => {
       }),
     );
     await expect(api.sendVerificationEmail('firebase-token')).resolves.toEqual({ aceptado: true });
-    expect(bodies).toHaveLength(2);
-    expect(bodies[1]).toBe('');
+    expect(bodies).toHaveLength(3);
+    expect(JSON.parse(bodies[1] ?? '')).toEqual({ continue_url: `${window.location.origin}/cuenta` });
+    expect(bodies[2]).toBe('');
   });
 
   it('elimina la cuenta con Idempotency-Key UUID y la confirmación que exige el backend', async () => {

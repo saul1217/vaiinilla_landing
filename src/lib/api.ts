@@ -1,6 +1,6 @@
 import { VaiinillaApiError } from './api-error';
 import { createIdempotencyKey } from './idempotency';
-import { resolveApiUrl, verificationReturnUrl } from './env';
+import { VERIFICATION_EMAIL_LANGUAGE, resolveApiUrl, verificationReturnUrl } from './env';
 import type {
   ApiEnvelope,
   ClaimGuestOrdersResponse,
@@ -219,22 +219,30 @@ export const api = {
 
   /** Correo de verificación: el backend genera el enlace y lo envía (202 aunque sea asíncrono). */
   async sendVerificationEmail(firebaseToken: string): Promise<{ aceptado: boolean }> {
-    const send = (body?: { continue_url: string }) =>
+    const send = (body?: { continue_url: string; idioma?: string }) =>
       request<{ aceptado: boolean }>('/publico/correos/verificacion', {
         method: 'POST',
         token: firebaseToken,
         body,
       });
-    try {
-      // El enlace debe regresar a esta landing y no al panel que use la plantilla por defecto.
-      return (await send({ continue_url: verificationReturnUrl() })).data;
-    } catch (cause) {
-      // Un backend que aún no acepta el campo no debe bloquear el registro.
-      if (cause instanceof VaiinillaApiError && (cause.status === 400 || cause.status === 422)) {
-        return (await send()).data;
+    // El enlace debe regresar a esta landing (no al panel de la plantilla) y en el idioma de la
+    // landing (es), no el inglés por defecto. Un backend que aún no acepta un campo no debe
+    // bloquear el registro: se reintenta con menos campos.
+    const attempts = [
+      { continue_url: verificationReturnUrl(), idioma: VERIFICATION_EMAIL_LANGUAGE },
+      { continue_url: verificationReturnUrl() },
+      undefined,
+    ];
+    let lastError: unknown;
+    for (const body of attempts) {
+      try {
+        return (await send(body)).data;
+      } catch (cause) {
+        if (!(cause instanceof VaiinillaApiError && (cause.status === 400 || cause.status === 422))) throw cause;
+        lastError = cause;
       }
-      throw cause;
     }
+    throw lastError;
   },
 
   async registerIdentity(

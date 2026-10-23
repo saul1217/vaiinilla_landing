@@ -36,6 +36,9 @@ export function isFirebaseConfigReady(config: FirebaseClientConfig): boolean {
  * Landing a la que regresa el enlace del correo de verificación: VITE_APP_URL si el ambiente la
  * define; si no, el origen desde el que se abrió la landing (develop → sand-user, prod → vaiinilla.app).
  */
+/** La landing solo existe en español (<html lang="es">): el correo de verificación va en ese idioma. */
+export const VERIFICATION_EMAIL_LANGUAGE = 'es';
+
 export function verificationReturnUrl(
   envUrl: string | undefined = import.meta.env.VITE_APP_URL,
   origin: string = window.location.origin,
