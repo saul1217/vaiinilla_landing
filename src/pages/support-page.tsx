@@ -46,7 +46,7 @@ export function SupportPage() {
               <p>
                 Para eliminar tu cuenta puedes hacerlo desde la app en Configuración, o seguir la
                 guía en{' '}
-                <a href={`${STAFF_APP_URL}/eliminar-cuenta`}>app.vaiinilla.app/eliminar-cuenta</a>.
+                <a href={`${STAFF_APP_URL}/eliminar-cuenta`}>{STAFF_APP_URL.replace(/^https?:\/\//, '')}/eliminar-cuenta</a>.
                 Los documentos legales vigentes están en{' '}
                 <a href={`${STAFF_APP_URL}/legal/terminos/2026-07`}>Términos</a> y{' '}
                 <a href={`${STAFF_APP_URL}/legal/privacidad/2026-07`}>Privacidad</a>.

@@ -84,6 +84,7 @@ export default defineConfig({
     css: true,
     env: {
       VITE_APP_ENV: 'development',
+      VITE_STAFF_APP_URL: 'https://app.vaiinilla.app',
       VITE_API_URL: 'https://vaiinillaback-development.up.railway.app/api/v1',
     },
   },
