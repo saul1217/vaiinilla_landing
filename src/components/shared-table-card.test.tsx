@@ -234,4 +234,27 @@ describe('mesa compartida', () => {
     // La mesa que ya se veía no se borra por una operación fallida.
     expect(screen.getByRole('article', { name: 'Mesa 3' })).toBeInTheDocument();
   });
+
+  it('"Solo tú" no se muestra si hay pedidos de otros en la mesa', async () => {
+    const [luis, mine] = table().grupos as [SharedTable['grupos'][number], SharedTable['grupos'][number]];
+    const others = { ...luis, alias: null, participante_id: null };
+    apiMock.currentTable.mockResolvedValue(
+      table({ participantes: [{ id: 'p-ana', alias: 'Ana', soy_yo: true, unido_en: null }], grupos: [mine, others] }),
+    );
+    render(<SharedTableCard accessToken="jwt" qrToken={null} />);
+
+    expect(await screen.findByRole('heading', { name: /otros en la mesa/i })).toBeInTheDocument();
+    expect(screen.queryByText('Solo tú')).not.toBeInTheDocument();
+  });
+
+  it('"Solo tú" cuando nadie más tiene pedidos', async () => {
+    apiMock.currentTable.mockResolvedValue(
+      table({
+        participantes: [{ id: 'p-ana', alias: 'Ana', soy_yo: true, unido_en: null }],
+        grupos: table().grupos.filter((group) => group.soy_yo),
+      }),
+    );
+    render(<SharedTableCard accessToken="jwt" qrToken={null} />);
+    expect(await screen.findByText('Solo tú')).toBeInTheDocument();
+  });
 });

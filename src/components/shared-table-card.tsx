@@ -3,7 +3,7 @@ import { LoadingSkeleton } from './loading-skeleton';
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { formatAmount } from '../lib/money';
-import { orderedGroups, tableGroupKey, tableOrderState, tablePersonKey } from '../lib/shared-table';
+import { orderedGroups, tableGroupKey, tableHeadcountLabel, tableOrderState, tablePersonKey } from '../lib/shared-table';
 import { dropTableParticipantOnSessionChange, forgetTableParticipant } from '../lib/table-participant';
 import { forgetSpace } from '../lib/space-session';
 import { spaceNoun } from '../lib/space-words';
@@ -179,12 +179,11 @@ export function SharedTableCard({
   if (!token) return null;
 
   const noun = spaceNoun(table.espacio.tipo);
-  const people = table.participantes.length;
   return (
     <article className="alumno-track-card shared-table alumno-arrive" aria-labelledby="shared-table-title">
       <header className="alumno-track-card__top">
         <span className="alumno-track-card__folio" id="shared-table-title">{table.espacio.nombre}</span>
-        <span className="alumno-track-card__pill">{people === 1 ? `Solo tú` : `${people} personas`}</span>
+        <span className="alumno-track-card__pill">{tableHeadcountLabel(table)}</span>
       </header>
 
       <div className="alumno-chips shared-table__people" aria-label={`Quién está en la ${noun}`}>

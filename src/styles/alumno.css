@@ -7443,6 +7443,8 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
    Usa la tarjeta de pedido (alumno-track-card), alumno-chip, alumno-section-label y
    alumno-ticket-items. Aquí solo lo que esas piezas necesitan sobre fondo oscuro. */
 .shared-table { cursor: default; display: grid; gap: 6px; padding-bottom: 18px; }
+/* Margen al pie para que el botón flotante de la campana no tape el texto de la tarjeta. */
+.shared-table { margin-bottom: 72px; }
 .shared-table .alumno-chips { margin-bottom: 6px; padding-bottom: 0; }
 .shared-table .alumno-chip { background: transparent; color: #f4f1e7; border-color: rgba(244, 241, 231, 0.18); min-height: 34px; padding: 6px 12px; }
 .shared-table .alumno-chip.is-on { background: var(--lime); color: var(--ink); border-color: var(--lime); }
