@@ -116,7 +116,22 @@ export async function signIn(page: Page) {
   await page.getByLabel(/correo/i).first().fill(env.E2E_CLIENTE_EMAIL!);
   await page.getByLabel(/contraseña/i).first().fill(env.E2E_PASSWORD!);
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();
-  await page.getByRole('heading', { name: 'Inicia sesión' }).waitFor({ state: 'hidden', timeout: 45_000 });
+  const heading = page.getByRole('heading', { name: 'Inicia sesión' });
+  const alert = page.getByRole('alert').first();
+  const outcome = await Promise.race([
+    heading.waitFor({ state: 'hidden', timeout: 45_000 }).then(() => 'ok' as const),
+    alert.waitFor({ state: 'visible', timeout: 45_000 }).then(() => 'alert' as const),
+  ]);
+  if (outcome === 'ok') return;
+  const message = (await alert.innerText()).trim();
+  // Que la contraseña no quede en el snapshot de la página que guarda el reporte.
+  await page.getByLabel(/contraseña/i).first().fill('');
+  // Un rechazo de configuración de Firebase (referer/dominio no autorizado) no es una regresión de la interfaz.
+  test.skip(
+    /referer|requests-from|unauthorized-domain|api-key|app-not-authorized/i.test(message),
+    `BLOQUEADA por configuración de Firebase en develop-e2e: ${message}`,
+  );
+  throw new Error(`Inicio de sesión rechazado: ${message}`);
 }
 
 export const SCREENS = [
