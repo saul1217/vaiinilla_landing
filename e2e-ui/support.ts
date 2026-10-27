@@ -128,7 +128,7 @@ export async function signIn(page: Page) {
   await page.getByLabel(/contraseña/i).first().fill('');
   // Un rechazo de configuración de Firebase (referer/dominio no autorizado) no es una regresión de la interfaz.
   test.skip(
-    /referer|requests-from|unauthorized-domain|api-key|app-not-authorized/i.test(message),
+    /no está autorizado|referer|requests-from|unauthorized-domain|api-key|app-not-authorized/i.test(message),
     `BLOQUEADA por configuración de Firebase en develop-e2e: ${message}`,
   );
   throw new Error(`Inicio de sesión rechazado: ${message}`);

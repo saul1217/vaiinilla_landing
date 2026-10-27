@@ -18,6 +18,12 @@ describe('firebaseAuthMessage (QA-053)', () => {
     expect(firebaseAuthMessage(firebaseError(code))).toMatch(expected);
   });
 
+  it('un bloqueo de referer o dominio de la API key se distingue del genérico', () => {
+    const code = 'auth/requests-from-referer-https://x.vercel.app/-are-blocked';
+    expect(firebaseAuthMessage(firebaseError(code))).toMatch(/no está autorizado/i);
+    expect(firebaseAuthMessage(firebaseError('auth/unauthorized-domain'))).toMatch(/no está autorizado/i);
+  });
+
   it('un código desconocido cae en un mensaje genérico, sin texto crudo', () => {
     const message = firebaseAuthMessage(firebaseError('auth/algo-nuevo'));
     expect(message).toBe('No pudimos completar el acceso. Inténtalo de nuevo.');

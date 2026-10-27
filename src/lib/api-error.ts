@@ -84,10 +84,16 @@ const firebaseAuthMessages: Record<string, string> = {
 
 const FIREBASE_GENERIC_MESSAGE = 'No pudimos completar el acceso. Inténtalo de nuevo.';
 
+// Configuración del proyecto (referer/dominio/API key), no un error del usuario: se distingue del genérico.
+export const FIREBASE_BLOCKED_MESSAGE = 'Este sitio no está autorizado para iniciar sesión. Avisa a soporte.';
+const FIREBASE_BLOCKED_CODE =
+  /^auth\/(requests-from-referer|unauthorized-domain|invalid-api-key|api-key-not-valid|app-not-authorized)/;
+
 export function firebaseAuthMessage(error: unknown): string {
   if (error && typeof error === 'object' && 'code' in error) {
     const code = String(error.code);
     if (firebaseAuthMessages[code]) return firebaseAuthMessages[code];
+    if (FIREBASE_BLOCKED_CODE.test(code)) return FIREBASE_BLOCKED_MESSAGE;
     if (code.startsWith('auth/')) return FIREBASE_GENERIC_MESSAGE;
   }
   // Nunca se muestra el texto técnico del SDK: «Firebase: Error (auth/...)».
