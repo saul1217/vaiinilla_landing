@@ -76,14 +76,23 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
     setSpace(scannedSpace());
   }, [pathname]);
 
-  const token = space ? readStoredClientContext()?.context.access_token : undefined;
+  // El botón sale con la mesa guardada en el dispositivo; la sesión del cliente puede llegar
+  // después del backend y solo hace falta para llamar, no para mostrarlo.
+  const [token, setToken] = useState(() => readStoredClientContext()?.context.access_token);
+  useEffect(() => {
+    if (!space || injected) return;
+    const sync = () => setToken(readStoredClientContext()?.context.access_token);
+    sync();
+    const id = window.setInterval(sync, 1000);
+    return () => window.clearInterval(id);
+  }, [space, injected, pathname]);
   const client = useMemo(
     () => injected ?? (token ? createBuyerCallClient(token) : null),
     [injected, token],
   );
   const espacioId = space?.espacioId ?? 0;
   const visible =
-    Boolean(space && client) && !hidden && !HIDDEN_PATHS.some((pattern) => pattern.test(pathname));
+    Boolean(space) && !hidden && !HIDDEN_PATHS.some((pattern) => pattern.test(pathname));
 
   useEffect(() => {
     const onResize = () => setViewport((n) => n + 1);
@@ -135,7 +144,7 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
     return () => document.removeEventListener('keydown', onKey);
   }, [panelOpen]);
 
-  if (!visible || !space || !client) return null;
+  if (!visible || !space) return null;
 
   const bounds = fabBounds(window.innerHeight, { desktop: isDesktop(), cart: /\/carrito\/?$/.test(pathname) });
   const side = saved?.side ?? 'right';
@@ -217,7 +226,10 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
   }
 
   async function send(reason: CallReason) {
-    if (!client) return;
+    if (!client) {
+      setError('Estamos conectando tu sesión. Intenta de nuevo en unos segundos.');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {

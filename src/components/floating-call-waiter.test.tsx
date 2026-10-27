@@ -156,4 +156,14 @@ describe('FloatingCallWaiter', () => {
     drag([350, 300], [350, 5000]);
     expect(readFabPosition()?.y).toBe(800 - 84 - 56);
   });
+
+  it('aparece de inmediato con la mesa guardada, sin esperar la sesión del backend', async () => {
+    render(
+      <MemoryRouter initialEntries={['/e/demo']}>
+        <FloatingCallWaiter />
+      </MemoryRouter>,
+    );
+    expect(sessionStorage.length).toBe(0);
+    expect(fab()).toBeTruthy();
+  });
 });
