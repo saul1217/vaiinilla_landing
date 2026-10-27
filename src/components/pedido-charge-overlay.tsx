@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useHideFloatingCall } from '../lib/floating-call';
 import { STRIPE_COPY } from '../lib/stripe-status';
 
 export type PedidoChargePhase = 'processing' | 'success';
@@ -9,6 +10,7 @@ interface PedidoChargeOverlayProps {
 }
 
 export function PedidoChargeOverlay({ phase, onDismiss }: PedidoChargeOverlayProps) {
+  useHideFloatingCall();
   useEffect(() => {
     if (phase !== 'success' || !onDismiss) return;
     const timer = window.setTimeout(onDismiss, 2800);

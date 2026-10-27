@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { FloatingCallWaiter } from '../components/floating-call-waiter';
 import { TrackingPage } from '../pages/tracking-page';
 import { AccountPage } from '../pages/account-page';
 import { CartPage } from '../pages/cart-page';
@@ -35,6 +36,7 @@ export function AppRouter() {
 
 export function AppRoutes() {
   return (
+    <>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/soporte" element={<SupportPage />} />
@@ -71,5 +73,7 @@ export function AppRoutes() {
         <Route path="/cafeterias" element={<Navigate to="/pedir" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      <FloatingCallWaiter />
+    </>
   );
 }

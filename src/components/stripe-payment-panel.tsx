@@ -6,6 +6,7 @@ import { loadStripe } from '@stripe/stripe-js/pure';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import type { AppEnvironment } from '../lib/env';
+import { useHideFloatingCall } from '../lib/floating-call';
 import { formatMoney } from '../lib/money';
 import { resolveStripePublishableKey, stripePublishableKey } from '../lib/stripe-public';
 import { STRIPE_TOTAL_LABEL } from '../lib/stripe-status';
@@ -43,6 +44,7 @@ export function StripePaymentPanel({
   onProcessing,
   onProcessingFailed,
 }: StripePaymentPanelProps) {
+  useHideFloatingCall();
   const resolved = useMemo(() => {
     try {
       return {
