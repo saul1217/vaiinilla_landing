@@ -15,7 +15,6 @@ import type { CartLine, CatalogProduct, OrderDetail, SharedTable } from "../type
 import { CartEmptyView, CartFilledView } from "./cart-page";
 import { OrderTicketView } from "./order-detail-page";
 import { useDeskPane } from "../lib/use-desk-pane";
-import { createMockBuyerCallClient } from "../lib/mesero-mock";
 import { WalletBoardView } from "./wallet-page";
 import { isActiveOrder, openTab } from "../lib/order-labels";
 import { formatAmount } from "../lib/money";
@@ -142,7 +141,6 @@ const QA_SHARED_TABLE: SharedTable = {
   totales: { total: "1264999.99", pagado: "0.00", pendiente: "1264999.99" },
   mi_parte: { total: "1014999.99", pagado: "0.00", pendiente: "1014999.99" },
 };
-const qaCallClient = createMockBuyerCallClient();
 const CARD = qaOrder({
   id: "qa-94",
   folio: 94,
@@ -468,7 +466,6 @@ export function AlumnoQaTableOrderPage() {
             expanded={open}
             onToggle={() => setOpen((v) => !v)}
             imageUrl={qaOrderThumb(MESA)}
-            callClient={qaCallClient}
           />
           <OrderTicketView order={MESA} table={QA_SHARED_TABLE} />
         </div>
@@ -573,7 +570,6 @@ export function AlumnoQaNewOrdersPage() {
                 expanded={open === order.id}
                 onToggle={() => setOpen((current) => (current === order.id ? null : order.id))}
                 imageUrl={null}
-                callClient={qaCallClient}
                 arrivalClient={qaArrival}
               />
             ))}
