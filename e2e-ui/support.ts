@@ -16,8 +16,8 @@ function loadEnv(): Record<string, string> {
 export const env = { ...loadEnv(), ...process.env };
 
 // Datos sembrados en CI con `/dev/test-setup`; nunca se editan a mano.
-export const SHOP_SLUG = env.E2E_UI_SHOP_SLUG ?? 'ci-tienda';
-export const COURTS_SLUG = env.E2E_UI_COURTS_SLUG ?? 'ci-canchas';
+export const SHOP_SLUG = env.E2E_UI_SHOP_SLUG ?? env.E2E_PLACE_SLUG ?? 'ci-vaiinilla';
+export const COURTS_SLUG = env.E2E_UI_COURTS_SLUG ?? env.E2E_PLACE_SLUG ?? 'ci-vaiinilla';
 export const FROZEN_NOW = new Date('2026-10-20T15:00:00.000Z');
 export const THEMES = ['light', 'dark'] as const;
 export const VIEWPORTS = [
