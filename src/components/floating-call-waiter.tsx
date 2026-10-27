@@ -45,6 +45,9 @@ type View = 'closed' | 'reasons' | 'open' | 'unavailable';
 
 const isDesktop = () => window.matchMedia?.('(min-width: 768px)').matches ?? false;
 
+/** En pantalla ancha la barra lateral ocupa la orilla izquierda (232 px, en espejo con alumno.css). */
+const sidebarInset = () => (window.matchMedia?.('(min-width: 1024px)').matches ? 232 : 0);
+
 interface Drag {
   pointerId: number;
   startX: number;
@@ -152,7 +155,7 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
   const left = live
     ? `${live.left}px`
     : side === 'left'
-      ? `calc(${FAB_MARGIN}px + env(safe-area-inset-left, 0px))`
+      ? `calc(var(--fcw-inset-left, 0px) + ${FAB_MARGIN}px + env(safe-area-inset-left, 0px))`
       : `calc(100% - ${FAB_SIZE + FAB_MARGIN}px - env(safe-area-inset-right, 0px))`;
   const opensUp = top > 300;
 
@@ -180,7 +183,7 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
     d.moved = true;
     setView((v) => (v === 'reasons' ? 'closed' : v));
     setLive({
-      left: Math.min(window.innerWidth - FAB_SIZE, Math.max(0, d.originLeft + dx)),
+      left: Math.min(window.innerWidth - FAB_SIZE, Math.max(sidebarInset(), d.originLeft + dx)),
       top: clampY(d.originTop + dy, bounds),
     });
   }

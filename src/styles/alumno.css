@@ -7962,6 +7962,19 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   }
 }
 
+/* Con la barra lateral fija, la orilla izquierda empieza después de ella. */
+@media (min-width: 1024px) {
+  .alumno-fcw {
+    --fcw-inset-left: 232px;
+  }
+}
+
+/* Margen al pie para que la campana flotante no tape el último texto de pedidos y seguimiento. */
+.alumno-orders-desk__list,
+.alumno-timeline {
+  padding-bottom: 72px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .alumno-fcw {
     transition: none;

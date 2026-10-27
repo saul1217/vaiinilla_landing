@@ -140,6 +140,13 @@ describe('FloatingCallWaiter', () => {
     expect(readFabPosition()?.side).toBe('left');
   });
 
+  it('pegada a la izquierda respeta la barra lateral en pantalla ancha', async () => {
+    await mount();
+    drag([350, 300], [60, 320]);
+    const left = screen.getByTestId('floating-call').style.left;
+    expect(left).toContain('var(--fcw-inset-left, 0px)');
+  });
+
   it('la posición se guarda y se restaura al recargar', async () => {
     const first = await mount();
     drag([350, 300], [60, 320]);

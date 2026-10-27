@@ -25,13 +25,15 @@ export interface GuestLiveOrdersState {
 export function useGuestLiveOrders(slug: string): GuestLiveOrdersState {
   const { user, ready } = useAuth();
   const [orders, setOrders] = useState<TrackedOrder[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Hasta saber si hay sesión (ready) se está cargando: el estado vacío no puede salir antes.
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // La llave identifica al invitado en este dispositivo; sin ella solo quedan
   // los enlaces de seguimiento guardados (otro dispositivo o datos borrados).
   const llave = !ready || user ? null : (readGuest()?.llave ?? null);
 
   useEffect(() => {
+    if (!ready) return;
     if (!llave || !slug) {
       setOrders([]);
       setLoading(false);
@@ -73,7 +75,7 @@ export function useGuestLiveOrders(slug: string): GuestLiveOrdersState {
       active = false;
       window.clearInterval(timer);
     };
-  }, [llave, slug]);
+  }, [llave, slug, ready]);
 
-  return { orders, loading, error };
+  return { orders, loading: loading || !ready, error };
 }
