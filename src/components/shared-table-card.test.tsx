@@ -78,6 +78,36 @@ describe('mesa compartida', () => {
     expect(await screen.findByRole('article', { name: 'Mesa 3' })).toBeInTheDocument();
   });
 
+  it('ya unido: mientras consulta muestra esqueleto y nunca el formulario de unirse', async () => {
+    let resolve!: (value: SharedTable) => void;
+    apiMock.currentTable.mockReturnValue(new Promise<SharedTable>((r) => { resolve = r; }));
+    render(<SharedTableCard accessToken="jwt" qrToken="qr-1" />);
+
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /unirme a la mesa/i })).not.toBeInTheDocument();
+
+    resolve(table());
+    expect(await screen.findByRole('article', { name: 'Mesa 3' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /unirme a la mesa/i })).not.toBeInTheDocument();
+  });
+
+  it('el nombre que escribe el usuario no se vuelve a rellenar', async () => {
+    apiMock.currentTable.mockResolvedValue(null);
+    apiMock.joinTable.mockResolvedValue(table());
+    const user = userEvent.setup();
+    const { rerender } = render(<SharedTableCard accessToken="jwt" qrToken="qr-1" defaultAlias="Invitado" />);
+
+    const input = await screen.findByRole('textbox', { name: /tu nombre en la mesa/i });
+    expect(input).toHaveValue('Invitado');
+    await user.clear(input);
+    rerender(<SharedTableCard accessToken="jwt" qrToken="qr-1" defaultAlias="Invitado" onLeave={() => {}} />);
+    expect(input).toHaveValue('');
+
+    await user.type(input, 'Ana');
+    await user.click(screen.getByRole('button', { name: /unirme a la mesa/i }));
+    expect(apiMock.joinTable).toHaveBeenCalledWith('jwt', 'qr-1', 'Ana');
+  });
+
   it('sin QR y sin mesa no muestra nada', async () => {
     apiMock.currentTable.mockResolvedValue(null);
     const { container } = render(<SharedTableCard accessToken="jwt" qrToken={null} />);

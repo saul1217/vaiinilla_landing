@@ -151,6 +151,7 @@ export function GuestOrdersPage() {
         <SharedTableCard
           accessToken={mesa.token}
           qrToken={qrToken}
+          sessionPending={mesa.pending}
           defaultAlias={guestName || undefined}
           legalNote={
             legal ? (

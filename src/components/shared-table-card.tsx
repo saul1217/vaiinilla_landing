@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { LoadingSkeleton } from './loading-skeleton';
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { formatAmount } from '../lib/money';
@@ -23,6 +24,7 @@ function isUnauthorized(cause: unknown): boolean {
 export function SharedTableCard({
   accessToken,
   qrToken,
+  sessionPending = false,
   defaultAlias,
   legalNote,
   onEnsureToken,
@@ -31,6 +33,8 @@ export function SharedTableCard({
 }: {
   accessToken: string | null;
   qrToken: string | null;
+  /** El padre aún renueva la sesión: no se sabe si ya hay mesa. */
+  sessionPending?: boolean;
   defaultAlias?: string;
   legalNote?: ReactNode;
   onEnsureToken?: (alias: string) => Promise<string>;
@@ -45,9 +49,14 @@ export function SharedTableCard({
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const token = accessToken ?? sessionToken;
 
+  // Si ya consultamos la mesa al menos una vez; antes no sabemos si el cliente ya está unido.
+  const [checked, setChecked] = useState(false);
+  const aliasTouched = useRef(false);
+
+  // El nombre por defecto solo se pone si llega tarde y el usuario aún no ha escrito (ni borrado) nada.
   useEffect(() => {
-    if (!alias && defaultAlias) setAlias(defaultAlias);
-  }, [alias, defaultAlias]);
+    if (!aliasTouched.current && defaultAlias) setAlias(defaultAlias);
+  }, [defaultAlias]);
 
   const refresh = useCallback(async () => {
     if (!token) return;
@@ -60,6 +69,8 @@ export function SharedTableCard({
     } catch (cause) {
       // Una consulta fallida no borra la mesa que ya se ve; la siguiente lo intenta otra vez.
       if (isUnauthorized(cause)) onUnauthorized?.();
+    } finally {
+      setChecked(true);
     }
   }, [onUnauthorized, token]);
 
@@ -129,6 +140,8 @@ export function SharedTableCard({
 
   if (!table) {
     if (!qrToken || (!token && !onEnsureToken)) return null;
+    // Con sesión pero sin saber aún si ya está unido: esqueleto, nunca el formulario de unirse.
+    if (sessionPending || (token && !checked)) return <LoadingSkeleton shape="rows" label="Cargando la mesa" />;
     return (
       <form className="alumno-track-card shared-table alumno-arrive" onSubmit={join}>
         <header className="alumno-track-card__top">
@@ -147,7 +160,10 @@ export function SharedTableCard({
             value={alias}
             maxLength={ALIAS_MAX}
             autoComplete="nickname"
-            onChange={(event) => setAlias(event.target.value)}
+            onChange={(event) => {
+              aliasTouched.current = true;
+              setAlias(event.target.value);
+            }}
             placeholder="Ana"
           />
         </label>
