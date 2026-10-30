@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isFirebaseConfigReady, parseAppEnvironment, resolveApiUrl, resolveStaffAppUrl, verificationReturnUrl, walletQrUrl } from './env';
 
 describe('env', () => {
+  afterEach(() => vi.restoreAllMocks());
   it('toma el API de VITE_API_URL sin la diagonal final', () => {
     expect(resolveApiUrl('/api/v1')).toBe('/api/v1');
     expect(resolveApiUrl('https://example.test/api/v1/')).toBe('https://example.test/api/v1');
@@ -47,8 +48,27 @@ describe('env', () => {
     expect(walletQrUrl('u-1', undefined, 'https://sand-user.test')).toBe('https://sand-user.test/u/u-1');
   });
 
-  it('el panel del equipo sale de VITE_STAFF_APP_URL y falla si falta', () => {
-    expect(resolveStaffAppUrl(' https://panel.test/ ')).toBe('https://panel.test');
-    expect(() => resolveStaffAppUrl(undefined)).toThrow(/VITE_STAFF_APP_URL/);
+  it.each([true, false])('limpia VITE_STAFF_APP_URL sin avisos (production=%s)', (isProd) => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(resolveStaffAppUrl(' https://panel.test/// ', isProd)).toBe('https://panel.test');
+    expect(error).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, '', '  '])('usa el panel de producción si falta la URL (%s)', (url) => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(resolveStaffAppUrl(url, true)).toBe('https://app.vaiinilla.app');
+    expect(error).toHaveBeenCalledExactlyOnceWith(expect.stringContaining('VITE_STAFF_APP_URL'));
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, '', '  '])('usa el panel de desarrollo si falta la URL (%s)', (url) => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(resolveStaffAppUrl(url, false)).toBe('https://dev.vaiinilla.app');
+    expect(warn).toHaveBeenCalledExactlyOnceWith(expect.stringContaining('VITE_STAFF_APP_URL'));
+    expect(error).not.toHaveBeenCalled();
   });
 });
