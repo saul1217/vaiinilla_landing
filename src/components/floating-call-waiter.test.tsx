@@ -57,15 +57,17 @@ function drag(from: [number, number], to: [number, number]) {
 
 describe('helpers de posición', () => {
   it('se pega a la orilla cuyo lado contiene el centro', () => {
-    expect(snapSide(100, 400)).toBe('left');
-    expect(snapSide(250, 400)).toBe('right');
+    expect(snapSide(100, 56, 400)).toBe('left');
+    expect(snapSide(250, 56, 400)).toBe('right');
+    expect(snapSide(120, 200, 400)).toBe('right');
+    expect(snapSide(120, 56, 400)).toBe('left');
   });
 
   it('deja el botón arriba de la barra inferior y, en el Carrito, del botón de pagar', () => {
     const home = fabBounds(800, { desktop: false, cart: false });
     const cart = fabBounds(800, { desktop: false, cart: true });
     expect(clampY(5000, home)).toBe(800 - 84 - 56);
-    expect(clampY(5000, cart)).toBe(800 - 160 - 56);
+    expect(clampY(5000, cart)).toBe(800 - 216 - 56);
     expect(clampY(-50, home)).toBe(home.top);
   });
 });
@@ -86,6 +88,7 @@ describe('FloatingCallWaiter', () => {
   });
 
   it('muestra el pill arriba y lo colapsa al bajar, expandiéndolo al volver', async () => {
+    Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 1600 });
     await mount();
     expect(screen.getByText('Llamar al mesero').className).toBe('alumno-fcw__label');
     expect(screen.getByTestId('floating-call').className).not.toContain('is-collapsed');
@@ -244,5 +247,67 @@ describe('FloatingCallWaiter', () => {
     );
     expect(sessionStorage.length).toBe(0);
     expect(fab()).toBeTruthy();
+  });
+});
+
+ describe('finalización y envío único', () => {
+  it.each(['atendida', 'expirada', 'cancelada', null, 'error'] as const)('estado final %s', async (estado) => {
+    vi.useFakeTimers();
+    try {
+      rememberSpace({ slug: 'demo', espacioId: 4, nombre: 'Mesa 4' });
+      const api = client({
+        current: vi.fn().mockResolvedValueOnce(tableCall()).mockResolvedValue(null),
+        finalState: estado === 'error' ? vi.fn().mockRejectedValue(new Error('Sin conexión')) : vi.fn().mockResolvedValue(estado),
+      });
+      await mount('/e/demo', api);
+      await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+      if (estado === 'atendida') {
+        expect(fab().getAttribute('aria-label')).toContain('15 segundos');
+        for (let i = 0; i < 15; i++) await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+        expect(fab().getAttribute('aria-label')).toBe('Llamar al mesero');
+      }
+      else { expect(fab().getAttribute('aria-label')).toBe('Llamar al mesero'); }
+    } finally { vi.useRealTimers(); }
+  });
+  it('dos clicks rápidos envían una sola llamada', async () => {
+    rememberSpace({ slug: 'demo', espacioId: 4, nombre: 'Mesa 4' });
+    const send = vi.fn(() => new Promise<TableCall>(() => {}));
+    const api = client({ call: send });
+    await mount('/e/demo', api);
+    fireEvent.click(screen.getByRole('button', { name: 'Llamar al mesero' }));
+    const option = screen.getByRole('button', { name: 'Necesito algo' });
+    fireEvent.click(option);
+    fireEvent.click(option);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+});
+
+ describe('sin scroll y foco', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 0 });
+    rememberSpace({ slug: 'demo', espacioId: 4, nombre: 'Mesa 4' });
+    window.scrollY = 0;
+  });
+  it.each(['timer', 'pointerdown', 'keydown', 'scroll'])('colapsa por %s y permanece colapsada', async (event) => {
+    vi.useFakeTimers();
+    try {
+      await mount();
+      if (event === 'timer') await act(async () => { await vi.advanceTimersByTimeAsync(4000); });
+      else fireEvent(document, new Event(event, { bubbles: true }));
+      fireEvent.scroll(window);
+      expect(screen.getByTestId('floating-call').className).toContain('is-collapsed');
+    } finally { vi.useRealTimers(); }
+  });
+  it('en cooldown enfoca el texto; Escape devuelve foco, sin modal', async () => {
+    await mount('/e/demo', client({ call: vi.fn().mockRejectedValue(new VaiinillaApiError(429, { code: 'RATE_LIMITED', message: 'Espera' }, 7)) }));
+    fireEvent.click(fab());
+    fireEvent.click(screen.getByRole('button', { name: 'Necesito algo' }));
+    await act(async () => {});
+    fireEvent.click(fab());
+    expect(document.activeElement).toBe(screen.getByText('Puedes volver a llamar en 7 s'));
+    expect(screen.getByRole('dialog').hasAttribute('aria-modal')).toBe(false);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(document.activeElement).toBe(fab());
   });
 });

@@ -34,6 +34,8 @@ export interface TableCall {
   version: number;
 }
 
+export const CALL_COOLDOWN_S = 15;
+
 export const OPEN_CALL: CallStatus[] = ['pendiente', 'en_camino'];
 
 // The backend only accepts calls from table orders still in progress (or delivered < 2 h).
@@ -52,6 +54,7 @@ const missing = (error: unknown) => error instanceof VaiinillaApiError && (error
 // ---------------- buyer ----------------
 
 export interface BuyerCallClient {
+  finalState?(id: string): Promise<CallStatus | null>;
   current(espacioId: number): Promise<TableCall | null>;
   call(espacioId: number, motivo: CallReason, pedidoId: string | null): Promise<TableCall>;
   cancel(call: TableCall): Promise<TableCall>;
@@ -69,6 +72,10 @@ export function createBuyerCallClient(token: string): BuyerCallClient {
     }
   };
   return {
+    finalState: (id) => guard(async () => {
+      const calls = await request<TableCall[]>('/llamadas?estado=atendida,cancelada,expirada', { token });
+      return calls.find((call) => call.id === id)?.estado ?? null;
+    }),
     current: (espacioId) =>
       guard(async () => {
         const calls = await request<TableCall[]>(`/llamadas?estado=${OPEN_CALL.join(',')}`, { token });

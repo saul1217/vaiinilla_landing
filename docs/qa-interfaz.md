@@ -34,3 +34,13 @@ Escape cierra la hoja de producto y devuelve el foco; objetivos táctiles de 44 
 ## Workflow de CI
 
 La integración de GitHub Actions no se pudo subir desde esta automatización (no puede modificar `.github/workflows`). Ejemplo en `docs/qa-interfaz.workflow.yml.example`.
+
+## QA-064 — Llamar al mesero flotante
+
+- Con mesa escaneada, en menú y carrito con artículos, a 320–414 px la pastilla expandida ocupa como máximo 40% del viewport; etiqueta de hasta 120 px con elipsis y nombre accesible «Llamar al mesero».
+- No intersecta controles fijos (navegación inferior, botón de continuar/pagar del Carrito, cabecera), arriba o al desplazar la página. Reserva inferior: 84 px (barra) y 216 px en el Carrito (barra + botón de pagar fijo). El contenido que se desplaza puede pasar por debajo, como con cualquier botón flotante; la pastilla se colapsa a la campana al desplazar.
+- Verificación: `npx playwright test -c playwright.ui.config.ts e2e-ui/floating-call.spec.ts` (320×568 y 360×740, menú y Carrito).
+- En documentos sin scroll colapsa a campana a los 4 s o ante la primera interacción pointerdown/keydown/scroll; permanece colapsada. Con scroll colapsa después de 8 px y se expande al volver arriba.
+- Solo una llamada confirmada como atendida inicia 15 s de espera; expirada, cancelada o estado desconocido no la inician. Un 429 respeta Retry-After.
+- Al abrir motivos durante la espera, el foco llega al texto del contador. El diálogo es no modal, sin trampa de foco; Escape cierra y devuelve foco al botón.
+- Dos clicks rápidos en un motivo producen una sola llamada.

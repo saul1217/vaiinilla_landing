@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { VaiinillaApiError } from '../lib/api-error';
@@ -153,5 +153,35 @@ describe('CallWaiter: pedir la cuenta', () => {
     await user.click(await screen.findByRole('button', { name: /llamar al mesero/i }));
     await user.click(screen.getByRole('button', { name: 'Pedir la cuenta' }));
     expect(send).toHaveBeenCalledWith(4, 'cuenta', 'p1');
+  });
+});
+
+ describe('finalización y envío único', () => {
+  it.each(['atendida', 'expirada', 'cancelada', null, 'error'] as const)('estado final %s', async (estado) => {
+    vi.useFakeTimers();
+    try {
+      const api = client({
+        current: vi.fn().mockResolvedValueOnce(call()).mockResolvedValue(null),
+        finalState: estado === 'error' ? vi.fn().mockRejectedValue(new Error('Sin conexión')) : vi.fn().mockResolvedValue(estado),
+      });
+      render(<CallWaiter order={order()} client={api} />); await act(async () => {});
+      await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+      if (estado === 'atendida') {
+        expect(screen.getByRole('button', { name: 'Puedes volver a llamar en 15 s' })).toBeDisabled();
+        for (let i = 0; i < 15; i++) await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+        expect(screen.getByRole('button', { name: 'Llamar al mesero' })).toBeEnabled();
+      }
+      else { expect(screen.getByRole('button', { name: 'Llamar al mesero' })).toBeEnabled(); }
+    } finally { vi.useRealTimers(); }
+  });
+  it('dos clicks rápidos envían una sola llamada', async () => {
+    const send = vi.fn(() => new Promise<TableCall>(() => {}));
+    const api = client({ call: send });
+    render(<CallWaiter order={order()} client={api} />); await act(async () => {});
+    fireEvent.click(screen.getByRole('button', { name: 'Llamar al mesero' }));
+    const option = screen.getByRole('button', { name: 'Necesito algo' });
+    fireEvent.click(option);
+    fireEvent.click(option);
+    expect(send).toHaveBeenCalledTimes(1);
   });
 });

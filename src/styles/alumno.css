@@ -7866,7 +7866,7 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 }
 
 .alumno-fcw.is-cart {
-  --fcw-reserve: calc(160px + env(safe-area-inset-bottom, 0px));
+  --fcw-reserve: calc(216px + env(safe-area-inset-bottom, 0px));
 }
 
 .alumno-fcw.is-dragging {
@@ -7896,7 +7896,8 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 
 .alumno-fcw__fab svg { flex-shrink: 0; }
 .alumno-fcw__label {
-  max-width: 180px;
+  text-overflow: ellipsis;
+  max-width: 120px;
   margin-left: 8px;
   overflow: hidden;
   white-space: nowrap;
@@ -8001,4 +8002,9 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   .alumno-fcw.is-calling .alumno-fcw__fab {
     animation: none;
   }
+}
+
+@media (max-width: 767px) {
+  .alumno-fcw__fab { max-width: 40vw; padding-inline: 10px; }
+  .alumno-fcw__label { min-width: 0; }
 }

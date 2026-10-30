@@ -17,10 +17,10 @@ const KEY = 'vaiinilla.buyer.call-fab.v1';
 
 /**
  * Espacio vertical vedado, en espejo con alumno.css: en móvil la barra inferior
- * (84 px con safe-area) y, en el Carrito, además el botón de pagar fijo.
+ * (84 px con safe-area) y, en el Carrito, además el botón de pagar fijo (12 px de relleno + ~53 px de botón + margen: 216 px, QA-064).
  */
 export function fabBounds(viewportHeight: number, opts: { desktop: boolean; cart: boolean }) {
-  const reserve = opts.desktop ? 16 : opts.cart ? 160 : 84;
+  const reserve = opts.desktop ? 16 : opts.cart ? 216 : 84;
   const top = opts.desktop ? 72 : FAB_MARGIN;
   const bottom = Math.max(top, viewportHeight - reserve - FAB_SIZE);
   return { top, bottom };
@@ -31,8 +31,8 @@ export function clampY(y: number, bounds: { top: number; bottom: number }): numb
 }
 
 /** Al soltar, el botón se pega a la orilla cuyo lado contiene su centro. */
-export function snapSide(left: number, viewportWidth: number): FabSide {
-  return left + FAB_SIZE / 2 < viewportWidth / 2 ? 'left' : 'right';
+export function snapSide(left: number, width: number, viewportWidth: number): FabSide {
+  return left + width / 2 < viewportWidth / 2 ? 'left' : 'right';
 }
 
 export function readFabPosition(): FabPosition | null {

@@ -6,6 +6,7 @@ import { errorMessage, VaiinillaApiError } from "../lib/api-error";
 import { readStoredClientContext } from "../lib/client-session";
 import {
   CALL_REASONS,
+  CALL_COOLDOWN_S,
   CallsUnavailableError,
   canCallWaiter,
   createBuyerCallClient,
@@ -17,7 +18,6 @@ import { useHeightMorph } from "../lib/use-height-morph";
 import type { OrderDetail } from "../types/api";
 
 const POLL_MS = 5000;
-const COOLDOWN_S = 60;
 
 type View = "idle" | "reasons" | "open" | "unavailable";
 
@@ -38,6 +38,8 @@ export function CallWaiter({
   const callable = canCallWaiter(order);
   const [call, setCall] = useState<TableCall | null>(null);
   const [view, setView] = useState<View>("idle");
+  const callRef = useRef<TableCall | null>(null);
+  const sending = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
@@ -52,11 +54,15 @@ export function CallWaiter({
       try {
         const current = await client.current(espacioId);
         if (!active) return;
-        setCall((prev) => {
-          if (prev && !current && prev.estado !== "cancelada")
-            setCooldown(COOLDOWN_S);
-          return current;
-        });
+        const previous = callRef.current;
+        callRef.current = current;
+        setCall(current);
+        if (previous && !current) {
+          // An absent open call can also have expired or been cancelled.
+          const finalState = await client.finalState?.(previous.id).catch(() => null);
+          if (!active) return;
+          if (finalState === 'atendida') setCooldown(CALL_COOLDOWN_S);
+        }
         setView((v) => (current ? "open" : v === "open" ? "idle" : v));
       } catch (cause) {
         if (active && cause instanceof CallsUnavailableError)
@@ -81,21 +87,25 @@ export function CallWaiter({
 
   async function send(reason: CallReason) {
     if (!client) return;
+    if (sending.current || cooldown > 0) return;
+    sending.current = true;
     setBusy(true);
     setError(null);
     try {
       const next = await client.call(espacioId, reason, order.id);
+      callRef.current = next;
       setCall(next);
       setView("open");
       navigator.vibrate?.(20);
     } catch (cause) {
       if (cause instanceof CallsUnavailableError) setView("unavailable");
       else if (cause instanceof VaiinillaApiError && cause.status === 429) {
-        // Called from this table less than a minute ago: wait what the backend says.
+        // Respect the backend cooldown, including its Retry-After.
         setView("idle");
-        setCooldown(cause.retryAfter ?? COOLDOWN_S);
+        setCooldown(cause.retryAfter ?? CALL_COOLDOWN_S);
       } else setError(errorMessage(cause));
     } finally {
+      sending.current = false;
       setBusy(false);
     }
   }
@@ -105,6 +115,7 @@ export function CallWaiter({
     setBusy(true);
     try {
       await client.cancel(call);
+      callRef.current = null;
       setCall(null);
       setView("idle");
     } catch (cause) {

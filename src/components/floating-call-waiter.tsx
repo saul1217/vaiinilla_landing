@@ -17,6 +17,7 @@ import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { readStoredClientContext } from '../lib/client-session';
 import {
   clampY,
+  snapSide,
   FAB_MARGIN,
   FAB_SIZE,
   fabBounds,
@@ -28,6 +29,7 @@ import {
 } from '../lib/floating-call';
 import {
   CALL_REASONS,
+  CALL_COOLDOWN_S,
   CallsUnavailableError,
   createBuyerCallClient,
   type BuyerCallClient,
@@ -37,7 +39,6 @@ import {
 import { scannedSpace } from '../lib/space-session';
 
 const POLL_MS = 5000;
-const COOLDOWN_S = 15;
 const HIDDEN_PATHS = [/^\/$/, /^\/soporte\/?$/, /^\/u\//, /^\/seguimiento\//];
 
 type View = 'closed' | 'reasons' | 'open' | 'unavailable';
@@ -61,6 +62,8 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
   const hidden = useFloatingCallHidden();
   const panelId = useId();
   const headingId = useId();
+  const cooldownText = useRef<HTMLSpanElement>(null);
+  const autoCollapsed = useRef(false);
   const firstOption = useRef<HTMLButtonElement>(null);
   const [collapsed, setCollapsed] = useState(() => window.scrollY > 8);
   const [needsJoin, setNeedsJoin] = useState(false);
@@ -69,6 +72,8 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
   const [live, setLive] = useState<{ left: number; top: number } | null>(null);
   const [view, setView] = useState<View>('closed');
   const [call, setCall] = useState<TableCall | null>(null);
+  const callRef = useRef<TableCall | null>(null);
+  const sending = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
@@ -107,13 +112,33 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
   }, []);
 
   useEffect(() => {
-    const onScroll = () => setCollapsed(window.scrollY > 8);
+    if (!visible) return;
+    const collapseIfShort = () => {
+      if (document.documentElement.scrollHeight <= window.innerHeight) {
+        autoCollapsed.current = true;
+        setCollapsed(true);
+      }
+    };
+    const onScroll = () => {
+      collapseIfShort();
+      setCollapsed(autoCollapsed.current || window.scrollY > 8);
+    };
+    const timer = window.setTimeout(collapseIfShort, 4000);
+    document.addEventListener('pointerdown', collapseIfShort, true);
+    document.addEventListener('keydown', collapseIfShort, true);
+    document.addEventListener('scroll', collapseIfShort, true);
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('pointerdown', collapseIfShort, true);
+      document.removeEventListener('keydown', collapseIfShort, true);
+      document.removeEventListener('scroll', collapseIfShort, true);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [visible, pathname]);
 
   useEffect(() => {
-    if (visible && view === 'reasons') firstOption.current?.focus();
+    if (visible && view === 'reasons') (cooldownText.current ?? firstOption.current)?.focus();
   }, [visible, view]);
 
   // Recupera una llamada abierta tras recargar y la mantiene al día.
@@ -125,10 +150,15 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
       try {
         const current = await client.current(espacioId);
         if (!active) return;
-        setCall((prev) => {
-          if (prev && !current && prev.estado !== 'cancelada') setCooldown(COOLDOWN_S);
-          return current;
-        });
+        const previous = callRef.current;
+        callRef.current = current;
+        setCall(current);
+        if (previous && !current) {
+          // An absent open call can also have expired or been cancelled.
+          const finalState = await client.finalState?.(previous.id).catch(() => null);
+          if (!active) return;
+          if (finalState === 'atendida') setCooldown(CALL_COOLDOWN_S);
+        }
         setView((v) => (current ? 'open' : v === 'open' ? 'closed' : v));
       } catch (cause) {
         if (active && cause instanceof CallsUnavailableError) setView('unavailable');
@@ -210,8 +240,7 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
     if (!d.moved) return;
     suppressClick.current = true;
     const next: FabPosition = {
-      side: d.originLeft + (event.clientX - d.startX) +
-        (event.currentTarget.offsetWidth || FAB_SIZE) / 2 < window.innerWidth / 2 ? 'left' : 'right',
+      side: snapSide(d.originLeft + event.clientX - d.startX, event.currentTarget.offsetWidth || FAB_SIZE, window.innerWidth),
       y: clampY(d.originTop + (event.clientY - d.startY), bounds),
     };
     setSaved(next);
@@ -248,11 +277,14 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
       setError('Estamos conectando tu sesión. Intenta de nuevo en unos segundos.');
       return;
     }
+    if (sending.current || cooldown > 0) return;
+    sending.current = true;
     setBusy(true);
     setError(null);
     setNeedsJoin(false);
     try {
       const next = await client.call(espacioId, reason, null);
+      callRef.current = next;
       setCall(next);
       setView('open');
       navigator.vibrate?.(20);
@@ -260,12 +292,13 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
       if (cause instanceof CallsUnavailableError) setView('unavailable');
       else if (cause instanceof VaiinillaApiError && cause.status === 429) {
         setView('closed');
-        setCooldown(cause.retryAfter ?? COOLDOWN_S);
+        setCooldown(cause.retryAfter ?? CALL_COOLDOWN_S);
       } else if (cause instanceof VaiinillaApiError && cause.status === 403 && cause.code === 'NO_ACTIVE_ORDER_IN_SPACE') {
         setNeedsJoin(true);
         setError('Para llamar al mesero, primero únete a la mesa.');
       } else setError(errorMessage(cause));
     } finally {
+      sending.current = false;
       setBusy(false);
     }
   }
@@ -275,6 +308,7 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
     setBusy(true);
     try {
       await client.cancel(call);
+      callRef.current = null;
       setCall(null);
       setView('closed');
     } catch (cause) {
@@ -318,6 +352,7 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
         <BellIcon />
         <span className="alumno-fcw__label">Llamar al mesero</span>
       </button>
+      {/* Non-modal disclosure-style dialog: the page stays usable; Escape returns focus. */}
       <div id={panelId} role="dialog"
         aria-labelledby={view === 'reasons' ? headingId : undefined}
         aria-label={view === 'reasons' ? undefined : 'Llamar al mesero'} className="alumno-fcw__panel" hidden={!panelOpen || Boolean(live)}>
@@ -347,7 +382,7 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
         ) : view === 'reasons' ? (
           <div className="alumno-callwaiter__reasons">
             {cooldown > 0 ? (
-              <span className="alumno-muted">Puedes volver a llamar en {cooldown} s</span>
+              <span ref={cooldownText} tabIndex={-1} className="alumno-muted">Puedes volver a llamar en {cooldown} s</span>
             ) : (
               CALL_REASONS.filter((reason) => reason.value !== 'cuenta' || space.pagaAlFinal).map((reason, index) => (
                 <button ref={index === 0 ? firstOption : undefined} key={reason.value} type="button" onClick={() => void send(reason.value)} disabled={busy}>
