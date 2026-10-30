@@ -17,7 +17,8 @@ const KEY = 'vaiinilla.buyer.call-fab.v1';
 
 /**
  * Espacio vertical vedado, en espejo con alumno.css: en móvil la barra inferior
- * (84 px con safe-area) y, en el Carrito, además el botón de pagar fijo (12 px de relleno + ~53 px de botón + margen: 216 px, QA-064).
+ * (84 px) y, en el Carrito, el botón de pagar sticky con su espacio (~132 px):
+ * 216 px en total, más safe-area (QA-064).
  */
 export function fabBounds(viewportHeight: number, opts: { desktop: boolean; cart: boolean }) {
   const reserve = opts.desktop ? 16 : opts.cart ? 216 : 84;

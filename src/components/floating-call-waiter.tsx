@@ -60,6 +60,7 @@ interface Drag {
 export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallClient }) {
   const { pathname } = useLocation();
   const hidden = useFloatingCallHidden();
+  const isCart = /\/carrito\/?$/.test(pathname);
   const panelId = useId();
   const headingId = useId();
   const cooldownText = useRef<HTMLSpanElement>(null);
@@ -192,9 +193,11 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
 
   if (!visible || !space) return null;
 
-  const bounds = fabBounds(window.innerHeight, { desktop: isDesktop(), cart: /\/carrito\/?$/.test(pathname) });
+  const bounds = fabBounds(window.innerHeight, { desktop: isDesktop(), cart: isCart });
   const side = saved?.side ?? 'right';
-  const top = live ? live.top : clampY(saved?.y ?? bounds.bottom, bounds);
+  // En el Carrito a 320×568 la parte baja la ocupan la tarjeta de la mesa y el botón de pagar;
+  // sin posición guardada, la campana arranca arriba junto al título (QA-064).
+  const top = live ? live.top : clampY(saved?.y ?? (isCart ? bounds.top : bounds.bottom), bounds);
   const left = live
     ? `${live.left}px`
     : side === 'left'
@@ -329,9 +332,9 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
 
   return (
     <div
-      className={`alumno-fcw${collapsed ? ' is-collapsed' : ''} is-${side}${opensUp ? ' is-up' : ' is-down'}${live ? ' is-dragging' : ''}${
+      className={`alumno-fcw${isCart || collapsed ? ' is-collapsed' : ''} is-${side}${opensUp ? ' is-up' : ' is-down'}${live ? ' is-dragging' : ''}${
         call ? (going ? ' is-going' : ' is-calling') : ''
-      }${/\/carrito\/?$/.test(pathname) ? ' is-cart' : ''}`}
+      }${isCart ? ' is-cart' : ''}`}
       style={{ left, right, '--fcw-y': `${top}px` } as CSSProperties}
       data-testid="floating-call"
     >
@@ -350,7 +353,8 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
         onKeyDown={onKeyDown}
       >
         <BellIcon />
-        <span className="alumno-fcw__label">Llamar al mesero</span>
+        <span className="alumno-fcw__label alumno-fcw__label--short" aria-hidden="true">Mesero</span>
+        <span className="alumno-fcw__label alumno-fcw__label--full" aria-hidden="true">Llamar al mesero</span>
       </button>
       {/* Non-modal disclosure-style dialog: the page stays usable; Escape returns focus. */}
       <div id={panelId} role="dialog"

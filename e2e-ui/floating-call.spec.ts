@@ -25,7 +25,21 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 360, height: 740 }
         expect((await fab.boundingBox())!.width).toBeLessThanOrEqual(viewport.width * .4);
         for (const scroll of [0, 300, 10000]) {
           await page.evaluate((y) => window.scrollTo(0, y), scroll);
-          if (scroll === 0 && process.env.QA_SHOTS_DIR) await page.screenshot({ path: `${process.env.QA_SHOTS_DIR}/after_${viewport.width}x${viewport.height}${path.replace(/\//g, '_')}_top.png` });
+          if (scroll === 0 && process.env.QA_SHOTS_DIR) await page.screenshot({ path: `${process.env.QA_SHOTS_DIR}/final_${viewport.width}x${viewport.height}${path.replace(/\//g, '_')}_top.png` });
+          if (path.endsWith('/carrito')) {
+            await expect.poll(async () => (await fab.boundingBox())!.width).toBeLessThanOrEqual(56);
+          }
+          if (path.endsWith('/carrito') && viewport.width === 320) {
+            const tableCard = page.locator('.alumno-cart-layout__checkout > button.alumno-card').filter({ has: page.getByRole('heading', { name: 'Mesa 4', exact: true }) });
+            await expect(tableCard).toHaveCount(1);
+            await expect.poll(() => tableCard.evaluate(card => {
+              const pill = document.querySelector('.alumno-fcw__fab')!.getBoundingClientRect();
+              return [card, ...Array.from(card.querySelectorAll('a[href], button, input, select, textarea, [role="button"], [role="link"], [tabindex], [contenteditable="true"]'))].filter(el => {
+                const r = el.getBoundingClientRect();
+                return r.width > 0 && r.height > 0 && r.left < pill.right && r.right > pill.left && r.top < pill.bottom && r.bottom > pill.top;
+              }).map(el => `${el.tagName}.${el.className}`);
+            })).toEqual([]);
+          }
           await expect.poll(() => page.evaluate(() => {
             const pill = document.querySelector('.alumno-fcw__fab')!.getBoundingClientRect();
             return Array.from(document.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [role="button"], nav')).filter(el => {

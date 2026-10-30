@@ -90,7 +90,8 @@ describe('FloatingCallWaiter', () => {
   it('muestra el pill arriba y lo colapsa al bajar, expandiéndolo al volver', async () => {
     Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 1600 });
     await mount();
-    expect(screen.getByText('Llamar al mesero').className).toBe('alumno-fcw__label');
+    expect(screen.getByText('Llamar al mesero').className).toContain('alumno-fcw__label--full');
+    expect(screen.getByText('Mesero').getAttribute('aria-hidden')).toBe('true');
     expect(screen.getByTestId('floating-call').className).not.toContain('is-collapsed');
     window.scrollY = 9;
     fireEvent.scroll(window);
@@ -100,6 +101,16 @@ describe('FloatingCallWaiter', () => {
     fireEvent.scroll(window);
     expect(screen.getByTestId('floating-call').className).not.toContain('is-collapsed');
     expect(screen.getByTestId('floating-call').style.right).toContain('12px');
+  });
+
+  it.each(['/e/demo/carrito', '/e/demo/carrito/'])('permanece colapsada en %s incluso arriba', async (path) => {
+    await mount(path);
+    expect(screen.getByTestId('floating-call').className).toContain('is-collapsed');
+    window.scrollY = 300;
+    fireEvent.scroll(window);
+    window.scrollY = 0;
+    fireEvent.scroll(window);
+    expect(screen.getByTestId('floating-call').className).toContain('is-collapsed');
   });
 
   it.each([undefined, 'qr-demo'])('ofrece unirse a la mesa en un 403, con QR %s', async (qrToken) => {
@@ -276,8 +287,10 @@ describe('FloatingCallWaiter', () => {
     await mount('/e/demo', api);
     fireEvent.click(screen.getByRole('button', { name: 'Llamar al mesero' }));
     const option = screen.getByRole('button', { name: 'Necesito algo' });
-    fireEvent.click(option);
-    fireEvent.click(option);
+    act(() => {
+      fireEvent.click(option);
+      fireEvent.click(option);
+    });
     expect(send).toHaveBeenCalledTimes(1);
   });
 });

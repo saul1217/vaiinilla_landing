@@ -7896,12 +7896,17 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 
 .alumno-fcw__fab svg { flex-shrink: 0; }
 .alumno-fcw__label {
-  text-overflow: ellipsis;
-  max-width: 120px;
+  flex-shrink: 0;
+  max-width: 180px;
   margin-left: 8px;
   overflow: hidden;
   white-space: nowrap;
   transition: max-width 240ms ease, margin-left 240ms ease, opacity 240ms ease;
+}
+.alumno-fcw__label--short { display: none; }
+@media (max-width: 359px) {
+  .alumno-fcw__label--short { display: inline; }
+  .alumno-fcw__label--full { display: none; }
 }
 .alumno-fcw.is-collapsed .alumno-fcw__label {
   max-width: 0;
@@ -8005,6 +8010,6 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 }
 
 @media (max-width: 767px) {
-  .alumno-fcw__fab { max-width: 40vw; padding-inline: 10px; }
-  .alumno-fcw__label { min-width: 0; }
+  .alumno-fcw__fab { max-width: 40vw; padding-inline: 8px; }
+  .alumno-fcw__label { font-size: 12px; margin-left: 6px; }
 }
