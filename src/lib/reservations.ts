@@ -294,14 +294,21 @@ function dateOnly(date: string): number {
   return Date.UTC(y, m - 1, d, 12);
 }
 
-/** "Hoy", "Mañana" o "vie 3 oct". */
-export function dayChipLabel(date: string, today: string): string {
-  if (date === today) return 'Hoy';
-  if (date === addDays(today, 1)) return 'Mañana';
+/** "vie 3 oct", sin puntos ni espacios sobrantes. */
+function shortDate(date: string): string {
   return new Intl.DateTimeFormat('es-MX', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' })
     .format(dateOnly(date))
     .replace(/\./g, '')
-    .replace(' de ', ' ');
+    .replace(/\sde\s/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** "Hoy · jue 22 oct", "Mañana · vie 23 oct" o "sáb 24 oct". */
+export function dayChipLabel(date: string, today: string): string {
+  if (date === today) return `Hoy · ${shortDate(date)}`;
+  if (date === addDays(today, 1)) return `Mañana · ${shortDate(date)}`;
+  return shortDate(date);
 }
 
 /** "Hoy", "Mañana" o "viernes 3 de octubre". */

@@ -73,7 +73,11 @@ export function CartPage() {
   const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
   const menuPeek = useMemo(() => peekCatalogProducts(catalogProducts), [catalogProducts]);
   const [spaceVersion, setSpaceVersion] = useState(0);
-  const scanned = useMemo(() => readSpace(slug), [slug, spaceVersion]);
+  const scanned = useMemo(() => {
+    // Re-read storage only when the slug changes or a space action invalidates it.
+    void spaceVersion;
+    return readSpace(slug);
+  }, [slug, spaceVersion]);
   // Sin QR escaneado, una renta en curso en este negocio hace de mesa: la comida va a la cancha.
   const [rentalSpace, setRentalSpace] = useState<SpaceSession | null>(null);
   const space = scanned ?? rentalSpace;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isFirebaseConfigReady, parseAppEnvironment, resolveApiUrl, verificationReturnUrl, walletQrUrl } from './env';
+import { isFirebaseConfigReady, parseAppEnvironment, resolveApiUrl, resolveStaffAppUrl, verificationReturnUrl, walletQrUrl } from './env';
 
 describe('env', () => {
   it('toma el API de VITE_API_URL sin la diagonal final', () => {
@@ -34,7 +34,21 @@ describe('env', () => {
     expect(verificationReturnUrl('  ', 'https://vaiinilla.app')).toBe('https://vaiinilla.app/cuenta');
   });
 
+  it('continue_url sale de VITE_APP_URL por ambiente y nunca es el panel', () => {
+    expect(verificationReturnUrl('https://sand-user.vaiinilla.app', 'http://localhost:5173')).toBe(
+      'https://sand-user.vaiinilla.app/cuenta',
+    );
+    expect(verificationReturnUrl('https://vaiinilla.app', 'http://localhost:5173')).toBe('https://vaiinilla.app/cuenta');
+    expect(verificationReturnUrl(undefined, 'https://vaiinilla.app')).not.toContain('dev.vaiinilla.app');
+  });
+
   it('codifica el QR de recarga en el dominio público', () => {
-    expect(walletQrUrl(' u-42 ')).toBe('https://vaiinilla.app/u/u-42');
+    expect(walletQrUrl(' u-42 ', 'https://sand-user.test/', 'https://otro.test')).toBe('https://sand-user.test/u/u-42');
+    expect(walletQrUrl('u-1', undefined, 'https://sand-user.test')).toBe('https://sand-user.test/u/u-1');
+  });
+
+  it('el panel del equipo sale de VITE_STAFF_APP_URL y falla si falta', () => {
+    expect(resolveStaffAppUrl(' https://panel.test/ ')).toBe('https://panel.test');
+    expect(() => resolveStaffAppUrl(undefined)).toThrow(/VITE_STAFF_APP_URL/);
   });
 });

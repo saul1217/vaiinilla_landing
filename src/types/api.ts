@@ -1,3 +1,5 @@
+import { resolveStaffAppUrl } from '../lib/env';
+
 export type OrderStatus =
   | 'por_cobrar'
   | 'cobrado'
@@ -371,7 +373,7 @@ export interface CartLine {
   imageUrl: string | null;
 }
 
-export const STAFF_APP_URL = 'https://app.vaiinilla.app';
+export const STAFF_APP_URL = resolveStaffAppUrl(import.meta.env.VITE_STAFF_APP_URL);
 export const ESTABLISHMENT_CLOSED_MESSAGE =
   'El establecimiento no está abierto en este momento. Verifica que esté abierto y desliza hacia abajo para actualizar.';
 

@@ -1,9 +1,11 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { FloatingCallWaiter } from '../components/floating-call-waiter';
 import { TrackingPage } from '../pages/tracking-page';
 import { AccountPage } from '../pages/account-page';
 import { CartPage } from '../pages/cart-page';
 import { ReservationsPage } from '../pages/reservations-page';
 import { DiscoveryPage } from '../pages/discovery-page';
+import { EmailVerificationPage, PasswordResetPage } from '../pages/email-action-page';
 import { HomePage } from '../pages/home-page';
 import { MenuPage } from '../pages/menu-page';
 import { NotFoundPage } from '../pages/not-found-page';
@@ -27,6 +29,14 @@ import {
 export function AppRouter() {
   return (
     <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
+  );
+}
+
+export function AppRoutes() {
+  return (
+    <>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/soporte" element={<SupportPage />} />
@@ -40,7 +50,11 @@ export function AppRouter() {
         <Route path="/:slug/m/:token/quien" element={<TableWhoPage />} />
         <Route path="/seguimiento/:token" element={<TrackingPage />} />
         <Route path="/cuenta" element={<AccountPage />} />
+        <Route path="/acceso" element={<Navigate to="/cuenta" replace />} />
+        <Route path="/acceso/verificar" element={<EmailVerificationPage />} />
+        <Route path="/acceso/recuperar" element={<PasswordResetPage />} />
         <Route path="/cuenta/pedidos" element={<OrdersPage />} />
+        <Route path="/cuenta/reservas" element={<Navigate to="/cuenta/pedidos" replace />} />
         <Route path="/cuenta/pedidos/:id" element={<OrderDetailPage />} />
         <Route path="/cuenta/saldo" element={<WalletPage />} />
         <Route path="/u/:id" element={<WalletQrPage />} />
@@ -59,6 +73,7 @@ export function AppRouter() {
         <Route path="/cafeterias" element={<Navigate to="/pedir" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
-    </BrowserRouter>
+      <FloatingCallWaiter />
+    </>
   );
 }

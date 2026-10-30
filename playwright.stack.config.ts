@@ -31,6 +31,7 @@ export default defineConfig({
     env: {
       E2E_API_ORIGIN: apiOrigin,
       VITE_APP_ENV: 'development',
+      VITE_APP_URL: 'https://sand-user.vaiinilla.app',
       VITE_API_URL: '/api/v1',
       VITE_FIREBASE_API_KEY: 'e2e-fake-api-key',
       VITE_FIREBASE_AUTH_DOMAIN: 'localhost',

@@ -3657,11 +3657,15 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     position: sticky;
     top: 28px;
     min-height: 0;
-    height: 100%;
+    /* Se ajusta al contenido (sin hueco vacío) y solo hace scroll si no cabe. */
+    align-self: start;
+    height: auto;
+    max-height: calc(100dvh - 56px);
+    overflow-y: auto;
   }
 
   .alumno-orders-desk__detail .alumno-track-card {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-height: 0;
     height: auto;
     display: flex;
@@ -7439,6 +7443,8 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
    Usa la tarjeta de pedido (alumno-track-card), alumno-chip, alumno-section-label y
    alumno-ticket-items. Aquí solo lo que esas piezas necesitan sobre fondo oscuro. */
 .shared-table { cursor: default; display: grid; gap: 6px; padding-bottom: 18px; }
+/* Margen al pie para que el botón flotante de la campana no tape el texto de la tarjeta. */
+.shared-table { margin-bottom: 72px; }
 .shared-table .alumno-chips { margin-bottom: 6px; padding-bottom: 0; }
 .shared-table .alumno-chip { background: transparent; color: #f4f1e7; border-color: rgba(244, 241, 231, 0.18); min-height: 34px; padding: 6px 12px; }
 .shared-table .alumno-chip.is-on { background: var(--lime); color: var(--ink); border-color: var(--lime); }
@@ -7844,4 +7850,136 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   margin: 0;
   font-size: 0.85rem;
   color: var(--alumno-muted, #8a8a8a);
+}
+
+/* ---------- Buyer: floating "Llamar al mesero" ---------- */
+.alumno-fcw {
+  --fcw-reserve: calc(84px + env(safe-area-inset-bottom, 0px));
+  --fcw-min: calc(12px + env(safe-area-inset-top, 0px));
+  position: fixed;
+  z-index: 25;
+  width: 56px;
+  height: 56px;
+  /* Dentro de la pantalla y nunca encima de la barra inferior ni del botón de pagar. */
+  top: clamp(var(--fcw-min), var(--fcw-y, 0px), calc(100dvh - var(--fcw-reserve) - 56px));
+  transition: left 240ms cubic-bezier(0.16, 1, 0.3, 1), top 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.alumno-fcw.is-cart {
+  --fcw-reserve: calc(160px + env(safe-area-inset-bottom, 0px));
+}
+
+.alumno-fcw.is-dragging {
+  transition: none;
+}
+
+.alumno-fcw__fab {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 8px 22px rgba(23, 24, 23, 0.18);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.alumno-fcw.is-dragging .alumno-fcw__fab {
+  cursor: grabbing;
+  transform: scale(1.06);
+}
+
+.alumno-fcw__fab:focus-visible {
+  outline: 3px solid var(--lime);
+  outline-offset: 2px;
+}
+
+.alumno-fcw.is-calling .alumno-fcw__fab {
+  background: var(--danger-fill);
+  border-color: transparent;
+  color: #fff;
+  animation: callwaiter-ring 1.4s ease-in-out infinite;
+}
+
+.alumno-fcw.is-going .alumno-fcw__fab {
+  background: var(--lime);
+  border-color: transparent;
+  color: #171817;
+}
+
+.alumno-fcw__panel {
+  position: absolute;
+  width: min(280px, calc(100vw - 24px));
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(23, 24, 23, 0.2);
+}
+
+.alumno-fcw__panel[hidden] {
+  display: none;
+}
+
+.alumno-fcw.is-left .alumno-fcw__panel {
+  left: 0;
+}
+
+.alumno-fcw.is-right .alumno-fcw__panel {
+  right: 0;
+}
+
+.alumno-fcw.is-up .alumno-fcw__panel {
+  bottom: 64px;
+}
+
+.alumno-fcw.is-down .alumno-fcw__panel {
+  top: 64px;
+}
+
+.alumno-fcw__live {
+  display: grid;
+  gap: 4px;
+}
+
+.alumno-fcw__live span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+@media (min-width: 768px) {
+  .alumno-fcw,
+  .alumno-fcw.is-cart {
+    --fcw-reserve: 16px;
+    --fcw-min: 72px;
+  }
+}
+
+/* Con la barra lateral fija, la orilla izquierda empieza después de ella. */
+@media (min-width: 1024px) {
+  .alumno-fcw {
+    --fcw-inset-left: 232px;
+  }
+}
+
+/* Margen al pie para que la campana flotante no tape el último texto de pedidos y seguimiento. */
+.alumno-orders-desk__list,
+.alumno-timeline {
+  padding-bottom: 72px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alumno-fcw {
+    transition: none;
+  }
+  .alumno-fcw.is-calling .alumno-fcw__fab {
+    animation: none;
+  }
 }

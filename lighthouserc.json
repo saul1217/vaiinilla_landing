@@ -1,7 +1,7 @@
 {
   "ci": {
     "collect": {
-      "url": ["/pedir", "/e/ci-canchas/canchas", "/e/ci-tienda"],
+      "url": ["/pedir", "/e/ci-vaiinilla/canchas", "/e/ci-vaiinilla"],
       "numberOfRuns": 3,
       "settings": { "preset": "desktop", "throttlingMethod": "simulate" }
     },

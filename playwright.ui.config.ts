@@ -18,7 +18,7 @@ export default defineConfig({
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   snapshotPathTemplate: '{testDir}/__screenshots__/{testFilePath}/{arg}{ext}',
   expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.01, animations: 'disabled', caret: 'hide' } },
-  use: { baseURL, locale: 'es-MX', timezoneId: 'America/Mexico_City', trace: 'on-first-retry' },
+  use: { baseURL, locale: 'es-MX', timezoneId: 'America/Mexico_City', trace: 'off' },
   webServer: external
     ? undefined
     : { command: 'node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4173', url: baseURL, reuseExistingServer: !process.env.CI },

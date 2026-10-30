@@ -29,6 +29,17 @@ export function tablePersonKey(
   return typeof id === 'string' && id ? id : `sin-id-${index}`;
 }
 
+/**
+ * Cuántos hay en la mesa. "Solo tú" solo si nadie más tiene pedidos: los de quien
+ * no se unió también son de otros.
+ */
+export function tableHeadcountLabel(table: SharedTable): string {
+  const people = table.participantes.length;
+  if (people > 1) return `${people} personas`;
+  const othersOrdering = table.grupos.some((group) => !group.soy_yo && group.pedidos.length > 0);
+  return othersOrdering ? 'Tú y pedidos de otros' : 'Solo tú';
+}
+
 /** Tu alias en la mesa: el del participante cuando existe. */
 export function myTableAlias(table: SharedTable): string {
   return table.mi_participante?.alias ?? table.mi_alias;

@@ -1,7 +1,12 @@
 import { expect, test } from '@playwright/test';
+import { loadEnv } from 'vite';
 import { assertCiStoreSeeded, CI_MENU_URL, CI_PLACE_NAME, CI_PLACE_NAME_RE } from './ci-store';
 
+// Mismo VITE_STAFF_APP_URL que usa el servidor de Vite del e2e (modo development): .env.development o variable de CI.
+const STAFF_APP_URL = loadEnv('development', process.cwd(), 'VITE_').VITE_STAFF_APP_URL;
+
 test('la landing de marketing conserva soporte y manda a pedir, no al panel', async ({ page }) => {
+  expect(STAFF_APP_URL, 'falta VITE_STAFF_APP_URL en el ambiente del e2e').toBeTruthy();
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /pide sin fila/i })).toBeVisible();
   await expect(page.getByRole('link', { name: /^pedir$/i }).first()).toHaveAttribute('href', '/pedir');
@@ -11,7 +16,7 @@ test('la landing de marketing conserva soporte y manda a pedir, no al panel', as
   );
   await expect(page.getByRole('link', { name: /soy establecimiento/i }).first()).toHaveAttribute(
     'href',
-    'https://app.vaiinilla.app',
+    STAFF_APP_URL,
   );
   // En móvil las insignias de la barra se ocultan (marketing.css, .nav__actions .store-badges): se comprueba una visible.
   await expect(page.getByText(/próximamente/i).filter({ visible: true }).first()).toBeVisible();

@@ -36,14 +36,37 @@ export function isFirebaseConfigReady(config: FirebaseClientConfig): boolean {
  * Landing a la que regresa el enlace del correo de verificación: VITE_APP_URL si el ambiente la
  * define; si no, el origen desde el que se abrió la landing (develop → sand-user, prod → vaiinilla.app).
  */
+/** La landing solo existe en español (<html lang="es">): el correo de verificación va en ese idioma. */
+export const VERIFICATION_EMAIL_LANGUAGE = 'es';
+
 export function verificationReturnUrl(
   envUrl: string | undefined = import.meta.env.VITE_APP_URL,
   origin: string = window.location.origin,
 ): string {
-  const base = (envUrl?.trim() || origin).replace(/\/$/, '');
-  return `${base}/cuenta`;
+  return `${publicBaseUrl(envUrl, origin)}/cuenta`;
 }
 
-export function walletQrUrl(userId: string): string {
-  return `https://vaiinilla.app/u/${userId.trim()}`;
+/** Landing pública del ambiente: VITE_APP_URL o el origen actual, sin diagonal final. */
+export function publicBaseUrl(
+  envUrl: string | undefined = import.meta.env.VITE_APP_URL,
+  origin: string = window.location.origin,
+): string {
+  return (envUrl?.trim() || origin).replace(/\/$/, '');
+}
+
+/** Panel del equipo del ambiente (VITE_STAFF_APP_URL): develop no debe apuntar al de producción. */
+export function resolveStaffAppUrl(envUrl: string | undefined): string {
+  const url = envUrl?.trim().replace(/\/$/, '');
+  if (!url) {
+    throw new Error('Falta VITE_STAFF_APP_URL: configúrala en .env.development o en Vercel.');
+  }
+  return url;
+}
+
+export function walletQrUrl(
+  userId: string,
+  envUrl: string | undefined = import.meta.env.VITE_APP_URL,
+  origin: string = window.location.origin,
+): string {
+  return `${publicBaseUrl(envUrl, origin)}/u/${userId.trim()}`;
 }

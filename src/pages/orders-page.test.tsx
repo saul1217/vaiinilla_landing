@@ -322,4 +322,11 @@ describe("OrdersPage", () => {
     expect(screen.queryByText(/cargando pedidos/i)).not.toBeInTheDocument();
     expect(screen.getAllByText(/#\d+/).length).toBeGreaterThan(0);
   });
+
+  it("abre arriba del todo: scroll en 0", () => {
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    renderOrders();
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
+    scrollTo.mockRestore();
+  });
 });

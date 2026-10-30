@@ -5,7 +5,7 @@ Capturas comparadas, axe, pruebas de teclado y Lighthouse CI para `/pedir`, men�
 ## Cómo corre
 
 - Contra el preview de Vercel del mismo commit y la API de develop: `E2E_BASE_URL=<preview> npm run test:ui`.
-- Datos del establecimiento de CI sembrados con `/dev/test-setup` (horarios, productos y fotos fijos, sin edición manual). Slugs por defecto `ci-tienda` y `ci-canchas`; se cambian con `E2E_UI_SHOP_SLUG` y `E2E_UI_COURTS_SLUG`. «Mis pedidos» y «Mis reservas» usan `E2E_CLIENTE_EMAIL` y `E2E_PASSWORD`.
+- Datos del establecimiento de CI sembrados con `/dev/test-setup` (horarios, productos y fotos fijos, sin edición manual). Slugs por defecto `ci-vaiinilla` (la tienda de CI de develop, la misma de `e2e/`, o `E2E_PLACE_SLUG`); se cambian con `E2E_UI_SHOP_SLUG` y `E2E_UI_COURTS_SLUG`. «Mis pedidos» y «Mis reservas» usan `E2E_CLIENTE_EMAIL` y `E2E_PASSWORD`.
 - Lighthouse CI: `npm run lhci` con `lighthouserc.json` (umbrales de performance, accesibilidad y buenas prácticas en `/pedir`, canchas y menú). Se ejecuta con el preview como `--collect.url` absoluto.
 
 ## Estabilidad

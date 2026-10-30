@@ -20,9 +20,7 @@ import type { OrderDetail } from '../types/api';
 import { useHeightMorph } from '../lib/use-height-morph';
 import { ArrivalButton } from './arrival-button';
 import type { ArrivalClient } from '../lib/arrival-api';
-import { CallWaiter } from './call-waiter';
 import { OrderPickupPanel } from './order-pickup-panel';
-import type { BuyerCallClient } from '../lib/mesero-api';
 
 export function OrderTrackCard({
   order,
@@ -33,9 +31,7 @@ export function OrderTrackCard({
   selected = false,
   imageUrl = null,
   pickupToken = null,
-  callClient,
   arrivalClient,
-  callWaiter = true,
 }: {
   order: OrderDetail;
   expanded: boolean;
@@ -45,11 +41,7 @@ export function OrderTrackCard({
   selected?: boolean;
   imageUrl?: string | null;
   pickupToken?: string | null;
-  /** Injected in QA; otherwise built from the stored client context. */
-  callClient?: BuyerCallClient;
   arrivalClient?: ArrivalClient;
-  /** En escritorio el pedido seleccionado se ve también en el detalle: ahí vive el botón. */
-  callWaiter?: boolean;
 }) {
   const rental = Boolean(order.reserva);
   const holdTicking = rentalHoldRemainingMs(order) !== null;
@@ -202,9 +194,6 @@ export function OrderTrackCard({
       {orderRejectedItemsHint(order) ? (
         <p className="alumno-track-card__status alumno-track-card__rejected">{orderRejectedItemsHint(order)}</p>
       ) : null}
-      {/* Fuera del seguimiento: se llama al mesero sin abrir la tarjeta, y el botón no
-          se vuelve a montar (ni a consultar) cada vez que se abre o se cierra. */}
-      {active && callWaiter ? <CallWaiter order={order} client={callClient} /> : null}
       {expanded ? (
         <div className="alumno-track-card__follow" data-morph-in>
           <OrderPickupPanel

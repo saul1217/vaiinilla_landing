@@ -1,0 +1,7 @@
+# Excepciones de OSV-Scanner (QA-051). Se detecta solo junto a package-lock.json.
+# Revisar antes del vencimiento: si sale una versión corregida, quitar la excepción.
+
+[[IgnoredVulns]]
+id = "GHSA-gcqx-w48m-w2h4"
+ignoreUntil = 2026-12-26T00:00:00Z
+reason = "deepmerge 4.3.1 (prototype poisoning en mergeObject, 5.3) llega solo como transitiva de build: vite-plugin-pwa > workbox-build > @rollup/plugin-node-resolve@16.0.3 (^4.2.2, última versión y aún lo usa). No existe versión corregida y no entra al bundle de producción."

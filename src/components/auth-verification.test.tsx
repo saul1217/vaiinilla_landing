@@ -112,6 +112,23 @@ describe('verificación de correo al crear cuenta', () => {
     expect(mocks.registerIdentity).not.toHaveBeenCalled();
   });
 
+  it('correo ya registrado: vuelve al paso del correo con opciones y sin texto de Firebase (QA-053)', async () => {
+    mocks.createPasswordAccount.mockRejectedValue(
+      Object.assign(new Error('Firebase: Error (auth/email-already-in-use).'), {
+        code: 'auth/email-already-in-use',
+      }),
+    );
+    const user = userEvent.setup();
+    renderAuth();
+    await signup(user);
+
+    expect(await screen.findByText(/Este correo ya tiene una cuenta/)).toBeInTheDocument();
+    expect(screen.queryByText(/Firebase/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Correo')).toHaveValue('nuevo@example.test');
+    expect(screen.getByRole('button', { name: 'Iniciar sesión' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Recuperar contraseña' })).toBeInTheDocument();
+  });
+
   it('si el envío falla, muestra la pantalla y deja reenviar', async () => {
     mocks.sendVerificationEmail.mockRejectedValueOnce(new Error('Resend caído'));
     const user = userEvent.setup();

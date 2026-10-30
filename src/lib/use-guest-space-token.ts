@@ -10,6 +10,8 @@ const RENEW_MS = 10 * 60 * 1000;
 
 export interface GuestSpaceToken {
   token: string | null;
+  /** Aún se renueva la sesión del invitado: no se sabe si ya está en una mesa. */
+  pending: boolean;
   /** Sesión fresca con este nombre (renueva o da de alta con la llave). */
   ensure: (alias?: string) => Promise<string>;
 }
@@ -18,6 +20,7 @@ export interface GuestSpaceToken {
 export function useGuestSpaceToken(slug: string | null): GuestSpaceToken {
   const { user, ready } = useAuth();
   const [token, setToken] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   const ensure = useCallback(
     async (alias?: string): Promise<string> => {
@@ -35,12 +38,13 @@ export function useGuestSpaceToken(slug: string | null): GuestSpaceToken {
     if (!ready || user || !slug) return;
     if (!readGuest()) return;
     // Al entrar (y al volver otro día) la sesión se renueva sola con la llave.
-    void ensure().catch(() => undefined);
+    void ensure().catch(() => setFailed(true));
     const timer = window.setInterval(() => {
       if (document.visibilityState === 'visible') void ensure().catch(() => undefined);
     }, RENEW_MS);
     return () => window.clearInterval(timer);
   }, [ensure, ready, slug, user]);
 
-  return { token, ensure };
+  const pending = !token && !failed && ready && !user && !!slug && !!readGuest();
+  return { token, pending, ensure };
 }

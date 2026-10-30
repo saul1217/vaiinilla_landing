@@ -16,8 +16,8 @@ function loadEnv(): Record<string, string> {
 export const env = { ...loadEnv(), ...process.env };
 
 // Datos sembrados en CI con `/dev/test-setup`; nunca se editan a mano.
-export const SHOP_SLUG = env.E2E_UI_SHOP_SLUG ?? 'ci-tienda';
-export const COURTS_SLUG = env.E2E_UI_COURTS_SLUG ?? 'ci-canchas';
+export const SHOP_SLUG = env.E2E_UI_SHOP_SLUG ?? env.E2E_PLACE_SLUG ?? 'ci-vaiinilla';
+export const COURTS_SLUG = env.E2E_UI_COURTS_SLUG ?? env.E2E_PLACE_SLUG ?? 'ci-vaiinilla';
 export const FROZEN_NOW = new Date('2026-10-20T15:00:00.000Z');
 export const THEMES = ['light', 'dark'] as const;
 export const VIEWPORTS = [
@@ -53,10 +53,10 @@ type ApiProblem = { status: number; url: string };
 
 export const test = base.extend<{ prepared: Page; apiProblems: ApiProblem[] }>({
   // eslint-disable-next-line no-empty-pattern
-  apiProblems: async ({}, use) => {
-    await use([]);
+  apiProblems: async ({}, provide) => {
+    await provide([]);
   },
-  prepared: async ({ page, apiProblems }, use) => {
+  prepared: async ({ page, apiProblems }, provide) => {
     await page.clock.install({ time: FROZEN_NOW });
     await page.clock.setFixedTime(FROZEN_NOW);
     page.on('response', (response) => {
@@ -67,7 +67,7 @@ export const test = base.extend<{ prepared: Page; apiProblems: ApiProblem[] }>({
     page.on('requestfailed', (request) => {
       if (request.url().includes('/api/v1/')) apiProblems.push({ status: 0, url: request.url() });
     });
-    await use(page);
+    await provide(page);
   },
 });
 
@@ -111,10 +111,27 @@ export async function signIn(page: Page) {
     test.skip(true, 'BLOQUEADA: falta la cuenta cliente de CI (E2E_CLIENTE_EMAIL / E2E_PASSWORD).');
   }
   await page.goto('/cuenta');
+  // Sin sesión, /cuenta abre primero la portada; el formulario aparece tras «Iniciar sesión».
+  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
   await page.getByLabel(/correo/i).first().fill(env.E2E_CLIENTE_EMAIL!);
   await page.getByLabel(/contraseña/i).first().fill(env.E2E_PASSWORD!);
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();
-  await page.getByRole('heading', { name: 'Inicia sesión' }).waitFor({ state: 'hidden', timeout: 45_000 });
+  const heading = page.getByRole('heading', { name: 'Inicia sesión' });
+  const alert = page.getByRole('alert').first();
+  const outcome = await Promise.race([
+    heading.waitFor({ state: 'hidden', timeout: 45_000 }).then(() => 'ok' as const),
+    alert.waitFor({ state: 'visible', timeout: 45_000 }).then(() => 'alert' as const),
+  ]);
+  if (outcome === 'ok') return;
+  const message = (await alert.innerText()).trim();
+  // Que la contraseña no quede en el snapshot de la página que guarda el reporte.
+  await page.getByLabel(/contraseña/i).first().fill('');
+  // Un rechazo de configuración de Firebase (referer/dominio no autorizado) no es una regresión de la interfaz.
+  test.skip(
+    /no está autorizado|referer|requests-from|unauthorized-domain|api-key|app-not-authorized/i.test(message),
+    `BLOQUEADA por configuración de Firebase en develop-e2e: ${message}`,
+  );
+  throw new Error(`Inicio de sesión rechazado: ${message}`);
 }
 
 export const SCREENS = [
