@@ -176,9 +176,13 @@ describe('TableWhoPage', () => {
     await screen.findByRole('button', { name: 'Anterior' });
     for (const name of ['Ocupado', 'Sin id', 'Con id']) {
       const button = screen.getByRole('button', { name: `${name} · En uso en otro teléfono` });
-      expect(button).toBeDisabled();
+      expect(button).toBeEnabled();
+      expect(button).toHaveAttribute('aria-disabled', 'true');
+      button.focus();
+      expect(button).toHaveFocus();
       fireEvent.click(button);
     }
+    expect(screen.getByText('Los nombres marcados como en uso están abiertos en otro teléfono. Únete con otro nombre.')).toBeInTheDocument();
     expect(joinTable).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Libre' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Anterior' })).toBeEnabled();
@@ -192,9 +196,10 @@ describe('TableWhoPage', () => {
     const user = userEvent.setup();
     renderWho();
     await user.click(await screen.findByRole('button', { name: 'David' }));
-    expect(await screen.findByText('Este nombre está en uso en otro teléfono. Pide al mesero que lo libere.')).toBeInTheDocument();
+    expect(await screen.findByText('Este nombre ya se está usando en otro teléfono. Únete con otro nombre.')).toBeInTheDocument();
     expect(tableSession).toHaveBeenCalledTimes(2);
-    expect(screen.getByRole('button', { name: 'David · En uso en otro teléfono' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'David · En uso en otro teléfono' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('alert')).toHaveFocus();
     expect(joinTable).toHaveBeenCalledTimes(1);
   });
 
@@ -230,10 +235,36 @@ describe('TableWhoPage', () => {
       await Promise.resolve();
     });
     await act(async () => vi.advanceTimersByTimeAsync(1000));
-    expect(screen.getByText('No fue posible completar la operación. Inténtalo de nuevo en un momento.')).toBeInTheDocument();
+    expect(screen.getByText('No pudimos unirte a la mesa. Inténtalo de nuevo en unos segundos.')).toBeInTheDocument();
     expect(button).toBeEnabled();
     await act(async () => vi.advanceTimersByTimeAsync(10000));
     expect(joinTable).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['PARTICIPANT_NAME_TAKEN', 'PARTICIPANT_TAKEN'])('503 seguido de 409 %s conserva el conflicto', async (code) => {
+    tableSession.mockResolvedValue(session());
+    const message = code === 'PARTICIPANT_TAKEN'
+      ? 'Este nombre ya se está usando en otro teléfono. Únete con otro nombre.'
+      : 'Agrega tu apellido para distinguir tu nombre.';
+    joinTable.mockRejectedValueOnce(new VaiinillaApiError(503, { code: 'RETRY', message: 'retry' }))
+      .mockRejectedValueOnce(new VaiinillaApiError(409, { code, message }));
+    renderWho();
+    fireEvent.click(await screen.findByRole('button', { name: /agregarme a la mesa/i }));
+    fireEvent.change(screen.getByLabelText('Tu nombre'), { target: { value: 'David' } });
+    vi.useFakeTimers();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+      await Promise.resolve();
+    });
+    await act(async () => vi.advanceTimersByTimeAsync(1000));
+    expect(screen.getByRole('alert')).toHaveTextContent(message);
+    expect(joinTable).toHaveBeenCalledTimes(2);
+    if (code === 'PARTICIPANT_TAKEN') {
+      expect(tableSession).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole('alert')).toHaveFocus();
+    } else {
+      expect(screen.getByLabelText('Tu nombre')).toHaveValue('David');
+    }
   });
 
   it('agregarme crea el participante con su alias y lo guarda', async () => {
@@ -267,7 +298,7 @@ describe('TableWhoPage', () => {
     await user.click(await screen.findByRole('button', { name: /agregarme a la mesa/i }));
     await user.type(screen.getByLabelText('Tu nombre'), 'David');
     await user.click(screen.getByRole('button', { name: /^entrar$/i }));
-    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(message);
     // El texto sigue para agregar el apellido.
     expect(screen.getByLabelText('Tu nombre')).toHaveValue('David');
     expect(screen.getByText(/david r\. o david ramírez/i)).toBeInTheDocument();

@@ -49,6 +49,15 @@ export function TableWhoPage() {
   const [alias, setAlias] = useState('');
   const [busy, setBusy] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const joinErrorRef = useRef<HTMLParagraphElement>(null);
+  const focusJoinError = useRef(false);
+
+  useEffect(() => {
+    if (!loading && joinError && focusJoinError.current && joinErrorRef.current) {
+      joinErrorRef.current.focus();
+      focusJoinError.current = false;
+    }
+  }, [joinError, loading]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -126,7 +135,8 @@ export function TableWhoPage() {
       finishWith(table);
     } catch (cause) {
       if (cause instanceof VaiinillaApiError && cause.status === 409 && cause.code === 'PARTICIPANT_TAKEN') {
-        setJoinError('Este nombre está en uso en otro teléfono. Pide al mesero que lo libere.');
+        focusJoinError.current = true;
+        setJoinError('Este nombre ya se está usando en otro teléfono. Únete con otro nombre.');
         await load();
         setShowList(true);
         return;
@@ -134,7 +144,7 @@ export function TableWhoPage() {
       const taken = isNameTaken(cause);
       // 409 con el nombre repetido: se muestra el mensaje del servidor tal cual y
       // se deja el texto escrito para agregar el apellido.
-      setJoinError(retried ? 'No fue posible completar la operación. Inténtalo de nuevo en un momento.' : taken ?? errorMessage(cause));
+      setJoinError(taken ?? (retried ? 'No pudimos unirte a la mesa. Inténtalo de nuevo en unos segundos.' : errorMessage(cause)));
       if (!taken) setError(null);
     } finally {
       setBusy(false);
@@ -192,7 +202,7 @@ export function TableWhoPage() {
                 No soy {me.alias}
               </button>
             </div>
-            {joinError ? <p className="alumno-error table-who__fade">{joinError}</p> : null}
+            {joinError ? <p ref={joinErrorRef} role="alert" tabIndex={-1} className="alumno-error table-who__fade">{joinError}</p> : null}
           </>
         ) : session ? (
           <>
@@ -203,9 +213,10 @@ export function TableWhoPage() {
                     key={person.id || `sin-id-${index}`}
                     className="alumno-btn alumno-btn--ghost"
                     type="button"
-                    disabled={busy || !person.id || person.en_uso === true}
+                    disabled={busy}
+                    aria-disabled={!person.id || person.en_uso === true ? true : undefined}
                     onClick={() => {
-                      if (person.id && person.en_uso !== true) void joinAs({ participanteId: person.id });
+                      if (!busy && person.id && person.en_uso !== true) void joinAs({ participanteId: person.id });
                     }}
                   >
                     {!person.id || person.en_uso === true ? `${person.alias} · En uso en otro teléfono` : person.alias}
@@ -213,7 +224,10 @@ export function TableWhoPage() {
                 ))}
               </div>
             )}
-            {joinError && session.participantes.length > 0 && !showAdd ? <p className="alumno-error table-who__fade">{joinError}</p> : null}
+            {session.participantes.some((person) => !person.id || person.en_uso === true) ? (
+              <p className="alumno-muted">Los nombres marcados como en uso están abiertos en otro teléfono. Únete con otro nombre.</p>
+            ) : null}
+            {joinError && session.participantes.length > 0 && !showAdd ? <p ref={joinErrorRef} role="alert" tabIndex={-1} className="alumno-error table-who__fade">{joinError}</p> : null}
             {session.participantes.length === 0 || showAdd ? (
               <form className="table-who__add is-open" onSubmit={submitAlias}>
                 <div className="table-who__add-inner">
@@ -231,7 +245,7 @@ export function TableWhoPage() {
                     />
                   </label>
                   <p className="alumno-muted">Ej. David R. o David Ramírez</p>
-                  {joinError ? <p className="alumno-error table-who__fade">{joinError}</p> : null}
+                  {joinError ? <p ref={joinErrorRef} role="alert" tabIndex={-1} className="alumno-error table-who__fade">{joinError}</p> : null}
                   <button
                     className="alumno-btn alumno-btn--lime"
                     type="submit"
