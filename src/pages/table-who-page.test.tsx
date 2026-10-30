@@ -1,7 +1,7 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { VaiinillaApiError } from '../lib/api-error';
 import type { SharedTable, TableSession } from '../types/api';
 import { TableWhoPage } from './table-who-page';
@@ -87,6 +87,7 @@ function renderWho(entry = '/e/demo-a/m/qr-1/quien?next=/e/demo-a') {
 }
 
 describe('TableWhoPage', () => {
+  afterEach(() => vi.useRealTimers());
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
@@ -161,6 +162,78 @@ describe('TableWhoPage', () => {
     await user.click(await screen.findByRole('button', { name: 'David' }));
     expect(joinTable).toHaveBeenCalledWith('client-jwt', 'qr-1', { participanteId: 'p-david' });
     expect(await screen.findByText('Menú demo-a')).toBeInTheDocument();
+  });
+
+  it('deshabilita participantes sin id o en uso y permite el contrato anterior', async () => {
+    tableSession.mockResolvedValue(session({ participantes: [
+      { alias: 'Ocupado', soy_yo: false, en_uso: true },
+      { alias: 'Sin id', soy_yo: false },
+      { id: 'busy', alias: 'Con id', soy_yo: false, en_uso: true },
+      { id: 'free', alias: 'Libre', soy_yo: false, en_uso: false },
+      { id: 'old', alias: 'Anterior', soy_yo: false },
+    ] }));
+    renderWho();
+    await screen.findByRole('button', { name: 'Anterior' });
+    for (const name of ['Ocupado', 'Sin id', 'Con id']) {
+      const button = screen.getByRole('button', { name: `${name} · En uso en otro teléfono` });
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+    }
+    expect(joinTable).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Libre' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Anterior' })).toBeEnabled();
+  });
+
+  it('409 PARTICIPANT_TAKEN muestra el mensaje y recarga la lista', async () => {
+    tableSession.mockResolvedValueOnce(session()).mockResolvedValueOnce(session({ participantes: [
+      { alias: 'David', soy_yo: false, en_uso: true },
+    ] }));
+    joinTable.mockRejectedValue(new VaiinillaApiError(409, { code: 'PARTICIPANT_TAKEN', message: 'taken' }));
+    const user = userEvent.setup();
+    renderWho();
+    await user.click(await screen.findByRole('button', { name: 'David' }));
+    expect(await screen.findByText('Este nombre está en uso en otro teléfono. Pide al mesero que lo libere.')).toBeInTheDocument();
+    expect(tableSession).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('button', { name: 'David · En uso en otro teléfono' })).toBeDisabled();
+    expect(joinTable).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([2, undefined])('503 RETRY espera Retry-After (%s) y reintenta una vez', async (retryAfter) => {
+    tableSession.mockResolvedValue(session());
+    joinTable.mockRejectedValueOnce(new VaiinillaApiError(503, { code: 'RETRY', message: 'retry' }, retryAfter))
+      .mockResolvedValueOnce(joined());
+    renderWho();
+    const button = await screen.findByRole('button', { name: 'David' });
+    vi.useFakeTimers();
+    await act(async () => {
+      fireEvent.click(button);
+      await Promise.resolve();
+    });
+    expect(button).toBeDisabled();
+    const delay = (retryAfter ?? 1) * 1000;
+    await act(async () => vi.advanceTimersByTimeAsync(delay - 1));
+    expect(joinTable).toHaveBeenCalledTimes(1);
+    await act(async () => vi.advanceTimersByTimeAsync(1));
+    expect(joinTable).toHaveBeenCalledTimes(2);
+    expect(joinTable).toHaveBeenLastCalledWith('client-jwt', 'qr-1', { participanteId: 'p-david' });
+    expect(screen.getByText('Menú demo-a')).toBeInTheDocument();
+  });
+
+  it('si el reintento falla muestra un mensaje genérico sin volver a reintentar', async () => {
+    tableSession.mockResolvedValue(session());
+    joinTable.mockRejectedValue(new VaiinillaApiError(503, { code: 'RETRY', message: 'technical' }));
+    renderWho();
+    const button = await screen.findByRole('button', { name: 'David' });
+    vi.useFakeTimers();
+    await act(async () => {
+      fireEvent.click(button);
+      await Promise.resolve();
+    });
+    await act(async () => vi.advanceTimersByTimeAsync(1000));
+    expect(screen.getByText('No fue posible completar la operación. Inténtalo de nuevo en un momento.')).toBeInTheDocument();
+    expect(button).toBeEnabled();
+    await act(async () => vi.advanceTimersByTimeAsync(10000));
+    expect(joinTable).toHaveBeenCalledTimes(2);
   });
 
   it('agregarme crea el participante con su alias y lo guarda', async () => {

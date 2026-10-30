@@ -409,7 +409,8 @@ export interface SharedTableGroup extends SharedTableAmounts {
 
 /** Participante temporal de la sesión activa de una mesa. El alias es solo etiqueta visible. */
 export interface TableParticipant {
-  id: string;
+  id?: string;
+  en_uso?: boolean;
   alias: string;
   soy_yo: boolean;
 }

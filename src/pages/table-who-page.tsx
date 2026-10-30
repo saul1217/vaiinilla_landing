@@ -86,9 +86,9 @@ export function TableWhoPage() {
     session != null ? tableParticipantFor(slug, session.espacio.id, session.sesion_id) : null;
   const listedSelf =
     !session?.yo && stored
-      ? (session?.participantes.find((p) => p.id === stored.participanteId) ?? null)
+      ? (session?.participantes.find((p) => p.id === stored.participanteId && p.en_uso !== true) ?? null)
       : null;
-  const me = session?.yo ?? (listedSelf ? { id: listedSelf.id, alias: listedSelf.alias } : null);
+  const me = session?.yo ?? (listedSelf?.id ? { id: listedSelf.id, alias: listedSelf.alias } : null);
   const offerContinue = me && !showList;
 
   function finishWith(table: SharedTable) {
@@ -110,14 +110,31 @@ export function TableWhoPage() {
     if (!clientToken) return;
     setBusy(true);
     setJoinError(null);
+    let retried = false;
     try {
-      const table = await api.joinTable(clientToken, qrToken, input);
+      let table: SharedTable;
+      try {
+        table = await api.joinTable(clientToken, qrToken, input);
+      } catch (cause) {
+        if (!(cause instanceof VaiinillaApiError && cause.status === 503 && cause.code === 'RETRY')) {
+          throw cause;
+        }
+        retried = true;
+        await new Promise((resolve) => setTimeout(resolve, (cause.retryAfter ?? 1) * 1000));
+        table = await api.joinTable(clientToken, qrToken, input);
+      }
       finishWith(table);
     } catch (cause) {
+      if (cause instanceof VaiinillaApiError && cause.status === 409 && cause.code === 'PARTICIPANT_TAKEN') {
+        setJoinError('Este nombre está en uso en otro teléfono. Pide al mesero que lo libere.');
+        await load();
+        setShowList(true);
+        return;
+      }
       const taken = isNameTaken(cause);
       // 409 con el nombre repetido: se muestra el mensaje del servidor tal cual y
       // se deja el texto escrito para agregar el apellido.
-      setJoinError(taken ?? errorMessage(cause));
+      setJoinError(retried ? 'No fue posible completar la operación. Inténtalo de nuevo en un momento.' : taken ?? errorMessage(cause));
       if (!taken) setError(null);
     } finally {
       setBusy(false);
@@ -181,19 +198,22 @@ export function TableWhoPage() {
           <>
             {session.participantes.length === 0 ? null : (
               <div className="alumno-arrive table-who__stack">
-                {session.participantes.map((person) => (
+                {session.participantes.map((person, index) => (
                   <button
-                    key={person.id}
+                    key={person.id || `sin-id-${index}`}
                     className="alumno-btn alumno-btn--ghost"
                     type="button"
-                    disabled={busy}
-                    onClick={() => void joinAs({ participanteId: person.id })}
+                    disabled={busy || !person.id || person.en_uso === true}
+                    onClick={() => {
+                      if (person.id && person.en_uso !== true) void joinAs({ participanteId: person.id });
+                    }}
                   >
-                    {person.alias}
+                    {!person.id || person.en_uso === true ? `${person.alias} · En uso en otro teléfono` : person.alias}
                   </button>
                 ))}
               </div>
             )}
+            {joinError && session.participantes.length > 0 && !showAdd ? <p className="alumno-error table-who__fade">{joinError}</p> : null}
             {session.participantes.length === 0 || showAdd ? (
               <form className="table-who__add is-open" onSubmit={submitAlias}>
                 <div className="table-who__add-inner">
