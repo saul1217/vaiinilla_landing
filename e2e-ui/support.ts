@@ -53,10 +53,10 @@ type ApiProblem = { status: number; url: string };
 
 export const test = base.extend<{ prepared: Page; apiProblems: ApiProblem[] }>({
   // eslint-disable-next-line no-empty-pattern
-  apiProblems: async ({}, use) => {
-    await use([]);
+  apiProblems: async ({}, provide) => {
+    await provide([]);
   },
-  prepared: async ({ page, apiProblems }, use) => {
+  prepared: async ({ page, apiProblems }, provide) => {
     await page.clock.install({ time: FROZEN_NOW });
     await page.clock.setFixedTime(FROZEN_NOW);
     page.on('response', (response) => {
@@ -67,7 +67,7 @@ export const test = base.extend<{ prepared: Page; apiProblems: ApiProblem[] }>({
     page.on('requestfailed', (request) => {
       if (request.url().includes('/api/v1/')) apiProblems.push({ status: 0, url: request.url() });
     });
-    await use(page);
+    await provide(page);
   },
 });
 

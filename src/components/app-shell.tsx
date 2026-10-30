@@ -250,7 +250,7 @@ export function AppShell({
   useEffect(() => {
     return onUnauthorizedSession(({ pathname }) => {
       if (!pathname.startsWith('/cuenta')) {
-        navigate(`/cuenta?next=${encodeURIComponent(pathname)}`, { replace: true });
+        void navigate(`/cuenta?next=${encodeURIComponent(pathname)}`, { replace: true });
       }
     });
   }, [navigate]);

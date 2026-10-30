@@ -9,7 +9,7 @@ vi.mock('./guest-session', () => ({ guestSession: vi.fn(), forgetGuestEntry: vi.
 
 describe('entrar con un QR o NFC cuando hay límite', () => {
   beforeEach(() => {
-    vi.mocked(api.resolveSpace).mockResolvedValue({
+    vi.spyOn(api, 'resolveSpace').mockResolvedValue({
       establecimiento_slug: 'padel',
       espacio_id: 's1',
       espacio_nombre: 'Cancha 1',

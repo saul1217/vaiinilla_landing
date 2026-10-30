@@ -154,7 +154,7 @@ describe('renta en Mis pedidos', () => {
   });
 
   it('un pedido que no es renta sí conserva el aviso de Caja inactiva', () => {
-    const { reserva: _reserva, ...rest } = rental({ estado: 'por_cobrar', motivo_pendiente_operativo: 'caja_inactiva' });
+    const rest = rental({ estado: 'por_cobrar', motivo_pendiente_operativo: 'caja_inactiva' });
     expect(orderOperationalHint({ ...rest, reserva: null })).toMatch(/Caja lo procesará/);
   });
 

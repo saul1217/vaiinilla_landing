@@ -1,7 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error módulo .mjs sin tipos
 import { findProductionDomains } from '../../scripts/check-bundle-domains.mjs';
 
 function sourceFiles(dir: string): string[] {
