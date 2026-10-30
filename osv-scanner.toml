@@ -5,3 +5,8 @@
 id = "GHSA-gcqx-w48m-w2h4"
 ignoreUntil = 2026-12-26T00:00:00Z
 reason = "deepmerge 4.3.1 (prototype poisoning en mergeObject, 5.3) llega solo como transitiva de build: vite-plugin-pwa > workbox-build > @rollup/plugin-node-resolve@16.0.3 (^4.2.2, última versión y aún lo usa). No existe versión corregida y no entra al bundle de producción."
+
+[[IgnoredVulns]]
+id = "GHSA-g3hv-75wg-m249"
+ignoreUntil = 2026-12-26T00:00:00Z
+reason = "minimatch (DoS por globparts, 6.9) solo en herramientas de desarrollo: eslint@9 (minimatch 3.x, CJS default) y vite-plugin-pwa > workbox-build > ejs > jake > filelist (5.x). La versión corregida (11.x) cambia la API y rompe esos paquetes; glob y typescript-estree ya se forzaron a versiones corregidas. No entra al bundle de producción; entradas de patrones controladas por el repo."

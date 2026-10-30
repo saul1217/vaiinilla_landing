@@ -24,4 +24,15 @@ describe('dominios de producción', () => {
     );
     expect(offenders).toEqual([]);
   });
+
+  it('permite solo el respaldo diagnosticado del panel, también minificado', () => {
+    for (const fallback of [
+      `console.error('Falta VITE_STAFF_APP_URL: respaldo.');\nreturn 'https://app.vaiinilla.app'`,
+      'console.error("Falta VITE_STAFF_APP_URL: respaldo."),"https://app.vaiinilla.app"',
+    ]) {
+      expect(findProductionDomains(fallback)).toEqual([]);
+      expect(findProductionDomains(`${fallback};x="https://app.vaiinilla.app"`)).toEqual(['app.vaiinilla.app']);
+    }
+    expect(findProductionDomains('return "https://app.vaiinilla.app"')).toEqual(['app.vaiinilla.app']);
+  });
 });

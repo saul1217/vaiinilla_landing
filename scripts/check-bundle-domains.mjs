@@ -7,7 +7,13 @@ const FORBIDDEN = [/app\.vaiinilla\.app/g, /(?<![\w.-])vaiinilla\.app\/u\//g];
 const SCANNED = /\.(js|css|html|webmanifest|json)$/;
 
 export function findProductionDomains(text) {
-  return FORBIDDEN.flatMap((pattern) => text.match(pattern) ?? []);
+  // Única excepción: el respaldo del panel tras el diagnóstico de configuración.
+  // Cubre el código fuente y la expresión con coma que genera el minificador.
+  const withoutStaffFallback = text.replace(
+    /console\.error\((['"])Falta VITE_STAFF_APP_URL:[^'"]*\1\)[;,]\s*(?:return\s*)?(['"])https:\/\/app\.vaiinilla\.app\2/g,
+    '',
+  );
+  return FORBIDDEN.flatMap((pattern) => withoutStaffFallback.match(pattern) ?? []);
 }
 
 function* walk(dir) {
