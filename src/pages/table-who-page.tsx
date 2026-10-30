@@ -62,7 +62,7 @@ export function TableWhoPage() {
         openClientSession: openClientSessionRef.current,
       });
       setClientToken(client.access_token);
-      await validateTableParticipant(client.access_token);
+      await validateTableParticipant(client.access_token).catch(() => undefined);
       const table = await api.tableSession(client.access_token, qrToken);
       // Sesión nueva (mesa cerrada y reabierta): la identidad local ya no vale.
       dropTableParticipantOnSessionChange(table.sesion_id);

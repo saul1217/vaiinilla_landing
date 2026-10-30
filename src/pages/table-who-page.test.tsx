@@ -124,6 +124,14 @@ describe('TableWhoPage', () => {
     expect(screen.getByRole('button', { name: /agregarme a la mesa/i })).toBeInTheDocument();
   });
 
+  it('renders the participant list when currentTable rejects', async () => {
+    currentTable.mockRejectedValue(new Error('offline'));
+    tableSession.mockResolvedValue(session());
+    renderWho();
+    expect(await screen.findByRole('button', { name: 'David' })).toBeInTheDocument();
+    expect(tableSession).toHaveBeenCalledWith('client-jwt', 'qr-1');
+  });
+
   it('con yo ofrece continuar y "No soy" muestra la lista', async () => {
     tableSession.mockResolvedValue(session({ yo: { id: 'p-jesus', alias: 'Jesús' } }));
     const user = userEvent.setup();
@@ -255,6 +263,7 @@ describe('TableWhoPage', () => {
     renderWho();
     expect(await screen.findByRole('heading', { name: /quién eres/i })).toBeInTheDocument();
     await waitFor(() => expect(tableSession).toHaveBeenCalledWith('reg-jwt', 'qr-1'));
+    expect(currentTable).toHaveBeenCalledWith('reg-jwt');
     expect(createGuest).not.toHaveBeenCalled();
     authState.user = null;
   });

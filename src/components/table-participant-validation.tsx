@@ -1,14 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from '../context/auth-context';
-import { useBuyerSession } from '../context/buyer-session';
-import { clientSessionForPlace } from '../lib/client-session-for-place';
+import { readStoredClientContext } from '../lib/client-session';
 import { readTableParticipant } from '../lib/table-participant';
 import { validateTableParticipant } from '../lib/validate-table-participant';
 
 /** Validate a saved table identity once authentication is ready at startup. */
 export function TableParticipantValidation() {
-  const { user, ready } = useAuth();
-  const { context, openClientSession } = useBuyerSession();
+  const { ready } = useAuth();
   const started = useRef(false);
 
   useEffect(() => {
@@ -16,10 +14,10 @@ export function TableParticipantValidation() {
     started.current = true;
     const identity = readTableParticipant();
     if (!identity) return;
-    void clientSessionForPlace({ slug: identity.slug, user, context, openClientSession })
-      .then((client) => validateTableParticipant(client.access_token))
-      .catch(() => undefined);
-  }, [context, openClientSession, ready, user]);
+    const token = readStoredClientContext()?.context.access_token;
+    if (!token) return;
+    void validateTableParticipant(token).catch(() => undefined);
+  }, [ready]);
 
   return null;
 }
