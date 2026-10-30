@@ -7858,7 +7858,7 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   --fcw-min: calc(12px + env(safe-area-inset-top, 0px));
   position: fixed;
   z-index: 25;
-  width: 56px;
+  width: max-content;
   height: 56px;
   /* Dentro de la pantalla y nunca encima de la barra inferior ni del botón de pagar. */
   top: clamp(var(--fcw-min), var(--fcw-y, 0px), calc(100dvh - var(--fcw-reserve) - 56px));
@@ -7874,12 +7874,15 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 }
 
 .alumno-fcw__fab {
-  display: grid;
-  place-items: center;
-  width: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: max-content;
+  min-width: 44px;
+  min-height: 44px;
   height: 56px;
-  padding: 0;
-  border-radius: 50%;
+  padding: 0 16px;
+  border-radius: 999px;
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--text);
@@ -7890,6 +7893,21 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
+
+.alumno-fcw__fab svg { flex-shrink: 0; }
+.alumno-fcw__label {
+  max-width: 180px;
+  margin-left: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 240ms ease, margin-left 240ms ease, opacity 240ms ease;
+}
+.alumno-fcw.is-collapsed .alumno-fcw__label {
+  max-width: 0;
+  margin-left: 0;
+  opacity: 0;
+}
+.alumno-fcw.is-collapsed .alumno-fcw__fab { width: 56px; padding: 0; }
 
 .alumno-fcw.is-dragging .alumno-fcw__fab {
   cursor: grabbing;
@@ -7976,7 +7994,8 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .alumno-fcw {
+  .alumno-fcw,
+  .alumno-fcw__label {
     transition: none;
   }
   .alumno-fcw.is-calling .alumno-fcw__fab {

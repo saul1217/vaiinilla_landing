@@ -12,7 +12,7 @@ import {
   type KeyboardEvent,
   type PointerEvent,
 } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { readStoredClientContext } from '../lib/client-session';
 import {
@@ -21,7 +21,6 @@ import {
   FAB_SIZE,
   fabBounds,
   readFabPosition,
-  snapSide,
   TAP_SLOP,
   useFloatingCallHidden,
   writeFabPosition,
@@ -38,7 +37,7 @@ import {
 import { scannedSpace } from '../lib/space-session';
 
 const POLL_MS = 5000;
-const COOLDOWN_S = 60;
+const COOLDOWN_S = 15;
 const HIDDEN_PATHS = [/^\/$/, /^\/soporte\/?$/, /^\/u\//, /^\/seguimiento\//];
 
 type View = 'closed' | 'reasons' | 'open' | 'unavailable';
@@ -61,6 +60,10 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
   const { pathname } = useLocation();
   const hidden = useFloatingCallHidden();
   const panelId = useId();
+  const headingId = useId();
+  const firstOption = useRef<HTMLButtonElement>(null);
+  const [collapsed, setCollapsed] = useState(() => window.scrollY > 8);
+  const [needsJoin, setNeedsJoin] = useState(false);
   const [space, setSpace] = useState(() => scannedSpace());
   const [saved, setSaved] = useState<FabPosition | null>(() => readFabPosition());
   const [live, setLive] = useState<{ left: number; top: number } | null>(null);
@@ -102,6 +105,16 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+
+  useEffect(() => {
+    const onScroll = () => setCollapsed(window.scrollY > 8);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (visible && view === 'reasons') firstOption.current?.focus();
+  }, [visible, view]);
 
   // Recupera una llamada abierta tras recargar y la mantiene al día.
   useEffect(() => {
@@ -156,7 +169,8 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
     ? `${live.left}px`
     : side === 'left'
       ? `calc(var(--fcw-inset-left, 0px) + ${FAB_MARGIN}px + env(safe-area-inset-left, 0px))`
-      : `calc(100% - ${FAB_SIZE + FAB_MARGIN}px - env(safe-area-inset-right, 0px))`;
+      : undefined;
+  const right = !live && side === 'right' ? `calc(${FAB_MARGIN}px + env(safe-area-inset-right, 0px))` : undefined;
   const opensUp = top > 300;
 
   function onPointerDown(event: PointerEvent<HTMLButtonElement>) {
@@ -183,7 +197,7 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
     d.moved = true;
     setView((v) => (v === 'reasons' ? 'closed' : v));
     setLive({
-      left: Math.min(window.innerWidth - FAB_SIZE, Math.max(sidebarInset(), d.originLeft + dx)),
+      left: Math.min(window.innerWidth - (event.currentTarget.offsetWidth || FAB_SIZE), Math.max(sidebarInset(), d.originLeft + dx)),
       top: clampY(d.originTop + dy, bounds),
     });
   }
@@ -196,7 +210,8 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
     if (!d.moved) return;
     suppressClick.current = true;
     const next: FabPosition = {
-      side: snapSide(d.originLeft + (event.clientX - d.startX), window.innerWidth),
+      side: d.originLeft + (event.clientX - d.startX) +
+        (event.currentTarget.offsetWidth || FAB_SIZE) / 2 < window.innerWidth / 2 ? 'left' : 'right',
       y: clampY(d.originTop + (event.clientY - d.startY), bounds),
     };
     setSaved(next);
@@ -235,6 +250,7 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
     }
     setBusy(true);
     setError(null);
+    setNeedsJoin(false);
     try {
       const next = await client.call(espacioId, reason, null);
       setCall(next);
@@ -245,6 +261,9 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
       else if (cause instanceof VaiinillaApiError && cause.status === 429) {
         setView('closed');
         setCooldown(cause.retryAfter ?? COOLDOWN_S);
+      } else if (cause instanceof VaiinillaApiError && cause.status === 403 && cause.code === 'NO_ACTIVE_ORDER_IN_SPACE') {
+        setNeedsJoin(true);
+        setError('Para llamar al mesero, primero únete a la mesa.');
       } else setError(errorMessage(cause));
     } finally {
       setBusy(false);
@@ -268,18 +287,18 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
   const going = call?.estado === 'en_camino';
   const label = call
     ? going
-      ? 'Tu mesero va en camino. Ver estado de la llamada'
-      : 'Llamando a tu mesero. Ver estado de la llamada'
+      ? 'Llamar al mesero. Tu mesero va en camino. Ver estado de la llamada'
+      : 'Llamar al mesero. Llamando a tu mesero. Ver estado de la llamada'
     : cooldown > 0
       ? `Llamar al mesero. Podrás volver a llamar en ${cooldown} segundos`
       : 'Llamar al mesero';
 
   return (
     <div
-      className={`alumno-fcw is-${side}${opensUp ? ' is-up' : ' is-down'}${live ? ' is-dragging' : ''}${
+      className={`alumno-fcw${collapsed ? ' is-collapsed' : ''} is-${side}${opensUp ? ' is-up' : ' is-down'}${live ? ' is-dragging' : ''}${
         call ? (going ? ' is-going' : ' is-calling') : ''
       }${/\/carrito\/?$/.test(pathname) ? ' is-cart' : ''}`}
-      style={{ left, '--fcw-y': `${top}px` } as CSSProperties}
+      style={{ left, right, '--fcw-y': `${top}px` } as CSSProperties}
       data-testid="floating-call"
     >
       <button
@@ -297,8 +316,12 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
         onKeyDown={onKeyDown}
       >
         <BellIcon />
+        <span className="alumno-fcw__label">Llamar al mesero</span>
       </button>
-      <div id={panelId} className="alumno-fcw__panel" hidden={!panelOpen || Boolean(live)}>
+      <div id={panelId} role="dialog"
+        aria-labelledby={view === 'reasons' ? headingId : undefined}
+        aria-label={view === 'reasons' ? undefined : 'Llamar al mesero'} className="alumno-fcw__panel" hidden={!panelOpen || Boolean(live)}>
+        {view === 'reasons' ? <p id={headingId}>¿Qué necesitas?</p> : null}
         {view === 'unavailable' ? (
           <p className="alumno-callwaiter__note">
             Llamar al mesero todavía no está disponible en esta cafetería.
@@ -323,12 +346,11 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
           </div>
         ) : view === 'reasons' ? (
           <div className="alumno-callwaiter__reasons">
-            <p>¿Qué necesitas?</p>
             {cooldown > 0 ? (
               <span className="alumno-muted">Puedes volver a llamar en {cooldown} s</span>
             ) : (
-              CALL_REASONS.filter((reason) => reason.value !== 'cuenta' || space.pagaAlFinal).map((reason) => (
-                <button key={reason.value} type="button" onClick={() => void send(reason.value)} disabled={busy}>
+              CALL_REASONS.filter((reason) => reason.value !== 'cuenta' || space.pagaAlFinal).map((reason, index) => (
+                <button ref={index === 0 ? firstOption : undefined} key={reason.value} type="button" onClick={() => void send(reason.value)} disabled={busy}>
                   {reason.label}
                 </button>
               ))
@@ -338,7 +360,9 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
             </button>
           </div>
         ) : null}
-        {error ? <p className="alumno-error">{error}</p> : null}
+        {error ? <p className="alumno-error" role="alert">{error}{needsJoin && space.qrToken ? (
+          <> <Link to={`/${space.slug}/m/${space.qrToken}/quien`}>Unirme a la mesa</Link></>
+        ) : null}</p> : null}
       </div>
     </div>
   );

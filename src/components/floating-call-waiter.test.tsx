@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { VaiinillaApiError } from '../lib/api-error';
 import { clampY, fabBounds, readFabPosition, snapSide } from '../lib/floating-call';
 import type { BuyerCallClient, TableCall } from '../lib/mesero-api';
 import { forgetSpace, rememberSpace } from '../lib/space-session';
@@ -71,6 +72,7 @@ describe('helpers de posición', () => {
 
 describe('FloatingCallWaiter', () => {
   beforeEach(() => {
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 0, writable: true });
     localStorage.clear();
     sessionStorage.clear();
     window.innerWidth = 400;
@@ -81,6 +83,58 @@ describe('FloatingCallWaiter', () => {
   it.each(['/e/demo', '/cuenta/pedidos', '/cuenta/saldo', '/e/demo/carrito'])('aparece en %s con una mesa escaneada', async (path) => {
     await mount(path);
     expect(fab()).toBeTruthy();
+  });
+
+  it('muestra el pill arriba y lo colapsa al bajar, expandiéndolo al volver', async () => {
+    await mount();
+    expect(screen.getByText('Llamar al mesero').className).toBe('alumno-fcw__label');
+    expect(screen.getByTestId('floating-call').className).not.toContain('is-collapsed');
+    window.scrollY = 9;
+    fireEvent.scroll(window);
+    expect(screen.getByTestId('floating-call').className).toContain('is-collapsed');
+    expect(fab()).toBeTruthy();
+    window.scrollY = 0;
+    fireEvent.scroll(window);
+    expect(screen.getByTestId('floating-call').className).not.toContain('is-collapsed');
+    expect(screen.getByTestId('floating-call').style.right).toContain('12px');
+  });
+
+  it.each([undefined, 'qr-demo'])('ofrece unirse a la mesa en un 403, con QR %s', async (qrToken) => {
+    rememberSpace({ slug: 'demo', espacioId: 4, nombre: 'Mesa 4', qrToken });
+    await mount('/e/demo', client({ call: vi.fn().mockRejectedValue(
+      new VaiinillaApiError(403, { code: 'NO_ACTIVE_ORDER_IN_SPACE', message: 'Denied' }),
+    ) }));
+    fireEvent.click(fab());
+    fireEvent.click(screen.getByRole('button', { name: 'Necesito algo' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Para llamar al mesero, primero únete a la mesa.');
+    if (qrToken) expect(screen.getByRole('link').getAttribute('href')).toBe('/demo/m/qr-demo/quien');
+    else expect(screen.queryByRole('link')).toBeNull();
+  });
+
+  it('anuncia los errores generales como alertas', async () => {
+    await mount('/e/demo', client({ call: vi.fn().mockRejectedValue(new Error('Sin conexión')) }));
+    fireEvent.click(fab());
+    fireEvent.click(screen.getByRole('button', { name: 'Necesito algo' }));
+    expect((await screen.findByRole('alert')).textContent).toBe('Sin conexión');
+  });
+
+  it.each([undefined, 7])('usa cooldown de 15 segundos o Retry-After %s', async (retryAfter) => {
+    vi.useFakeTimers();
+    try {
+      await mount('/e/demo', client({ call: vi.fn().mockRejectedValue(
+        new VaiinillaApiError(429, { code: 'RATE_LIMITED', message: 'Espera' }, retryAfter),
+      ) }));
+      fireEvent.click(fab());
+      fireEvent.click(screen.getByRole('button', { name: 'Necesito algo' }));
+      await act(async () => {});
+      const seconds = retryAfter ?? 15;
+      expect(fab().getAttribute('aria-label')).toContain(seconds + ' segundos');
+      for (let i = 0; i < seconds; i++) await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+      expect(fab().getAttribute('aria-label')).toBe('Llamar al mesero');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('no aparece sin mesa escaneada', async () => {
@@ -107,7 +161,10 @@ describe('FloatingCallWaiter', () => {
     fireEvent.pointerUp(fab(), pos(203, 302));
     fireEvent.click(fab());
     expect(screen.getByText('¿Qué necesitas?')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Necesito algo' })).toBeTruthy();
+    const dialog = screen.getByRole('dialog', { name: '¿Qué necesitas?' });
+    expect(dialog.getAttribute('aria-labelledby')).toBe(screen.getByText('¿Qué necesitas?').id);
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Necesito algo' }));
+    expect(screen.queryByRole('button', { name: 'Pedir la cuenta' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Cubiertos o servilletas' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Algo está mal con mi pedido' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Necesito algo' }));
@@ -119,7 +176,7 @@ describe('FloatingCallWaiter', () => {
     rememberSpace({ slug: 'demo', espacioId: 4, nombre: 'Mesa 4', pagaAlFinal: true });
     await mount();
     fireEvent.click(fab());
-    expect(screen.getByRole('button', { name: 'Pedir cuenta' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Pedir la cuenta' })).toBeTruthy();
   });
 
   it('el teclado abre el menú y Escape lo cierra', async () => {
@@ -129,6 +186,7 @@ describe('FloatingCallWaiter', () => {
     expect(fab().getAttribute('aria-expanded')).toBe('true');
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(fab().getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(fab());
   });
 
   it('arrastrar no abre el menú y se pega a la orilla izquierda', async () => {
@@ -138,6 +196,20 @@ describe('FloatingCallWaiter', () => {
     expect(screen.queryByText('¿Qué necesitas?')).toBeNull();
     expect(screen.getByTestId('floating-call').className).toContain('is-left');
     expect(readFabPosition()?.side).toBe('left');
+  });
+
+  it('usa el ancho real para limitar el arrastre y elegir la orilla', async () => {
+    await mount();
+    Object.defineProperty(fab(), 'offsetWidth', { configurable: true, value: 200 });
+    fireEvent.pointerDown(fab(), pos(0, 0));
+    fireEvent.pointerMove(fab(), pos(500, 20));
+    expect(screen.getByTestId('floating-call').style.left).toBe('200px');
+    fireEvent.pointerUp(fab(), pos(120, 20));
+    expect(readFabPosition()?.side).toBe('right');
+    fireEvent.keyDown(fab(), { key: 'ArrowLeft' });
+    expect(readFabPosition()?.side).toBe('left');
+    fireEvent.keyDown(fab(), { key: 'ArrowRight' });
+    expect(readFabPosition()?.side).toBe('right');
   });
 
   it('pegada a la izquierda respeta la barra lateral en pantalla ancha', async () => {
@@ -164,7 +236,7 @@ describe('FloatingCallWaiter', () => {
     expect(readFabPosition()?.y).toBe(800 - 84 - 56);
   });
 
-  it('aparece de inmediato con la mesa guardada, sin esperar la sesión del backend', async () => {
+  it('aparece de inmediato con la mesa guardada, sin esperar la sesión del backend', () => {
     render(
       <MemoryRouter initialEntries={['/e/demo']}>
         <FloatingCallWaiter />

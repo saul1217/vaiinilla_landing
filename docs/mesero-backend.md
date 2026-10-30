@@ -64,7 +64,7 @@ Todo sigue las convenciones actuales: sobre `{ data, meta, error }`, token de co
   - `200` con la llamada abierta existente si ya hay una en ese espacio (se une, no duplica).
   - `403 NO_ACTIVE_ORDER_IN_SPACE` si el cliente no tiene un pedido `en_espacio` de hoy en ese espacio (activo o entregado hace menos de 2 h).
   - `422 SPACE_NOT_ACTIVE` si el espacio está inactivo.
-  - `429 RATE_LIMITED` con `Retry-After` si llamó hace menos de 60 s (por usuario + espacio).
+  - `429 RATE_LIMITED` con `Retry-After` durante los 15 s después de que la llamada fue atendida (por usuario + espacio).
 - `GET /api/v1/llamadas?estado=pendiente,en_camino` — con rol `cliente` devuelve solo las suyas. La web lo usa para recuperar el estado al recargar.
 - `POST /api/v1/llamadas/{id}/cancelaciones` — rol `cliente`, dueño, desde `pendiente` o `en_camino`. `201` con la llamada `cancelada`.
 
@@ -113,7 +113,7 @@ Todo sigue las convenciones actuales: sobre `{ data, meta, error }`, token de co
 - Dos meseros toman la misma llamada: uno recibe `409`.
 - Cliente de otra mesa no puede llamar a esa mesa (`403`).
 - RLS: un mesero de otro establecimiento no ve ni transiciona llamadas ajenas.
-- `Retry-After` en el segundo intento antes de 60 s.
+- `Retry-After` al intentar llamar durante los 15 s después de que la llamada fue atendida.
 
 ## Cómo se comporta la web mientras esto no existe
 
