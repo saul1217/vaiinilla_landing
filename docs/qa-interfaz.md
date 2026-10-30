@@ -37,7 +37,7 @@ La integración de GitHub Actions no se pudo subir desde esta automatización (n
 
 ## QA-064 — Llamar al mesero flotante
 
-- Con mesa escaneada, en menú y carrito con artículos, a 320–414 px la pastilla expandida ocupa como máximo 40% del viewport; etiqueta de hasta 120 px con elipsis y nombre accesible «Llamar al mesero».
+- Con mesa escaneada, en menú y carrito con artículos, a 320–414 px la pastilla expandida ocupa como máximo 40% del viewport; etiqueta corta «Mesero» bajo 360 px y «Llamar al mesero» desde 360 px y en escritorio, sin elipsis; nombre accesible siempre «Llamar al mesero». En el Carrito arranca colapsada (solo campana) y, sin posición guardada, arriba junto al título; no intersecta la tarjeta «Mesa N».
 - No intersecta controles fijos (navegación inferior, botón de continuar/pagar del Carrito, cabecera), arriba o al desplazar la página. Reserva inferior: 84 px (barra) y 216 px en el Carrito (barra + botón de pagar fijo). El contenido que se desplaza puede pasar por debajo, como con cualquier botón flotante; la pastilla se colapsa a la campana al desplazar.
 - Verificación: `npx playwright test -c playwright.ui.config.ts e2e-ui/floating-call.spec.ts` (320×568 y 360×740, menú y Carrito).
 - En documentos sin scroll colapsa a campana a los 4 s o ante la primera interacción pointerdown/keydown/scroll; permanece colapsada. Con scroll colapsa después de 8 px y se expande al volver arriba.
