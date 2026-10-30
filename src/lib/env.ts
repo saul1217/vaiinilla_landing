@@ -1,6 +1,6 @@
 // Configuración por ambiente. Todo sale de las variables VITE_* (ver .env.example):
 // `npm run dev` usa .env.development y Vercel define Production y Preview. Aquí no
-// hay URLs, claves ni dominios hardcodeados.
+// hay claves hardcodeadas; el panel tiene URLs de respaldo para no bloquear la landing.
 
 export type AppEnvironment = 'development' | 'production';
 
@@ -55,12 +55,18 @@ export function publicBaseUrl(
 }
 
 /** Panel del equipo del ambiente (VITE_STAFF_APP_URL): develop no debe apuntar al de producción. */
-export function resolveStaffAppUrl(envUrl: string | undefined): string {
-  const url = envUrl?.trim().replace(/\/$/, '');
-  if (!url) {
-    throw new Error('Falta VITE_STAFF_APP_URL: configúrala en .env.development o en Vercel.');
+export function resolveStaffAppUrl(
+  envUrl: string | undefined,
+  isProd = import.meta.env.VITE_APP_ENV === 'production' || import.meta.env.PROD,
+): string {
+  const url = envUrl?.trim().replace(/\/+$/, '');
+  if (url) return url;
+  if (isProd) {
+    console.error('Falta VITE_STAFF_APP_URL: se usa el panel de producción como respaldo.');
+    return 'https://app.vaiinilla.app';
   }
-  return url;
+  console.warn('Falta VITE_STAFF_APP_URL: se usa el panel de desarrollo como respaldo.');
+  return 'https://dev.vaiinilla.app';
 }
 
 export function walletQrUrl(
