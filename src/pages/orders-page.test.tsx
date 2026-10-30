@@ -270,7 +270,8 @@ describe("OrdersPage", () => {
     currentTable.mockResolvedValue(null);
     renderOrders();
     expect(await screen.findByText("Mis pedidos")).toBeInTheDocument();
-    expect(screen.getByText(/pides como lupi sin cuenta/i)).toBeInTheDocument();
+    expect(screen.getByText(/pides sin cuenta/i)).toBeInTheDocument();
+    expect(screen.queryByText(/pides como lupi/i)).not.toBeInTheDocument();
     expect(listOrders).not.toHaveBeenCalled();
   });
 

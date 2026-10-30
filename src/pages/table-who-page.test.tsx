@@ -8,8 +8,9 @@ import { TableWhoPage } from './table-who-page';
 
 const authState: { user: null | { email: string } } = { user: null };
 
-const { tableSession, joinTable, getEstablishment, getLegalVersions, createGuest, renewGuest, openClientSession } =
+const { currentTable, tableSession, joinTable, getEstablishment, getLegalVersions, createGuest, renewGuest, openClientSession } =
   vi.hoisted(() => ({
+    currentTable: vi.fn(),
     tableSession: vi.fn(),
     joinTable: vi.fn(),
     getEstablishment: vi.fn(),
@@ -21,6 +22,7 @@ const { tableSession, joinTable, getEstablishment, getLegalVersions, createGuest
 
 vi.mock('../lib/api', () => ({
   api: {
+    currentTable: (...args: unknown[]) => currentTable(...args) as Promise<unknown>,
     tableSession: (...args: unknown[]) => tableSession(...args) as Promise<unknown>,
     joinTable: (...args: unknown[]) => joinTable(...args) as Promise<unknown>,
     getEstablishment: (...args: unknown[]) => getEstablishment(...args) as Promise<unknown>,
@@ -89,6 +91,7 @@ describe('TableWhoPage', () => {
     localStorage.clear();
     sessionStorage.clear();
     authState.user = null;
+    currentTable.mockReset().mockResolvedValue(joined());
     tableSession.mockReset();
     joinTable.mockReset();
     getEstablishment.mockReset();
@@ -199,6 +202,19 @@ describe('TableWhoPage', () => {
     tableSession.mockResolvedValue(session());
     renderWho();
     expect(await screen.findByRole('heading', { name: /continuar como david/i })).toBeInTheDocument();
+  });
+
+  it.each([null, joined({ sesion_id: 'otra' })])('descarta la identidad si /mesas/actual devuelve %j', async (table) => {
+    localStorage.setItem('vaiinilla.buyer.table-participant.v1', JSON.stringify({
+      slug: 'demo-a', espacioId: 5, sesionId: 'ses-5', participanteId: 'p-david', alias: 'David',
+    }));
+    currentTable.mockResolvedValue(table);
+    tableSession.mockResolvedValue(session());
+    renderWho();
+    expect(await screen.findByRole('button', { name: 'David' })).toBeInTheDocument();
+    expect(currentTable).toHaveBeenCalledWith('client-jwt');
+    expect(localStorage.getItem('vaiinilla.buyer.table-participant.v1')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Continuar como David' })).not.toBeInTheDocument();
   });
 
   it('si la sesión cambió, la identidad local se borra y se muestra la lista', async () => {

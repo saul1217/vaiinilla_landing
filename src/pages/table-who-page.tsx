@@ -12,6 +12,7 @@ import {
   rememberTableParticipant,
   tableParticipantFor,
 } from '../lib/table-participant';
+import { validateTableParticipant } from '../lib/validate-table-participant';
 import { spaceNoun } from '../lib/space-words';
 import type { SharedTable, TableSession } from '../types/api';
 
@@ -61,6 +62,7 @@ export function TableWhoPage() {
         openClientSession: openClientSessionRef.current,
       });
       setClientToken(client.access_token);
+      await validateTableParticipant(client.access_token);
       const table = await api.tableSession(client.access_token, qrToken);
       // Sesión nueva (mesa cerrada y reabierta): la identidad local ya no vale.
       dropTableParticipantOnSessionChange(table.sesion_id);

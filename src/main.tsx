@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { TableParticipantValidation } from './components/table-participant-validation';
 import { AppRouter } from './app/router';
 import { AuthProvider } from './context/auth-context';
 import { BuyerSessionProvider } from './context/buyer-session';
@@ -22,6 +23,7 @@ createRoot(document.getElementById('root')!).render(
       <AuthProvider>
         <BuyerSessionProvider>
           <CartProvider>
+            <TableParticipantValidation />
             <AppRouter />
           </CartProvider>
         </BuyerSessionProvider>

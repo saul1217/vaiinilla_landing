@@ -18,7 +18,6 @@ import { api } from '../lib/api';
 import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
 import { isGoneTracking, isSettledOrder } from '../lib/guest-order-check';
 import { forgetGuestOrderByToken, readGuestOrders } from '../lib/guest-orders';
-import { readGuest } from '../lib/guest-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { formatAmount } from '../lib/money';
 import { openTab } from '../lib/order-labels';
@@ -41,7 +40,6 @@ export function GuestOrdersPage() {
   // Lo guardado en este navegador también cuenta: con "Tu pedido #N" a la vista no se dice que no hay pedidos.
   const savedHere = readGuestOrders().some((order) => order.slug === slug);
   const mesa = useGuestSpaceToken(slug);
-  const guestName = readGuest()?.nombre ?? '';
   const qrToken = slug ? (readSpace(slug)?.qrToken ?? null) : null;
   const thumbImages = useMemo(() => catalogImageMap(catalogProducts), [catalogProducts]);
   const liveTokens = useMemo(
@@ -152,7 +150,6 @@ export function GuestOrdersPage() {
           accessToken={mesa.token}
           qrToken={qrToken}
           sessionPending={mesa.pending}
-          defaultAlias={guestName || undefined}
           legalNote={
             legal ? (
               <p className="alumno-muted alumno-guest-checkout__legal">
@@ -235,16 +232,16 @@ export function GuestOrdersPage() {
             </div>
           </section>
         ) : null}
-        <GuestAccountInvite name={guestName || undefined} />
+        <GuestAccountInvite />
       </main>
     </AppShell>
   );
 }
 
-function GuestAccountInvite({ name }: { name?: string }) {
+function GuestAccountInvite() {
   return (
     <p className="alumno-muted alumno-tracking__account">
-      {name ? `Pides como ${name} sin cuenta. ` : 'Pides sin cuenta. '}
+      Pides sin cuenta.{' '}
       ¿Quieres saldo e historial? <Link to="/cuenta">Crea tu cuenta</Link> (opcional).
     </p>
   );

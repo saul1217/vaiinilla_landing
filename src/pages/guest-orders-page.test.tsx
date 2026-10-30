@@ -178,7 +178,9 @@ describe('pedidos del invitado', () => {
     const link = screen.getByRole('link', { name: /ver seguimiento/i });
     expect(link.getAttribute('href')).toBe(`/seguimiento/${TOKEN}`);
     expect(listGuestOrders).toHaveBeenCalledWith('padel', LLAVE);
-    expect(screen.getByText(/pides como lupi sin cuenta/i)).toBeInTheDocument();
+    expect(screen.queryByText(/pides como lupi sin cuenta/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/pides sin cuenta/i)).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem('vaiinilla.buyer.guest.v1')!)).toMatchObject({ llave: LLAVE });
   });
 
   it('recién pedido (?nuevo=token): ese pedido ya llega abierto', async () => {
@@ -197,9 +199,10 @@ describe('pedidos del invitado', () => {
     const user = userEvent.setup();
     renderPage();
 
-    // El alias viene del nombre del invitado; unirse usa su sesión de llave.
+    // El nombre se elige explícitamente; unirse conserva la sesión de llave.
     const alias = await screen.findByRole('textbox', { name: /tu nombre en la mesa/i });
-    expect(alias).toHaveValue('Lupi');
+    expect(alias).toHaveValue('');
+    await user.type(alias, 'Lupi');
     await user.click(screen.getByRole('button', { name: /unirme a la mesa/i }));
 
     expect(joinTable).toHaveBeenCalledWith('guest-jwt', 'qr-5', 'Lupi');
