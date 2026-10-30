@@ -3,9 +3,11 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "target": "ES2023",
     "lib": [
-      "ES2023"
+      "ES2023",
+      "DOM"
     ],
     "module": "ESNext",
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "moduleResolution": "Bundler",
     "allowImportingTsExtensions": true,
@@ -23,6 +25,7 @@
     "eslint.config.js",
     "playwright.config.ts",
     "playwright.stack.config.ts",
-    "playwright.ui.config.ts"
+    "playwright.ui.config.ts",
+    "e2e-ui/**/*.ts"
   ]
 }

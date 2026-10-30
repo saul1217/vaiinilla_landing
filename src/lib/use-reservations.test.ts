@@ -71,15 +71,15 @@ function deferred<T>() {
 }
 
 function fakeClient(day: ReservationsClient['day']) {
-  const create = vi.fn<ReservationsClient['create']>(async (input) =>
-    reservation(input.start ?? 0, input.durationMinutes),
+  const create = vi.fn<ReservationsClient['create']>((input) =>
+    new Promise<Reservation>((resolve) => resolve(reservation(input.start ?? 0, input.durationMinutes))),
   );
   const client: ReservationsClient = {
     day,
-    list: async () => [],
+    list: () => Promise.resolve([]),
     create,
     pay: vi.fn(),
-    cancel: async () => reservation(0, 60),
+    cancel: () => Promise.resolve(reservation(0, 60)),
   };
   return { client, create };
 }
@@ -92,7 +92,7 @@ async function mount(client: ReservationsClient) {
 
 describe('cambio de día y apartar', () => {
   it('pide al servidor el día elegido, no el anterior', async () => {
-    const day = vi.fn(async (date?: string) => courtDay(date ?? TODAY));
+    const day = vi.fn((date?: string) => new Promise<CourtDay>((resolve) => resolve(courtDay(date ?? TODAY))));
     const { client } = fakeClient(day);
     const { result } = await mount(client);
 
@@ -117,12 +117,15 @@ describe('cambio de día y apartar', () => {
     await act(() => result.current.reserve());
     expect(create).not.toHaveBeenCalled();
 
-    await act(async () => pending.resolve(courtDay(TOMORROW)));
+    await act(() => {
+      pending.resolve(courtDay(TOMORROW));
+      return Promise.resolve();
+    });
     expect(selectedCourt(result.current.state)?.id).toBe(2);
   });
 
   it('apartar justo después de elegir mañana guarda el inicio de mañana', async () => {
-    const day = vi.fn(async (date?: string) => courtDay(date ?? TODAY));
+    const day = vi.fn((date?: string) => new Promise<CourtDay>((resolve) => resolve(courtDay(date ?? TODAY))));
     const { client, create } = fakeClient(day);
     const { result } = await mount(client);
 
@@ -137,7 +140,7 @@ describe('cambio de día y apartar', () => {
   });
 
   it('Hoy → Mañana → Hoy y el día +14 piden su propia fecha', async () => {
-    const day = vi.fn(async (date?: string) => courtDay(date ?? TODAY));
+    const day = vi.fn((date?: string) => new Promise<CourtDay>((resolve) => resolve(courtDay(date ?? TODAY))));
     const { client } = fakeClient(day);
     const { result } = await mount(client);
 
@@ -165,12 +168,14 @@ describe('cambio de día y apartar', () => {
 
     // Un refresco de hoy queda en vuelo (p. ej. la consulta automática)...
     let inFlight!: Promise<void>;
-    await act(async () => {
+    await act(() => {
       inFlight = result.current.cancel(reservation(0, 60)); // termina con un refresh() de hoy
+      return Promise.resolve();
     });
     expect(calls).toBe(2);
-    await act(async () => {
+    await act(() => {
       result.current.selectDate(TOMORROW);
+      return Promise.resolve();
     });
     await waitFor(() => expect(result.current.state.day?.date).toBe(TOMORROW));
     // ...y responde tarde, con la lista de hoy.

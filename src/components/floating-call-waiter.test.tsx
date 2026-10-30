@@ -164,7 +164,7 @@ describe('FloatingCallWaiter', () => {
     expect(readFabPosition()?.y).toBe(800 - 84 - 56);
   });
 
-  it('aparece de inmediato con la mesa guardada, sin esperar la sesión del backend', async () => {
+  it('aparece de inmediato con la mesa guardada, sin esperar la sesión del backend', () => {
     render(
       <MemoryRouter initialEntries={['/e/demo']}>
         <FloatingCallWaiter />
