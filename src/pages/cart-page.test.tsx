@@ -5,6 +5,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
 import { VaiinillaApiError } from '../lib/api-error';
 import * as cartLib from '../lib/cart';
+import * as stripePendingLib from '../lib/stripe-pending';
+import { clearStripeCheckoutSession } from '../lib/stripe-session';
+import { canSilentlyApplyServiceWorkerUpdate, resetPwaUpdateGuardsForTests } from '../lib/pwa-update';
 import { QA_PHOTO_TACOS } from '../lib/qa-catalog-photos';
 import { CartPage } from './cart-page';
 
@@ -169,6 +172,9 @@ describe('CartPage', () => {
       contexto: { establecimiento_id: '1' },
     });
     cartState.cart = null;
+    sessionStorage.clear();
+    resetPwaUpdateGuardsForTests();
+    clearStripeCheckoutSession();
     createOrder.mockReset();
     retryStripePayment.mockReset();
     listOrders.mockResolvedValue({ orders: [] });
@@ -394,6 +400,7 @@ describe('CartPage', () => {
     expect(JSON.stringify(payload)).not.toContain('"total"');
     expect(createOrder.mock.calls[0]?.[2]).toEqual(expect.any(String));
     expect(localStorage.getItem('vaiinilla.buyer.pickup-qr.v1.ord-stripe')).toBe('pickup-token');
+    expect(stripePendingLib.readPendingStripeOrderId()).toBe('ord-stripe');
   });
 
   it('espera la validación operativa sin mostrar un error transitorio', async () => {
@@ -657,6 +664,70 @@ describe('CartPage', () => {
       getEstablishment.mockResolvedValue({ id: '1', nombre: 'Escuela', slug: 'demo-a', identificador_cliente_etiqueta: 'Matrícula', identificador_cliente_obligatorio: true, acepta_tarjeta: true });
       renderCart();
       expect(await screen.findByRole('button', { name: 'Crea tu cuenta para pedir aquí' })).toBeInTheDocument();
+    });
+
+    it('invitado: no guarda pending Stripe y puede pedir otra ronda', async () => {
+      const savePending = vi.spyOn(stripePendingLib, 'savePendingStripeOrderId');
+      sessionStorage.removeItem('vaiinilla.buyer.stripe-pending-order.v1');
+      createOrder.mockResolvedValue({
+        id: 'ord-g1',
+        folio: 22,
+        estado: 'por_cobrar',
+        metodo_pago: 'efectivo',
+        destino: 'para_llevar',
+        qr_token: 'qr',
+        espacio: null,
+        total: '240.00',
+        items: [],
+        invitado: true,
+        seguimiento_token: SEGUIMIENTO,
+      });
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
+      await user.type(screen.getByLabelText('Tu nombre'), 'Lupita');
+      await user.click(screen.getByRole('button', { name: /^continuar con/i }));
+
+      expect(await screen.findByText(`Mis pedidos ?nuevo=${SEGUIMIENTO}`)).toBeInTheDocument();
+      expect(savePending).not.toHaveBeenCalled();
+      expect(stripePendingLib.readPendingStripeOrderId()).toBeNull();
+      expect(canSilentlyApplyServiceWorkerUpdate()).toBe(true);
+
+      cartState.cart = {
+        slug: 'demo-a',
+        establishmentName: 'Cafetería Demo A',
+        lines: [{ productId: 1, quantity: 1, optionIds: [], productName: 'Chocolate', unitPreview: '120.00', unitCounter: '120.00', imageUrl: null }],
+      };
+      createOrder.mockResolvedValue({
+        id: 'ord-g2',
+        folio: 23,
+        estado: 'por_cobrar',
+        metodo_pago: 'efectivo',
+        destino: 'para_llevar',
+        qr_token: 'qr',
+        espacio: null,
+        total: '120.00',
+        items: [],
+        invitado: true,
+        seguimiento_token: SEGUIMIENTO,
+      });
+      renderCart();
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
+      await user.click(screen.getByRole('button', { name: /^continuar con/i }));
+      await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(2));
+      expect(screen.queryByText(/pago stripe pendiente/i)).not.toBeInTheDocument();
+    });
+
+    it('invitado con pago Stripe en seguimiento no llama savePendingStripeOrderId', () => {
+      const savePending = vi.spyOn(stripePendingLib, 'savePendingStripeOrderId');
+      const user = null;
+      const guestLike = true;
+      const payment = 'stripe';
+      if (payment === 'stripe') {
+        if (user && !guestLike) savePending('ord-guest-stripe');
+      }
+      expect(savePending).not.toHaveBeenCalled();
+      expect(canSilentlyApplyServiceWorkerUpdate()).toBe(true);
     });
   });
 

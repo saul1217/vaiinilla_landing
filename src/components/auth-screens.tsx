@@ -23,7 +23,7 @@ import { entryAfterAccess, guestEntryAfterAccess, guestMenuPath, scannedSpace } 
 import { splashContextFor } from '../lib/splash-context';
 import { staffAccesses } from '../lib/staff-access';
 import { markVerificationSent } from '../lib/verification';
-import { setRegistrationFormDraft } from '../lib/pwa-update';
+import { beginRegistrationFormDraft } from '../lib/pwa-update';
 import type { LegalVersions, SessionAccess } from '../types/api';
 import { AlumnoBack, AlumnoLockup, AlumnoLogo } from './alumno-brand';
 import { SignupSteps } from './signup-steps';
@@ -190,8 +190,8 @@ export function AuthScreens({
       mode !== 'splash' &&
       mode !== 'staff' &&
       Boolean(email.trim() || password.trim() || nombre.trim() || totpCode.trim());
-    setRegistrationFormDraft(drafting);
-    return () => setRegistrationFormDraft(false);
+    if (!drafting) return undefined;
+    return beginRegistrationFormDraft('auth-screens');
   }, [email, mode, nombre, password, totpCode]);
 
   useEffect(() => {

@@ -431,7 +431,8 @@ export function CartPage() {
       if (payment === 'stripe') {
         const stripeSession = stripeSessionFromCreatedOrder(order);
         rememberStripeCheckoutSession(order.id, stripeSession);
-        savePendingStripeOrderId(order.id);
+        // Invitados pagan en seguimiento; la marca pendiente solo aplica en Mis pedidos.
+        if (user && !guestLike) savePendingStripeOrderId(order.id);
       }
       reset();
       // La mesa se conserva para pedir otra ronda sin volver a escanear.

@@ -10,8 +10,8 @@ export const PWA_REGISTRATION_UPDATE_MS = 30 * 60_000;
 
 let checkoutSubmits = 0;
 let stripePaymentPanels = 0;
-let registrationFormDraft = false;
-let reservationFormDraft = false;
+const registrationFormDrafts = new Set<string>();
+const reservationFormDrafts = new Set<string>();
 
 /** Marca un envío de pedido o confirmación Stripe en curso (no interrumpir con SKIP_WAITING). */
 export function beginCheckoutSubmit(): () => void {
@@ -29,12 +29,18 @@ export function beginStripePaymentPanel(): () => void {
   };
 }
 
-export function setRegistrationFormDraft(active: boolean): void {
-  registrationFormDraft = active;
+export function beginRegistrationFormDraft(id: string): () => void {
+  registrationFormDrafts.add(id);
+  return () => {
+    registrationFormDrafts.delete(id);
+  };
 }
 
-export function setReservationFormDraft(active: boolean): void {
-  reservationFormDraft = active;
+export function beginReservationFormDraft(id: string): () => void {
+  reservationFormDrafts.add(id);
+  return () => {
+    reservationFormDrafts.delete(id);
+  };
 }
 
 export function canSilentlyApplyServiceWorkerUpdate(): boolean {
@@ -45,7 +51,15 @@ export function canSilentlyApplyServiceWorkerUpdate(): boolean {
   if (readPendingStripeOrderId()) return false;
   if (stripeConfirmingInProgress()) return false;
   if (stripeCheckoutInProgress()) return false;
-  if (registrationFormDraft) return false;
-  if (reservationFormDraft) return false;
+  if (registrationFormDrafts.size > 0) return false;
+  if (reservationFormDrafts.size > 0) return false;
   return true;
+}
+
+/** Solo pruebas: evita fugas de contadores entre archivos. */
+export function resetPwaUpdateGuardsForTests(): void {
+  checkoutSubmits = 0;
+  stripePaymentPanels = 0;
+  registrationFormDrafts.clear();
+  reservationFormDrafts.clear();
 }

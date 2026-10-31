@@ -1,10 +1,11 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import {
   beginCheckoutSubmit,
+  beginRegistrationFormDraft,
+  beginReservationFormDraft,
   beginStripePaymentPanel,
   canSilentlyApplyServiceWorkerUpdate,
-  setRegistrationFormDraft,
-  setReservationFormDraft,
+  resetPwaUpdateGuardsForTests,
 } from './pwa-update';
 import * as cartStorage from './cart-storage';
 import * as stripePending from './stripe-pending';
@@ -16,14 +17,12 @@ describe('canSilentlyApplyServiceWorkerUpdate', () => {
     vi.spyOn(stripePending, 'readPendingStripeOrderId').mockReturnValue(null);
     vi.spyOn(stripePending, 'stripeConfirmingInProgress').mockReturnValue(false);
     vi.spyOn(stripeSession, 'stripeCheckoutInProgress').mockReturnValue(false);
-    setRegistrationFormDraft(false);
-    setReservationFormDraft(false);
+    resetPwaUpdateGuardsForTests();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    setRegistrationFormDraft(false);
-    setReservationFormDraft(false);
+    resetPwaUpdateGuardsForTests();
   });
 
   it('permite actualizar con carrito vacío y sin checkout', () => {
@@ -63,11 +62,13 @@ describe('canSilentlyApplyServiceWorkerUpdate', () => {
   });
 
   it('bloquea con borrador en registro o reservas', () => {
-    setRegistrationFormDraft(true);
+    const endReg = beginRegistrationFormDraft('test-auth');
     expect(canSilentlyApplyServiceWorkerUpdate()).toBe(false);
-    setRegistrationFormDraft(false);
+    endReg();
 
-    setReservationFormDraft(true);
+    const endRes = beginReservationFormDraft('test-res');
     expect(canSilentlyApplyServiceWorkerUpdate()).toBe(false);
+    endRes();
+    expect(canSilentlyApplyServiceWorkerUpdate()).toBe(true);
   });
 });

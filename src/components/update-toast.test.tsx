@@ -2,18 +2,26 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PWA_UPDATE_IDLE_MS } from '../lib/pwa-update';
+import {
+  PWA_REGISTRATION_UPDATE_MS,
+  PWA_UPDATE_IDLE_MS,
+  canSilentlyApplyServiceWorkerUpdate,
+  resetPwaUpdateGuardsForTests,
+} from '../lib/pwa-update';
 import * as pwaUpdate from '../lib/pwa-update';
 import { UpdateToast } from './update-toast';
 
 function fakeServiceWorker() {
   const postMessage = vi.fn();
-  const waiting = { postMessage } as unknown as ServiceWorker;
+  let waiting = { postMessage } as unknown as ServiceWorker;
   const registration = {
-    waiting,
+    get waiting() {
+      return waiting;
+    },
     update: vi.fn().mockResolvedValue(undefined),
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
+    installing: null as { addEventListener: (event: string, cb: () => void) => void } | null,
   };
   Object.defineProperty(navigator, 'serviceWorker', {
     configurable: true,
@@ -23,7 +31,24 @@ function fakeServiceWorker() {
       addEventListener: vi.fn(),
     },
   });
-  return { postMessage, registration };
+
+  function setWaiting(next: ServiceWorker) {
+    waiting = next;
+  }
+
+  function emitUpdateFound() {
+    registration.installing = {
+      addEventListener: (_event: string, cb: () => void) => {
+        cb();
+      },
+    };
+    const onFound = registration.addEventListener.mock.calls.find(([event]) => event === 'updatefound')?.[1] as
+      | (() => void)
+      | undefined;
+    onFound?.();
+  }
+
+  return { postMessage, registration, setWaiting, emitUpdateFound };
 }
 
 function setVisibility(state: 'hidden' | 'visible') {
@@ -154,5 +179,98 @@ describe('UpdateToast respaldos', () => {
     await flushMicrotasks();
 
     expect(waiting).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+  });
+
+  it('P5: montar fuera de /pedir no aplica por esa ruta', async () => {
+    const { postMessage: waiting } = fakeServiceWorker();
+    serveUpdateJson(false);
+    renderToast('/e/demo-a');
+    await flushMicrotasks();
+
+    expect(waiting).not.toHaveBeenCalled();
+  });
+});
+
+describe('UpdateToast mantenimiento', () => {
+  beforeEach(() => {
+    setVisibility('visible');
+    resetPwaUpdateGuardsForTests();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(navigator, 'serviceWorker');
+  });
+
+  it('R1: llama registration.update cada 30 min', async () => {
+    vi.useFakeTimers();
+    const { registration } = fakeServiceWorker();
+    serveUpdateJson(false);
+    renderToast();
+    await flushMicrotasks();
+
+    const before = registration.update.mock.calls.length;
+    act(() => {
+      vi.advanceTimersByTime(PWA_REGISTRATION_UPDATE_MS);
+    });
+    expect(registration.update.mock.calls.length).toBeGreaterThan(before);
+  });
+
+  it('R2: un SW nuevo rearma el temporizador de inactividad', async () => {
+    vi.useFakeTimers();
+    const { postMessage: waiting, setWaiting, emitUpdateFound } = fakeServiceWorker();
+    serveUpdateJson(false);
+    renderToast();
+    await flushMicrotasks();
+
+    act(() => {
+      vi.advanceTimersByTime(PWA_UPDATE_IDLE_MS - 5_000);
+    });
+    expect(waiting).not.toHaveBeenCalled();
+
+    const nextPostMessage = vi.fn();
+    setWaiting({ postMessage: nextPostMessage } as unknown as ServiceWorker);
+    emitUpdateFound();
+    await flushMicrotasks();
+
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    expect(nextPostMessage).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(PWA_UPDATE_IDLE_MS);
+    });
+    expect(nextPostMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+  });
+
+  it('R3: al desmontar cancela el temporizador de inactividad', async () => {
+    vi.useFakeTimers();
+    const { postMessage: waiting } = fakeServiceWorker();
+    serveUpdateJson(false);
+    const view = renderToast();
+    await flushMicrotasks();
+
+    view.unmount();
+    act(() => {
+      vi.advanceTimersByTime(PWA_UPDATE_IDLE_MS);
+    });
+    expect(waiting).not.toHaveBeenCalled();
+  });
+});
+
+describe('invitado y actualización PWA', () => {
+  afterEach(() => {
+    sessionStorage.clear();
+  });
+
+  it('sin pending de Stripe registrado, la actualización silenciosa sigue permitida', async () => {
+    const { savePendingStripeOrderId } = await import('../lib/stripe-pending');
+    expect(canSilentlyApplyServiceWorkerUpdate()).toBe(true);
+    savePendingStripeOrderId('ord-stuck');
+    expect(canSilentlyApplyServiceWorkerUpdate()).toBe(false);
+    sessionStorage.removeItem('vaiinilla.buyer.stripe-pending-order.v1');
+    expect(canSilentlyApplyServiceWorkerUpdate()).toBe(true);
   });
 });
