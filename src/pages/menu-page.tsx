@@ -21,10 +21,8 @@ import { MotionSheet } from '../components/motion-sheet';
 import { ProductSheet } from '../components/product-sheet';
 import { SlidingChips } from '../components/sliding-chips';
 import { SeatedToast } from '../components/seated-toast';
-import { peekResource, resourceKeys } from '../lib/resource-cache';
+import { cachedResource, peekResource, resourceKeys } from '../lib/resource-cache';
 import { useBuyerSession } from '../context/buyer-session';
-import { resolveClientSession } from '../lib/client-session';
-import { lastPlaceSlug } from '../lib/last-place';
 import { isActiveOrder, orderDestinationLabel } from '../lib/order-labels';
 import { statusAsPhrase } from '../lib/status-phrase';
 import { readSpace } from '../lib/space-session';
@@ -34,7 +32,7 @@ export function MenuPage({ qaFixture }: { qaFixture?: { user: { displayName: str
   const { slug = '' } = useParams();
   const { user: authUser } = useAuth();
   const user = qaFixture?.user as typeof authUser ?? authUser;
-  const { context, openClientSession } = useBuyerSession();
+  const { context } = useBuyerSession();
   const { addLine, cart } = useCart();
   // Lo ya cargado se ve al instante; la carga de abajo lo actualiza en segundo plano.
   const [place, setPlace] = useState<PublicEstablishment | null>(() => qaFixture?.place ?? peekResource(resourceKeys.establishment(slug)) ?? null);
@@ -63,20 +61,26 @@ export function MenuPage({ qaFixture }: { qaFixture?: { user: { displayName: str
 
   useEffect(() => {
     if (qaFixture) return;
-    if (!user) { setActiveOrder(null); return; }
+    setActiveOrder(null);
+    const uid = user?.uid;
+    if (!uid || !context?.access_token || context.contexto.usuario_id !== uid || !place || context.contexto.establecimiento_id !== place.id) return;
+    const key = resourceKeys.orders(uid, slug);
+    const cached = peekResource<OrderDetail[]>(key);
+    if (cached) setActiveOrder(cached.find((order) => isActiveOrder(order)) ?? null);
     let active = true;
     const load = async () => {
+      if (!active || document.hidden) return;
       try {
-        const session = await resolveClientSession({ user, context, preferredSlug: slug || lastPlaceSlug(), openClientSession });
-        if (!session) return;
-        const result = await api.listOrders(session.context.access_token);
-        if (active) setActiveOrder(result.orders.find((order) => isActiveOrder(order)) ?? null);
-      } catch { if (active) setActiveOrder(null); }
+        const orders = await cachedResource(key, 30_000, async () => (await api.listOrders(context.access_token)).orders);
+        if (active && user?.uid === uid) setActiveOrder(orders.find((order) => isActiveOrder(order)) ?? null);
+      } catch { if (active && user?.uid === uid) setActiveOrder(null); }
     };
     void load();
-    const timer = window.setInterval(() => void load(), 5000);
-    return () => { active = false; window.clearInterval(timer); };
-  }, [context, openClientSession, qaFixture, slug, user]);
+    const timer = window.setInterval(() => void load(), 30_000);
+    const onVisibilityChange = () => { if (!document.hidden) void load(); };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => { active = false; window.clearInterval(timer); document.removeEventListener('visibilitychange', onVisibilityChange); };
+  }, [context, place, qaFixture, slug, user]);
 
   // "Rentar cancha" solo se ofrece si el negocio tiene al menos una cancha con precio por hora.
   useEffect(() => {

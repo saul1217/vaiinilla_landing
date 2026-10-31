@@ -1,16 +1,19 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeProvider } from "../context/theme-context";
 import { api } from "../lib/api";
+import { clearResourceCache } from "../lib/resource-cache";
 import { QA_PHOTO_TACOS } from "../lib/qa-catalog-photos";
 import { MenuPage } from "./menu-page";
 
 const addLine = vi.fn();
-const authState: { user: { email: string; displayName: string } | null } = {
+const authState: { user: { uid: string; email: string; displayName: string } | null } = {
   user: null,
 };
+const sessionState: { context: { access_token: string; contexto: { usuario_id: string; establecimiento_id: string } } | null } = { context: null };
+const openClientSession = vi.fn();
 const cartState: {
   cart: { slug: string; establishmentName: string; lines: unknown[] } | null;
 } = { cart: { slug: "demo-a", establishmentName: "Demo A", lines: [] } };
@@ -25,6 +28,7 @@ vi.mock("../lib/api", () => ({
       identificador_cliente_obligatorio: false,
     }),
     getPublicSpaces: vi.fn().mockResolvedValue([]),
+    listOrders: vi.fn().mockResolvedValue({ orders: [] }),
     getGuestCatalog: vi.fn().mockResolvedValue({
       categorias: [{ id: 1, nombre: "Bebidas", orden: 1 }],
       productos: [
@@ -73,7 +77,7 @@ vi.mock("../context/auth-context", () => ({
 }));
 
 vi.mock("../context/buyer-session", () => ({
-  useBuyerSession: () => ({ context: null, openClientSession: vi.fn() }),
+  useBuyerSession: () => ({ context: sessionState.context, openClientSession }),
 }));
 
 vi.mock("../context/cart-context", () => ({
@@ -103,7 +107,11 @@ function renderMenu() {
 describe("MenuPage", () => {
   beforeEach(() => {
     sessionStorage.clear();
+    clearResourceCache();
     authState.user = null;
+    sessionState.context = null;
+    openClientSession.mockReset();
+    vi.mocked(api).listOrders.mockReset().mockResolvedValue({ orders: [], cursor: null });
     cartState.cart = { slug: "demo-a", establishmentName: "Demo A", lines: [] };
     addLine.mockReset();
   });
@@ -264,5 +272,61 @@ describe("MenuPage", () => {
     renderMenu();
     await screen.findByText(/chocolate/i);
     expect(screen.queryByRole("link", { name: /apartar una cancha/i })).not.toBeInTheDocument();
+  });
+
+  it("no muestra pedido activo a invitados y nunca abre sesión", async () => {
+    renderMenu();
+    await screen.findByRole("button", { name: /chocolate frío/i });
+    expect(screen.queryByText("Pedido activo")).not.toBeInTheDocument();
+    expect(vi.mocked(api).listOrders.mock.calls).toHaveLength(0);
+    expect(openClientSession).not.toHaveBeenCalled();
+  });
+
+  it("muestra solo pedidos activos y excluye estados terminales", async () => {
+    authState.user = { uid: "u1", displayName: "María", email: "maria@example.test" };
+    sessionState.context = { access_token: "token-u1", contexto: { usuario_id: "u1", establecimiento_id: "1" } };
+    vi.mocked(api).listOrders.mockResolvedValue({ orders: [
+      ...(["entregado", "cancelado", "expirado", "no_recogido"] as const).map((estado, i) => ({ id: `dead-${i}`, folio: 10 + i, estado, items: [] })),
+      { id: "active", folio: 99, estado: "preparando", items: [] },
+    ] as never, cursor: null });
+    renderMenu();
+    expect(await screen.findByText("#99")).toBeInTheDocument();
+    expect(screen.getByText("Pedido activo")).toBeInTheDocument();
+    expect(screen.queryByText(/#1[0-3]/)).not.toBeInTheDocument();
+    expect(openClientSession).not.toHaveBeenCalled();
+  });
+
+  it("limpia la tarjeta al cambiar uid y no consulta con la pestaña oculta", async () => {
+    authState.user = { uid: "u1", displayName: "María", email: "maria@example.test" };
+    sessionState.context = { access_token: "token-u1", contexto: { usuario_id: "u1", establecimiento_id: "1" } };
+    vi.mocked(api).listOrders.mockResolvedValue({ orders: [{ id: "active", folio: 77, estado: "preparando", items: [] }] as never, cursor: null });
+    const view = renderMenu();
+    expect(await screen.findByText("#77")).toBeInTheDocument();
+    authState.user = { uid: "u2", displayName: "Luis", email: "luis@example.test" };
+    sessionState.context = { access_token: "token-u2", contexto: { usuario_id: "u2", establecimiento_id: "1" } };
+    vi.mocked(api).listOrders.mockResolvedValue({ orders: [], cursor: null });
+    view.rerender(<MemoryRouter initialEntries={["/e/demo-a"]}><ThemeProvider><Routes><Route path="/e/:slug" element={<MenuPage />} /></Routes></ThemeProvider></MemoryRouter>);
+    expect(screen.queryByText("#77")).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /chocolate frío/i })).toBeInTheDocument();
+    expect(openClientSession).not.toHaveBeenCalled();
+  });
+
+  it("no vuelve a consultar pedidos mientras document.hidden", async () => {
+    vi.useFakeTimers();
+    const hidden = Object.getOwnPropertyDescriptor(document, "hidden");
+    Object.defineProperty(document, "hidden", { configurable: true, value: true });
+    authState.user = { uid: "u1", displayName: "María", email: "maria@example.test" };
+    sessionState.context = { access_token: "token-u1", contexto: { usuario_id: "u1", establecimiento_id: "1" } };
+    try {
+      renderMenu();
+      await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+      expect(vi.mocked(api).listOrders.mock.calls).toHaveLength(0);
+      act(() => { vi.advanceTimersByTime(60_000); });
+      expect(vi.mocked(api).listOrders.mock.calls).toHaveLength(0);
+    } finally {
+      if (hidden) Object.defineProperty(document, "hidden", hidden);
+      else delete (document as { hidden?: boolean }).hidden;
+      vi.useRealTimers();
+    }
   });
 });

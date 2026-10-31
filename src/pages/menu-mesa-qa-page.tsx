@@ -15,7 +15,7 @@ function QaFrame({ children }: { children: ReactNode }) { return <ThemeProvider>
 
 export function MenuMesaQaPage() {
   const [ready] = useState(() => {
-    localStorage.setItem('vaiinilla.buyer.space.v1', JSON.stringify({ slug: place.slug, espacioId: 5, nombre: 'Mesa 5', tipo: 'mesa', guardadoEn: Date.now() }));
+    if (import.meta.env.DEV) localStorage.setItem('vaiinilla.buyer.space.v1', JSON.stringify({ slug: place.slug, espacioId: 5, nombre: 'Mesa 5', tipo: 'mesa', guardadoEn: Date.now() }));
     return true;
   });
   if (!import.meta.env.DEV || !ready) return null;

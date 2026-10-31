@@ -57,4 +57,11 @@ describe('ProductSheet', () => {
     renderSheet();
     expect(screen.getByRole('button', { name: 'Cerrar producto' })).toBeInTheDocument();
   });
+
+  it('incluye el extra elegido en el precio mostrado y en el botón Agregar', () => {
+    const withOption = { ...product, grupos_opcion: [{ id: 2, nombre: 'Leche', min_selecciones: 0, max_selecciones: 1, opciones: [{ id: 9, nombre: 'Avena', precio_extra: '15.00' }] }] };
+    render(<ProductSheet product={withOption} placeName="Cafetería Demo" photoUrl={null} optionIds={[9]} quantity={1} lineTotal="100.00" error={null} canAddToCart loginHref="/cuenta" onToggleOption={() => undefined} onClearGroup={() => undefined} onQuantityChange={() => undefined} onAdd={() => true} onClosed={() => undefined} />);
+    expect(document.querySelector('.alumno-psheet__price-line')).toHaveTextContent('$100 · listo en ~12 min');
+    expect(screen.getByRole('button', { name: /agregar/i })).toHaveTextContent('$100');
+  });
 });

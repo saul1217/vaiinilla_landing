@@ -74,7 +74,7 @@ export function ProductSheet(props: ProductSheetProps) {
               {product.descripcion ? <p className="alumno-psheet__lead">{product.descripcion}</p> : null}
 
               <p className="alumno-psheet__price-line">
-                {formatAmount(product.precio_digital)} · listo en ~{product.tiempo_estimado_min} min
+                {price || formatAmount(product.precio_digital)} · listo en ~{product.tiempo_estimado_min} min
               </p>
               <div className="alumno-psheet__meta">
                 {product.ingredientes ? <MetaCard icon="leaf" label="Ingredientes" value={product.ingredientes} /> : null}
