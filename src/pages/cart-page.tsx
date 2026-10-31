@@ -634,7 +634,7 @@ export function CartPage() {
                   selected={useTab}
                   icon="tab"
                   title="Pagar al final"
-                  badge="Cuenta"
+                  badge="Pagas al irte"
                   subtitle={`Pide ahora y paga todo junto al irte de tu ${spaceNoun(space.tipo)}.`}
                   onSelect={() => {
                     setPayment('efectivo');

@@ -15,6 +15,7 @@ describe('theme', () => {
   it('migra una preferencia AMOLED guardada a oscuro sin cambiar la clave', () => {
     localStorage.setItem(THEME_STORAGE_KEY, 'amoled');
     expect(readThemePreference()).toBe('dark');
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
     expect(THEME_STORAGE_KEY).toBe('vaiinilla.buyer.theme.v1');
   });
 });

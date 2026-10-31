@@ -16,7 +16,10 @@ export function isThemePreference(value: string | null): value is ThemePreferenc
 export function readThemePreference(): ThemePreference {
   if (typeof window === 'undefined') return 'system';
   const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-  if (stored === 'amoled') return 'dark';
+  if (stored === 'amoled') {
+    window.localStorage.setItem(THEME_STORAGE_KEY, 'dark');
+    return 'dark';
+  }
   return isThemePreference(stored) ? stored : 'system';
 }
 

@@ -236,23 +236,23 @@ describe("MenuPage", () => {
     expect(document.querySelector(".alumno-psheet__vaini")).toBeNull();
   });
 
-  it("ofrece Rentar cancha solo si hay una cancha con precio por hora", async () => {
+  it("ofrece Apartar una cancha solo si hay una cancha con precio por hora", async () => {
     vi.mocked(api).getPublicSpaces.mockResolvedValueOnce([
       { espacio: { tipo: "mesa" }, precio_hora: null },
       { espacio: { tipo: "cancha" }, precio_hora: "300.00" },
     ]);
     renderMenu();
-    const link = await screen.findByRole("link", { name: /rentar una cancha/i });
+    const link = await screen.findByRole("link", { name: /apartar una cancha/i });
     expect(link).toHaveAttribute("href", "/e/demo-a/canchas");
   });
 
-  it("no ofrece Rentar cancha si las canchas no tienen precio o no hay canchas", async () => {
+  it("no ofrece Apartar una cancha si las canchas no tienen precio o no hay canchas", async () => {
     vi.mocked(api).getPublicSpaces.mockResolvedValueOnce([
       { espacio: { tipo: "cancha" }, precio_hora: null },
       { espacio: { tipo: "mesa" }, precio_hora: "10.00" },
     ]);
     renderMenu();
     await screen.findByText(/chocolate/i);
-    expect(screen.queryByRole("link", { name: /rentar una cancha/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /apartar una cancha/i })).not.toBeInTheDocument();
   });
 });

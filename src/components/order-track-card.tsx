@@ -12,7 +12,6 @@ import {
   orderCancelReason,
   orderOperationalHint,
   orderProgressFilled,
-  orderStatusLabel,
   orderTrackSteps,
 } from '../lib/order-labels';
 import { RENTAL_STEPS, formatHoldCountdown, rentalHoldRemainingMs, rentalStep } from '../lib/rental-tracking';
@@ -21,6 +20,7 @@ import { useHeightMorph } from '../lib/use-height-morph';
 import { ArrivalButton } from './arrival-button';
 import type { ArrivalClient } from '../lib/arrival-api';
 import { OrderPickupPanel } from './order-pickup-panel';
+import { statusAsPhrase } from '../lib/status-phrase';
 
 export function OrderTrackCard({
   order,
@@ -66,8 +66,7 @@ export function OrderTrackCard({
   const steps = orderTrackSteps(order, now);
   const inFlow = rental ? rentalCurrent !== null : ORDER_FLOW.includes(order.estado);
   const active = isActiveOrder(order);
-  const statusLabel = orderStatusLabel(order, now);
-  const statusPhrase = statusAsPhrase(statusLabel, rental);
+  const statusPhrase = statusAsPhrase(order, now);
   const showBar = inFlow;
   const cardRef = useRef<HTMLElement>(null);
   // Una foto que no carga vuelve a la mascota en vez de dejar el ícono de imagen rota.
@@ -236,28 +235,6 @@ export function OrderTrackCard({
       ) : null}
     </article>
   );
-}
-
-function statusAsPhrase(label: string, rental: boolean): string {
-  if (rental && label === 'Por pagar') return 'Falta pagar tu reserva';
-  if (rental && label === 'Reservada') return 'Tu cancha está reservada';
-  if (rental && label === 'En juego') return 'Tu horario está en curso';
-  if (rental && label === 'Terminada') return 'Tu horario terminó';
-  if (rental && label === 'Apartado vencido') return 'El apartado venció';
-  if (rental && label === 'Cancelada') return 'La reserva fue cancelada';
-  if (rental && label === 'Vencida') return 'La reserva venció';
-  if (rental && label === 'Revisar con el personal') return 'Consulta con el personal sobre tu reserva';
-  if (label === 'Preparando') return 'Estamos preparando tu pedido';
-  if (label === 'Listo') return 'Tu pedido está listo';
-  if (label === 'Cobrado') return 'Recibimos tu pedido';
-  if (label === 'Por cobrar') return 'Falta pagar tu pedido';
-  if (label === 'En tu cuenta') return 'Tu pedido está en la cuenta';
-  if (label === 'Por pagar') return 'Tu pedido está por pagar';
-  if (label === 'Entregado') return 'Tu pedido fue entregado';
-  if (label === 'Cancelado') return 'Tu pedido fue cancelado';
-  if (label === 'No recogido') return 'Tu pedido no se recogió';
-  if (label === 'Expirado') return 'El pedido venció';
-  return label;
 }
 
 function focusExpandedTrackCard(card: HTMLElement) {

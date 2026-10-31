@@ -236,8 +236,8 @@ export function MenuPage() {
         {rentsCourts ? (
           <Link className="alumno-courts-entry" to={`/e/${slug}/canchas`}>
             <span>
-              <strong>Rentar una cancha</strong>
-              <small>Elige día y hora. Se paga al apartar.</small>
+              <strong>Apartar una cancha</strong>
+              <small>Elige día y hora. Pagas al apartar.</small>
             </span>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M5 12h14m-5-5 5 5-5 5" />

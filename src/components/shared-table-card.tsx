@@ -8,6 +8,7 @@ import { dropTableParticipantOnSessionChange, forgetTableParticipant } from '../
 import { forgetSpace } from '../lib/space-session';
 import { spaceNoun } from '../lib/space-words';
 import type { SharedTable } from '../types/api';
+import { assignmentStatus } from '../lib/assignment-status';
 
 const POLL_MS = 5000;
 const ALIAS_MAX = 30;
@@ -179,15 +180,7 @@ export function SharedTableCard({
   if (!token) return null;
 
   const noun = spaceNoun(table.espacio.tipo);
-  const tableOrders = table.grupos.flatMap((group) => group.pedidos);
-  const assignedToMe = tableOrders.filter((order) => order.lo_pago_yo).length;
-  const unassigned = tableOrders.filter(
-    (order) => order.pendiente_cobro && !order.pagara && !order.lo_pago_yo,
-  ).length;
-  const assignmentStatus = [
-    assignedToMe ? `${assignedToMe} marcado${assignedToMe === 1 ? '' : 's'} para pagar` : '',
-    unassigned ? `${unassigned} por asignar` : '',
-  ].filter(Boolean).join(' · ');
+  const assignmentSummary = assignmentStatus(table.grupos.flatMap((group) => group.pedidos));
   return (
     <article className="alumno-track-card shared-table alumno-arrive" aria-labelledby="shared-table-title">
       <header className="alumno-track-card__top">
@@ -203,7 +196,7 @@ export function SharedTableCard({
 
       <details className="shared-table__details">
         <summary>
-          Ver pedidos y elegir qué pago yo{assignmentStatus ? ` · ${assignmentStatus}` : ''}
+          Ver pedidos y elegir qué pago yo{assignmentSummary ? ` · ${assignmentSummary}` : ''}
         </summary>
         <div className="alumno-chips shared-table__people" aria-label={`Quién está en la ${noun}`}>
           {table.participantes.map((person, index) => (

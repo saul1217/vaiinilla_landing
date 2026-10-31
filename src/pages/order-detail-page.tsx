@@ -14,6 +14,7 @@ import { lastPlaceSlug } from '../lib/last-place';
 import { errorMessage } from '../lib/api-error';
 import { forgetIdempotencyKey, idempotencyKeyFor } from '../lib/idempotency';
 import { formatAmount } from '../lib/money';
+import { assignmentStatus } from '../lib/assignment-status';
 import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
 import { usePickupQrToken } from '../lib/use-pickup-qr';
 import {
@@ -384,14 +385,7 @@ export function OrderTicketView({
   table?: SharedTable | null;
 }) {
   const tableOrders = table?.grupos.flatMap((group) => group.pedidos) ?? [];
-  const assignedToMe = tableOrders.filter((sharedOrder) => sharedOrder.lo_pago_yo).length;
-  const unassigned = tableOrders.filter(
-    (sharedOrder) => sharedOrder.pendiente_cobro && !sharedOrder.pagara && !sharedOrder.lo_pago_yo,
-  ).length;
-  const assignmentStatus = [
-    assignedToMe ? `${assignedToMe} marcado${assignedToMe === 1 ? '' : 's'} para pagar` : '',
-    unassigned ? `${unassigned} por asignar` : '',
-  ].filter(Boolean).join(' · ');
+  const assignmentSummary = assignmentStatus(tableOrders);
   const tableIncludesOrder = Boolean(
     table?.cuenta_abierta &&
       table.grupos.some((group) => group.pedidos.some((sharedOrder) => sharedOrder.id === order.id)),
@@ -456,7 +450,7 @@ export function OrderTicketView({
           </div>
           <details className="shared-table__details">
             <summary>
-              Ver pedidos y elegir qué pago yo{assignmentStatus ? ` · ${assignmentStatus}` : ''}
+              Ver pedidos y elegir qué pago yo{assignmentSummary ? ` · ${assignmentSummary}` : ''}
             </summary>
             {orderedGroups(table)
               .filter((group) => group.pedidos.length > 0)
