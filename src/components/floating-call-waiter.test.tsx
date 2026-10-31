@@ -1,7 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { clampY, fabBounds, readFabPosition, snapSide } from '../lib/floating-call';
 import type { BuyerCallClient, TableCall } from '../lib/mesero-api';
 import { forgetSpace, rememberSpace } from '../lib/space-session';
 import { FloatingCallWaiter } from './floating-call-waiter';
@@ -45,30 +44,6 @@ async function mount(path = '/e/demo', api: BuyerCallClient = client()) {
 }
 
 const fab = () => screen.getByRole('button', { name: /llamar al mesero/i });
-const pos = (x: number, y: number) => ({ pointerId: 1, clientX: x, clientY: y, button: 0 });
-
-function drag(from: [number, number], to: [number, number]) {
-  const button = fab();
-  fireEvent.pointerDown(button, pos(...from));
-  fireEvent.pointerMove(button, pos(...to));
-  fireEvent.pointerUp(button, pos(...to));
-}
-
-describe('helpers de posición', () => {
-  it('se pega a la orilla cuyo lado contiene el centro', () => {
-    expect(snapSide(100, 400)).toBe('left');
-    expect(snapSide(250, 400)).toBe('right');
-  });
-
-  it('deja el botón arriba de la barra inferior y, en el Carrito, del botón de pagar', () => {
-    const home = fabBounds(800, { desktop: false, cart: false });
-    const cart = fabBounds(800, { desktop: false, cart: true });
-    expect(clampY(5000, home)).toBe(800 - 84 - 56);
-    expect(clampY(5000, cart)).toBe(800 - 160 - 56);
-    expect(clampY(-50, home)).toBe(home.top);
-  });
-});
-
 describe('FloatingCallWaiter', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -104,8 +79,8 @@ describe('FloatingCallWaiter', () => {
   it('un toque corto abre "¿Qué necesitas?" y cada opción llama a la mesa', async () => {
     const callSpy = vi.fn(() => Promise.resolve(tableCall()));
     await mount('/e/demo', client({ call: callSpy }));
-    fireEvent.pointerDown(fab(), pos(200, 300));
-    fireEvent.pointerUp(fab(), pos(203, 302));
+    fireEvent.pointerDown(fab(), { pointerId: 1, clientX: 200, clientY: 300, button: 0 });
+    fireEvent.pointerUp(fab(), { pointerId: 1, clientX: 203, clientY: 302, button: 0 });
     fireEvent.click(fab());
     expect(screen.getByText('¿Qué necesitas?')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Necesito algo' })).toBeTruthy();
@@ -114,6 +89,15 @@ describe('FloatingCallWaiter', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Necesito algo' }));
     await screen.findByText('Llamando a tu mesero…');
     expect(callSpy).toHaveBeenCalledWith(4, 'atencion', null);
+  });
+
+  it('un toque con movimiento abre el panel', async () => {
+    await mount();
+    fireEvent.pointerDown(fab(), { pointerId: 1, clientX: 200, clientY: 300, button: 0 });
+    fireEvent.pointerMove(fab(), { pointerId: 1, clientX: 260, clientY: 360, button: 0 });
+    fireEvent.pointerUp(fab(), { pointerId: 1, clientX: 260, clientY: 360, button: 0 });
+    fireEvent.click(fab());
+    expect(screen.getByText('¿Qué necesitas?')).toBeInTheDocument();
   });
 
   it('Pedir la cuenta solo aparece si se paga al final', async () => {
@@ -132,37 +116,9 @@ describe('FloatingCallWaiter', () => {
     expect(fab().getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('arrastrar no abre el menú y se pega a la orilla izquierda', async () => {
+  it('no registra una posición del control', async () => {
     await mount();
-    drag([350, 300], [60, 320]);
-    fireEvent.click(fab());
-    expect(screen.queryByText('¿Qué necesitas?')).toBeNull();
-    expect(screen.getByTestId('floating-call').className).toContain('is-left');
-    expect(readFabPosition()?.side).toBe('left');
-  });
-
-  it('pegada a la izquierda respeta la barra lateral en pantalla ancha', async () => {
-    await mount();
-    drag([350, 300], [60, 320]);
-    const left = screen.getByTestId('floating-call').style.left;
-    expect(left).toContain('var(--fcw-inset-left, 0px)');
-  });
-
-  it('la posición se guarda y se restaura al recargar', async () => {
-    const first = await mount();
-    drag([350, 300], [60, 320]);
-    const saved = readFabPosition();
-    expect(saved).toEqual({ side: 'left', y: 20 });
-    first.unmount();
-    await mount('/cuenta/pedidos');
-    expect(screen.getByTestId('floating-call').className).toContain('is-left');
-    expect(screen.getByTestId('floating-call').style.getPropertyValue('--fcw-y')).toBe('20px');
-  });
-
-  it('arrastrar hacia abajo fuera de la pantalla lo deja arriba de la barra inferior', async () => {
-    await mount();
-    drag([350, 300], [350, 5000]);
-    expect(readFabPosition()?.y).toBe(800 - 84 - 56);
+    expect(localStorage.getItem('vaiinilla.buyer.call-fab.v1')).toBeNull();
   });
 
   it('aparece de inmediato con la mesa guardada, sin esperar la sesión del backend', () => {

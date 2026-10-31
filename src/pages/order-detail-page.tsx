@@ -383,6 +383,15 @@ export function OrderTicketView({
   order: OrderDetail;
   table?: SharedTable | null;
 }) {
+  const tableOrders = table?.grupos.flatMap((group) => group.pedidos) ?? [];
+  const assignedToMe = tableOrders.filter((sharedOrder) => sharedOrder.lo_pago_yo).length;
+  const unassigned = tableOrders.filter(
+    (sharedOrder) => sharedOrder.pendiente_cobro && !sharedOrder.pagara && !sharedOrder.lo_pago_yo,
+  ).length;
+  const assignmentStatus = [
+    assignedToMe ? `${assignedToMe} marcado${assignedToMe === 1 ? '' : 's'} para pagar` : '',
+    unassigned ? `${unassigned} por asignar` : '',
+  ].filter(Boolean).join(' · ');
   const tableIncludesOrder = Boolean(
     table?.cuenta_abierta &&
       table.grupos.some((group) => group.pedidos.some((sharedOrder) => sharedOrder.id === order.id)),
@@ -446,7 +455,9 @@ export function OrderTicketView({
             <p><strong>Tu parte por pagar</strong><span>{formatAmount(table.mi_parte.pendiente)}</span></p>
           </div>
           <details className="shared-table__details">
-            <summary>Ver desglose</summary>
+            <summary>
+              Ver pedidos y elegir qué pago yo{assignmentStatus ? ` · ${assignmentStatus}` : ''}
+            </summary>
             {orderedGroups(table)
               .filter((group) => group.pedidos.length > 0)
               .map((group) => {

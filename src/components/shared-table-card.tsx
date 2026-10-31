@@ -179,6 +179,15 @@ export function SharedTableCard({
   if (!token) return null;
 
   const noun = spaceNoun(table.espacio.tipo);
+  const tableOrders = table.grupos.flatMap((group) => group.pedidos);
+  const assignedToMe = tableOrders.filter((order) => order.lo_pago_yo).length;
+  const unassigned = tableOrders.filter(
+    (order) => order.pendiente_cobro && !order.pagara && !order.lo_pago_yo,
+  ).length;
+  const assignmentStatus = [
+    assignedToMe ? `${assignedToMe} marcado${assignedToMe === 1 ? '' : 's'} para pagar` : '',
+    unassigned ? `${unassigned} por asignar` : '',
+  ].filter(Boolean).join(' · ');
   return (
     <article className="alumno-track-card shared-table alumno-arrive" aria-labelledby="shared-table-title">
       <header className="alumno-track-card__top">
@@ -193,7 +202,9 @@ export function SharedTableCard({
       </div>
 
       <details className="shared-table__details">
-        <summary>Ver desglose</summary>
+        <summary>
+          Ver pedidos y elegir qué pago yo{assignmentStatus ? ` · ${assignmentStatus}` : ''}
+        </summary>
         <div className="alumno-chips shared-table__people" aria-label={`Quién está en la ${noun}`}>
           {table.participantes.map((person, index) => (
             <span key={tablePersonKey(person, index)} className={person.soy_yo ? 'alumno-chip is-on' : 'alumno-chip'}>

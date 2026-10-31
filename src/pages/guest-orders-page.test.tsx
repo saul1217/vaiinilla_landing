@@ -205,7 +205,7 @@ describe('pedidos del invitado', () => {
     expect(joinTable).toHaveBeenCalledWith('guest-jwt', 'qr-5', 'Lupi');
     expect(await screen.findByRole('article', { name: 'Mesa 5' })).toBeInTheDocument();
     // Dos invitados en la misma mesa: solo alias, cada quien ve al otro.
-    await user.click(screen.getByText('Ver desglose'));
+    await user.click(screen.getByText(/^Ver pedidos y elegir qué pago yo/));
     expect(screen.getByText('Lupi (tú)')).toBeInTheDocument();
     expect(screen.getAllByText('Beto').length).toBeGreaterThan(0);
     expect(screen.getByText('1× Torta')).toBeInTheDocument();

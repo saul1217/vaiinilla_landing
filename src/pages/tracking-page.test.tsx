@@ -145,7 +145,7 @@ describe('seguimiento sin cuenta', () => {
     renderAt(`/seguimiento/${TOKEN}`);
 
     expect(await screen.findByRole('heading', { name: 'Cuenta de la mesa' })).toBeInTheDocument();
-    await userEvent.setup().click(screen.getByText('Ver desglose'));
+    await userEvent.setup().click(screen.getByText(/^Ver pedidos y elegir qué pago yo/));
     expect(screen.getAllByText(/1 × Quesadilla/)).toHaveLength(2);
     expect(screen.getByText(/4 personas/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Tus pedidos' })).toBeInTheDocument();

@@ -47,7 +47,7 @@ describe('mesa agrupada por participante', () => {
     const user = userEvent.setup();
     render(<SharedTableCard accessToken="jwt" qrToken={null} />);
     expect(await screen.findByRole('article', { name: 'Mesa 3' })).toBeInTheDocument();
-    await user.click(screen.getByText('Ver desglose'));
+    await user.click(screen.getByText(/^Ver pedidos y elegir qué pago yo/));
     // Dos grupos "David": uno por cada participante.
     expect(screen.getAllByRole('heading', { name: 'David' })).toHaveLength(2);
   });
@@ -58,7 +58,7 @@ describe('mesa agrupada por participante', () => {
     ] });
     const user = userEvent.setup();
     render(<SharedTableCard accessToken="jwt" qrToken={null} />);
-    await user.click(await screen.findByText('Ver desglose'));
+    await user.click(await screen.findByText(/^Ver pedidos y elegir qué pago yo/));
     expect(await screen.findByRole('heading', { name: /otros en la mesa/i })).toBeInTheDocument();
   });
 

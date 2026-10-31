@@ -131,12 +131,28 @@ describe('mesa compartida', () => {
     const user = userEvent.setup();
     render(<SharedTableCard accessToken="jwt" qrToken={null} />);
 
-    await user.click(await screen.findByText('Ver desglose'));
+    await user.click(await screen.findByText(/^Ver pedidos y elegir qué pago yo/));
     expect(screen.getByText('Ana (tú)')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /tus pedidos/i })).toBeInTheDocument();
     expect(screen.getByText('1× Torta')).toBeInTheDocument();
     expect(screen.getByText(/listo · pagado/i)).toBeInTheDocument();
     expect(screen.getAllByText('Tu parte por pagar')[0]?.nextElementSibling).toHaveTextContent('$10.10');
+  });
+
+  it('resume pedidos marcados para pagar y pendientes de asignar', async () => {
+    apiMock.currentTable.mockResolvedValue(table({
+      grupos: [{
+        alias: 'Ana', participante_id: 'p-ana', soy_yo: true,
+        total: '30.30', pagado: '20.20', pendiente: '10.10',
+        pedidos: [
+          { id: null, folio: 8, estado: 'listo', items_resumen: 'Torta', total: '10.10', pendiente_cobro: true, creado_en: 'a', pagara: 'Ana', lo_pago_yo: true },
+          { id: null, folio: 9, estado: 'listo', items_resumen: 'Agua', total: '10.10', pendiente_cobro: true, creado_en: 'b', pagara: null, lo_pago_yo: false },
+        ],
+      }],
+    }));
+    render(<SharedTableCard accessToken="jwt" qrToken={null} />);
+
+    expect(await screen.findByText('Ver pedidos y elegir qué pago yo · 1 marcado para pagar · 1 por asignar')).toBeInTheDocument();
   });
 
   it('sin pedidos en la cuenta lo dice', async () => {
@@ -177,7 +193,7 @@ describe('mesa compartida', () => {
     const user = userEvent.setup();
     render(<SharedTableCard accessToken="jwt" qrToken={null} />);
 
-    await user.click(await screen.findByText('Ver desglose'));
+    await user.click(await screen.findByText(/^Ver pedidos y elegir qué pago yo/));
     await user.click(await screen.findByRole('button', { name: 'Esto lo pago yo' }));
 
     expect(apiMock.claimTableOrder).toHaveBeenCalledWith('jwt', 7, true);
@@ -195,7 +211,7 @@ describe('mesa compartida', () => {
     );
     const user = userEvent.setup();
     render(<SharedTableCard accessToken="jwt" qrToken={null} />);
-    await user.click(await screen.findByText('Ver desglose'));
+    await user.click(await screen.findByText(/^Ver pedidos y elegir qué pago yo/));
     expect(await screen.findByText('Paga Luis')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Esto lo pago yo' })).not.toBeInTheDocument();
   });
@@ -243,7 +259,7 @@ describe('mesa compartida', () => {
     render(<SharedTableCard accessToken="jwt" qrToken={null} onUnauthorized={onUnauthorized} />);
 
     expect(await screen.findByRole('article', { name: 'Mesa 3' })).toBeInTheDocument();
-    await user.click(screen.getByText('Ver desglose'));
+    await user.click(screen.getByText(/^Ver pedidos y elegir qué pago yo/));
     await user.click(await screen.findByRole('button', { name: 'Esto lo pago yo' }));
 
     await waitFor(() => expect(onUnauthorized).toHaveBeenCalled());
@@ -259,7 +275,7 @@ describe('mesa compartida', () => {
     );
     const user = userEvent.setup();
     render(<SharedTableCard accessToken="jwt" qrToken={null} />);
-    await user.click(await screen.findByText('Ver desglose'));
+    await user.click(await screen.findByText(/^Ver pedidos y elegir qué pago yo/));
 
     expect(await screen.findByRole('heading', { name: /otros en la mesa/i })).toBeInTheDocument();
     expect(screen.queryByText('Solo tú')).not.toBeInTheDocument();
@@ -274,7 +290,7 @@ describe('mesa compartida', () => {
     );
     const user = userEvent.setup();
     render(<SharedTableCard accessToken="jwt" qrToken={null} />);
-    await user.click(await screen.findByText('Ver desglose'));
+    await user.click(await screen.findByText(/^Ver pedidos y elegir qué pago yo/));
     expect(await screen.findByText('Solo tú')).toBeInTheDocument();
   });
 });
