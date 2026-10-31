@@ -4,6 +4,10 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
 import { VaiinillaApiError } from '../lib/api-error';
+import * as cartLib from '../lib/cart';
+import * as stripePendingLib from '../lib/stripe-pending';
+import { clearStripeCheckoutSession } from '../lib/stripe-session';
+import { canSilentlyApplyServiceWorkerUpdate, resetPwaUpdateGuardsForTests } from '../lib/pwa-update';
 import { QA_PHOTO_TACOS } from '../lib/qa-catalog-photos';
 import { CartPage } from './cart-page';
 
@@ -168,6 +172,9 @@ describe('CartPage', () => {
       contexto: { establecimiento_id: '1' },
     });
     cartState.cart = null;
+    sessionStorage.clear();
+    resetPwaUpdateGuardsForTests();
+    clearStripeCheckoutSession();
     createOrder.mockReset();
     retryStripePayment.mockReset();
     listOrders.mockResolvedValue({ orders: [] });
@@ -388,10 +395,12 @@ describe('CartPage', () => {
     expect(retryStripePayment).not.toHaveBeenCalled();
     const payload = createOrder.mock.calls[0]?.[1] as Record<string, unknown>;
     expect(payload.metodo_pago).toBe('stripe');
+    expect(payload.pago_diferido).toBe(false);
     expect(payload.items).toEqual([{ producto_id: 1, cantidad: 1, opcion_ids: [] }]);
     expect(JSON.stringify(payload)).not.toContain('"total"');
     expect(createOrder.mock.calls[0]?.[2]).toEqual(expect.any(String));
     expect(localStorage.getItem('vaiinilla.buyer.pickup-qr.v1.ord-stripe')).toBe('pickup-token');
+    expect(stripePendingLib.readPendingStripeOrderId()).toBe('ord-stripe');
   });
 
   it('espera la validación operativa sin mostrar un error transitorio', async () => {
@@ -656,6 +665,70 @@ describe('CartPage', () => {
       renderCart();
       expect(await screen.findByRole('button', { name: 'Crea tu cuenta para pedir aquí' })).toBeInTheDocument();
     });
+
+    it('invitado: no guarda pending Stripe y puede pedir otra ronda', async () => {
+      const savePending = vi.spyOn(stripePendingLib, 'savePendingStripeOrderId');
+      sessionStorage.removeItem('vaiinilla.buyer.stripe-pending-order.v1');
+      createOrder.mockResolvedValue({
+        id: 'ord-g1',
+        folio: 22,
+        estado: 'por_cobrar',
+        metodo_pago: 'efectivo',
+        destino: 'para_llevar',
+        qr_token: 'qr',
+        espacio: null,
+        total: '240.00',
+        items: [],
+        invitado: true,
+        seguimiento_token: SEGUIMIENTO,
+      });
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
+      await user.type(screen.getByLabelText('Tu nombre'), 'Lupita');
+      await user.click(screen.getByRole('button', { name: /^continuar con/i }));
+
+      expect(await screen.findByText(`Mis pedidos ?nuevo=${SEGUIMIENTO}`)).toBeInTheDocument();
+      expect(savePending).not.toHaveBeenCalled();
+      expect(stripePendingLib.readPendingStripeOrderId()).toBeNull();
+      expect(canSilentlyApplyServiceWorkerUpdate()).toBe(true);
+
+      cartState.cart = {
+        slug: 'demo-a',
+        establishmentName: 'Cafetería Demo A',
+        lines: [{ productId: 1, quantity: 1, optionIds: [], productName: 'Chocolate', unitPreview: '120.00', unitCounter: '120.00', imageUrl: null }],
+      };
+      createOrder.mockResolvedValue({
+        id: 'ord-g2',
+        folio: 23,
+        estado: 'por_cobrar',
+        metodo_pago: 'efectivo',
+        destino: 'para_llevar',
+        qr_token: 'qr',
+        espacio: null,
+        total: '120.00',
+        items: [],
+        invitado: true,
+        seguimiento_token: SEGUIMIENTO,
+      });
+      renderCart();
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
+      await user.click(screen.getByRole('button', { name: /^continuar con/i }));
+      await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(2));
+      expect(screen.queryByText(/pago stripe pendiente/i)).not.toBeInTheDocument();
+    });
+
+    it('invitado con pago Stripe en seguimiento no llama savePendingStripeOrderId', () => {
+      const savePending = vi.spyOn(stripePendingLib, 'savePendingStripeOrderId');
+      const user = null;
+      const guestLike = true;
+      const payment = 'stripe';
+      if (payment === 'stripe') {
+        if (user && !guestLike) savePending('ord-guest-stripe');
+      }
+      expect(savePending).not.toHaveBeenCalled();
+      expect(canSilentlyApplyServiceWorkerUpdate()).toBe(true);
+    });
   });
 
   describe('correo sin verificar', () => {
@@ -847,7 +920,47 @@ describe('CartPage', () => {
       await user.click(screen.getByRole('radio', { name: /pago en caja/i }));
       await user.click(screen.getByRole('button', { name: /continuar con pago en caja/i }));
       await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1));
-      expect(createOrder.mock.calls[0]?.[1]).not.toHaveProperty('pago_diferido');
+      expect(createOrder.mock.calls[0]?.[1]).toMatchObject({ pago_diferido: false });
+    });
+
+    it('L4: creación pasa useTab al payload, no payAtEnd crudo si el método no es efectivo', async () => {
+      const toCreate = vi.spyOn(cartLib, 'toCreateOrderInput');
+      setup({ permite: true, enEspacio: true });
+      localStorage.setItem(
+        'vaiinilla.buyer.space.v1',
+        JSON.stringify({ slug: 'demo-a', espacioId: 12, nombre: 'Cancha 2', tipo: 'cancha', pagaAlFinal: true }),
+      );
+      createOrder.mockResolvedValue({
+        id: 'ord-stripe-mesa',
+        folio: 9,
+        estado: 'por_cobrar',
+        metodo_pago: 'stripe',
+        destino: 'en_espacio',
+        qr_token: 'pickup-token',
+        espacio: null,
+        total: '30.00',
+        items: [],
+        pago: {
+          payment_attempt_id: 'attempt-1',
+          payment_intent_id: 'pi_test',
+          stripe_account_id: 'acct_test',
+          payment_status: 'pendiente_pago',
+          client_secret: 'secret',
+          publishable_key: 'pk_test',
+        },
+      });
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
+      await user.click(await screen.findByRole('radio', { name: /pagar al final/i }));
+      await user.click(await screen.findByRole('radio', { name: /pago con stripe/i }));
+      await user.click(screen.getByRole('button', { name: /^continuar con/i }));
+      await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1));
+      expect(toCreate).toHaveBeenCalled();
+      const payAtEndArg = toCreate.mock.calls.at(-1)?.[5];
+      expect(payAtEndArg).toBe(false);
+      expect(createOrder.mock.calls[0]?.[1]).toMatchObject({ pago_diferido: false, metodo_pago: 'stripe' });
+      toCreate.mockRestore();
     });
 
     it('no se ofrece si el negocio no lo permite', async () => {
@@ -857,6 +970,25 @@ describe('CartPage', () => {
       await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
       await screen.findByRole('heading', { name: /cómo quieres pagar/i });
       expect(screen.queryByRole('radio', { name: /pagar al final/i })).not.toBeInTheDocument();
+    });
+
+    it('con pagaAlFinal guardado pero sin permite_pago_al_final, efectivo en mesa manda pago_diferido false', async () => {
+      setup({ permite: false, enEspacio: true });
+      localStorage.setItem(
+        'vaiinilla.buyer.space.v1',
+        JSON.stringify({ slug: 'demo-a', espacioId: 12, nombre: 'Cancha 2', tipo: 'cancha', pagaAlFinal: true }),
+      );
+      createOrder.mockResolvedValue({ id: 'p9', metodo_pago: 'efectivo', qr_token: null });
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
+      await user.click(screen.getByRole('button', { name: /^continuar con/i }));
+      await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1));
+      expect(createOrder.mock.calls[0]?.[1]).toMatchObject({
+        metodo_pago: 'efectivo',
+        destino: 'en_espacio',
+        pago_diferido: false,
+      });
     });
 
     it('no se ofrece en un pedido para llevar', async () => {

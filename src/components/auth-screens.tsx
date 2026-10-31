@@ -23,6 +23,7 @@ import { entryAfterAccess, guestEntryAfterAccess, guestMenuPath, scannedSpace } 
 import { splashContextFor } from '../lib/splash-context';
 import { staffAccesses } from '../lib/staff-access';
 import { markVerificationSent } from '../lib/verification';
+import { beginRegistrationFormDraft } from '../lib/pwa-update';
 import type { LegalVersions, SessionAccess } from '../types/api';
 import { AlumnoBack, AlumnoLockup, AlumnoLogo } from './alumno-brand';
 import { SignupSteps } from './signup-steps';
@@ -183,6 +184,15 @@ export function AuthScreens({
   const [busy, setBusy] = useState(false);
   const [emailTaken, setEmailTaken] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string | null; password?: string | null }>({});
+
+  useEffect(() => {
+    const drafting =
+      mode !== 'splash' &&
+      mode !== 'staff' &&
+      Boolean(email.trim() || password.trim() || nombre.trim() || totpCode.trim());
+    if (!drafting) return undefined;
+    return beginRegistrationFormDraft('auth-screens');
+  }, [email, mode, nombre, password, totpCode]);
 
   useEffect(() => {
     void api

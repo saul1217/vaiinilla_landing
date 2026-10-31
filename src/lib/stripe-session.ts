@@ -106,3 +106,11 @@ export function takeStripeCheckoutSession(orderId: string): StripePaymentSession
 export function clearStripeCheckoutSession(orderId?: string): void {
   if (!orderId || memorySession?.orderId === orderId) memorySession = null;
 }
+
+const CHECKOUT_IN_FLIGHT: StripePaymentStatus[] = ['pendiente_pago', 'processing', 'requires_action'];
+
+/** Sesión Stripe abierta en memoria (panel de pago o reintento). */
+export function stripeCheckoutInProgress(): boolean {
+  if (!memorySession) return false;
+  return CHECKOUT_IN_FLIGHT.includes(memorySession.session.payment_status);
+}
