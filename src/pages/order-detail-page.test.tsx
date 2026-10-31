@@ -514,8 +514,8 @@ describe('OrderDetailPage', () => {
     renderOrder();
 
     expect(await screen.findByRole('heading', { name: 'Cuenta de la mesa' })).toBeInTheDocument();
-    expect(screen.getByText('Ver pedidos y elegir qué pago yo · 3 por asignar')).toBeInTheDocument();
-    await user.click(screen.getByText(/^Ver pedidos y elegir qué pago yo/));
+    expect(screen.getByText('Ver pedidos de la mesa · 3 por asignar')).toBeInTheDocument();
+    await user.click(screen.getByText(/^Ver pedidos de la mesa/));
     expect(screen.getAllByRole('heading', { name: 'Tus pedidos' })).toHaveLength(1);
     expect(screen.getAllByRole('heading', { name: 'Luis' })).toHaveLength(1);
     expect(screen.getByText('1 × Taco primero')).toBeInTheDocument();
@@ -559,7 +559,7 @@ describe('OrderDetailPage', () => {
     renderOrder();
 
     expect(await screen.findByRole('heading', { name: 'Cuenta de la mesa' })).toBeInTheDocument();
-    await userEvent.setup().click(screen.getByText(/^Ver pedidos y elegir qué pago yo/));
+    await userEvent.setup().click(screen.getByText(/^Ver pedidos de la mesa/));
     expect(screen.getAllByRole('heading', { name: 'Tus pedidos' })).toHaveLength(1);
     expect(screen.getAllByRole('heading', { name: 'Ana' })).toHaveLength(1);
     expect(screen.getByText('1 × Taco propio')).toBeInTheDocument();

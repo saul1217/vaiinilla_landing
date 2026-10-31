@@ -450,7 +450,7 @@ export function OrderTicketView({
           </div>
           <details className="shared-table__details">
             <summary>
-              Ver pedidos y elegir qué pago yo{assignmentSummary ? ` · ${assignmentSummary}` : ''}
+              Ver pedidos de la mesa{assignmentSummary ? ` · ${assignmentSummary}` : ''}
             </summary>
             {orderedGroups(table)
               .filter((group) => group.pedidos.length > 0)

@@ -23,4 +23,8 @@ describe('assignmentStatus', () => {
   it('omite pedidos ya asignados a otra persona', () => {
     expect(assignmentStatus([order({ pagara: 'Ana' })])).toBe('');
   });
+
+  it('no cuenta como pendientes los pedidos que no requieren cobro', () => {
+    expect(assignmentStatus([order({ pendiente_cobro: false })])).toBe('');
+  });
 });

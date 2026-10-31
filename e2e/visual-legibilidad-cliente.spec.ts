@@ -18,7 +18,6 @@ function loadEnv(): Record<string, string> {
 const env = { ...loadEnv(), ...process.env };
 const SLUG = 'legibilidad-qa';
 // Firebase solo autoriza `localhost` (no 127.0.0.1) para iniciar sesión en desarrollo.
-const ACCOUNT_ORIGIN = 'http://localhost:4173';
 const themes = ['light', 'dark'] as const;
 
 function watchSessionBanner() {
@@ -37,7 +36,6 @@ async function expectNoSessionBanner(page: Page) {
 
 async function waitForAccountSettled(page: Page) {
   await page.getByRole('heading', { name: 'Configuración' }).waitFor({ timeout: 20_000 });
-  await page.waitForLoadState('networkidle');
 }
 
 async function signIn(page: Page) {
@@ -69,11 +67,11 @@ for (const scheme of themes) {
     test('invitado: descubrir, menú, producto y carrito', async ({ page }, info) => {
       const shot = (name: string) => snap(page, name, scheme, info.project.name);
       await page.goto('/pedir');
-      await page.waitForLoadState('networkidle');
+      await page.getByRole('radiogroup', { name: 'Establecimientos' }).waitFor();
       await shot('01-pedir');
 
       await page.goto(`/e/${SLUG}`);
-      await page.waitForLoadState('networkidle');
+      await page.locator('.alumno-product').first().waitFor();
       await shot('02-menu');
 
       await page.locator('.alumno-product').first().click();
@@ -86,7 +84,7 @@ for (const scheme of themes) {
       await shot('04-agregado');
 
       await page.goto(`/e/${SLUG}/carrito`);
-      await page.waitForLoadState('networkidle');
+      await page.locator('.alumno-cart-layout, .alumno-cart-empty').first().waitFor();
       await shot('05-carrito');
     });
 
@@ -96,15 +94,15 @@ for (const scheme of themes) {
       await page.waitForLoadState('load'); // la mesa compartida sondea el backend: nunca queda en reposo
       await shot('06-mesa-qr');
       await page.goto('/seguimiento/token-inexistente');
-      await page.waitForLoadState('networkidle');
+      await page.getByRole('alert').getByRole('heading', { name: 'No encontramos este pedido' }).waitFor();
       await shot('07-seguimiento-error');
     });
 
     test('cuenta: acceso y pantallas con el cliente QA', async ({ page }, info) => {
       const shot = (name: string) => snap(page, name, scheme, info.project.name);
       await page.addInitScript(watchSessionBanner);
-      await page.goto(`${ACCOUNT_ORIGIN}/cuenta`);
-      await page.waitForLoadState('networkidle');
+      await page.goto('/cuenta');
+      await page.locator('main').waitFor();
       await shot('08-cuenta-acceso');
       test.skip(!env.E2E_CLIENTE_EMAIL || !env.E2E_PASSWORD, 'Falta la cuenta cliente QA en .env.e2e.local.');
 
@@ -122,7 +120,7 @@ for (const scheme of themes) {
           apiStatuses.push(`${response.status()} ${url}`);
         }));
       });
-      await page.goto(`${ACCOUNT_ORIGIN}/cuenta`);
+      await page.goto('/cuenta');
       await waitForAccountSettled(page);
       await Promise.all(apiBodies);
       await shot('09-cuenta-inicio');
@@ -134,7 +132,7 @@ for (const scheme of themes) {
         ['/cuenta/pedidos', '10-cuenta-pedidos', 'Mis pedidos'],
         ['/cuenta/saldo', '11-cuenta-saldo', 'Mi saldo'],
       ] as const) {
-        await page.goto(`${ACCOUNT_ORIGIN}${route}`);
+        await page.goto(route);
         await page.getByRole('heading', { name: heading }).waitFor({ timeout: 20_000 });
         await shot(name);
         if (await page.getByText('Tu acceso terminó').count()) {
@@ -157,9 +155,9 @@ test.describe('preferencia AMOLED heredada', () => {
       localStorage.setItem('vaiinilla.buyer.theme.v1', 'amoled');
     });
     await page.addInitScript(watchSessionBanner);
-    await page.goto(`${ACCOUNT_ORIGIN}/cuenta`);
+    await page.goto('/cuenta');
     await signIn(page);
-    await page.goto(`${ACCOUNT_ORIGIN}/cuenta/saldo`);
+    await page.goto('/cuenta/saldo');
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await page.getByRole('heading', { name: 'Mi saldo' }).waitFor({ timeout: 20_000 });
     await shot('11-cuenta-saldo');

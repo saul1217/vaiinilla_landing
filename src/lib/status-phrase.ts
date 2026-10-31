@@ -32,5 +32,6 @@ export function statusAsPhrase(order: OrderDetail, now: Date = new Date()): stri
     case 'cancelado': return 'Tu pedido fue cancelado';
     case 'no_recogido': return 'Tu pedido no se recogió';
     case 'expirado': return 'El pedido venció';
+    default: return 'Revisa el estado de tu pedido';
   }
 }

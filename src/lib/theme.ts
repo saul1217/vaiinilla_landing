@@ -15,16 +15,29 @@ export function isThemePreference(value: string | null): value is ThemePreferenc
 
 export function readThemePreference(): ThemePreference {
   if (typeof window === 'undefined') return 'system';
-  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  let stored: string | null;
+  try {
+    stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  } catch {
+    return 'system';
+  }
   if (stored === 'amoled') {
-    window.localStorage.setItem(THEME_STORAGE_KEY, 'dark');
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, 'dark');
+    } catch {
+      // La preferencia oscura sigue siendo válida aunque no se pueda persistir.
+    }
     return 'dark';
   }
   return isThemePreference(stored) ? stored : 'system';
 }
 
 export function writeThemePreference(preference: ThemePreference): void {
-  window.localStorage.setItem(THEME_STORAGE_KEY, preference);
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, preference);
+  } catch {
+    // El tema sigue aplicándose en memoria aunque el almacenamiento esté bloqueado.
+  }
 }
 
 export function resolveTheme(preference: ThemePreference, prefersDark: boolean): ResolvedTheme {

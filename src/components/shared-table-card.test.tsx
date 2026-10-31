@@ -116,13 +116,13 @@ describe('mesa compartida', () => {
   });
 
   it('muestra los tres importes y mantiene el desglose cerrado por defecto', async () => {
-    apiMock.currentTable.mockResolvedValue(table());
+    apiMock.currentTable.mockResolvedValue(table({ mi_parte: { total: '25.00', pagado: '7.00', pendiente: '18.00' } }));
     render(<SharedTableCard accessToken="jwt" qrToken={null} />);
 
     expect(await screen.findByText('2 personas')).toBeInTheDocument();
-    expect(screen.getByText('Tú pediste').nextElementSibling).toHaveTextContent('$10.10');
+    expect(screen.getByText('Tú pediste').nextElementSibling).toHaveTextContent('$25');
     expect(screen.getByText('Total de la mesa').nextElementSibling).toHaveTextContent('$30.30');
-    expect(screen.getAllByText('Tu parte por pagar')[0]?.nextElementSibling).toHaveTextContent('$10.10');
+    expect(screen.getAllByText('Tu parte por pagar')[0]?.nextElementSibling).toHaveTextContent('$18');
     expect(document.querySelector('.shared-table__details')).not.toHaveAttribute('open');
   });
 
@@ -198,6 +198,21 @@ describe('mesa compartida', () => {
 
     expect(apiMock.claimTableOrder).toHaveBeenCalledWith('jwt', 7, true);
     expect(await screen.findByRole('button', { name: /lo pago yo ✓/i })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('permite desmarcar Esto lo pago yo', async () => {
+    apiMock.currentTable.mockResolvedValue(table({
+      grupos: [{ alias: 'Luis', participante_id: 'p-luis', soy_yo: false, total: '20.20', pagado: '0.00', pendiente: '20.20',
+        pedidos: [{ id: null, folio: 7, estado: 'listo', items_resumen: '1× Torta', total: '20.20', pendiente_cobro: true, creado_en: 'a', pagara: 'Ana', lo_pago_yo: true }] }],
+    }));
+    apiMock.claimTableOrder.mockResolvedValue(table());
+    const user = userEvent.setup();
+    render(<SharedTableCard accessToken="jwt" qrToken={null} />);
+
+    await user.click(await screen.findByText(/^Ver pedidos y elegir qué pago yo/));
+    await user.click(await screen.findByRole('button', { name: /lo pago yo ✓/i }));
+
+    expect(apiMock.claimTableOrder).toHaveBeenCalledWith('jwt', 7, false);
   });
 
   it('si otra persona ya lo paga, solo lo dice', async () => {
