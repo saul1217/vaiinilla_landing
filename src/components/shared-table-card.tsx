@@ -213,8 +213,8 @@ export function SharedTableCard({
             .filter((group) => group.pedidos.length > 0)
             .map((group, index) => (
               <section key={tableGroupKey(group, index)} className="shared-table__group" style={{ ['--i' as string]: index }}>
-                <h3 className="alumno-section-label">
-                  {group.soy_yo ? 'Tus pedidos' : (group.alias ?? `Otros en la ${noun}`)}
+        <h3 className="alumno-section-label">
+                  {group.soy_yo ? <>Tus pedidos <span className="shared-table__you">(tú)</span></> : (group.alias ?? `Otros en la ${noun}`)}
                 </h3>
                 <ul className="alumno-ticket-items">
                   {group.pedidos.map((order) => (
@@ -265,7 +265,7 @@ export function SharedTableCard({
       </details>
 
       {error ? <p className="alumno-error">{error}</p> : null}
-      <button className="alumno-btn alumno-btn--ghost shared-table__leave" type="button" onClick={() => void leave()} disabled={busy}>
+      <button className="alumno-btn shared-table__leave" type="button" onClick={() => void leave()} disabled={busy}>
         Salir de la {noun}
       </button>
     </article>

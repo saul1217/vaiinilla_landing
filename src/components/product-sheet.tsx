@@ -63,9 +63,6 @@ export function ProductSheet(props: ProductSheetProps) {
                 </svg>
               </button>
               {customized ? <span className="alumno-psheet__tag">Personalizado</span> : null}
-              <span className="alumno-psheet__price" aria-hidden="true">
-                <span key={price} className="alumno-ticker">{price}</span>
-              </span>
             </div>
 
             <div className="alumno-psheet__body">
@@ -76,9 +73,11 @@ export function ProductSheet(props: ProductSheetProps) {
               {label.pieces ? <p className="alumno-pieces alumno-psheet__pieces">{piecesLabel(label.pieces)}</p> : null}
               {product.descripcion ? <p className="alumno-psheet__lead">{product.descripcion}</p> : null}
 
+              <p className="alumno-psheet__price-line">
+                {formatAmount(product.precio_digital)} · listo en ~{product.tiempo_estimado_min} min
+              </p>
               <div className="alumno-psheet__meta">
-                <MetaCard icon="leaf" label="Ingredientes" value={product.ingredientes || 'Consulta en cafetería'} />
-                <MetaCard icon="clock" label="Tiempo estimado" value={`${product.tiempo_estimado_min} min`} />
+                {product.ingredientes ? <MetaCard icon="leaf" label="Ingredientes" value={product.ingredientes} /> : null}
                 {product.alergenos && !/^sin /i.test(product.alergenos) ? (
                   <MetaCard icon="warning" label="Alérgenos" value={product.alergenos} wide />
                 ) : null}

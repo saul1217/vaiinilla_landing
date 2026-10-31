@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { PedidoChargeOverlay } from '../components/pedido-charge-overlay';
 import { StripePaymentPanel } from '../components/stripe-payment-panel';
 import { OrderTrackCard } from '../components/order-track-card';
+import { statusAsPhrase } from '../lib/status-phrase';
+import { orderProgressFilled } from '../lib/order-labels';
 import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
@@ -288,11 +289,18 @@ export function OrderDetailPage() {
   return (
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
-        <AlumnoPageHeader
-          kicker="Pedido"
-          title={order ? `#${order.folio}` : 'Seguimiento'}
-          back={{ to: '/cuenta/pedidos', label: 'Volver' }}
-        />
+        <div className="alumno-visual-hero alumno-orders-hero" aria-hidden="true" />
+        <section className="alumno-visual-sheet alumno-detail-sheet">
+          <Link className="alumno-back" to="/cuenta/pedidos">‹ Volver</Link>
+          {order ? <h2 className="sr-only" aria-label={`Pedido #${order.folio}`}>Folio</h2> : null}
+          <p className="alumno-kicker">Pedido</p>
+          <h1>{order ? statusAsPhrase(order) : 'Seguimiento'}</h1>
+          {order ? <div className="alumno-detail-progress" aria-label="Progreso del pedido">{['Pedido', 'Preparando', 'Listo'].map((label, index) => {
+            const filled = orderProgressFilled(order);
+            const phase = filled <= 1 ? 0 : filled <= 3 ? 1 : 2;
+            return <span key={label} className={index < phase ? 'is-done' : index === phase ? 'is-current' : ''}>{label}</span>;
+          })}</div> : null}
+        </section>
         {error ? <p className="alumno-error">{error}</p> : null}
         {chargePhase ? (
           <PedidoChargeOverlay
@@ -396,7 +404,7 @@ export function OrderTicketView({
       <div className="alumno-ticket-head">
         <div className="alumno-ticket-head__copy">
           <p className="alumno-muted">
-            Pedido #{order.folio} · {orderPayLabel(order)} · {orderDestinationLabel(order)}
+            {`Pedido #${order.folio}`} · {orderPayLabel(order)} · {orderDestinationLabel(order)}
           </p>
           {order.destino === 'en_espacio' && (order.espacio?.tipo === 'cancha' || /cancha/i.test(order.espacio?.nombre ?? '')) ? (
             <p style={{ margin: '4px 0 0 0', fontWeight: 800, color: 'var(--lime, #84cc16)' }}>
