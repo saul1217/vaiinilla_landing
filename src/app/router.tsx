@@ -8,6 +8,7 @@ import { DiscoveryPage } from '../pages/discovery-page';
 import { EmailVerificationPage, PasswordResetPage } from '../pages/email-action-page';
 import { HomePage } from '../pages/home-page';
 import { MenuPage } from '../pages/menu-page';
+import { MenuMesaQaPage } from '../pages/menu-mesa-qa-page';
 import { NotFoundPage } from '../pages/not-found-page';
 import { OrderDetailPage } from '../pages/order-detail-page';
 import { OrdersPage } from '../pages/orders-page';
@@ -61,6 +62,7 @@ export function AppRoutes() {
         <Route path="/u/:id" element={<WalletQrPage />} />
         {import.meta.env.DEV ? (
           <>
+            <Route path="/__qa/menu-mesa/*" element={<MenuMesaQaPage />} />
             <Route path="/__qa/entrada" element={<AlumnoQaMarketingEntryPage />} />
             <Route path="/__qa/carrito" element={<AlumnoQaCartPage />} />
             <Route path="/__qa/carrito-lleno" element={<AlumnoQaFilledCartPage />} />

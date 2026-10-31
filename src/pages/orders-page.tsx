@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { AlumnoPageHeader } from "../components/alumno-brand";
 import { AppShell } from "../components/app-shell";
 import { OrderTrackCard } from "../components/order-track-card";
 import { SharedTableCard } from "../components/shared-table-card";
@@ -187,10 +186,13 @@ export function OrdersPage() {
   return (
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
-        <AlumnoPageHeader title="Mis pedidos" />
+        <div className="alumno-visual-hero alumno-orders-hero" aria-hidden="true" />
+        <section className="alumno-visual-sheet"><h1>Mis pedidos</h1>
         {place?.nombre ? (
           <p className="alumno-place-name">{place.nombre}</p>
         ) : null}
+        </section>
+        <p className="alumno-section-label alumno-orders-label">• EN CURSO</p>
         {error ? <p className="alumno-error">{error}</p> : null}
         {user && claim.state === "idle" && hasClaimableGuestOrders() ? (
           <section className="alumno-banner" aria-label="Pasar pedidos de invitado a tu cuenta">
