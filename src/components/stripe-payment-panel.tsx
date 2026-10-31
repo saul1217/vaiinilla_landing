@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 // `pure` no inserta Stripe.js al importar: su antifraude corría en cada toque de toda la
 // app. Así se carga solo cuando este panel va a cobrar.
@@ -8,7 +8,7 @@ import { errorMessage } from '../lib/api-error';
 import type { AppEnvironment } from '../lib/env';
 import { useHideFloatingCall } from '../lib/floating-call';
 import { formatMoney } from '../lib/money';
-import { beginCheckoutSubmit } from '../lib/pwa-update';
+import { beginCheckoutSubmit, beginStripePaymentPanel } from '../lib/pwa-update';
 import { resolveStripePublishableKey, stripePublishableKey } from '../lib/stripe-public';
 import { STRIPE_TOTAL_LABEL } from '../lib/stripe-status';
 import type { OrderDetail, StripePaymentSession } from '../types/api';
@@ -46,6 +46,10 @@ export function StripePaymentPanel({
   onProcessingFailed,
 }: StripePaymentPanelProps) {
   useHideFloatingCall();
+  useEffect(() => {
+    const end = beginStripePaymentPanel();
+    return end;
+  }, []);
   const resolved = useMemo(() => {
     try {
       return {

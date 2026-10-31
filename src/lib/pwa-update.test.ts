@@ -1,5 +1,11 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { beginCheckoutSubmit, canSilentlyApplyServiceWorkerUpdate } from './pwa-update';
+import {
+  beginCheckoutSubmit,
+  beginStripePaymentPanel,
+  canSilentlyApplyServiceWorkerUpdate,
+  setRegistrationFormDraft,
+  setReservationFormDraft,
+} from './pwa-update';
 import * as cartStorage from './cart-storage';
 import * as stripePending from './stripe-pending';
 import * as stripeSession from './stripe-session';
@@ -10,10 +16,14 @@ describe('canSilentlyApplyServiceWorkerUpdate', () => {
     vi.spyOn(stripePending, 'readPendingStripeOrderId').mockReturnValue(null);
     vi.spyOn(stripePending, 'stripeConfirmingInProgress').mockReturnValue(false);
     vi.spyOn(stripeSession, 'stripeCheckoutInProgress').mockReturnValue(false);
+    setRegistrationFormDraft(false);
+    setReservationFormDraft(false);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    setRegistrationFormDraft(false);
+    setReservationFormDraft(false);
   });
 
   it('permite actualizar con carrito vacío y sin checkout', () => {
@@ -36,12 +46,28 @@ describe('canSilentlyApplyServiceWorkerUpdate', () => {
     expect(canSilentlyApplyServiceWorkerUpdate()).toBe(true);
   });
 
+  it('P3b: bloquea mientras el panel Stripe está montado', () => {
+    const end = beginStripePaymentPanel();
+    expect(canSilentlyApplyServiceWorkerUpdate()).toBe(false);
+    end();
+    expect(canSilentlyApplyServiceWorkerUpdate()).toBe(true);
+  });
+
   it('bloquea con pago Stripe pendiente o 3DS', () => {
     vi.mocked(stripePending.readPendingStripeOrderId).mockReturnValue('ord-1');
     expect(canSilentlyApplyServiceWorkerUpdate()).toBe(false);
 
     vi.mocked(stripePending.readPendingStripeOrderId).mockReturnValue(null);
     vi.mocked(stripePending.stripeConfirmingInProgress).mockReturnValue(true);
+    expect(canSilentlyApplyServiceWorkerUpdate()).toBe(false);
+  });
+
+  it('bloquea con borrador en registro o reservas', () => {
+    setRegistrationFormDraft(true);
+    expect(canSilentlyApplyServiceWorkerUpdate()).toBe(false);
+    setRegistrationFormDraft(false);
+
+    setReservationFormDraft(true);
     expect(canSilentlyApplyServiceWorkerUpdate()).toBe(false);
   });
 });

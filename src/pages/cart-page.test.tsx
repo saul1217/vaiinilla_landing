@@ -911,8 +911,7 @@ describe('CartPage', () => {
       const user = userEvent.setup();
       renderCart();
       await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
-      await user.click(await screen.findByRole('radio', { name: /pago en caja/i }));
-      await user.click(screen.getByRole('button', { name: /continuar con pago en caja/i }));
+      await user.click(screen.getByRole('button', { name: /^continuar con/i }));
       await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1));
       expect(createOrder.mock.calls[0]?.[1]).toMatchObject({
         metodo_pago: 'efectivo',

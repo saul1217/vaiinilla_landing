@@ -431,8 +431,7 @@ export function CartPage() {
       if (payment === 'stripe') {
         const stripeSession = stripeSessionFromCreatedOrder(order);
         rememberStripeCheckoutSession(order.id, stripeSession);
-        // Sin cuenta el pago se termina en el enlace de seguimiento, no en Mis pedidos.
-        if (user) savePendingStripeOrderId(order.id);
+        savePendingStripeOrderId(order.id);
       }
       reset();
       // La mesa se conserva para pedir otra ronda sin volver a escanear.

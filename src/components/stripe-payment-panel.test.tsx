@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { useEffect, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { StripeOrderTotal, StripePaymentPanel } from '../components/stripe-payment-panel';
+import { canSilentlyApplyServiceWorkerUpdate } from '../lib/pwa-update';
 import { STRIPE_TOTAL_LABEL } from '../lib/stripe-status';
 import type { OrderDetail, StripePaymentSession } from '../types/api';
 
@@ -54,5 +55,15 @@ describe('StripePaymentPanel', () => {
     );
     expect(screen.getByTestId('stripe-payment-element')).toBeInTheDocument();
     expect(screen.queryByText(/pasa a caja/i)).not.toBeInTheDocument();
+  });
+
+  it('P3b: montado bloquea la actualización silenciosa del SW', () => {
+    expect(canSilentlyApplyServiceWorkerUpdate()).toBe(true);
+    const view = render(
+      <StripePaymentPanel order={order} session={session} environment="development" onConfirmed={() => undefined} onCanceled={() => undefined} />,
+    );
+    expect(canSilentlyApplyServiceWorkerUpdate()).toBe(false);
+    view.unmount();
+    expect(canSilentlyApplyServiceWorkerUpdate()).toBe(true);
   });
 });

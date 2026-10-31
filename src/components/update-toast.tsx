@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
+  PWA_REGISTRATION_UPDATE_MS,
   PWA_UPDATE_IDLE_MS,
   canSilentlyApplyServiceWorkerUpdate,
 } from '../lib/pwa-update';
@@ -27,10 +28,13 @@ function activate(waiting: ServiceWorker) {
 }
 
 export function UpdateToast() {
+  const location = useLocation();
   const [important, setImportant] = useState<ServiceWorker | null>(null);
   const pendingRef = useRef<ServiceWorker | null>(null);
   const appliedRef = useRef(false);
-  const location = useLocation();
+  const bumpIdleRef = useRef<(() => void) | null>(null);
+  const pathnameRef = useRef(location.pathname);
+  pathnameRef.current = location.pathname;
 
   const tryApplyPending = useCallback((options?: { requireHidden?: boolean }) => {
     const pending = pendingRef.current;
@@ -46,6 +50,15 @@ export function UpdateToast() {
     if (!sw) return;
     let registration: ServiceWorkerRegistration | undefined;
     let seen: ServiceWorker | null = null;
+    let updateTimer: number | undefined;
+
+    const scheduleRegistrationUpdate = () => {
+      window.clearTimeout(updateTimer);
+      updateTimer = window.setTimeout(() => {
+        void registration?.update().catch(() => {});
+        scheduleRegistrationUpdate();
+      }, PWA_REGISTRATION_UPDATE_MS);
+    };
 
     const check = () => {
       const waiting = registration?.waiting;
@@ -54,7 +67,9 @@ export function UpdateToast() {
       void isImportant().then((yes) => {
         pendingRef.current = waiting;
         if (yes) setImportant(waiting);
+        bumpIdleRef.current?.();
         tryApplyPending({ requireHidden: true });
+        if (pathnameRef.current === '/pedir') tryApplyPending();
       });
     };
     const onFound = () => registration?.installing?.addEventListener('statechange', check);
@@ -66,10 +81,12 @@ export function UpdateToast() {
     void sw.getRegistration().then((found) => {
       registration = found;
       check();
+      scheduleRegistrationUpdate();
       registration?.addEventListener('updatefound', onFound);
     });
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
+      window.clearTimeout(updateTimer);
       registration?.removeEventListener('updatefound', onFound);
       document.removeEventListener('visibilitychange', onVisibility);
     };
@@ -86,10 +103,12 @@ export function UpdateToast() {
       window.clearTimeout(idleTimer);
       idleTimer = window.setTimeout(() => tryApplyPending(), PWA_UPDATE_IDLE_MS);
     };
+    bumpIdleRef.current = bumpIdle;
     bumpIdle();
     const events: (keyof WindowEventMap)[] = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
     for (const event of events) window.addEventListener(event, bumpIdle, { passive: true });
     return () => {
+      bumpIdleRef.current = null;
       window.clearTimeout(idleTimer);
       for (const event of events) window.removeEventListener(event, bumpIdle);
     };
