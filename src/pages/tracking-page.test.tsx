@@ -145,6 +145,7 @@ describe('seguimiento sin cuenta', () => {
     renderAt(`/seguimiento/${TOKEN}`);
 
     expect(await screen.findByRole('heading', { name: 'Cuenta de la mesa' })).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByText('Ver desglose'));
     expect(screen.getAllByText(/1 × Quesadilla/)).toHaveLength(2);
     expect(screen.getByText(/4 personas/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Tus pedidos' })).toBeInTheDocument();
@@ -153,10 +154,10 @@ describe('seguimiento sin cuenta', () => {
     expect(screen.getByText(/Pedido #29/)).toBeInTheDocument();
     expect(screen.getAllByText('$70').length).toBeGreaterThan(0);
     expect(screen.getAllByText('$20').length).toBeGreaterThan(0);
-    expect(screen.getByText('Total de la mesa').parentElement).toHaveTextContent('$90');
-    expect(screen.getByText('Pagado').parentElement).toHaveTextContent('$0');
-    expect(screen.getByText('Por pagar').parentElement).toHaveTextContent('$90');
-    expect(screen.getByText('Tu parte por pagar').parentElement).toHaveTextContent('$70');
+    const breakdown = document.querySelector('.shared-table__details');
+    expect(breakdown?.querySelector('.alumno-ticket-table__totals')).toHaveTextContent('$0');
+    expect(breakdown?.querySelector('.alumno-ticket-table__totals')).toHaveTextContent('$90');
+    expect(breakdown?.querySelector('.alumno-ticket-table__mine')).toHaveTextContent('$70');
     expect(screen.getAllByRole('heading', { name: 'Tus pedidos' })).toHaveLength(1);
     expect(screen.getAllByRole('heading', { name: 'David' })).toHaveLength(1);
     expect(screen.queryByRole('heading', { name: 'David R.' })).not.toBeInTheDocument();
@@ -268,7 +269,9 @@ describe('seguimiento sin cuenta', () => {
         intervals[0]?.();
       });
 
-      await waitFor(() => expect(screen.getByText('Total de la mesa').parentElement).toHaveTextContent('$100'));
+      await waitFor(() =>
+        expect(screen.getByLabelText('Resumen de la mesa').querySelector('p:nth-child(2)')).toHaveTextContent('$100'),
+      );
       expect(screen.getByRole('heading', { name: 'Pedido #28' })).toBeInTheDocument();
       expect(currentTable).toHaveBeenCalledTimes(2);
     } finally {

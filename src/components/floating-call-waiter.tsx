@@ -1,6 +1,5 @@
-// Botón flotante y arrastrable de "Llamar al mesero". Se monta una sola vez en la raíz de
-// las rutas del cliente y aparece solo con una mesa escaneada. Al soltar se pega a la
-// orilla izquierda o derecha; la posición vive en localStorage. Contrato del backend:
+// Control fijo de "Llamar al mesero". Se monta una sola vez en la raíz de
+// las rutas del cliente y aparece solo con una mesa activa. Contrato del backend:
 // docs/mesero-backend.md (la llamada va a la mesa, sin pedido).
 import {
   useEffect,
@@ -297,6 +296,7 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
         onKeyDown={onKeyDown}
       >
         <BellIcon />
+        <span>Llamar al mesero</span>
       </button>
       <div id={panelId} className="alumno-fcw__panel" hidden={!panelOpen || Boolean(live)}>
         {view === 'unavailable' ? (

@@ -114,8 +114,8 @@ describe('TableWhoPage', () => {
   it('lista los participantes para elegir quién se es', async () => {
     tableSession.mockResolvedValue(session());
     renderWho();
-    expect(await screen.findByRole('heading', { name: /quién eres/i })).toBeInTheDocument();
-    expect(screen.getByText('Selecciona tu nombre para continuar.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /cómo te llamas en la mesa/i })).toBeInTheDocument();
+    expect(screen.getByText('Elige tu nombre o escribe uno para continuar.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Jesús' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'David' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /agregarme a la mesa/i })).toBeInTheDocument();
@@ -128,7 +128,7 @@ describe('TableWhoPage', () => {
     expect(await screen.findByRole('heading', { name: /continuar como jesús/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continuar como Jesús' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /no soy jesús/i }));
-    expect(screen.getByRole('heading', { name: /quién eres/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /cómo te llamas en la mesa/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'David' })).toBeInTheDocument();
   });
 
@@ -158,7 +158,7 @@ describe('TableWhoPage', () => {
     const user = userEvent.setup();
     renderWho();
     await user.click(await screen.findByRole('button', { name: /agregarme a la mesa/i }));
-    await user.type(screen.getByLabelText('Tu nombre'), 'Kikin');
+    await user.type(screen.getByLabelText('¿Cómo te llamas en la mesa?'), 'Kikin');
     await user.click(screen.getByRole('button', { name: /^entrar$/i }));
     expect(joinTable).toHaveBeenCalledWith('client-jwt', 'qr-1', { alias: 'Kikin' });
     expect(await screen.findByText('Menú demo-a')).toBeInTheDocument();
@@ -181,11 +181,11 @@ describe('TableWhoPage', () => {
     const user = userEvent.setup();
     renderWho();
     await user.click(await screen.findByRole('button', { name: /agregarme a la mesa/i }));
-    await user.type(screen.getByLabelText('Tu nombre'), 'David');
+    await user.type(screen.getByLabelText('¿Cómo te llamas en la mesa?'), 'David');
     await user.click(screen.getByRole('button', { name: /^entrar$/i }));
     expect(await screen.findByText(message)).toBeInTheDocument();
     // El texto sigue para agregar el apellido.
-    expect(screen.getByLabelText('Tu nombre')).toHaveValue('David');
+    expect(screen.getByLabelText('¿Cómo te llamas en la mesa?')).toHaveValue('David');
     expect(screen.getByText(/david r\. o david ramírez/i)).toBeInTheDocument();
     // Sigue en la pantalla, no avanzó al menú.
     expect(screen.queryByText('Menú demo-a')).not.toBeInTheDocument();
@@ -208,16 +208,16 @@ describe('TableWhoPage', () => {
     );
     tableSession.mockResolvedValue(session());
     renderWho();
-    expect(await screen.findByRole('heading', { name: /quién eres/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /cómo te llamas en la mesa/i })).toBeInTheDocument();
     expect(localStorage.getItem('vaiinilla.buyer.table-participant.v1')).toBeNull();
   });
 
   it('mesa vacía: solo ofrece agregarme', async () => {
     tableSession.mockResolvedValue(session({ participantes: [] }));
     renderWho();
-    expect(await screen.findByRole('heading', { name: /quién eres/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /cómo te llamas en la mesa/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /agregarme a la mesa/i })).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Tu nombre')).toBeInTheDocument();
+    expect(screen.getByLabelText('¿Cómo te llamas en la mesa?')).toBeInTheDocument();
   });
 
   it('error de red con reintentar', async () => {
@@ -227,7 +227,7 @@ describe('TableWhoPage', () => {
     renderWho();
     expect(await screen.findByText('Error de red')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /reintentar/i }));
-    expect(await screen.findByRole('heading', { name: /quién eres/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /cómo te llamas en la mesa/i })).toBeInTheDocument();
     expect(tableSession).toHaveBeenCalledTimes(2);
   });
 
@@ -237,7 +237,7 @@ describe('TableWhoPage', () => {
     openClientSession.mockResolvedValue({ access_token: 'reg-jwt', contexto: { establecimiento_id: 'e1' } });
     tableSession.mockResolvedValue(session());
     renderWho();
-    expect(await screen.findByRole('heading', { name: /quién eres/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /cómo te llamas en la mesa/i })).toBeInTheDocument();
     await waitFor(() => expect(tableSession).toHaveBeenCalledWith('reg-jwt', 'qr-1'));
     expect(createGuest).not.toHaveBeenCalled();
     authState.user = null;

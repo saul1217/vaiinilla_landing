@@ -81,6 +81,7 @@ describe('FloatingCallWaiter', () => {
   it.each(['/e/demo', '/cuenta/pedidos', '/cuenta/saldo', '/e/demo/carrito'])('aparece en %s con una mesa escaneada', async (path) => {
     await mount(path);
     expect(fab()).toBeTruthy();
+    expect(fab()).toHaveTextContent('Llamar al mesero');
   });
 
   it('no aparece sin mesa escaneada', async () => {

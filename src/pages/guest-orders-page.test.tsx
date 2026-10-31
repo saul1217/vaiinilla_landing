@@ -198,13 +198,14 @@ describe('pedidos del invitado', () => {
     renderPage();
 
     // El alias viene del nombre del invitado; unirse usa su sesión de llave.
-    const alias = await screen.findByRole('textbox', { name: /tu nombre en la mesa/i });
+    const alias = await screen.findByRole('textbox', { name: /cómo te llamas en la mesa/i });
     expect(alias).toHaveValue('Lupi');
     await user.click(screen.getByRole('button', { name: /unirme a la mesa/i }));
 
     expect(joinTable).toHaveBeenCalledWith('guest-jwt', 'qr-5', 'Lupi');
     expect(await screen.findByRole('article', { name: 'Mesa 5' })).toBeInTheDocument();
     // Dos invitados en la misma mesa: solo alias, cada quien ve al otro.
+    await user.click(screen.getByText('Ver desglose'));
     expect(screen.getByText('Lupi (tú)')).toBeInTheDocument();
     expect(screen.getAllByText('Beto').length).toBeGreaterThan(0);
     expect(screen.getByText('1× Torta')).toBeInTheDocument();

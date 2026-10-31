@@ -508,16 +508,18 @@ describe('OrderDetailPage', () => {
         mi_parte: { total: '333.33', pagado: '10.00', pendiente: '323.33' },
       }),
     );
+    const user = userEvent.setup();
     renderOrder();
 
     expect(await screen.findByRole('heading', { name: 'Cuenta de la mesa' })).toBeInTheDocument();
+    await user.click(screen.getByText('Ver desglose'));
     expect(screen.getAllByRole('heading', { name: 'Tus pedidos' })).toHaveLength(1);
     expect(screen.getAllByRole('heading', { name: 'Luis' })).toHaveLength(1);
     expect(screen.getByText('1 × Taco primero')).toBeInTheDocument();
     expect(screen.getByText('2 × Taco segundo')).toBeInTheDocument();
     expect(screen.getByText('Subtotal de tus pedidos').parentElement).toHaveTextContent('$888.88');
-    expect(screen.getByText('Total de la mesa').parentElement).toHaveTextContent('$777777.77');
-    expect(screen.getByText('Tu parte por pagar').parentElement).toHaveTextContent('$323.33');
+    expect(document.querySelector('.alumno-ticket-table__totals')).toHaveTextContent('$777777.77');
+    expect(document.querySelector('.alumno-ticket-table__mine')).toHaveTextContent('$323.33');
   });
 
   it('conserva separados a participantes distintos aunque compartan alias', async () => {
@@ -554,6 +556,7 @@ describe('OrderDetailPage', () => {
     renderOrder();
 
     expect(await screen.findByRole('heading', { name: 'Cuenta de la mesa' })).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByText('Ver desglose'));
     expect(screen.getAllByRole('heading', { name: 'Tus pedidos' })).toHaveLength(1);
     expect(screen.getAllByRole('heading', { name: 'Ana' })).toHaveLength(1);
     expect(screen.getByText('1 × Taco propio')).toBeInTheDocument();
@@ -707,7 +710,7 @@ describe('OrderDetailPage', () => {
     });
 
     await waitFor(() =>
-      expect(screen.getByText('Total de la mesa').parentElement).toHaveTextContent('$456.78'),
+      expect(screen.getByLabelText('Resumen de la mesa').querySelector('p:nth-child(2)')).toHaveTextContent('$456.78'),
     );
     expect(screen.getByText('1 × Taco de prueba')).toBeInTheDocument();
     expect(container.querySelectorAll('.alumno-ticket-table')).toHaveLength(1);

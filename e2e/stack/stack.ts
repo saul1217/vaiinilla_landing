@@ -43,7 +43,7 @@ export async function placeTableOrder(page: Page): Promise<{ token: string }> {
   const alias = `E2E ${Date.now().toString(36)}`;
 
   await page.goto(`/e/${slug}/m/${qrToken}`);
-  const aliasInput = page.getByPlaceholder('Como te dicen en la mesa');
+  const aliasInput = page.getByPlaceholder('Por ejemplo, Ana o José');
   const addMe = page.getByRole('button', { name: /agregarme a la mesa/i });
   await expect(aliasInput.or(addMe)).toBeVisible({ timeout: 20_000 });
   if (await addMe.isVisible()) await addMe.click();
