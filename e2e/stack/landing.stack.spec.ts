@@ -119,7 +119,7 @@ test('Olvidé mi contraseña manda continue_url con sand-user, no el panel ni el
   });
 
   await page.goto('/cuenta');
-  await page.getByRole('button', { name: /iniciar sesión/i }).click();
+  await page.getByRole('button', { name: /entrar a mi cuenta/i }).click();
   await page.getByLabel(/correo/i).fill(' Persona@Example.test ');
   await page.getByRole('button', { name: /¿la olvidaste\?/i }).click();
 

@@ -871,6 +871,13 @@ html[data-theme='amoled'] .alumno-antojo img {
   font-size: 0.75rem;
 }
 
+.alumno-location-hint {
+  margin: 2px 0 0;
+  color: var(--text-soft);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
 .alumno-radio {
   display: flex;
   gap: 14px;
@@ -7537,7 +7544,7 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   justify-self: end; font-size: 0.875rem; color: inherit; padding: 6px 4px;
 }
 
-/* Entrada a un lugar: Escanear QR · Escribir código · Acercar NFC. */
+/* Entrada por número de mesa, con cámara y etiqueta NFC como alternativas. */
 .alumno-entry {
   margin: 4px 0 18px;
   padding: 16px;
@@ -7570,7 +7577,7 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 
 .alumno-entry__options {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -7579,6 +7586,7 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   justify-items: center;
   gap: 8px;
   padding: 14px 6px;
+  min-height: 64px;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--bg);
@@ -7589,6 +7597,25 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   cursor: pointer;
   transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1), border-color 200ms ease;
 }
+
+.alumno-entry__option.is-main { grid-column: 1 / -1; }
+.alumno-entry__more { margin-top: 10px; }
+.alumno-entry__more-toggle {
+  width: fit-content;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.alumno-entry__more .alumno-entry__options { margin-top: 6px; }
 
 .alumno-entry__option:active {
   transform: scale(0.95);

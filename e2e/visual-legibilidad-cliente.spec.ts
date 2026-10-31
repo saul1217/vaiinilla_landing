@@ -41,7 +41,7 @@ async function waitForAccountSettled(page: Page) {
 }
 
 async function signIn(page: Page) {
-  await page.getByRole('button', { name: /iniciar sesión/i }).or(page.getByRole('link', { name: /iniciar sesión/i })).first().click();
+  await page.getByRole('button', { name: /entrar a mi cuenta/i }).or(page.getByRole('link', { name: /entrar a mi cuenta/i })).first().click();
   await page.getByLabel(/correo/i).first().fill(env.E2E_CLIENTE_EMAIL);
   await page.getByLabel(/contraseña/i).first().fill(env.E2E_PASSWORD);
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();

@@ -519,8 +519,13 @@ export function AuthScreens({
         </div>
         {error ? <p className="alumno-error" role="alert">{error}</p> : null}
         <div className="alumno-splash__actions">
+          {allowExplore ? (
+            <button className="alumno-btn alumno-btn--lime" type="button" onClick={buyAsGuest}>
+              Pedir sin registrarme
+            </button>
+          ) : null}
           <button
-            className="alumno-btn alumno-btn--lime alumno-splash__google"
+            className={allowExplore ? 'alumno-btn alumno-btn--google' : 'alumno-btn alumno-btn--lime alumno-splash__google'}
             type="button"
             disabled={busy || !configured}
             onClick={() => void onGoogle()}
@@ -530,13 +535,15 @@ export function AuthScreens({
             </span>
             Continuar con Google
           </button>
-          <button className="alumno-btn alumno-btn--ghost" type="button" onClick={buyAsGuest}>
-            Comprar sin cuenta
-          </button>
+          {!allowExplore ? (
+            <button className="alumno-btn alumno-btn--ghost" type="button" onClick={buyAsGuest}>
+              Continuar sin cuenta
+            </button>
+          ) : null}
           <p className="alumno-splash__login">
             ¿Ya tienes cuenta?{' '}
             <button className="alumno-link" type="button" onClick={() => setMode('entrar')}>
-              Iniciar sesión
+              Entrar a mi cuenta
             </button>
           </p>
           <button className="alumno-splash__email" type="button" onClick={() => setMode('alta')}>

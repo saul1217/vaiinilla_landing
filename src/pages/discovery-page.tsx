@@ -198,7 +198,7 @@ export function DiscoveryPage() {
             lead={
               selected.identificador_cliente_obligatorio
                 ? `Este lugar pide ${selected.identificador_cliente_etiqueta.toLowerCase()}.`
-                : 'Acceso libre. Puedes abrir el menú o usar el código de tu mesa.'
+                : 'Acceso libre. Puedes abrir el menú o escribir el número de tu mesa.'
             }
           />
           {error ? <p className="alumno-error">{error}</p> : null}
@@ -220,7 +220,7 @@ export function DiscoveryPage() {
             </div>
             <div className="alumno-card">
               <h2>Mesa</h2>
-              <p className="alumno-muted">Si ya estás sentado, usa el código del QR.</p>
+              <p className="alumno-muted">Si ya estás sentado, escribe los 4 números que ves en la mesa o en el papel del mesero.</p>
               <button className="alumno-btn alumno-btn--ghost" type="button" onClick={() => setCodeSheetOpen(true)}>
                 Usar código de mesa
               </button>
@@ -248,28 +248,29 @@ export function DiscoveryPage() {
         <div className="alumno-deskhead">
           <AlumnoPageHeader
             kicker="Hoy"
-            title="¿Dónde comes hoy?"
+            title="¿En qué restaurante estás?"
             lead={
               !loading && items.length === 0 && !query
-                ? 'Entra con el QR o el código de tu mesa. El menú se ve sin iniciar sesión.'
-                : 'Elige tu establecimiento. El menú se puede ver sin iniciar sesión.'
+                ? 'Busca el restaurante o escribe el número de tu mesa. Puedes ver el menú sin registrarte.'
+                : 'Busca el nombre del restaurante o escribe el número de tu mesa.'
             }
           />
           <div className="alumno-discovery-tools">
             <div className="alumno-search-wrap">
               <SearchIcon />
               <label className="sr-only" htmlFor="search-places">
-                Buscar establecimiento
+                Buscar restaurante
               </label>
               <input
                 id="search-places"
                 className="alumno-search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Busca por nombre"
+                placeholder="Buscar restaurante por nombre"
                 autoComplete="off"
               />
             </div>
+            <p className="alumno-location-hint">La ubicación es opcional; sirve para ordenar los restaurantes por cercanía.</p>
             <button className={location ? 'alumno-location-btn is-on' : 'alumno-location-btn'} type="button" onClick={useMyLocation} disabled={locating}>
               <LocationIcon />
               {locating ? 'Buscando lugares…' : location ? 'Cerca de mí' : 'Usar mi ubicación'}
@@ -289,7 +290,7 @@ export function DiscoveryPage() {
               query ? (
                 <div className="alumno-empty">
                   <img src="/vaini/cutout-frente.png" alt="" />
-                  <p>No encontramos ese lugar en la lista. Si ya estás ahí, escanea su QR o escribe el código.</p>
+                  <p>No encontramos ese restaurante. Si ya estás ahí, escribe los 4 números de tu mesa.</p>
                 </div>
               ) : null
             ) : (

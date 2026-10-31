@@ -111,8 +111,8 @@ export async function signIn(page: Page) {
     test.skip(true, 'BLOQUEADA: falta la cuenta cliente de CI (E2E_CLIENTE_EMAIL / E2E_PASSWORD).');
   }
   await page.goto('/cuenta');
-  // Sin sesión, /cuenta abre primero la portada; el formulario aparece tras «Iniciar sesión».
-  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
+  // Sin cuenta, /cuenta abre primero la portada; el formulario aparece tras «Entrar a mi cuenta».
+  await page.getByRole('button', { name: 'Entrar a mi cuenta', exact: true }).click();
   await page.getByLabel(/correo/i).first().fill(env.E2E_CLIENTE_EMAIL!);
   await page.getByLabel(/contraseña/i).first().fill(env.E2E_PASSWORD!);
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();

@@ -1,8 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DiscoveryPage } from './discovery-page';
+import { TableCodeSheet } from '../components/table-code-sheet';
 
 const listEstablishments = vi.fn();
 const resolveSpace = vi.fn();
@@ -53,7 +54,10 @@ describe('DiscoveryPage', () => {
         <DiscoveryPage />
       </MemoryRouter>,
     );
-    expect(await screen.findByRole('heading', { name: /dónde comes hoy/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /en qué restaurante estás/i })).toBeInTheDocument();
+    expect(screen.getByText(/la ubicación es opcional/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /escribir número de mesa/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /más opciones/i })).toBeInTheDocument();
     expect(await screen.findByRole('radio', { name: /cafetería demo a/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /entrar al menú/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Abrir Instagram' })).toHaveAttribute('href', 'https://instagram.com/cafeteria-demo');
@@ -95,7 +99,7 @@ describe('DiscoveryPage', () => {
         <DiscoveryPage />
       </MemoryRouter>,
     );
-    expect(await screen.findByRole('heading', { name: /dónde comes hoy/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /en qué restaurante estás/i })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /tu lugar, a tu ritmo/i })).not.toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: /^navegación$/i })).toBeInTheDocument();
   });
@@ -119,8 +123,8 @@ describe('DiscoveryPage', () => {
         <DiscoveryPage />
       </MemoryRouter>,
     );
-    expect(await screen.findByRole('heading', { name: /dónde comes hoy/i })).toBeInTheDocument();
-    const search = await screen.findByRole('textbox', { name: /buscar establecimiento/i });
+    expect(await screen.findByRole('heading', { name: /en qué restaurante estás/i })).toBeInTheDocument();
+    const search = await screen.findByRole('textbox', { name: /buscar restaurante/i });
     expect(search).toHaveAttribute('id', 'search-places');
     await waitFor(() => expect(search).toHaveFocus());
   });
@@ -150,5 +154,28 @@ describe('DiscoveryPage', () => {
     const raw = localStorage.getItem('vaiinilla.buyer.space.v1');
     expect(raw).toContain('"qrToken":"12345678"');
     expect(raw).toContain('"espacioId":3');
+  });
+
+  it('mantiene cámara y NFC disponibles como opciones secundarias', async () => {
+    const user = userEvent.setup();
+    render(<MemoryRouter><DiscoveryPage /></MemoryRouter>);
+    expect(await screen.findByRole('button', { name: /escribir número de mesa/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /usar cámara/i })).not.toBeInTheDocument();
+    await user.click(screen.getByText('Más opciones'));
+    expect(screen.getByRole('button', { name: /usar cámara/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /acercar el teléfono a la etiqueta/i })).toBeInTheDocument();
+  });
+
+  it('explica dónde encontrar el código y solo confirma con cuatro números', () => {
+    const onChange = vi.fn();
+    const onConfirm = vi.fn();
+    const view = render(<TableCodeSheet code="123" resolving={false} error={null} onChange={onChange} onConfirm={onConfirm} onClosed={vi.fn()} />);
+    expect(screen.getByText(/4 números que ves en la mesa o en el papel del mesero/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /confirmar y sentarme/i })).toBeDisabled();
+    fireEvent.keyDown(document.querySelector('.alumno-codesheet__panel')!, { key: '4' });
+    expect(onChange).toHaveBeenCalledWith('1234');
+    view.rerender(<TableCodeSheet code="1234" resolving={false} error="No encontramos ese código." onChange={onChange} onConfirm={onConfirm} onClosed={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /confirmar y sentarme/i })).toBeEnabled();
+    expect(screen.getByText('No encontramos ese código.')).toBeInTheDocument();
   });
 });

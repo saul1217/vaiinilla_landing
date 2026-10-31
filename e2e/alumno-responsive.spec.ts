@@ -3,13 +3,29 @@ import { assertCiStoreSeeded, CI_CART_URL_RE, CI_MENU_URL, CI_PLACE_NAME, CI_PLA
 
 // El selector de lugar ya no tiene botón «Continuar»: con la tienda de CI listada aparece «Entrar al menú».
 async function waitForDiscovery(page: Page) {
-  await expect(page.getByRole('heading', { name: /dónde comes hoy/i })).toBeVisible();
-  await page.getByRole('textbox', { name: /buscar establecimiento/i }).fill(CI_PLACE_NAME);
+  await expect(page.getByRole('heading', { name: /en qué restaurante estás/i })).toBeVisible();
+  await page.getByRole('textbox', { name: /buscar restaurante/i }).fill(CI_PLACE_NAME);
   await expect(page.getByRole('radiogroup', { name: /establecimientos/i }).getByRole('radio').first()).toBeVisible({
     timeout: 20_000,
   });
   await expect(page.getByRole('button', { name: /entrar al menú/i })).toBeVisible();
 }
+
+test('la entrada manual a la mesa aparece primero y la cámara queda en más opciones', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/pedir');
+  await expect(page.getByRole('button', { name: /escribir número de mesa/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /usar cámara/i })).toHaveCount(0);
+  await page.getByRole('button', { name: /escribir número de mesa/i }).click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet.getByText(/4 números que ves en la mesa o en el papel del mesero/i)).toBeVisible();
+  await expect(sheet.getByRole('button', { name: /confirmar y sentarme/i })).toBeDisabled();
+  for (const digit of ['1', '2', '3', '4']) await sheet.getByRole('button', { name: digit, exact: true }).click();
+  await expect(sheet.getByRole('button', { name: /confirmar y sentarme/i })).toBeEnabled();
+  await sheet.getByRole('button', { name: /cancelar/i }).click();
+  await page.getByRole('button', { name: /más opciones/i }).click();
+  await expect(page.getByRole('button', { name: /usar cámara/i })).toBeVisible();
+});
 
 async function waitForCiMenu(page: Page) {
   await expect(page.getByRole('heading', { level: 1, name: CI_PLACE_NAME_RE })).toBeVisible({ timeout: 20_000 });
@@ -223,7 +239,7 @@ test.describe('alumno responsive', () => {
       await expect(actions.getByRole('link', { name: 'Cuenta' })).toBeVisible();
       await actions.getByRole('link', { name: 'Cuenta' }).click();
       await expect(page).toHaveURL(/\/cuenta$/);
-      await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
+      await page.getByRole('button', { name: 'Entrar a mi cuenta', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Inicia sesión' })).toBeVisible();
 
       const auth = await authMetrics(page);
@@ -239,7 +255,7 @@ test.describe('alumno responsive', () => {
   test('móvil 390: el acceso conserva su mosaico y no muestra la ventana de escritorio', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/cuenta');
-    await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
+    await page.getByRole('button', { name: 'Entrar a mi cuenta', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Inicia sesión' })).toBeVisible();
 
     const auth = await authMetrics(page);
