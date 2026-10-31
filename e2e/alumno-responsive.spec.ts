@@ -241,6 +241,8 @@ test.describe('alumno responsive', () => {
       await expect(page).toHaveURL(/\/cuenta$/);
       await page.getByRole('button', { name: 'Entrar a mi cuenta', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Entrar a mi cuenta' })).toBeVisible();
+      // La hoja de acceso termina su transición antes de medir su centrado.
+      await expect.poll(async () => (await authMetrics(page)).panelOffset).toBeLessThanOrEqual(1);
 
       const auth = await authMetrics(page);
       expect(auth.authWidth).toBe(width);
