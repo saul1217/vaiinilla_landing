@@ -30,16 +30,17 @@ import { statusAsPhrase } from '../lib/status-phrase';
 import { readSpace } from '../lib/space-session';
 import type { OrderDetail } from '../types/api';
 
-export function MenuPage() {
+export function MenuPage({ qaFixture }: { qaFixture?: { user: { displayName: string; email: string }; place: PublicEstablishment; catalog: CatalogResponse; order: OrderDetail } } = {}) {
   const { slug = '' } = useParams();
-  const { user } = useAuth();
+  const { user: authUser } = useAuth();
+  const user = qaFixture?.user as typeof authUser ?? authUser;
   const { context, openClientSession } = useBuyerSession();
   const { addLine, cart } = useCart();
   // Lo ya cargado se ve al instante; la carga de abajo lo actualiza en segundo plano.
-  const [place, setPlace] = useState<PublicEstablishment | null>(() => peekResource(resourceKeys.establishment(slug)) ?? null);
+  const [place, setPlace] = useState<PublicEstablishment | null>(() => qaFixture?.place ?? peekResource(resourceKeys.establishment(slug)) ?? null);
   // Compra sin cuenta: cualquiera agrega al carrito, salvo donde se pide con matrícula.
   const canAddToCart = Boolean(user) || place?.identificador_cliente_obligatorio !== true;
-  const [catalog, setCatalog] = useState<CatalogResponse | null>(() => peekResource(resourceKeys.catalog(slug)) ?? null);
+  const [catalog, setCatalog] = useState<CatalogResponse | null>(() => qaFixture?.catalog ?? peekResource(resourceKeys.catalog(slug)) ?? null);
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<CatalogProduct | null>(null);
@@ -47,7 +48,7 @@ export function MenuPage() {
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [missing, setMissing] = useState(false);
-  const [loading, setLoading] = useState(() => !peekResource(resourceKeys.catalog(slug)));
+  const [loading, setLoading] = useState(() => !qaFixture && !peekResource(resourceKeys.catalog(slug)));
   const [rentsCourts, setRentsCourts] = useState(false);
   // Cambio de tienda con carrito ajeno: se confirma antes de vaciarlo.
   const [switchCart, setSwitchCart] = useState<{ count: number; from: string } | null>(null);
@@ -57,10 +58,11 @@ export function MenuPage() {
     quantity: number;
     notes?: string;
   } | null>(null);
-  const [activeOrder, setActiveOrder] = useState<OrderDetail | null>(null);
+  const [activeOrder, setActiveOrder] = useState<OrderDetail | null>(qaFixture?.order ?? null);
   const table = readSpace(slug);
 
   useEffect(() => {
+    if (qaFixture) return;
     if (!user) { setActiveOrder(null); return; }
     let active = true;
     const load = async () => {
@@ -74,10 +76,11 @@ export function MenuPage() {
     void load();
     const timer = window.setInterval(() => void load(), 5000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [context, openClientSession, slug, user]);
+  }, [context, openClientSession, qaFixture, slug, user]);
 
   // "Rentar cancha" solo se ofrece si el negocio tiene al menos una cancha con precio por hora.
   useEffect(() => {
+    if (qaFixture) return;
     let active = true;
     setRentsCourts(false);
     void api
@@ -89,9 +92,10 @@ export function MenuPage() {
     return () => {
       active = false;
     };
-  }, [slug]);
+  }, [qaFixture, slug]);
 
   useEffect(() => {
+    if (qaFixture) return;
     let active = true;
     if (!peekResource(resourceKeys.catalog(slug))) setLoading(true);
     Promise.all([api.getEstablishment(slug), api.getGuestCatalog(slug)])
@@ -117,7 +121,7 @@ export function MenuPage() {
     return () => {
       active = false;
     };
-  }, [slug]);
+  }, [qaFixture, slug]);
 
   const products = useMemo(() => {
     const list = catalog?.productos ?? [];
@@ -229,9 +233,7 @@ export function MenuPage() {
     <AppShell tab="menu">
       <SeatedToast />
       <main id="main-content" className="alumno-main alumno-main--catalog">
-        <div className="alumno-menu-cover" style={place?.imagen_url ? { backgroundImage: `linear-gradient(180deg, rgba(22,22,20,.5), rgba(244,241,231,.05) 55%, var(--bg) 100%), url("${place.imagen_url}")` } : undefined} aria-hidden="true">
-          {!place?.imagen_url ? <img src="/vaini/cutout-frente.png" alt="" /> : null}
-        </div>
+        <div className={`alumno-menu-cover${place?.imagen_url ? '' : ' alumno-menu-cover--brand'}`} style={place?.imagen_url ? { backgroundImage: `linear-gradient(180deg, rgba(22,22,20,.5), rgba(244,241,231,.05) 55%, var(--bg) 100%), url("${place.imagen_url}")` } : undefined} aria-hidden="true" />
         <div className="alumno-menu-mobile-head">
           <Link className="alumno-change-place" to="/pedir" aria-label="Cambiar lugar"><StoreIcon/><span>Cambiar lugar</span></Link>
           {menuActions()}
@@ -279,7 +281,7 @@ export function MenuPage() {
           ]}
         />
         {activeOrder ? <Link className="alumno-active-order" to={`/cuenta/pedidos/${activeOrder.id}`}>
-          <span className="alumno-active-order__copy"><small>Pedido activo</small><strong>#{activeOrder.folio}</strong><span>{activeOrder.items.reduce((n, item) => n + item.cantidad, 0)} productos · {orderDestinationLabel(activeOrder)}</span></span>
+          <span className="alumno-active-order__copy"><small>Pedido activo</small><strong>#{activeOrder.folio}</strong><span>{(() => { const n = activeOrder.items.reduce((sum, item) => sum + item.cantidad, 0); return n === 1 ? '1 producto' : `${n} productos`; })()} · {orderDestinationLabel(activeOrder)}</span></span>
           <span className="alumno-active-order__state">{statusAsPhrase(activeOrder)}</span>
         </Link> : null}
         <div className="alumno-grid alumno-arrive">

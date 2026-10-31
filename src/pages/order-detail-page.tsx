@@ -291,7 +291,7 @@ export function OrderDetailPage() {
       <main id="main-content" className="alumno-main">
         <div className="alumno-visual-hero alumno-orders-hero" aria-hidden="true" />
         <section className="alumno-visual-sheet alumno-detail-sheet">
-          <Link className="alumno-back alumno-detail-back" to="/cuenta/pedidos" aria-label="Volver a mis pedidos">←</Link>
+          <Link className="alumno-back alumno-detail-back" style={{ minWidth: 44, minHeight: 44 }} to="/cuenta/pedidos" aria-label="Volver a mis pedidos">←</Link>
           {order ? <h2 className="sr-only" aria-label={`Pedido #${order.folio}`}>Folio</h2> : null}
           <p className="alumno-kicker">{order ? `Pedido #${order.folio}` : 'Pedido'}</p>
           <h1>{order ? statusAsPhrase(order) : 'Seguimiento'}</h1>

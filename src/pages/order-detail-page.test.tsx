@@ -178,6 +178,13 @@ function renderOrder() {
 }
 
 describe('OrderDetailPage', () => {
+  it('el botón Volver mantiene un área táctil de al menos 44 × 44 px', async () => {
+    getOrder.mockResolvedValue(stripeOrder({ estado: 'entregado', metodo_pago: 'efectivo' }));
+    renderOrder();
+    const back = await screen.findByRole('link', { name: 'Volver a mis pedidos' });
+    expect(back).toHaveClass('alumno-back', 'alumno-detail-back');
+    expect(back).toHaveStyle({ minHeight: '44px', minWidth: '44px' });
+  });
   let visibilityDescriptor: PropertyDescriptor | undefined;
   let printDescriptor: PropertyDescriptor | undefined;
   let spyCleanups: Array<() => void> = [];
