@@ -2,34 +2,34 @@ import { Link } from 'react-router-dom';
 import { STAFF_APP_URL } from '../types/api';
 import { BuyerEntryLink, PageShell, useReveal } from '../components/shell';
 import { StoreBadges } from '../components/store-badges';
-import { LiveOrderPill } from '../components/live-order-pill';
 import { OrderTrackerDemo } from '../components/order-tracker-demo';
 import { StickyOrderBar } from '../components/sticky-order-bar';
 import { StepsCarousel, type Step } from '../components/steps-carousel';
 import { PhoneShot } from '../components/phone-shot';
 import { CafeFilm } from '../components/cafe-film';
+import { markBuyerExplore } from '../lib/buyer-entry';
 
 const STEPS: readonly Step[] = [
   {
-    title: 'Escanea o busca tu lugar',
-    body: 'Usa el QR de la mesa o elige el negocio de la lista.',
-    image: '/screens/screen-table-code.jpg',
-    alt: 'Teclado para ingresar el código de la mesa',
-    statusColor: '#0e0e0e',
+    title: 'Entra al menú',
+    body: 'Escribe el número de mesa, busca el restaurante o escanea el código impreso en tu mesa.',
+    image: '/screens/screen-entry.jpg',
+    alt: 'Pantalla para escribir número de mesa, buscar restaurante o escanear código de mesa',
+    statusColor: '#f4f1e7',
   },
   {
-    title: 'Arma tu pedido y paga',
-    body: 'Con tarjeta, con tu saldo o en efectivo al recoger.',
+    title: 'Arma tu pedido',
+    body: 'Elige platillos, personaliza opciones y revisa el total antes de pagar.',
     image: '/screens/screen-cart.jpg',
-    alt: 'Carrito con ramen y mac & cheese, entrega en mesa y botón Pagar',
-    statusColor: '#1d1d1b',
+    alt: 'Carrito con productos del menú y botón para pagar',
+    statusColor: '#f4f1e7',
   },
   {
     title: 'Recoge cuando esté listo',
-    body: 'Te avisamos y te damos tu código para la barra.',
+    body: 'Sigue el estado en vivo. En barra te damos un código; en mesa te lo llevan.',
     image: '/screens/screen-orders.jpg',
-    alt: 'Seguimiento del pedido paso a paso',
-    statusColor: '#1d1d1b',
+    alt: 'Lista de pedidos con seguimiento paso a paso',
+    statusColor: '#f4f1e7',
   },
 ];
 
@@ -37,22 +37,48 @@ const FEATURES = [
   {
     icon: 'M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2zM22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z',
     title: 'Menú al día',
-    body: 'Ves lo que hay hoy, con fotos, precios e ingredientes.',
+    body: 'Fotos, precios, categorías y opciones como en el local.',
   },
   {
     icon: 'M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM15 15h2v2h-2zM19 19h2v2h-2zM19 15h2M15 19h2',
     title: 'Mesa o para llevar',
-    body: 'Escanea el QR de tu mesa o pide para recoger en barra.',
+    body: 'Número de mesa, código impreso o recoger en barra.',
   },
   {
     icon: 'M20 7H5a2 2 0 0 1 0-4h13v4M3 5v14a2 2 0 0 0 2 2h15V7M16 14h.01',
-    title: 'Saldo en Cartera',
-    body: 'Paga con tu saldo Vaiinilla. Recargas en Caja.',
+    title: 'Cartera Vaiinilla',
+    body: 'Paga con saldo recargado en caja, además de tarjeta o efectivo.',
   },
   {
-    icon: 'M13 2 3 14h9l-1 8 10-12h-9z',
-    title: 'Sin crear cuenta',
-    body: 'Tu primer pedido no pide registro. La cuenta es opcional.',
+    icon: 'M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0',
+    title: 'Llamar al mesero',
+    body: 'Desde la mesa pides cubiertos, ayuda o la cuenta cuando pagas al final.',
+  },
+  {
+    icon: 'M22 12h-4l-3 9L9 3l-3 9H2',
+    title: 'Seguimiento en vivo',
+    body: 'Sabes cuándo preparan tu pedido y cuándo está listo para recoger.',
+  },
+] as const;
+
+const HERO_PATHS = [
+  {
+    title: 'Número de mesa',
+    body: 'Cuatro dígitos en la mesa.',
+    to: '/pedir?entrada=codigo',
+    icon: 'M4 7h16M8 7V5h8v2M6 11h12v8H6z',
+  },
+  {
+    title: 'Buscar restaurante',
+    body: 'Nombre del lugar donde estás.',
+    to: '/pedir?entrada=buscar',
+    icon: 'M21 21l-4.3-4.3M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z',
+  },
+  {
+    title: 'Código impreso',
+    body: 'Escanea el de tu mesa con la cámara.',
+    to: '/pedir?entrada=qr',
+    icon: 'M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8h8M8 12h6M8 16h4',
   },
 ] as const;
 
@@ -68,47 +94,57 @@ export function HomePage() {
           <div className="hero__grid container">
             <div className="hero__copy">
               <p className="hero__chip" data-reveal>
-                <span className="status-dot" aria-hidden="true" /> Para cualquier negocio de comida
+                <span className="status-dot" aria-hidden="true" /> Para restaurantes, cafés, bares y más
               </p>
               <h1 data-reveal>
-                Pide sin fila.
+                Escribe tu mesa,
                 <br />
-                <span className="highlight">Recoge y listo.</span>
+                <span className="highlight">pide y listo.</span>
               </h1>
               <p className="hero__lead" data-reveal>
-                Escanea el QR del lugar, paga desde tu celular y te avisamos cuando tu pedido esté listo.
-                Sin descargar nada.
+                Busca tu restaurante o tu número de mesa y pide desde el celular sin filas.
               </p>
               <div className="hero__actions" id="hero-actions" data-reveal>
-                <BuyerEntryLink className="btn btn--primary btn--big">Pedir</BuyerEntryLink>
+                <BuyerEntryLink className="btn btn--primary btn--big">Empezar a pedir</BuyerEntryLink>
                 <Link className="text-link" to="/cuenta">
                   Ya tengo cuenta
                 </Link>
               </div>
+              <ul className="hero__paths" data-reveal aria-label="Formas de entrar">
+                {HERO_PATHS.map((path) => (
+                  <li key={path.title}>
+                    <Link className="hero__path" to={path.to} onClick={markBuyerExplore}>
+                      <span className="hero__path-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                          <path d={path.icon} />
+                        </svg>
+                      </span>
+                      <span className="hero__path-copy">
+                        <strong>{path.title}</strong>
+                        <small>{path.body}</small>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
               <ul className="hero__proof" data-reveal>
-                <li>Sin crear cuenta</li>
-                <li>Tarjeta, saldo o efectivo</li>
-                <li>Funciona en la web</li>
+                <li>Sin crear cuenta para empezar</li>
+                <li>Funciona en la web hoy</li>
+                <li>Paga como prefieras al cerrar</li>
               </ul>
             </div>
 
             <div className="hero__visual" data-reveal>
               <div className="hero__halo" aria-hidden="true" />
-              <div className="hero__phone">
-                <PhoneShot
-                  className="hero__device"
-                  src="/screens/screen-cart.jpg"
-                  alt="Pedido en Vaiinilla con dos productos y el total a pagar"
-                  width={720}
-                  height={1476}
-                  statusColor="#1d1d1b"
-                  priority
-                />
-                <img className="hero__vaini" src="/vaini/cutout-frente.png" alt="" width="640" height="860" />
-                <div className="hero__pill">
-                  <LiveOrderPill />
-                </div>
-              </div>
+              <PhoneShot
+                className="hero__device"
+                src="/screens/screen-entry.jpg"
+                alt="Pantalla para escribir número de mesa o buscar restaurante"
+                width={780}
+                height={1688}
+                statusColor="#f4f1e7"
+                priority
+              />
             </div>
           </div>
         </section>
@@ -116,14 +152,49 @@ export function HomePage() {
         <section className="how" id="como-funciona" aria-labelledby="how-title">
           <div className="container">
             <div className="section-head" data-reveal>
-              <p className="eyebrow">Cómo pedir</p>
+              <p className="eyebrow">Cómo funciona</p>
               <h2 id="how-title">
-                Tres pasos.
+                Tres pasos
                 <br />
-                <span className="lime-text">Cero filas.</span>
+                <span className="lime-text">desde tu celular.</span>
               </h2>
             </div>
             <StepsCarousel steps={STEPS} />
+          </div>
+        </section>
+
+        <section className="at-table" id="en-mesa" aria-labelledby="at-table-title">
+          <div className="container at-table__grid">
+            <div className="at-table__copy" data-reveal>
+              <p className="eyebrow">En la mesa</p>
+              <h2 id="at-table-title">
+                Pide sin
+                <br />
+                <span className="lime-text">esperar al mesero.</span>
+              </h2>
+              <p>
+                Cuando estás sentado, el menú ya sabe tu mesa. Puedes llamar al mesero para cubiertos, ayuda o la
+                cuenta cuando pagas al final, y ver cómo va tu pedido hasta que te lo traen.
+              </p>
+            </div>
+            <div className="at-table__phones" data-reveal>
+              <PhoneShot
+                className="at-table__phone at-table__phone--back"
+                src="/screens/screen-table-order.jpg"
+                alt="Pedido recibido en mesa con seguimiento Pedido, Preparando y Listo"
+                width={780}
+                height={1688}
+                statusColor="#f4f1e7"
+              />
+              <PhoneShot
+                className="at-table__phone at-table__phone--front"
+                src="/screens/screen-checkout.jpg"
+                alt="Revisión del pedido antes de pagar con total y forma de entrega"
+                width={780}
+                height={1688}
+                statusColor="#f4f1e7"
+              />
+            </div>
           </div>
         </section>
 
@@ -154,8 +225,8 @@ export function HomePage() {
                 <span>cuándo está listo.</span>
               </h2>
               <p>
-                Sigue tu pedido desde que pagas hasta que lo recoges. Cuando está listo, aparece tu código
-                para la barra.
+                Sigue tu pedido desde que lo envías hasta que lo recoges. Cuando está listo en barra, aparece tu código
+                de recogida.
               </p>
             </div>
             <div className="track__demo" data-reveal>
@@ -167,13 +238,14 @@ export function HomePage() {
         <section className="features" id="producto" aria-labelledby="features-title">
           <div className="container">
             <div className="section-head" data-reveal>
+              <p className="eyebrow">Qué incluye</p>
               <h2 id="features-title">
-                El menú del lugar,
+                Todo lo que necesitas
                 <br />
-                en tu celular.
+                <span className="lime-text">para pedir bien.</span>
               </h2>
             </div>
-            <ul className="features__grid">
+            <ul className="features__grid features__grid--five">
               {FEATURES.map((feature) => (
                 <li key={feature.title} className="feature" data-reveal>
                   <span className="feature__icon" aria-hidden="true">
@@ -196,13 +268,14 @@ export function HomePage() {
                 <p className="eyebrow eyebrow--dark">Para negocios</p>
                 <h2 id="business-title">¿Tienes un negocio de comida?</h2>
                 <p>
-                  Cafetería, club, snack o barra: recibe pedidos pagados, maneja tu menú y entrega con QR
-                  desde un solo panel.
+                  Cafetería, club, snack o barra: recibe pedidos pagados, maneja tu menú y entrega con código desde un
+                  solo panel.
                 </p>
                 <ul>
                   <li>Menú y disponibilidad al día</li>
                   <li>Pedidos activos e historial</li>
-                  <li>Caja, saldo y retiro con QR</li>
+                  <li>Caja, saldo y retiro con código</li>
+                  <li>Reservas de canchas en clubes</li>
                 </ul>
                 <a className="btn btn--lime-outline" href={STAFF_APP_URL} target="_blank" rel="noreferrer">
                   Soy establecimiento <span aria-hidden="true">↗</span>
@@ -223,8 +296,8 @@ export function HomePage() {
         <section className="apps" id="apps" aria-labelledby="apps-title">
           <div className="container apps__row" data-reveal>
             <div>
-              <h2 id="apps-title">Ya funciona en la web.</h2>
-              <p>Las apps de iPhone y Android vienen pronto.</p>
+              <h2 id="apps-title">Pide hoy en la web.</h2>
+              <p>Las apps de iPhone y Android vienen pronto; tu cuenta y pedidos siguen contigo.</p>
             </div>
             <StoreBadges />
           </div>
@@ -240,9 +313,9 @@ export function HomePage() {
                   <br />
                   <span>empieza aquí.</span>
                 </h2>
-                <p>Elige tu lugar y pide en menos de un minuto.</p>
+                <p>Busca tu restaurante o escribe tu número de mesa y pide en menos de un minuto.</p>
                 <div className="cta__actions">
-                  <BuyerEntryLink className="btn btn--dark btn--big">Pedir</BuyerEntryLink>
+                  <BuyerEntryLink className="btn btn--dark btn--big">Empezar a pedir</BuyerEntryLink>
                   <Link className="text-link" to="/cuenta">
                     Ya tengo cuenta
                   </Link>
@@ -254,8 +327,8 @@ export function HomePage() {
       </main>
       <StickyOrderBar watch={STICKY_WATCH}>
         <span className="sticky-order__text">
-          <strong>Pide sin fila</strong>
-          <small>Sin crear cuenta</small>
+          <strong>Tu mesa, tu menú</strong>
+          <small>Pide desde el celular</small>
         </span>
         <BuyerEntryLink className="btn btn--primary">Pedir</BuyerEntryLink>
       </StickyOrderBar>

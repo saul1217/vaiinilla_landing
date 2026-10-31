@@ -1,7 +1,7 @@
 // "¿Ya estás en el lugar?": la puerta de entrada cuando los negocios no están en el
 // directorio. Tres formas de llegar a la mesa o a la tienda: escanear su QR, escribir el
 // código de 4 dígitos de la mesa o acercar el teléfono a su etiqueta NFC.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { enterSpace, parseEntry, storeDestination } from '../lib/space-entry';
@@ -11,12 +11,22 @@ import { TableCodeSheet } from './table-code-sheet';
 
 type Sheet = 'qr' | 'code' | 'nfc' | null;
 
-export function PlaceEntry({ prominent = false }: { prominent?: boolean }) {
+export function PlaceEntry({
+  prominent = false,
+  autoOpen = null,
+}: {
+  prominent?: boolean;
+  autoOpen?: Sheet;
+}) {
   const navigate = useNavigate();
-  const [sheet, setSheet] = useState<Sheet>(null);
+  const [sheet, setSheet] = useState<Sheet>(autoOpen);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (autoOpen) setSheet(autoOpen);
+  }, [autoOpen]);
 
   async function enter(text: string) {
     const target = parseEntry(text);

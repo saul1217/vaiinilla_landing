@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { GuestOrdersBanner } from '../components/guest-orders-banner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { useAuth } from '../context/auth-context';
@@ -14,9 +14,20 @@ import { LoadingSkeleton } from '../components/loading-skeleton';
 import { TableCodeSheet } from '../components/table-code-sheet';
 import { PlaceEntry } from '../components/place-entry';
 
+type EntrySheet = 'qr' | 'code' | 'nfc' | null;
+
+function entrySheetFromParam(value: string | null): EntrySheet {
+  if (value === 'qr' || value === 'codigo' || value === 'code') return value === 'qr' ? 'qr' : 'code';
+  if (value === 'nfc') return 'nfc';
+  return null;
+}
+
 export function DiscoveryPage() {
   const { ready } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const entrySheet = entrySheetFromParam(searchParams.get('entrada'));
+  const focusSearch = searchParams.get('entrada') === 'buscar';
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<PublicEstablishment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +51,12 @@ export function DiscoveryPage() {
     if (!ready) return;
     enableGuestExplore();
   }, [ready]);
+
+  useEffect(() => {
+    if (!focusSearch || step !== 'list') return;
+    const node = document.getElementById('search-places');
+    node?.focus();
+  }, [focusSearch, step, ready]);
 
   // La app instalada arranca en /pedir. Si el teléfono la cerró a medio pedido (por ejemplo
   // al ir a Google a entrar), quien escaneó una mesa vuelve a su menú en lugar de elegir lugar.
@@ -261,7 +278,10 @@ export function DiscoveryPage() {
           </div>
         </div>
         {error ? <p className="alumno-error">{error}</p> : null}
-        <PlaceEntry prominent={!loading && items.length === 0 && !query} />
+        <PlaceEntry
+          prominent={!loading && items.length === 0 && !query}
+          autoOpen={entrySheet}
+        />
         {loading && items.length === 0 ? <LoadingSkeleton shape="places" label="Cargando establecimientos…" /> : null}
         <div className="alumno-discovery">
           <div className="alumno-discovery__list">

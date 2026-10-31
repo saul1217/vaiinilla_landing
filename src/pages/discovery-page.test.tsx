@@ -100,6 +100,31 @@ describe('DiscoveryPage', () => {
     expect(screen.getByRole('navigation', { name: /^navegación$/i })).toBeInTheDocument();
   });
 
+  it.each([
+    ['qr', /escanea el qr/i],
+    ['codigo', /ingresa el código de mesa/i],
+    ['nfc', /acerca tu teléfono/i],
+  ] as const)('?entrada=%s abre la hoja correcta en PlaceEntry', async (entrada, heading) => {
+    render(
+      <MemoryRouter initialEntries={[`/pedir?entrada=${entrada}`]}>
+        <DiscoveryPage />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument();
+  });
+
+  it('?entrada=buscar enfoca el campo #search-places', async () => {
+    render(
+      <MemoryRouter initialEntries={['/pedir?entrada=buscar']}>
+        <DiscoveryPage />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole('heading', { name: /dónde comes hoy/i })).toBeInTheDocument();
+    const search = await screen.findByRole('textbox', { name: /buscar establecimiento/i });
+    expect(search).toHaveAttribute('id', 'search-places');
+    await waitFor(() => expect(search).toHaveFocus());
+  });
+
   it('el código de mesa guarda el token para unirse después', async () => {
     resolveSpace.mockResolvedValue({
       establecimiento_slug: 'demo-a',

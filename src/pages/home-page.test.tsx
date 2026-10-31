@@ -24,7 +24,7 @@ describe('HomePage', () => {
         <HomePage />
       </MemoryRouter>,
     );
-    const pedir = screen.getAllByRole('link', { name: /^pedir$/i });
+    const pedir = screen.getAllByRole('link', { name: /empezar a pedir/i });
     expect(pedir[0]).toHaveAttribute('href', '/pedir');
     expect(screen.getAllByRole('link', { name: /ya tengo cuenta/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: /soy establecimiento/i })[0]).toHaveAttribute(
@@ -36,17 +36,18 @@ describe('HomePage', () => {
     expect(screen.queryByRole('link', { name: /google play/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /^entrar$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /^panel/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /el menú del lugar/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /todo lo que necesitas/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /directo al café/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/vaini recibe el pedido/i)).toHaveAttribute('src', '/film/vaini-latte-720.mp4');
     expect(screen.queryByText(/cafetería escolar/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/del campus/i)).not.toBeInTheDocument();
-    expect(screen.getAllByText(/cualquier negocio de comida/i).length).toBeGreaterThan(0);
-    expect(screen.getByRole('heading', { name: /pide sin fila/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/restaurantes, cafés, bares/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: /escribe tu mesa/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/seguimiento de un pedido/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /número de mesa/i })).toHaveAttribute('href', '/pedir?entrada=codigo');
   });
 
-  it('Pedir no abre solo el último lugar: con varias tiendas pide QR o código', async () => {
+  it('Empezar a pedir no abre solo el último lugar: con varias tiendas pide QR o código', async () => {
     rememberPlace('renasci-bar');
     render(
       <MemoryRouter>
@@ -54,7 +55,7 @@ describe('HomePage', () => {
       </MemoryRouter>,
     );
     await waitFor(() => {
-      expect(screen.getAllByRole('link', { name: /^pedir$/i })[0]).toHaveAttribute(
+      expect(screen.getAllByRole('link', { name: /empezar a pedir/i })[0]).toHaveAttribute(
         'href',
         '/pedir',
       );
