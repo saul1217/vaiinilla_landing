@@ -159,7 +159,7 @@ describe('WalletPage', () => {
   it('muestra saldo grande y atajos de Android', async () => {
     renderWallet();
     expect(await screen.findByText('$125.00')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /cartera/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /mi saldo/i })).toBeInTheDocument();
     const shortcuts = document.querySelector('.alumno-actions-3');
     expect(shortcuts).toBeTruthy();
     expect(within(shortcuts as HTMLElement).getByRole('link', { name: /^pagar$/i })).toHaveAttribute(
@@ -177,6 +177,7 @@ describe('WalletPage', () => {
     expect(screen.getByRole('link', { name: /abrir menú/i })).toHaveAttribute('href', '/e/demo-a');
     expect(screen.getByText('Saldo Vaiinilla')).toBeInTheDocument();
     expect(screen.getByText('Pedido #42')).toBeInTheDocument();
+    expect(screen.queryByText(/cashback/i)).not.toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: /del menú/i })).toBeInTheDocument();
     expect(screen.getByText('fruti Lupis')).toBeInTheDocument();
   });
@@ -241,6 +242,25 @@ describe('WalletPage', () => {
     expect(screen.getByRole('link', { name: /abrir menú/i })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /movimientos/i })).not.toBeInTheDocument();
     expect(document.querySelectorAll('.alumno-moves li')).toHaveLength(0);
+  });
+
+  it('no muestra movimientos de cashback ni sus importes', () => {
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <WalletBoardView
+            saldo="125.00"
+            placeSlug="demo-a"
+            reloadHref="/u/preview"
+            movimientos={[
+              { id: 'cb1', tipo: 'cashback', descripcion: 'Cashback ganado', monto: '125.45', saldo_posterior: '125.45', pedido_id: null, creado_en: '2026-09-15T00:00:00Z' },
+            ]}
+            menuPeek={[]}
+          />
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+    expect(document.body).not.toHaveTextContent(/cashback|125\.45/i);
   });
 
   it('sin saldo en el lugar: no ofrece recargar ni el QR', () => {

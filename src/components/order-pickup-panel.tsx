@@ -52,21 +52,21 @@ export function OrderPickupPanel({
       ? 'Muéstralo en caja o cocina para entregar.'
       : 'Muestra esto en la barra para recoger tu pedido.';
   const qrAlt = stripeOrder
-    ? 'Código QR del pedido para entregar'
-    : 'Código QR del pedido para mostrar en caja';
+    ? 'Código de retiro del pedido para entregar'
+    : 'Código de retiro del pedido para mostrar en caja';
 
   return (
     <div
       className={listo ? 'alumno-pickup alumno-pickup--listo' : 'alumno-pickup'}
       role="region"
-      aria-label="Código de retiro"
+      aria-label={`Pedido número ${order.folio}. ${toSpace ? 'Código de entrega' : 'Código de retiro'}`}
     >
       <div className="alumno-pickup__head">
         <div className="alumno-pickup__copy">
           <p className="alumno-pickup__kicker">{toSpace ? 'Código de entrega' : 'Código de retiro'}</p>
           <p className="alumno-pickup__hint">{hint}</p>
         </div>
-        <p className="alumno-pickup__folio">#{order.folio}</p>
+        <p className="alumno-pickup__folio" aria-label={`Número de pedido ${order.folio}`}>#{order.folio}</p>
       </div>
       {qr ? (
         <div className="alumno-pickup__qr-pad">

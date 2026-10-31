@@ -25,7 +25,7 @@ function isNameTaken(cause: unknown): string | null {
 }
 
 /**
- * "¿Quién eres?" de la mesa: al escanear el QR de un espacio compartible se elige
+ * Selección de participante: al llegar a un espacio compartible se elige
  * quién se es antes de pedir. La verdad es el servidor (`yo`); la identidad local
  * solo adelanta el "¿Continuar como X?" y detecta cambio de sesión.
  */
@@ -131,7 +131,7 @@ export function TableWhoPage() {
 
   const noun = spaceNoun(session?.espacio.tipo);
   const heading =
-    session && offerContinue && me ? `¿Continuar como ${me.alias}?` : '¿Quién eres?';
+    session && offerContinue && me ? `¿Continuar como ${me.alias}?` : '¿Cómo te llamas en la mesa?';
 
   return (
     <AppShell tab="none">
@@ -139,7 +139,7 @@ export function TableWhoPage() {
         <AlumnoPageHeader
           kicker={session ? session.espacio.nombre : `Tu ${noun}`}
           title={heading}
-          lead={session && !(offerContinue && me) ? 'Selecciona tu nombre para continuar.' : undefined}
+          lead={session && !(offerContinue && me) ? 'Elige tu nombre o escribe uno para continuar.' : undefined}
         />
         {loading ? (
           <p role="status">Viendo quién está en la mesa…</p>
@@ -196,7 +196,7 @@ export function TableWhoPage() {
               <form className="table-who__add is-open" onSubmit={submitAlias}>
                 <div className="table-who__add-inner">
                   <label className="alumno-field">
-                    <span>Tu nombre</span>
+                    <span>¿Cómo te llamas en la mesa?</span>
                     <input
                       value={alias}
                       maxLength={ALIAS_MAX}
@@ -205,7 +205,7 @@ export function TableWhoPage() {
                         setAlias(event.target.value);
                         setJoinError(null);
                       }}
-                      placeholder="Como te dicen en la mesa"
+                      placeholder="Por ejemplo, Ana o José"
                     />
                   </label>
                   <p className="alumno-muted">Ej. David R. o David Ramírez</p>

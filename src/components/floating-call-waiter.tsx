@@ -1,6 +1,5 @@
-// Botón flotante y arrastrable de "Llamar al mesero". Se monta una sola vez en la raíz de
-// las rutas del cliente y aparece solo con una mesa escaneada. Al soltar se pega a la
-// orilla izquierda o derecha; la posición vive en localStorage. Contrato del backend:
+// Control fijo de "Llamar al mesero". Se monta una sola vez en la raíz de
+// las rutas del cliente y aparece solo con una mesa activa. Contrato del backend:
 // docs/mesero-backend.md (la llamada va a la mesa, sin pedido).
 import {
   useEffect,
@@ -8,25 +7,11 @@ import {
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
-  type KeyboardEvent,
-  type PointerEvent,
 } from 'react';
 import { useLocation } from 'react-router-dom';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { readStoredClientContext } from '../lib/client-session';
-import {
-  clampY,
-  FAB_MARGIN,
-  FAB_SIZE,
-  fabBounds,
-  readFabPosition,
-  snapSide,
-  TAP_SLOP,
-  useFloatingCallHidden,
-  writeFabPosition,
-  type FabPosition,
-} from '../lib/floating-call';
+import { useFloatingCallHidden } from '../lib/floating-call';
 import {
   CALL_REASONS,
   CallsUnavailableError,
@@ -43,35 +28,17 @@ const HIDDEN_PATHS = [/^\/$/, /^\/soporte\/?$/, /^\/u\//, /^\/seguimiento\//];
 
 type View = 'closed' | 'reasons' | 'open' | 'unavailable';
 
-const isDesktop = () => window.matchMedia?.('(min-width: 768px)').matches ?? false;
-
-/** En pantalla ancha la barra lateral ocupa la orilla izquierda (232 px, en espejo con alumno.css). */
-const sidebarInset = () => (window.matchMedia?.('(min-width: 1024px)').matches ? 232 : 0);
-
-interface Drag {
-  pointerId: number;
-  startX: number;
-  startY: number;
-  originLeft: number;
-  originTop: number;
-  moved: boolean;
-}
-
 export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallClient }) {
   const { pathname } = useLocation();
   const hidden = useFloatingCallHidden();
   const panelId = useId();
   const [space, setSpace] = useState(() => scannedSpace());
-  const [saved, setSaved] = useState<FabPosition | null>(() => readFabPosition());
-  const [live, setLive] = useState<{ left: number; top: number } | null>(null);
   const [view, setView] = useState<View>('closed');
   const [call, setCall] = useState<TableCall | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
   const [, setViewport] = useState(0);
-  const drag = useRef<Drag | null>(null);
-  const suppressClick = useRef(false);
   const button = useRef<HTMLButtonElement>(null);
 
   // La mesa puede cambiar sin navegar (salir de la mesa, vencer la visita).
@@ -149,88 +116,17 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
 
   if (!visible || !space) return null;
 
-  const bounds = fabBounds(window.innerHeight, { desktop: isDesktop(), cart: /\/carrito\/?$/.test(pathname) });
-  const side = saved?.side ?? 'right';
-  const top = live ? live.top : clampY(saved?.y ?? bounds.bottom, bounds);
-  const left = live
-    ? `${live.left}px`
-    : side === 'left'
-      ? `calc(var(--fcw-inset-left, 0px) + ${FAB_MARGIN}px + env(safe-area-inset-left, 0px))`
-      : `calc(100% - ${FAB_SIZE + FAB_MARGIN}px - env(safe-area-inset-right, 0px))`;
-  const opensUp = top > 300;
+  const side = 'left';
+  const opensUp = true;
 
-  function onPointerDown(event: PointerEvent<HTMLButtonElement>) {
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    drag.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      originLeft: rect.left,
-      originTop: rect.top,
-      moved: false,
-    };
-    suppressClick.current = false;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-  }
-
-  function onPointerMove(event: PointerEvent<HTMLButtonElement>) {
-    const d = drag.current;
-    if (!d || d.pointerId !== event.pointerId) return;
-    const dx = event.clientX - d.startX;
-    const dy = event.clientY - d.startY;
-    if (!d.moved && Math.hypot(dx, dy) < TAP_SLOP) return;
-    d.moved = true;
-    setView((v) => (v === 'reasons' ? 'closed' : v));
-    setLive({
-      left: Math.min(window.innerWidth - FAB_SIZE, Math.max(sidebarInset(), d.originLeft + dx)),
-      top: clampY(d.originTop + dy, bounds),
-    });
-  }
-
-  function onPointerUp(event: PointerEvent<HTMLButtonElement>) {
-    const d = drag.current;
-    if (!d || d.pointerId !== event.pointerId) return;
-    drag.current = null;
-    event.currentTarget.releasePointerCapture?.(event.pointerId);
-    if (!d.moved) return;
-    suppressClick.current = true;
-    const next: FabPosition = {
-      side: snapSide(d.originLeft + (event.clientX - d.startX), window.innerWidth),
-      y: clampY(d.originTop + (event.clientY - d.startY), bounds),
-    };
-    setSaved(next);
-    setLive(null);
-    writeFabPosition(next);
-  }
-
-  function onPointerCancel() {
-    drag.current = null;
-    setLive(null);
-  }
-
-  // Teclado y toque llegan aquí; un arrastre recién soltado no abre el menú.
+  // El control es fijo: cualquier clic, incluso después de mover el dedo, abre el panel.
   function onClick() {
-    if (suppressClick.current) {
-      suppressClick.current = false;
-      return;
-    }
     setView((v) => (v === 'closed' ? (call ? 'open' : 'reasons') : 'closed'));
-  }
-
-  function onKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
-    const step = event.key === 'ArrowUp' ? -24 : event.key === 'ArrowDown' ? 24 : 0;
-    const sideKey = event.key === 'ArrowLeft' ? 'left' : event.key === 'ArrowRight' ? 'right' : null;
-    if (!step && !sideKey) return;
-    event.preventDefault();
-    const next: FabPosition = { side: sideKey ?? side, y: clampY(top + step, bounds) };
-    setSaved(next);
-    writeFabPosition(next);
   }
 
   async function send(reason: CallReason) {
     if (!client) {
-      setError('Estamos conectando tu sesión. Intenta de nuevo en unos segundos.');
+      setError('Estamos preparando la llamada. Intenta de nuevo en unos segundos.');
       return;
     }
     setBusy(true);
@@ -276,10 +172,9 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
 
   return (
     <div
-      className={`alumno-fcw is-${side}${opensUp ? ' is-up' : ' is-down'}${live ? ' is-dragging' : ''}${
+      className={`alumno-fcw is-${side}${opensUp ? ' is-up' : ' is-down'}${
         call ? (going ? ' is-going' : ' is-calling') : ''
       }${/\/carrito\/?$/.test(pathname) ? ' is-cart' : ''}`}
-      style={{ left, '--fcw-y': `${top}px` } as CSSProperties}
       data-testid="floating-call"
     >
       <button
@@ -289,16 +184,12 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
         aria-label={label}
         aria-expanded={panelOpen}
         aria-controls={panelId}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
         onClick={onClick}
-        onKeyDown={onKeyDown}
       >
         <BellIcon />
+        <span>Llamar al mesero</span>
       </button>
-      <div id={panelId} className="alumno-fcw__panel" hidden={!panelOpen || Boolean(live)}>
+      <div id={panelId} className="alumno-fcw__panel" hidden={!panelOpen}>
         {view === 'unavailable' ? (
           <p className="alumno-callwaiter__note">
             Llamar al mesero todavía no está disponible en esta cafetería.

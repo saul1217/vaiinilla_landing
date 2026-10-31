@@ -263,7 +263,7 @@ export function OrdersPage() {
         {orders.length === 0 && !error && !loading ? (
           <div className="alumno-empty">
             <img src="/vaini/cutout-frente.png" alt="" />
-            <p>Aún no hay pedidos en esta sesión.</p>
+            <p>Aún no has hecho pedidos.</p>
           </div>
         ) : (
           <div className="alumno-orders-desk">

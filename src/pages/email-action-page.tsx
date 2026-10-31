@@ -201,7 +201,7 @@ export function PasswordResetPage() {
             </p>
             {state !== 'checking' ? (
               <Link className="alumno-btn alumno-btn--lime" to="/cuenta">
-                {state === 'success' ? 'Iniciar sesión' : 'Volver al acceso'}
+                {state === 'success' ? 'Entrar a mi cuenta' : 'Volver al acceso'}
               </Link>
             ) : null}
           </>

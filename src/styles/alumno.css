@@ -28,21 +28,6 @@ html[data-theme='dark'] {
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.4);
 }
 
-html[data-theme='amoled'] {
-  --danger: var(--coral);
-  --lime-text: var(--lime);
-  --bg: #000000;
-  --bg-2: #070707;
-  --surface: #111111;
-  --text: #f4f1e7;
-  --text-soft: #c9c7bb;
-  --muted: #8d8e86;
-  --white: #111111;
-  --line: rgba(244, 241, 231, 0.14);
-  --nav-bg: #000000;
-  --shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
-}
-
 html:has(body[data-shell='alumno']) {
   scroll-behavior: auto;
 }
@@ -180,8 +165,31 @@ body[data-shell='alumno'] {
   text-decoration: none;
 }
 
-html[data-theme='dark'] .alumno-avatar,
-html[data-theme='amoled'] .alumno-avatar {
+.alumno-menu-action {
+  width: auto;
+  min-width: 44px;
+  min-height: 44px;
+  height: auto;
+  padding: 5px 9px;
+  gap: 6px;
+  border-radius: 16px;
+  text-decoration: none;
+  font-size: 0.75rem;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.alumno-menu-action > span:not(.alumno-badge) {
+  display: inline;
+}
+
+.alumno-menu-action.alumno-avatar {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 0 var(--line);
+}
+
+html[data-theme='dark'] .alumno-avatar {
   background: var(--lime);
   color: var(--ink);
 }
@@ -270,8 +278,7 @@ html[data-theme='amoled'] .alumno-avatar {
   border-color: var(--ink);
 }
 
-html[data-theme='dark'] .alumno-chip.is-on,
-html[data-theme='amoled'] .alumno-chip.is-on {
+html[data-theme='dark'] .alumno-chip.is-on {
   background: var(--lime);
   color: var(--ink);
   border-color: var(--lime);
@@ -365,8 +372,7 @@ html[data-theme='amoled'] .alumno-chip.is-on {
   box-shadow: 0 10px 28px rgba(23, 24, 23, 0.1);
 }
 
-html[data-theme='dark'] .alumno-nav,
-html[data-theme='amoled'] .alumno-nav {
+html[data-theme='dark'] .alumno-nav {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
 
@@ -392,6 +398,7 @@ html[data-theme='amoled'] .alumno-nav {
   font-size: 0.68rem;
   font-weight: 600;
   padding: 8px 0 6px;
+  min-height: 44px;
   position: relative;
   border-radius: 999px;
 }
@@ -487,6 +494,7 @@ html[data-theme='amoled'] .alumno-nav {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+  min-height: 44px;
   padding: 8px 0;
 }
 
@@ -610,6 +618,11 @@ html[data-theme='amoled'] .alumno-nav {
   font-size: 0.92rem;
 }
 
+.alumno-splash__login .alumno-link {
+  min-height: 44px;
+  padding: 8px 0;
+}
+
 .alumno-splash__actions .alumno-btn {
   transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1), filter 160ms ease;
 }
@@ -633,6 +646,7 @@ html[data-theme='amoled'] .alumno-nav {
 /* El registro con correo sigue disponible, pero discreto: Google es el camino corto. */
 .alumno-splash__email {
   justify-self: center;
+  min-height: 44px;
   padding: 6px 10px;
   border: 0;
   background: none;
@@ -667,13 +681,11 @@ html[data-theme='amoled'] .alumno-nav {
   }
 }
 
-html[data-theme='dark'] .alumno-empty img,
-html[data-theme='amoled'] .alumno-empty img {
+html[data-theme='dark'] .alumno-empty img {
   mix-blend-mode: lighten;
 }
 
-html[data-theme='dark'] .alumno-antojo img,
-html[data-theme='amoled'] .alumno-antojo img {
+html[data-theme='dark'] .alumno-antojo img {
   mix-blend-mode: normal;
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.18));
 }
@@ -869,6 +881,13 @@ html[data-theme='amoled'] .alumno-antojo img {
 .alumno-location-note {
   color: var(--muted);
   font-size: 0.75rem;
+}
+
+.alumno-location-hint {
+  margin: 2px 0 0;
+  color: var(--text-soft);
+  font-size: 0.8125rem;
+  line-height: 1.4;
 }
 
 .alumno-radio {
@@ -1514,6 +1533,12 @@ html[data-theme='amoled'] .alumno-antojo img {
   color: #f4f1e7;
 }
 
+.alumno-line .alumno-qty button {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+}
+
 .alumno-line__side {
   display: grid;
   justify-items: end;
@@ -1529,8 +1554,10 @@ html[data-theme='amoled'] .alumno-antojo img {
 .alumno-line__remove {
   background: none;
   border: 0;
-  padding: 0;
-  color: rgba(244, 241, 231, 0.55);
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px 8px;
+  color: #f4f1e7;
   font: inherit;
   font-size: 0.78rem;
   font-weight: 700;
@@ -1800,16 +1827,7 @@ html[data-theme='dark'] .alumno-cart-peek__sheet {
   background: #2a2b26;
 }
 
-html[data-theme='amoled'] .alumno-actions-3 a,
-html[data-theme='amoled'] .alumno-actions-3 button,
-html[data-theme='amoled'] .alumno-wallet-menu,
-html[data-theme='amoled'] .alumno-history-row,
-html[data-theme='amoled'] .alumno-cart-peek__sheet {
-  background: #1c1c1c;
-}
-
-html[data-theme='dark'] .alumno-wallet-menu__icon,
-html[data-theme='amoled'] .alumno-wallet-menu__icon {
+html[data-theme='dark'] .alumno-wallet-menu__icon {
   background: none;
 }
 
@@ -1880,7 +1898,7 @@ html[data-theme='amoled'] .alumno-wallet-menu__icon {
 
 .alumno-themes {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin: 12px 0 18px;
 }
@@ -1973,16 +1991,16 @@ html[data-theme='amoled'] .alumno-wallet-menu__icon {
   color: rgba(244, 241, 231, 0.55);
 }
 
-.alumno-track-card__pill {
+.alumno-track-card .alumno-track-card__pill {
   display: inline-flex;
+  max-width: min(68%, 19rem);
   border-radius: 999px;
-  padding: 7px 12px;
+  padding: 8px 12px;
   background: #f4f1e7;
   color: #1a1b19;
-  font-size: 0.66rem;
+  font-size: 0.78rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  line-height: 1.2;
 }
 
 html[data-theme='dark'] .alumno-track-card,
@@ -1997,20 +2015,6 @@ html[data-theme='dark'] .alumno-cart-layout .alumno-field textarea {
 html[data-theme='dark'] .alumno-track-card.is-selected {
   background: #33342e;
   box-shadow: 0 0 0 2px #171817, 0 0 0 5px var(--lime);
-}
-
-html[data-theme='amoled'] .alumno-track-card,
-html[data-theme='amoled'] .alumno-line,
-html[data-theme='amoled'] .alumno-card--ticket,
-html[data-theme='amoled'] .alumno-cart-layout .alumno-card,
-html[data-theme='amoled'] .alumno-cart-layout .alumno-field input,
-html[data-theme='amoled'] .alumno-cart-layout .alumno-field textarea {
-  background: #1c1c1c;
-}
-
-html[data-theme='amoled'] .alumno-track-card.is-selected {
-  background: #262626;
-  box-shadow: 0 0 0 2px #000, 0 0 0 5px var(--lime);
 }
 
 .alumno-track-card__top {
@@ -2307,8 +2311,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   display: block;
   font-size: 0.75rem;
   font-weight: 900;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   color: rgba(244, 241, 231, 0.72);
 }
@@ -2785,7 +2788,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-themes {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .alumno-order-list {
@@ -3148,31 +3151,10 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     background: #2a2b26;
   }
 
-  html[data-theme='amoled'] .alumno-actions-3 a,
-  html[data-theme='amoled'] .alumno-actions-3 button,
-  html[data-theme='amoled'] .alumno-wallet-menu,
-  html[data-theme='amoled'] .alumno-history-row,
-  html[data-theme='amoled'] .alumno-cart-peek__sheet,
-  html[data-theme='amoled'] .alumno-line,
-  html[data-theme='amoled'] .alumno-track-card,
-  html[data-theme='amoled'] .alumno-card--ticket,
-  html[data-theme='amoled'] .alumno-cart-layout .alumno-card,
-  html[data-theme='amoled'] .alumno-cart-layout .alumno-field input,
-  html[data-theme='amoled'] .alumno-cart-layout .alumno-field textarea,
-  html[data-theme='amoled'] .alumno-cart-layout__checkout {
-    background: #1c1c1c;
-  }
-
   html[data-theme='dark'] .alumno-cart-layout__checkout > .alumno-card,
   html[data-theme='dark'] .alumno-cart-layout__checkout .alumno-field input,
   html[data-theme='dark'] .alumno-cart-layout__checkout .alumno-field textarea {
     background: #171817;
-  }
-
-  html[data-theme='amoled'] .alumno-cart-layout__checkout > .alumno-card,
-  html[data-theme='amoled'] .alumno-cart-layout__checkout .alumno-field input,
-  html[data-theme='amoled'] .alumno-cart-layout__checkout .alumno-field textarea {
-    background: #000;
   }
 
   .alumno-sheet:not(.alumno-sheet--pay) {
@@ -3907,31 +3889,10 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
     background: #2a2b26;
   }
 
-  html[data-theme='amoled'] .alumno-actions-3 a,
-  html[data-theme='amoled'] .alumno-actions-3 button,
-  html[data-theme='amoled'] .alumno-wallet-menu,
-  html[data-theme='amoled'] .alumno-history-row,
-  html[data-theme='amoled'] .alumno-cart-peek__sheet,
-  html[data-theme='amoled'] .alumno-line,
-  html[data-theme='amoled'] .alumno-track-card,
-  html[data-theme='amoled'] .alumno-card--ticket,
-  html[data-theme='amoled'] .alumno-cart-layout .alumno-card,
-  html[data-theme='amoled'] .alumno-cart-layout .alumno-field input,
-  html[data-theme='amoled'] .alumno-cart-layout .alumno-field textarea,
-  html[data-theme='amoled'] .alumno-cart-layout__checkout {
-    background: #1c1c1c;
-  }
-
   html[data-theme='dark'] .alumno-cart-layout__checkout > .alumno-card,
   html[data-theme='dark'] .alumno-cart-layout__checkout .alumno-field input,
   html[data-theme='dark'] .alumno-cart-layout__checkout .alumno-field textarea {
     background: #171817;
-  }
-
-  html[data-theme='amoled'] .alumno-cart-layout__checkout > .alumno-card,
-  html[data-theme='amoled'] .alumno-cart-layout__checkout .alumno-field input,
-  html[data-theme='amoled'] .alumno-cart-layout__checkout .alumno-field textarea {
-    background: #000;
   }
 }
 
@@ -4180,7 +4141,6 @@ html[data-theme='light'] .alumno-lockup img {
 }
 
 html[data-theme='dark'] .alumno-lockup img,
-html[data-theme='amoled'] .alumno-lockup img,
 .alumno-lockup--on-dark img {
   mix-blend-mode: screen;
 }
@@ -4888,10 +4848,7 @@ html[data-theme='amoled'] .alumno-lockup img,
   color: var(--muted);
   font-size: 0.8125rem;
   line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 .alumno-psheet__group {
@@ -5009,9 +4966,8 @@ html[data-theme='amoled'] .alumno-lockup img,
   margin: 2px 0 0;
   font-size: 1.0625rem;
   font-weight: 900;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .alumno-psheet__qty {
@@ -5257,8 +5213,7 @@ html[data-theme='light'] .alumno-psheet__qty button {
   color: #1d250c;
 }
 
-html[data-theme='dark'] .alumno-signup__icon,
-html[data-theme='amoled'] .alumno-signup__icon {
+html[data-theme='dark'] .alumno-signup__icon {
   color: var(--lime);
 }
 
@@ -5605,15 +5560,15 @@ html[data-theme='light'] .alumno-codesheet__slots > span.is-filled {
   .alumno-line .alumno-qty {
     display: inline-flex;
     align-items: center;
-    height: 44px;
+    min-height: 48px;
     padding: 0 4px;
     border: 1px solid color-mix(in srgb, var(--text) 22%, transparent);
     border-radius: 22px;
   }
 
   .alumno-line .alumno-qty button {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border: 0;
     border-radius: 50%;
     background: transparent;
@@ -6565,6 +6520,18 @@ body[data-shell='alumno'] {
   display: none;
 }
 
+.alumno-seg__hint {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.alumno-menu-categories {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
 /* One highlight shared by every chip; JS springs its x and width. */
 .alumno-seg__pill {
   position: absolute;
@@ -6580,8 +6547,7 @@ body[data-shell='alumno'] {
   opacity: 0;
 }
 
-html[data-theme='dark'] .alumno-seg__pill,
-html[data-theme='amoled'] .alumno-seg__pill {
+html[data-theme='dark'] .alumno-seg__pill {
   background: var(--lime);
 }
 
@@ -6615,8 +6581,7 @@ html[data-theme='amoled'] .alumno-seg__pill {
   color: var(--cream);
 }
 
-html[data-theme='dark'] .alumno-seg__chip.is-on,
-html[data-theme='amoled'] .alumno-seg__chip.is-on {
+html[data-theme='dark'] .alumno-seg__chip.is-on {
   color: var(--ink);
 }
 
@@ -6743,8 +6708,7 @@ html[data-theme='amoled'] .alumno-seg__chip.is-on {
   color: var(--cream);
 }
 
-html[data-theme='dark'] .alumno-res__court.is-on,
-html[data-theme='amoled'] .alumno-res__court.is-on {
+html[data-theme='dark'] .alumno-res__court.is-on {
   background: var(--lime);
   color: var(--ink);
 }
@@ -7021,8 +6985,7 @@ html[data-theme='amoled'] .alumno-res__court.is-on {
   color: var(--cream);
 }
 
-html[data-theme='dark'] .alumno-res__hour.is-on,
-html[data-theme='amoled'] .alumno-res__hour.is-on {
+html[data-theme='dark'] .alumno-res__hour.is-on {
   background: var(--lime);
   border-color: var(--lime);
   color: var(--ink);
@@ -7049,6 +7012,12 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   text-transform: uppercase;
   letter-spacing: 0.02em;
   line-height: 1;
+}
+
+@media (max-width: 767px) {
+  .alumno-cart-layout {
+    padding-bottom: 48px;
+  }
 }
 
 .alumno-res-order-action {
@@ -7461,6 +7430,14 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 .shared-table .alumno-btn--ghost { color: #f4f1e7; border-color: rgba(244, 241, 231, 0.18); min-height: 46px; margin-top: 6px; }
 .shared-table .alumno-chip { transition: background-color 220ms ease, color 220ms ease, border-color 220ms ease, transform 320ms cubic-bezier(.34, 1.56, .64, 1); }
 .shared-table .alumno-chip:active { transform: scale(0.94); }
+.shared-table__summary { display: grid; gap: 0; border: 1px solid rgba(244, 241, 231, 0.16); border-radius: 16px; padding: 4px 14px; }
+.shared-table__summary p { display: flex; justify-content: space-between; gap: 12px; margin: 0; padding: 10px 0; border-bottom: 1px solid rgba(244, 241, 231, 0.12); }
+.shared-table__summary p:last-child { border-bottom: 0; color: var(--lime); }
+.shared-table__summary span { font-variant-numeric: tabular-nums; font-weight: 800; }
+.shared-table__details { min-width: 0; }
+.shared-table__details > summary { display: flex; align-items: center; min-height: 48px; cursor: pointer; font-weight: 800; color: var(--lime); }
+.shared-table__details > summary:focus-visible { outline: 3px solid var(--lime); outline-offset: 3px; border-radius: 8px; }
+.shared-table__details[open] > summary { margin-bottom: 8px; }
 @media (prefers-reduced-motion: reduce) {
   .shared-table__group { animation: none; }
   .shared-table .alumno-chip { transition: none; }
@@ -7537,7 +7514,7 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   justify-self: end; font-size: 0.875rem; color: inherit; padding: 6px 4px;
 }
 
-/* Entrada a un lugar: Escanear QR · Escribir código · Acercar NFC. */
+/* Entrada por número de mesa, con cámara y etiqueta NFC como alternativas. */
 .alumno-entry {
   margin: 4px 0 18px;
   padding: 16px;
@@ -7570,7 +7547,7 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 
 .alumno-entry__options {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -7579,6 +7556,7 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   justify-items: center;
   gap: 8px;
   padding: 14px 6px;
+  min-height: 64px;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--bg);
@@ -7589,6 +7567,25 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   cursor: pointer;
   transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1), border-color 200ms ease;
 }
+
+.alumno-entry__option.is-main { grid-column: 1 / -1; }
+.alumno-entry__more { margin-top: 10px; }
+.alumno-entry__more-toggle {
+  width: fit-content;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.alumno-entry__more .alumno-entry__options { margin-top: 6px; }
 
 .alumno-entry__option:active {
   transform: scale(0.95);
@@ -7865,6 +7862,17 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
   transition: left 240ms cubic-bezier(0.16, 1, 0.3, 1), top 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Control fijo con etiqueta visible; deja libre la navegación inferior y el contenido. */
+.alumno-fcw,
+.alumno-fcw.is-cart {
+  top: auto !important;
+  right: auto !important;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  left: 12px !important;
+  width: min(420px, calc(100vw - 24px));
+  height: auto;
+}
+
 .alumno-fcw.is-cart {
   --fcw-reserve: calc(160px + env(safe-area-inset-bottom, 0px));
 }
@@ -7874,18 +7882,21 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 }
 
 .alumno-fcw__fab {
-  display: grid;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
   place-items: center;
-  width: 56px;
-  height: 56px;
-  padding: 0;
-  border-radius: 50%;
+  width: 100%;
+  min-height: 52px;
+  height: auto;
+  padding: 10px 16px;
+  border-radius: 18px;
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--text);
   box-shadow: 0 8px 22px rgba(23, 24, 23, 0.18);
-  cursor: grab;
-  touch-action: none;
+  cursor: pointer;
+  touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
@@ -7957,8 +7968,7 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 @media (min-width: 768px) {
   .alumno-fcw,
   .alumno-fcw.is-cart {
-    --fcw-reserve: 16px;
-    --fcw-min: 72px;
+    bottom: 16px;
   }
 }
 
@@ -7966,6 +7976,8 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
 @media (min-width: 1024px) {
   .alumno-fcw {
     --fcw-inset-left: 232px;
+    left: 248px !important;
+    width: min(420px, calc(100vw - 272px));
   }
 }
 
@@ -7983,3 +7995,5 @@ html[data-theme='amoled'] .alumno-res__hour.is-on {
     animation: none;
   }
 }
+
+

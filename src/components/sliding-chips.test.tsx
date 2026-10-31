@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { SlidingChips } from './sliding-chips';
@@ -26,5 +26,23 @@ describe('SlidingChips', () => {
     const { container } = render(<SlidingChips label="Duración" items={items} selected={null} onSelect={() => undefined} />);
     expect(container.querySelector<HTMLElement>('.alumno-seg__pill')?.style.opacity).toBe('0');
     expect(screen.getAllByRole('radio').every((node) => node.getAttribute('aria-checked') === 'false')).toBe(true);
+  });
+
+  it('solo muestra la instrucción cuando las opciones no caben en la fila', () => {
+    const { rerender } = render(
+      <SlidingChips label="Categorías" hint="Desliza para ver más categorías" items={items} selected="60" onSelect={() => undefined} />,
+    );
+    const track = document.querySelector<HTMLElement>('.alumno-seg__track')!;
+    Object.defineProperties(track, {
+      clientWidth: { configurable: true, value: 200 },
+      scrollWidth: { configurable: true, value: 200 },
+    });
+    fireEvent(window, new Event('resize'));
+    expect(screen.queryByText('Desliza para ver más categorías')).not.toBeInTheDocument();
+    Object.defineProperty(track, 'scrollWidth', { configurable: true, value: 360 });
+    fireEvent(window, new Event('resize'));
+    expect(screen.getByText('Desliza para ver más categorías')).toBeInTheDocument();
+    rerender(<SlidingChips label="Categorías" hint="Desliza para ver más categorías" items={items} selected="90" onSelect={() => undefined} />);
+    expect(screen.getByRole('radio', { name: '1 h 30' })).toHaveAttribute('aria-checked', 'true');
   });
 });

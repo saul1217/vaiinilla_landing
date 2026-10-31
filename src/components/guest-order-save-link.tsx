@@ -28,11 +28,10 @@ export function GuestOrderSaveLink({ token, folio }: { token: string; folio?: nu
   }
 
   return (
-    <section className="alumno-tracking__keep" role="note" aria-label="Guarda este enlace">
+    <section className="alumno-tracking__keep" role="note" aria-label="Guarda este enlace para consultar tu pedido">
       <strong>Guarda este enlace</strong>
       <p>
-        Tu pedido también vive en este navegador, en esta pestaña. Guarda el enlace como
-        respaldo para otro dispositivo o si borras los datos: pediste sin cuenta, así que no
+        Tu pedido también aparece aquí. Guarda el enlace para consultar tu pedido desde otro dispositivo o si borras los datos: pediste sin cuenta, así que no
         te llegará por correo.
       </p>
       <code className="alumno-tracking__link">{link}</code>

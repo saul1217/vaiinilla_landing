@@ -81,7 +81,7 @@ test('registro con un correo que ya tiene cuenta: aviso amigable en el paso del 
 test('pedido en mesa: el invitado pide, paga en caja y lo ve en Mis pedidos', async ({ page }) => {
   await placeTableOrder(page);
   await expect(page.getByRole('heading', { name: /mis pedidos/i })).toBeVisible();
-  await expect(page.getByText(/aún no hay pedidos en esta sesión/i)).toBeHidden();
+  await expect(page.getByText(/aún no has hecho pedidos/i)).toBeHidden();
   await expect(page.getByText(new RegExp(seeded().product, 'i')).first()).toBeVisible({ timeout: 20_000 });
 });
 
@@ -119,7 +119,7 @@ test('Olvidé mi contraseña manda continue_url con sand-user, no el panel ni el
   });
 
   await page.goto('/cuenta');
-  await page.getByRole('button', { name: /iniciar sesión/i }).click();
+  await page.getByRole('button', { name: /entrar a mi cuenta/i }).click();
   await page.getByLabel(/correo/i).fill(' Persona@Example.test ');
   await page.getByRole('button', { name: /¿la olvidaste\?/i }).click();
 

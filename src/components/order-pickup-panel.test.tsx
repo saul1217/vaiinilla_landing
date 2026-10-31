@@ -13,6 +13,8 @@ describe('OrderPickupPanel', () => {
     render(<OrderPickupPanel order={base} token={null} />);
     expect(screen.getByText('Código de retiro')).toBeVisible();
     expect(screen.getByText(/barra/i)).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Pedido número 5. Código de retiro' })).toBeInTheDocument();
+    expect(screen.getByText('#5')).toHaveAccessibleName('Número de pedido 5');
   });
 
   it('en mesa: lo lleva el mesero, no dice "barra"', () => {
@@ -20,5 +22,12 @@ describe('OrderPickupPanel', () => {
     expect(screen.getByText('Código de entrega')).toBeVisible();
     expect(screen.getByText(/mesero te lo lleva/i)).toBeVisible();
     expect(screen.queryByText(/barra/i)).toBeNull();
+  });
+
+  it('describe el código visible con palabras cotidianas y conserva su aparición condicionada', async () => {
+    const { rerender } = render(<OrderPickupPanel order={base} token="pickup-5" />);
+    expect(await screen.findByRole('img', { name: 'Código de retiro del pedido para mostrar en caja' })).toBeInTheDocument();
+    rerender(<OrderPickupPanel order={{ ...base, estado: 'preparando' }} token="pickup-5" />);
+    expect(screen.queryByRole('region', { name: 'Pedido número 5. Código de retiro' })).not.toBeInTheDocument();
   });
 });

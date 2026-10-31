@@ -145,7 +145,7 @@ export function BottomNav({ tab }: { tab: Exclude<AlumnoTab, 'none'> }) {
     { id: 'orders' as const, href: ordersHref, label: 'Pedidos', Icon: IconOrders, active: tab === 'orders' },
     ...(guest
       ? []
-      : [{ id: 'wallet' as const, href: walletHref, label: 'Cartera', Icon: IconWallet, active: tab === 'wallet' }]),
+      : [{ id: 'wallet' as const, href: walletHref, label: 'Mi saldo', Icon: IconWallet, active: tab === 'wallet' }]),
     // Sin lugar no hay carrito al que ir: el atajo no lleva de vuelta al selector.
     ...(placeSlug
       ? [{ id: 'cart' as const, href: `/e/${placeSlug}/carrito`, label: 'Carrito', Icon: IconCart, badge: count, active: tab === 'cart' }]

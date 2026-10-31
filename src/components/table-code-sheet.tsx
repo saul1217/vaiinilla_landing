@@ -42,7 +42,7 @@ export function TableCodeSheet({
             <span aria-hidden="true" />
           </div>
           <h2 id="table-code-title">Ingresa el código de mesa</h2>
-          <p className="alumno-codesheet__lead">Escribe los 4 dígitos que aparecen junto al QR de tu mesa.</p>
+          <p className="alumno-codesheet__lead">Escribe los 4 números que ves en la mesa o en el papel del mesero.</p>
 
           <div className="alumno-codesheet__slots" role="status" aria-label={code ? `Código ${code.split('').join(' ')}` : 'Código vacío'}>
             {Array.from({ length: slots }, (_, index) => {

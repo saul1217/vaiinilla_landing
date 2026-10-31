@@ -14,6 +14,7 @@ import { lastPlaceSlug } from '../lib/last-place';
 import { errorMessage } from '../lib/api-error';
 import { forgetIdempotencyKey, idempotencyKeyFor } from '../lib/idempotency';
 import { formatAmount } from '../lib/money';
+import { assignmentStatus } from '../lib/assignment-status';
 import { catalogImageMap, orderThumbUrl } from '../lib/catalog-images';
 import { usePickupQrToken } from '../lib/use-pickup-qr';
 import {
@@ -85,7 +86,7 @@ export function OrderDetailPage() {
           openClientSession,
         });
         if (!resolved) {
-          setError('Abre una sesión en un establecimiento para consultar este pedido.');
+          setError('Entra al establecimiento para consultar este pedido.');
           return;
         }
         setAccessToken(resolved.context.access_token);
@@ -300,7 +301,7 @@ export function OrderDetailPage() {
           />
         ) : null}
         {order && stripeOrder ? (
-          <section className="alumno-card alumno-stripe-status">
+          <section className="alumno-card alumno-stripe-status" aria-label="Estado del pago con tarjeta">
             {chargePhase ? null : <p role="status">{stripeMessage}</p>}
             {showPaymentForm && stripeSession ? (
               <StripePaymentPanel
@@ -383,6 +384,8 @@ export function OrderTicketView({
   order: OrderDetail;
   table?: SharedTable | null;
 }) {
+  const tableOrders = table?.grupos.flatMap((group) => group.pedidos) ?? [];
+  const assignmentSummary = assignmentStatus(tableOrders);
   const tableIncludesOrder = Boolean(
     table?.cuenta_abierta &&
       table.grupos.some((group) => group.pedidos.some((sharedOrder) => sharedOrder.id === order.id)),
@@ -440,59 +443,68 @@ export function OrderTicketView({
               </p>
             </div>
           </header>
+          <div className="shared-table__summary" role="group" aria-label="Resumen de la mesa">
+            <p><strong>Tú pediste</strong><span>{formatAmount(table.mi_parte.total)}</span></p>
+            <p><strong>Total de la mesa</strong><span>{formatAmount(table.totales.total)}</span></p>
+            <p><strong>Tu parte por pagar</strong><span>{formatAmount(table.mi_parte.pendiente)}</span></p>
+          </div>
+          <details className="shared-table__details">
+            <summary>
+              Ver pedidos de la mesa{assignmentSummary ? ` · ${assignmentSummary}` : ''}
+            </summary>
+            {orderedGroups(table)
+              .filter((group) => group.pedidos.length > 0)
+              .map((group) => {
+                const subtotalLabel = group.soy_yo
+                  ? 'Subtotal de tus pedidos'
+                  : `Subtotal de ${group.alias ?? 'otros pedidos'}`;
+                return (
+                  <div
+                    className="alumno-ticket-table__group"
+                    key={group.participante_id ?? `general-${group.pedidos.map((sharedOrder) => sharedOrder.folio).join('-')}`}
+                  >
+                    <h3 className="alumno-section-label">
+                      {group.soy_yo ? 'Tus pedidos' : (group.alias ?? 'Otros pedidos')}
+                    </h3>
+                    <ul className="alumno-ticket-items">
+                      {group.pedidos.map((sharedOrder) => (
+                        <li key={`${sharedOrder.folio}-${sharedOrder.creado_en ?? ''}`}>
+                          <span className="alumno-ticket-table__order-copy">
+                            <strong>Pedido #{sharedOrder.folio}</strong>
+                            <span>{sharedOrder.items_resumen || 'Pedido de la mesa'}</span>
+                            <small>{tableOrderState(sharedOrder)}</small>
+                          </span>
+                          <strong>{formatAmount(sharedOrder.total)}</strong>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="alumno-ticket-table__subtotal">
+                      <span>{subtotalLabel}</span>
+                      <strong>{formatAmount(group.total)}</strong>
+                    </p>
+                  </div>
+                );
+              })}
 
-          {orderedGroups(table)
-            .filter((group) => group.pedidos.length > 0)
-            .map((group) => {
-              const subtotalLabel = group.soy_yo
-                ? 'Subtotal de tus pedidos'
-                : `Subtotal de ${group.alias ?? 'otros pedidos'}`;
-              return (
-                <div
-                  className="alumno-ticket-table__group"
-                  key={group.participante_id ?? `general-${group.pedidos.map((sharedOrder) => sharedOrder.folio).join('-')}`}
-                >
-                  <h3 className="alumno-section-label">
-                    {group.soy_yo ? 'Tus pedidos' : (group.alias ?? 'Otros pedidos')}
-                  </h3>
-                  <ul className="alumno-ticket-items">
-                    {group.pedidos.map((sharedOrder) => (
-                      <li key={`${sharedOrder.folio}-${sharedOrder.creado_en ?? ''}`}>
-                        <span className="alumno-ticket-table__order-copy">
-                          <strong>Pedido #{sharedOrder.folio}</strong>
-                          <span>{sharedOrder.items_resumen || 'Pedido de la mesa'}</span>
-                          <small>{tableOrderState(sharedOrder)}</small>
-                        </span>
-                        <strong>{formatAmount(sharedOrder.total)}</strong>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="alumno-ticket-table__subtotal">
-                    <span>{subtotalLabel}</span>
-                    <strong>{formatAmount(group.total)}</strong>
-                  </p>
-                </div>
-              );
-            })}
-
-          <ul className="alumno-ticket-items alumno-ticket-table__totals">
-            <li>
-              <span>Total de la mesa</span>
-              <strong>{formatAmount(table.totales.total)}</strong>
-            </li>
-            <li>
-              <span>Pagado</span>
-              <strong>{formatAmount(table.totales.pagado)}</strong>
-            </li>
-            <li>
-              <span>Por pagar</span>
-              <strong>{formatAmount(table.totales.pendiente)}</strong>
-            </li>
-            <li className="alumno-ticket-table__mine">
-              <strong>Tu parte por pagar</strong>
-              <strong>{formatAmount(table.mi_parte.pendiente)}</strong>
-            </li>
-          </ul>
+            <ul className="alumno-ticket-items alumno-ticket-table__totals">
+              <li>
+                <span>Total de la mesa</span>
+                <strong>{formatAmount(table.totales.total)}</strong>
+              </li>
+              <li>
+                <span>Pagado</span>
+                <strong>{formatAmount(table.totales.pagado)}</strong>
+              </li>
+              <li>
+                <span>Por pagar</span>
+                <strong>{formatAmount(table.totales.pendiente)}</strong>
+              </li>
+              <li className="alumno-ticket-table__mine">
+                <strong>Tu parte por pagar</strong>
+                <strong>{formatAmount(table.mi_parte.pendiente)}</strong>
+              </li>
+            </ul>
+          </details>
         </section>
       ) : null}
     </section>

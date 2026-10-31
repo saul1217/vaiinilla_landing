@@ -87,7 +87,7 @@ async function login() {
       </ThemeProvider>
     </MemoryRouter>,
   );
-  await user.click(await screen.findByRole('button', { name: /iniciar sesión/i }));
+  await user.click(await screen.findByRole('button', { name: /entrar a mi cuenta/i }));
   await user.type(screen.getByLabelText(/correo/i), 'adriancamargorp3@gmail.com');
   await user.type(screen.getByLabelText(/contraseña/i), 'password1');
   await user.click(screen.getByRole('button', { name: /^entrar$/i }));

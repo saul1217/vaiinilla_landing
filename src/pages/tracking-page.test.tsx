@@ -30,7 +30,7 @@ vi.mock('../components/app-shell', () => ({ AppShell: ({ children }: { children:
 vi.mock('../components/order-track-card', () => ({
   OrderTrackCard: ({ order, pickupToken }: { order: TrackedOrder; pickupToken: string | null }) => (
     <p>
-      Estado {order.estado} · QR {pickupToken ?? 'ninguno'}
+      Estado {order.estado} · Código de retiro {pickupToken ?? 'ninguno'}
     </p>
   ),
 }));
@@ -145,6 +145,7 @@ describe('seguimiento sin cuenta', () => {
     renderAt(`/seguimiento/${TOKEN}`);
 
     expect(await screen.findByRole('heading', { name: 'Cuenta de la mesa' })).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByText(/^Ver pedidos de la mesa/));
     expect(screen.getAllByText(/1 × Quesadilla/)).toHaveLength(2);
     expect(screen.getByText(/4 personas/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Tus pedidos' })).toBeInTheDocument();
@@ -153,10 +154,10 @@ describe('seguimiento sin cuenta', () => {
     expect(screen.getByText(/Pedido #29/)).toBeInTheDocument();
     expect(screen.getAllByText('$70').length).toBeGreaterThan(0);
     expect(screen.getAllByText('$20').length).toBeGreaterThan(0);
-    expect(screen.getByText('Total de la mesa').parentElement).toHaveTextContent('$90');
-    expect(screen.getByText('Pagado').parentElement).toHaveTextContent('$0');
-    expect(screen.getByText('Por pagar').parentElement).toHaveTextContent('$90');
-    expect(screen.getByText('Tu parte por pagar').parentElement).toHaveTextContent('$70');
+    const breakdown = document.querySelector('.shared-table__details');
+    expect(breakdown?.querySelector('.alumno-ticket-table__totals')).toHaveTextContent('$0');
+    expect(breakdown?.querySelector('.alumno-ticket-table__totals')).toHaveTextContent('$90');
+    expect(breakdown?.querySelector('.alumno-ticket-table__mine')).toHaveTextContent('$70');
     expect(screen.getAllByRole('heading', { name: 'Tus pedidos' })).toHaveLength(1);
     expect(screen.getAllByRole('heading', { name: 'David' })).toHaveLength(1);
     expect(screen.queryByRole('heading', { name: 'David R.' })).not.toBeInTheDocument();
@@ -268,7 +269,9 @@ describe('seguimiento sin cuenta', () => {
         intervals[0]?.();
       });
 
-      await waitFor(() => expect(screen.getByText('Total de la mesa').parentElement).toHaveTextContent('$100'));
+      await waitFor(() =>
+        expect(screen.getByLabelText('Resumen de la mesa').querySelector('p:nth-child(2)')).toHaveTextContent('$100'),
+      );
       expect(screen.getByRole('heading', { name: 'Pedido #28' })).toBeInTheDocument();
       expect(currentTable).toHaveBeenCalledTimes(2);
     } finally {
@@ -292,7 +295,8 @@ describe('seguimiento sin cuenta', () => {
     expect(await screen.findByText('¡Listo! Guarda este enlace')).toBeInTheDocument();
     expect(screen.getByText(/como respaldo para otro/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ver en Mis pedidos' })).toHaveAttribute('href', '/cuenta/pedidos');
-    expect(screen.getByText(`${window.location.origin}/seguimiento/${TOKEN}`)).toBeInTheDocument();
+    expect(screen.queryByText(`${window.location.origin}/seguimiento/${TOKEN}`)).not.toBeInTheDocument();
+    expect(screen.getByText(/comparte este enlace para consultar tu pedido/i)).toBeInTheDocument();
     expect(await screen.findByText('Pedido #21')).toBeInTheDocument();
     expect(screen.getByText('Cafetería Demo A')).toBeInTheDocument();
     expect(getTracking).toHaveBeenCalledWith(TOKEN);
@@ -316,14 +320,14 @@ describe('seguimiento sin cuenta', () => {
   it('ya pagado muestra el estado con el QR de recogida', async () => {
     getTracking.mockResolvedValue(order({ estado: 'listo', qr_token: 'v1.qr' }));
     renderAt(`/seguimiento/${TOKEN}`);
-    expect(await screen.findByText('Estado listo · QR v1.qr')).toBeInTheDocument();
+    expect(await screen.findByText('Estado listo · Código de retiro v1.qr')).toBeInTheDocument();
   });
 
   it('un pedido entregado sale de "Tu pedido #N" del menú, pero su seguimiento sigue abierto', async () => {
     rememberGuestOrder({ token: TOKEN, slug: 'padel', folio: 21, placeName: 'Pádel', createdAt: Date.now() });
     getTracking.mockResolvedValue(order({ estado: 'entregado', qr_token: 'v1.qr' }));
     renderAt(`/seguimiento/${TOKEN}`);
-    expect(await screen.findByText('Estado entregado · QR v1.qr')).toBeInTheDocument();
+    expect(await screen.findByText('Estado entregado · Código de retiro v1.qr')).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem('vaiinilla.buyer.guest-orders.v1') ?? '[]')).toEqual([]);
   });
 

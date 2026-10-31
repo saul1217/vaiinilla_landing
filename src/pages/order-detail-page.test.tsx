@@ -223,17 +223,19 @@ describe('OrderDetailPage', () => {
       destino: 'en_espacio',
       espacio: { id: 4, nombre: 'Mesa 4', tipo: 'mesa' },
       total: '70.00',
+      cashback_otorgado: '125.45',
       notas_cocina: 'Sin cebolla',
       qr_token: 'ticket-token',
       items: [{ id: 1, nombre_producto: 'Burrito', cantidad: 1, subtotal: '70.00' }],
     });
     renderOrder();
     expect(await screen.findByRole('heading', { name: /#42/i })).toBeInTheDocument();
-    expect(await screen.findByRole('img', { name: /código qr del pedido/i })).toHaveAttribute(
+    expect(document.body).not.toHaveTextContent(/cashback|125\.45/i);
+    expect(await screen.findByRole('img', { name: /código de retiro del pedido/i })).toHaveAttribute(
       'src',
       'data:image/png;base64,qr',
     );
-    expect(screen.getAllByRole('region', { name: /código de retiro/i })).toHaveLength(1);
+    expect(screen.getAllByRole('region', { name: /pedido número \d+\. código de (retiro|entrega)/i })).toHaveLength(1);
     expect(document.querySelector('.alumno-card--ticket .alumno-pickup')).toBeNull();
     expect(document.querySelector('.alumno-track-card__status')).toBeNull();
     expect(document.querySelector('.alumno-detail-split .alumno-card--ticket')).not.toBeNull();
@@ -252,7 +254,7 @@ describe('OrderDetailPage', () => {
       qr_token: undefined,
     });
     renderOrder();
-    expect(await screen.findByRole('img', { name: /código qr del pedido/i })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: /código de retiro del pedido/i })).toBeInTheDocument();
   });
 
   it('conserva el QR en localStorage si la visita nueva pierde sessionStorage', async () => {
@@ -264,7 +266,7 @@ describe('OrderDetailPage', () => {
       qr_token: undefined,
     });
     renderOrder();
-    expect(await screen.findByRole('img', { name: /código qr del pedido/i })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: /código de retiro del pedido/i })).toBeInTheDocument();
   });
 
   it('en listo muestra folio de retiro si el API no envía secreto', async () => {
@@ -282,7 +284,7 @@ describe('OrderDetailPage', () => {
       }),
     );
     renderOrder();
-    expect(await screen.findByRole('region', { name: /código de retiro/i })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: /pedido número 1\. código de retiro/i })).toBeInTheDocument();
     expect(screen.getAllByText('#1').length).toBeGreaterThan(1);
     expect((document.body.textContent?.match(/Recógelo en la barra/gi) ?? []).length).toBe(1);
     expect(document.querySelector('.alumno-card--ticket .alumno-pickup')).toBeNull();
@@ -297,7 +299,7 @@ describe('OrderDetailPage', () => {
     });
     getOrderQr.mockResolvedValue({ qr_token: 'recovered-token' });
     renderOrder();
-    expect(await screen.findByRole('img', { name: /código qr del pedido/i })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: /código de retiro del pedido/i })).toBeInTheDocument();
     expect(getOrderQr).toHaveBeenCalledWith('jwt', 'ord-1');
   });
 
@@ -508,16 +510,19 @@ describe('OrderDetailPage', () => {
         mi_parte: { total: '333.33', pagado: '10.00', pendiente: '323.33' },
       }),
     );
+    const user = userEvent.setup();
     renderOrder();
 
     expect(await screen.findByRole('heading', { name: 'Cuenta de la mesa' })).toBeInTheDocument();
+    expect(screen.getByText('Ver pedidos de la mesa · 3 por asignar')).toBeInTheDocument();
+    await user.click(screen.getByText(/^Ver pedidos de la mesa/));
     expect(screen.getAllByRole('heading', { name: 'Tus pedidos' })).toHaveLength(1);
     expect(screen.getAllByRole('heading', { name: 'Luis' })).toHaveLength(1);
     expect(screen.getByText('1 × Taco primero')).toBeInTheDocument();
     expect(screen.getByText('2 × Taco segundo')).toBeInTheDocument();
     expect(screen.getByText('Subtotal de tus pedidos').parentElement).toHaveTextContent('$888.88');
-    expect(screen.getByText('Total de la mesa').parentElement).toHaveTextContent('$777777.77');
-    expect(screen.getByText('Tu parte por pagar').parentElement).toHaveTextContent('$323.33');
+    expect(document.querySelector('.alumno-ticket-table__totals')).toHaveTextContent('$777777.77');
+    expect(document.querySelector('.alumno-ticket-table__mine')).toHaveTextContent('$323.33');
   });
 
   it('conserva separados a participantes distintos aunque compartan alias', async () => {
@@ -554,6 +559,7 @@ describe('OrderDetailPage', () => {
     renderOrder();
 
     expect(await screen.findByRole('heading', { name: 'Cuenta de la mesa' })).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByText(/^Ver pedidos de la mesa/));
     expect(screen.getAllByRole('heading', { name: 'Tus pedidos' })).toHaveLength(1);
     expect(screen.getAllByRole('heading', { name: 'Ana' })).toHaveLength(1);
     expect(screen.getByText('1 × Taco propio')).toBeInTheDocument();
@@ -707,7 +713,7 @@ describe('OrderDetailPage', () => {
     });
 
     await waitFor(() =>
-      expect(screen.getByText('Total de la mesa').parentElement).toHaveTextContent('$456.78'),
+      expect(screen.getByLabelText('Resumen de la mesa').querySelector('p:nth-child(2)')).toHaveTextContent('$456.78'),
     );
     expect(screen.getByText('1 × Taco de prueba')).toBeInTheDocument();
     expect(container.querySelectorAll('.alumno-ticket-table')).toHaveLength(1);

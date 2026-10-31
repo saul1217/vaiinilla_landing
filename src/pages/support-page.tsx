@@ -37,7 +37,7 @@ export function SupportPage() {
             <article className="support__card">
               <h3>Pagos</h3>
               <p>
-                Los pagos con tarjeta los procesa Stripe de forma segura. Si un cargo se ve
+                Los pagos con tarjeta se procesan de forma segura. Si un cargo se ve
                 duplicado o no se completó, mándanos el correo de tu cuenta y la fecha del intento.
               </p>
             </article>

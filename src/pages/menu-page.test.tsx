@@ -124,6 +124,17 @@ describe("MenuPage", () => {
     expect(card).not.toHaveTextContent("(5)");
   });
 
+  it('mantiene el filtro de categorías y nombra carrito y cuenta en la cabecera', async () => {
+    const user = userEvent.setup();
+    renderMenu();
+    await screen.findByRole('button', { name: /chocolate frío/i });
+    expect(screen.getAllByRole('link', { name: 'Carrito' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: 'Mi cuenta' }).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('radio', { name: 'Bebidas' }));
+    expect(screen.getByRole('radio', { name: 'Bebidas' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('button', { name: /chocolate frío/i })).toBeInTheDocument();
+  });
+
   it("búsqueda sin resultados dice qué no encontró y deja limpiarla", async () => {
     const user = userEvent.setup();
     renderMenu();
@@ -225,23 +236,23 @@ describe("MenuPage", () => {
     expect(document.querySelector(".alumno-psheet__vaini")).toBeNull();
   });
 
-  it("ofrece Rentar cancha solo si hay una cancha con precio por hora", async () => {
+  it("ofrece Apartar una cancha solo si hay una cancha con precio por hora", async () => {
     vi.mocked(api).getPublicSpaces.mockResolvedValueOnce([
       { espacio: { tipo: "mesa" }, precio_hora: null },
       { espacio: { tipo: "cancha" }, precio_hora: "300.00" },
     ]);
     renderMenu();
-    const link = await screen.findByRole("link", { name: /rentar una cancha/i });
+    const link = await screen.findByRole("link", { name: /apartar una cancha/i });
     expect(link).toHaveAttribute("href", "/e/demo-a/canchas");
   });
 
-  it("no ofrece Rentar cancha si las canchas no tienen precio o no hay canchas", async () => {
+  it("no ofrece Apartar una cancha si las canchas no tienen precio o no hay canchas", async () => {
     vi.mocked(api).getPublicSpaces.mockResolvedValueOnce([
       { espacio: { tipo: "cancha" }, precio_hora: null },
       { espacio: { tipo: "mesa" }, precio_hora: "10.00" },
     ]);
     renderMenu();
     await screen.findByText(/chocolate/i);
-    expect(screen.queryByRole("link", { name: /rentar una cancha/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /apartar una cancha/i })).not.toBeInTheDocument();
   });
 });

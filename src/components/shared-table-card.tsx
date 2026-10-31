@@ -8,6 +8,7 @@ import { dropTableParticipantOnSessionChange, forgetTableParticipant } from '../
 import { forgetSpace } from '../lib/space-session';
 import { spaceNoun } from '../lib/space-words';
 import type { SharedTable } from '../types/api';
+import { assignmentStatus } from '../lib/assignment-status';
 
 const POLL_MS = 5000;
 const ALIAS_MAX = 30;
@@ -18,7 +19,7 @@ function isUnauthorized(cause: unknown): boolean {
 
 /**
  * La mesa compartida: quién está, los pedidos de cada quien y la cuenta de todos.
- * Sin mesa, invita a unirse con un alias si el cliente llegó por el QR de una mesa.
+ * Sin mesa, invita a unirse con un alias si el cliente llegó desde una mesa.
  * Con `onEnsureToken`, un invitado sin sesión se une igual: el alias le da la sesión.
  */
 export function SharedTableCard({
@@ -154,7 +155,7 @@ export function SharedTableCard({
           </p>
         </div>
         <label className="alumno-field shared-table__field">
-          <span>Tu nombre en la mesa</span>
+          <span>¿Cómo te llamas en la mesa?</span>
           <input
             name="alias"
             value={alias}
@@ -164,7 +165,7 @@ export function SharedTableCard({
               aliasTouched.current = true;
               setAlias(event.target.value);
             }}
-            placeholder="Ana"
+            placeholder="Por ejemplo, Ana"
           />
         </label>
         {error ? <p className="alumno-error">{error}</p> : null}
@@ -179,6 +180,7 @@ export function SharedTableCard({
   if (!token) return null;
 
   const noun = spaceNoun(table.espacio.tipo);
+  const assignmentSummary = assignmentStatus(table.grupos.flatMap((group) => group.pedidos));
   return (
     <article className="alumno-track-card shared-table alumno-arrive" aria-labelledby="shared-table-title">
       <header className="alumno-track-card__top">
@@ -186,70 +188,81 @@ export function SharedTableCard({
         <span className="alumno-track-card__pill">{tableHeadcountLabel(table)}</span>
       </header>
 
-      <div className="alumno-chips shared-table__people" aria-label={`Quién está en la ${noun}`}>
-        {table.participantes.map((person, index) => (
-          <span key={tablePersonKey(person, index)} className={person.soy_yo ? 'alumno-chip is-on' : 'alumno-chip'}>
-            {person.soy_yo ? `${person.alias} (tú)` : person.alias}
-          </span>
-        ))}
+      <div className="shared-table__summary" role="group" aria-label="Resumen de la mesa">
+        <p><strong>Tú pediste</strong><span>{formatAmount(table.mi_parte.total)}</span></p>
+        <p><strong>Total de la mesa</strong><span>{formatAmount(table.totales.total)}</span></p>
+        <p><strong>Tu parte por pagar</strong><span>{formatAmount(table.mi_parte.pendiente)}</span></p>
       </div>
 
-      {!table.cuenta_abierta || table.grupos.every((group) => group.pedidos.length === 0) ? (
-        <p className="alumno-track-card__status">Aún no hay pedidos en la cuenta de la {noun}.</p>
-      ) : (
-        orderedGroups(table)
-          .filter((group) => group.pedidos.length > 0)
-          .map((group, index) => (
-            <section key={tableGroupKey(group, index)} className="shared-table__group" style={{ ['--i' as string]: index }}>
-              <h3 className="alumno-section-label">
-                {group.soy_yo ? 'Tus pedidos' : (group.alias ?? `Otros en la ${noun}`)}
-              </h3>
-              <ul className="alumno-ticket-items">
-                {group.pedidos.map((order) => (
-                  <li key={`${order.folio}-${order.creado_en ?? ''}`}>
-                    <span className="alumno-track-card__copy">
-                      <strong>{order.items_resumen || `Pedido #${order.folio}`}</strong>
-                      <span className="shared-table__state">{tableOrderState(order)}</span>
-                    </span>
-                    <span className="shared-table__right">
-                      <span className="alumno-track-card__price">{formatAmount(order.total)}</span>
-                      {order.pendiente_cobro ? (
-                        order.pagara && !order.lo_pago_yo ? (
-                          <span className="shared-table__state">Paga {order.pagara}</span>
-                        ) : (
-                          <button
-                            type="button"
-                            className={order.lo_pago_yo ? 'alumno-chip is-on' : 'alumno-chip'}
-                            aria-pressed={order.lo_pago_yo === true}
-                            disabled={busy}
-                            onClick={() => void claim(order.folio, !order.lo_pago_yo)}
-                          >
-                            {order.lo_pago_yo ? 'Lo pago yo ✓' : 'Esto lo pago yo'}
-                          </button>
-                        )
-                      ) : null}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))
-      )}
+      <details className="shared-table__details">
+        <summary>
+          Ver pedidos y elegir qué pago yo{assignmentSummary ? ` · ${assignmentSummary}` : ''}
+        </summary>
+        <div className="alumno-chips shared-table__people" aria-label={`Quién está en la ${noun}`}>
+          {table.participantes.map((person, index) => (
+            <span key={tablePersonKey(person, index)} className={person.soy_yo ? 'alumno-chip is-on' : 'alumno-chip'}>
+              {person.soy_yo ? `${person.alias} (tú)` : person.alias}
+            </span>
+          ))}
+        </div>
 
-      <ul className="alumno-ticket-items shared-table__sums">
-        <li>
-          <span>Pagado</span>
-          <span>{formatAmount(table.totales.pagado)}</span>
-        </li>
-        <li>
-          <span>Por pagar de la {noun}</span>
-          <span>{formatAmount(table.totales.pendiente)}</span>
-        </li>
-        <li className="shared-table__mine">
-          <strong>Tu parte por pagar</strong>
-          <strong className="alumno-track-card__price">{formatAmount(table.mi_parte.pendiente)}</strong>
-        </li>
-      </ul>
+        {!table.cuenta_abierta || table.grupos.every((group) => group.pedidos.length === 0) ? (
+          <p className="alumno-track-card__status">Aún no hay pedidos en la cuenta de la {noun}.</p>
+        ) : (
+          orderedGroups(table)
+            .filter((group) => group.pedidos.length > 0)
+            .map((group, index) => (
+              <section key={tableGroupKey(group, index)} className="shared-table__group" style={{ ['--i' as string]: index }}>
+                <h3 className="alumno-section-label">
+                  {group.soy_yo ? 'Tus pedidos' : (group.alias ?? `Otros en la ${noun}`)}
+                </h3>
+                <ul className="alumno-ticket-items">
+                  {group.pedidos.map((order) => (
+                    <li key={`${order.folio}-${order.creado_en ?? ''}`}>
+                      <span className="alumno-track-card__copy">
+                        <strong>{order.items_resumen || `Pedido #${order.folio}`}</strong>
+                        <span className="shared-table__state">{tableOrderState(order)}</span>
+                      </span>
+                      <span className="shared-table__right">
+                        <span className="alumno-track-card__price">{formatAmount(order.total)}</span>
+                        {order.pendiente_cobro ? (
+                          order.pagara && !order.lo_pago_yo ? (
+                            <span className="shared-table__state">Paga {order.pagara}</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className={order.lo_pago_yo ? 'alumno-chip is-on' : 'alumno-chip'}
+                              aria-pressed={order.lo_pago_yo === true}
+                              disabled={busy}
+                              onClick={() => void claim(order.folio, !order.lo_pago_yo)}
+                            >
+                              {order.lo_pago_yo ? 'Lo pago yo ✓' : 'Esto lo pago yo'}
+                            </button>
+                          )
+                        ) : null}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))
+        )}
+
+        <ul className="alumno-ticket-items shared-table__sums">
+          <li>
+            <span>Pagado</span>
+            <span>{formatAmount(table.totales.pagado)}</span>
+          </li>
+          <li>
+            <span>Por pagar de la {noun}</span>
+            <span>{formatAmount(table.totales.pendiente)}</span>
+          </li>
+          <li className="shared-table__mine">
+            <strong>Tu parte por pagar</strong>
+            <strong className="alumno-track-card__price">{formatAmount(table.mi_parte.pendiente)}</strong>
+          </li>
+        </ul>
+      </details>
 
       {error ? <p className="alumno-error">{error}</p> : null}
       <button className="alumno-btn alumno-btn--ghost shared-table__leave" type="button" onClick={() => void leave()} disabled={busy}>
