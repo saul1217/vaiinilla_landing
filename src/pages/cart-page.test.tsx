@@ -388,6 +388,7 @@ describe('CartPage', () => {
     expect(retryStripePayment).not.toHaveBeenCalled();
     const payload = createOrder.mock.calls[0]?.[1] as Record<string, unknown>;
     expect(payload.metodo_pago).toBe('stripe');
+    expect(payload.pago_diferido).toBe(false);
     expect(payload.items).toEqual([{ producto_id: 1, cantidad: 1, opcion_ids: [] }]);
     expect(JSON.stringify(payload)).not.toContain('"total"');
     expect(createOrder.mock.calls[0]?.[2]).toEqual(expect.any(String));
@@ -847,7 +848,7 @@ describe('CartPage', () => {
       await user.click(screen.getByRole('radio', { name: /pago en caja/i }));
       await user.click(screen.getByRole('button', { name: /continuar con pago en caja/i }));
       await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1));
-      expect(createOrder.mock.calls[0]?.[1]).not.toHaveProperty('pago_diferido');
+      expect(createOrder.mock.calls[0]?.[1]).toMatchObject({ pago_diferido: false });
     });
 
     it('no se ofrece si el negocio no lo permite', async () => {

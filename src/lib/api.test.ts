@@ -2,7 +2,7 @@ import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { api } from './api';
-import { canAcceptOrders } from './cart';
+import { canAcceptOrders, toCreateOrderInput } from './cart';
 
 const baseUrl = api.apiUrl;
 const server = setupServer();
@@ -96,6 +96,7 @@ describe('buyer API client', () => {
           metodo_pago: 'saldo',
           destino: 'para_llevar',
           espacio_id: null,
+          pago_diferido: false,
         });
         return HttpResponse.json({ data: { ...order, metodo_pago: 'saldo' }, meta: {}, error: null }, { status: 201 });
       }),
@@ -123,13 +124,11 @@ describe('buyer API client', () => {
     expect(context.access_token).toBe('jwt-client');
     const created = await api.createOrder(
       'jwt-client',
-      {
-        metodo_pago: 'saldo',
-        destino: 'para_llevar',
-        espacio_id: null,
-        notas_cocina: null,
-        items: [{ producto_id: 101, cantidad: 1, opcion_ids: [] }],
-      },
+      toCreateOrderInput(
+        [{ productId: 101, quantity: 1, optionIds: [], productName: 'Agua', unitPreview: '26.00', imageUrl: null }],
+        'saldo',
+        '',
+      ),
       '550e8400-e29b-41d4-a716-446655440000',
     );
     expect(created.metodo_pago).toBe('saldo');
@@ -141,6 +140,26 @@ describe('buyer API client', () => {
   it('permite checkout cuando el establecimiento recibe pedidos aunque Caja esté fuera de línea', () => {
     expect(canAcceptOrders({ recibiendo_pedidos: true })).toBe(true);
     expect(canAcceptOrders({ recibiendo_pedidos: false })).toBe(false);
+  });
+
+  it('envía pago_diferido false en para llevar y el POST responde 201 (sin 422)', async () => {
+    server.use(
+      http.post(`${baseUrl}/pedidos`, async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        expect(body.destino).toBe('para_llevar');
+        expect(body.pago_diferido).toBe(false);
+        return HttpResponse.json({ data: order, meta: {}, error: null }, { status: 201 });
+      }),
+    );
+    const payload = toCreateOrderInput(
+      [{ productId: 101, quantity: 1, optionIds: [], productName: 'Agua', unitPreview: '26.00', imageUrl: null }],
+      'efectivo',
+      '',
+      'para_llevar',
+      null,
+      false,
+    );
+    await expect(api.createOrder('jwt-client', payload, 'idem-false-tab')).resolves.toMatchObject({ id: order.id });
   });
 
   it('crea un pedido Stripe sin montos y no abre un segundo PaymentIntent', async () => {
