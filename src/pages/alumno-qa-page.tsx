@@ -20,7 +20,24 @@ import { isActiveOrder, openTab } from "../lib/order-labels";
 import { formatAmount } from "../lib/money";
 import type { ArrivalClient } from "../lib/arrival-api";
 import { createMockReservationsClient } from "../lib/reservations-mock";
+import {
+  isMarketingScreenCapture,
+  marketingCartLines,
+  marketingCatalogProducts,
+  marketingCheckoutOrder,
+  marketingDefaultExpandedOrderId,
+  marketingLiveOrders,
+  marketingMesaOrder,
+  MARKETING_SCREEN_PLACE,
+  MARKETING_SCREEN_TABLE,
+} from "../lib/marketing-screens-demo";
+import { PlaceEntry } from "../components/place-entry";
 import { ReservationsScreen } from "./reservations-page";
+
+function useQaMarketing(): boolean {
+  const [params] = useSearchParams();
+  return isMarketingScreenCapture(params);
+}
 
 function qaOrder(overrides: Partial<OrderDetail>): OrderDetail {
   return {
@@ -235,6 +252,43 @@ function qaOrderThumb(order: OrderDetail) {
   return orderThumbUrl(order, QA_IMAGES, QA_CATALOG);
 }
 
+export function AlumnoQaMarketingEntryPage() {
+  if (!import.meta.env.DEV) return <Navigate to="/" replace />;
+  return (
+    <AppShell tab="menu">
+      <main id="main-content" className="alumno-main alumno-main--discover">
+        <div className="alumno-deskhead">
+          <AlumnoPageHeader
+            kicker="Hoy"
+            title="¿Dónde comes hoy?"
+            lead="Escribe tu número de mesa o busca tu restaurante."
+          />
+          <div className="alumno-discovery-tools">
+            <div className="alumno-search-wrap">
+              <label className="sr-only" htmlFor="marketing-search-places">
+                Buscar establecimiento
+              </label>
+              <input
+                id="marketing-search-places"
+                className="alumno-search"
+                readOnly
+                defaultValue=""
+                placeholder="Busca por nombre"
+                aria-readonly="true"
+              />
+            </div>
+          </div>
+        </div>
+        <PlaceEntry prominent />
+        <div className="alumno-card" style={{ marginTop: '1rem' }}>
+          <strong>{MARKETING_SCREEN_PLACE}</strong>
+          <p className="alumno-muted">Café · Centro</p>
+        </div>
+      </main>
+    </AppShell>
+  );
+}
+
 export function AlumnoQaCartPage() {
   if (!import.meta.env.DEV) return <Navigate to="/" replace />;
   return (
@@ -271,8 +325,11 @@ const FILL_KEKE: CartLine = {
 
 export function AlumnoQaFilledCartPage() {
   const [params] = useSearchParams();
+  const marketing = isMarketingScreenCapture(params);
   const leftoverEmpty = params.get("leftover") === "0";
-  const [lines, setLines] = useState<CartLine[]>([FILL_LUPIS, FILL_KEKE]);
+  const [lines, setLines] = useState<CartLine[]>(() =>
+    marketing ? marketingCartLines() : [FILL_LUPIS, FILL_KEKE],
+  );
   const total = useMemo(() => {
     const totals = lines
       .map((line) => linePreview(line.unitPreview, line.quantity))
@@ -283,7 +340,11 @@ export function AlumnoQaFilledCartPage() {
   return (
     <AppShell tab="cart">
       <main id="main-content" className="alumno-main">
-        <AlumnoPageHeader kicker="Revisa y confirma" title="Tu pedido" />
+        <AlumnoPageHeader
+          kicker="Revisa y confirma"
+          title="Tu pedido"
+          lead={marketing ? MARKETING_SCREEN_PLACE : undefined}
+        />
         <CartFilledView
           payment="efectivo"
           lines={lines}
@@ -320,7 +381,7 @@ export function AlumnoQaFilledCartPage() {
           onNotesChange={() => undefined}
           total={total}
           slug={QA_CATALOG_SLUG}
-          menuPeek={leftoverEmpty ? [] : QA_CATALOG}
+          menuPeek={leftoverEmpty ? [] : marketing ? marketingCatalogProducts() : QA_CATALOG}
           payLabel="Pagar"
           payDisabled={false}
           onPay={() => undefined}
@@ -331,17 +392,18 @@ export function AlumnoQaFilledCartPage() {
 }
 
 export function AlumnoQaWalletPage() {
+  const marketing = useQaMarketing();
   if (!import.meta.env.DEV) return <Navigate to="/" replace />;
   return (
     <AppShell tab="wallet">
       <main id="main-content" className="alumno-main">
-        <AlumnoPageHeader title="Cartera" />
+        <AlumnoPageHeader title="Cartera" lead={marketing ? MARKETING_SCREEN_PLACE : undefined} />
         <WalletBoardView
-          saldo="0.00"
+          saldo="125.00"
           placeSlug={QA_CATALOG_SLUG}
           reloadHref="/u/preview"
           movimientos={[]}
-          menuPeek={[PEEK_LUPIS, PEEK_KEKE]}
+          menuPeek={marketing ? marketingCatalogProducts() : [PEEK_LUPIS, PEEK_KEKE]}
         />
       </main>
     </AppShell>
@@ -350,15 +412,18 @@ export function AlumnoQaWalletPage() {
 
 export function AlumnoQaOrdersPage() {
   const deskPane = useDeskPane();
-  const [expandedId, setExpandedId] = useState<string | null>(CARD.id);
+  const marketing = useQaMarketing();
+  const live = marketing ? marketingLiveOrders() : [CASH, CARD, CARD_LISTO];
+  const [expandedId, setExpandedId] = useState<string | null>(
+    marketing ? marketingDefaultExpandedOrderId() : CARD.id,
+  );
   if (!import.meta.env.DEV) return <Navigate to="/" replace />;
-  const live = [CASH, CARD, CARD_LISTO];
   const selected = live.find((order) => order.id === expandedId) ?? null;
   return (
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
-        <AlumnoPageHeader title="Mis pedidos" />
-        <p className="alumno-place-name">ci-vaiinilla</p>
+        <AlumnoPageHeader title="Mis pedidos" lead={marketing ? MARKETING_SCREEN_PLACE : undefined} />
+        {!marketing ? <p className="alumno-place-name">ci-vaiinilla</p> : null}
         <div className="alumno-orders-desk">
           <div className="alumno-orders-desk__list">
             <section aria-labelledby="qa-orders-live">
@@ -383,12 +448,12 @@ export function AlumnoQaOrdersPage() {
                         );
                       }}
                       imageUrl={qaOrderThumb(order)}
-                      pickupToken={open ? (order.qr_token ?? null) : null}
+                      pickupToken={marketing ? null : open ? (order.qr_token ?? null) : null}
                     />
                   );
                 })}
               </div>
-              <WaitingArcade />
+              {!marketing ? <WaitingArcade /> : null}
             </section>
           </div>
           {deskPane ? (
@@ -408,7 +473,7 @@ export function AlumnoQaOrdersPage() {
                     toggle={false}
                     onToggle={() => undefined}
                     imageUrl={qaOrderThumb(selected)}
-                    pickupToken={selected.qr_token ?? null}
+                    pickupToken={marketing ? null : (selected.qr_token ?? null)}
                   />
                 </>
               ) : (
@@ -426,26 +491,31 @@ export function AlumnoQaOrdersPage() {
 }
 
 export function AlumnoQaOrderDetailPage() {
+  const marketing = useQaMarketing();
+  const checkoutOrder = marketing ? marketingCheckoutOrder() : CARD_LISTO;
   if (!import.meta.env.DEV) return <Navigate to="/" replace />;
   return (
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
         <AlumnoPageHeader
-          kicker="Pedido"
-          title={`#${CARD_LISTO.folio}`}
-          back={{ to: "/cuenta/pedidos", label: "Volver" }}
+          kicker={marketing ? "Revisa y confirma" : "Pedido"}
+          title={marketing ? "Tu pedido" : `#${CARD_LISTO.folio}`}
+          lead={marketing ? MARKETING_SCREEN_PLACE : undefined}
+          back={marketing ? undefined : { to: "/cuenta/pedidos", label: "Volver" }}
         />
         <div className="alumno-detail-split">
-          <OrderTrackCard
-            order={CARD_LISTO}
-            expanded
-            completeLink={false}
-            toggle={false}
-            onToggle={() => undefined}
-            imageUrl={qaOrderThumb(CARD_LISTO)}
-            pickupToken={CARD_LISTO.qr_token ?? null}
-          />
-          <OrderTicketView order={CARD_LISTO} />
+          {!marketing ? (
+            <OrderTrackCard
+              order={CARD_LISTO}
+              expanded
+              completeLink={false}
+              toggle={false}
+              onToggle={() => undefined}
+              imageUrl={qaOrderThumb(CARD_LISTO)}
+              pickupToken={CARD_LISTO.qr_token ?? null}
+            />
+          ) : null}
+          <OrderTicketView order={checkoutOrder} />
         </div>
       </main>
     </AppShell>
@@ -453,21 +523,27 @@ export function AlumnoQaOrderDetailPage() {
 }
 
 export function AlumnoQaTableOrderPage() {
+  const marketing = useQaMarketing();
   const [open, setOpen] = useState(true);
+  const order = marketing ? marketingMesaOrder() : MESA;
   if (!import.meta.env.DEV) return <Navigate to="/" replace />;
   return (
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
-        <AlumnoPageHeader title="Mis pedidos" />
-        <p className="alumno-place-name">ci-vaiinilla · Mesa 4</p>
+        <AlumnoPageHeader
+          title={marketing ? "Pedido recibido" : "Mis pedidos"}
+          lead={marketing ? `Te lo llevan a ${MARKETING_SCREEN_TABLE}.` : undefined}
+        />
+        {!marketing ? <p className="alumno-place-name">ci-vaiinilla · Mesa 4</p> : null}
         <div className="alumno-detail-split">
           <OrderTrackCard
-            order={MESA}
+            order={order}
             expanded={open}
             onToggle={() => setOpen((v) => !v)}
-            imageUrl={qaOrderThumb(MESA)}
+            imageUrl={qaOrderThumb(order)}
+            pickupToken={marketing ? null : undefined}
           />
-          <OrderTicketView order={MESA} table={QA_SHARED_TABLE} />
+          {!marketing ? <OrderTicketView order={MESA} table={QA_SHARED_TABLE} /> : null}
         </div>
       </main>
     </AppShell>

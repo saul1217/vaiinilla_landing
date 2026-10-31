@@ -24,6 +24,7 @@ import {
   AlumnoQaNewOrdersPage,
   AlumnoQaCourtsPage,
   AlumnoQaWalletPage,
+  AlumnoQaMarketingEntryPage,
 } from '../pages/alumno-qa-page';
 
 export function AppRouter() {
@@ -60,6 +61,7 @@ export function AppRoutes() {
         <Route path="/u/:id" element={<WalletQrPage />} />
         {import.meta.env.DEV ? (
           <>
+            <Route path="/__qa/entrada" element={<AlumnoQaMarketingEntryPage />} />
             <Route path="/__qa/carrito" element={<AlumnoQaCartPage />} />
             <Route path="/__qa/carrito-lleno" element={<AlumnoQaFilledCartPage />} />
             <Route path="/__qa/cartera" element={<AlumnoQaWalletPage />} />

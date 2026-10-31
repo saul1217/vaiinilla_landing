@@ -42,9 +42,9 @@ describe('HomePage', () => {
     expect(screen.queryByText(/cafetería escolar/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/del campus/i)).not.toBeInTheDocument();
     expect(screen.getAllByText(/restaurantes, cafés, bares/i).length).toBeGreaterThan(0);
-    expect(screen.getByRole('heading', { name: /escanea tu mesa/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /escribe tu mesa/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/seguimiento de un pedido/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /escanear qr/i })).toHaveAttribute('href', '/pedir');
+    expect(screen.getByRole('link', { name: /número de mesa/i })).toHaveAttribute('href', '/pedir?entrada=codigo');
   });
 
   it('Empezar a pedir no abre solo el último lugar: con varias tiendas pide QR o código', async () => {

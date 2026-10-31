@@ -8,7 +8,7 @@ const STAFF_APP_URL = loadEnv('development', process.cwd(), 'VITE_').VITE_STAFF_
 test('la landing de marketing conserva soporte y manda a pedir, no al panel', async ({ page }) => {
   expect(STAFF_APP_URL, 'falta VITE_STAFF_APP_URL en el ambiente del e2e').toBeTruthy();
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: /escanea tu mesa/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /escribe tu mesa/i })).toBeVisible();
   await expect(page.getByRole('link', { name: /empezar a pedir/i }).first()).toHaveAttribute('href', '/pedir');
   await expect(page.getByRole('link', { name: /ya tengo cuenta/i }).first()).toHaveAttribute(
     'href',
