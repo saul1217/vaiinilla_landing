@@ -8,8 +8,8 @@ const STAFF_APP_URL = loadEnv('development', process.cwd(), 'VITE_').VITE_STAFF_
 test('la landing de marketing conserva soporte y manda a pedir, no al panel', async ({ page }) => {
   expect(STAFF_APP_URL, 'falta VITE_STAFF_APP_URL en el ambiente del e2e').toBeTruthy();
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: /pide sin fila/i })).toBeVisible();
-  await expect(page.getByRole('link', { name: /^pedir$/i }).first()).toHaveAttribute('href', '/pedir');
+  await expect(page.getByRole('heading', { name: /escanea tu mesa/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /empezar a pedir/i }).first()).toHaveAttribute('href', '/pedir');
   await expect(page.getByRole('link', { name: /ya tengo cuenta/i }).first()).toHaveAttribute(
     'href',
     '/cuenta',
@@ -20,13 +20,13 @@ test('la landing de marketing conserva soporte y manda a pedir, no al panel', as
   );
   // En móvil las insignias de la barra se ocultan (marketing.css, .nav__actions .store-badges): se comprueba una visible.
   await expect(page.getByText(/próximamente/i).filter({ visible: true }).first()).toBeVisible();
-  await expect(page.getByRole('heading', { name: /el menú del lugar/i })).toBeVisible();
-  await expect(page.getByText(/cualquier negocio de comida/i).filter({ visible: true }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: /todo lo que necesitas/i })).toBeVisible();
+  await expect(page.getByText(/restaurantes, cafés, bares/i).filter({ visible: true }).first()).toBeVisible();
 });
 
 test('Pedir en la landing entra al app del comprador', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('banner').getByRole('link', { name: /^pedir$/i }).click();
+  await page.getByRole('banner').getByRole('link', { name: /empezar a pedir|pedir/i }).click();
   await expect(page).toHaveURL(/\/pedir$/);
   await expect(page.getByRole('heading', { name: /dónde comes hoy/i })).toBeVisible();
   await expect(page.getByRole('navigation', { name: /^navegación$/i })).toBeVisible();

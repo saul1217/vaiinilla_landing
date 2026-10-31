@@ -61,7 +61,8 @@ export function SiteNav({ marketing = false }: { marketing?: boolean }) {
         </Link>
         {marketing ? (
           <nav className="nav__links" aria-label="Navegación principal">
-            <a href="#como-funciona">Cómo pedir</a>
+            <a href="#como-funciona">Cómo funciona</a>
+            <a href="#producto">Qué incluye</a>
             <a href="#apps">Apps</a>
             <a href="#para-establecimientos">Para negocios</a>
           </nav>
