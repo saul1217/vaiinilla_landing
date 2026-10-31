@@ -901,6 +901,26 @@ describe('CartPage', () => {
       expect(screen.queryByRole('radio', { name: /pagar al final/i })).not.toBeInTheDocument();
     });
 
+    it('con pagaAlFinal guardado pero sin permite_pago_al_final, efectivo en mesa manda pago_diferido false', async () => {
+      setup({ permite: false, enEspacio: true });
+      localStorage.setItem(
+        'vaiinilla.buyer.space.v1',
+        JSON.stringify({ slug: 'demo-a', espacioId: 12, nombre: 'Cancha 2', tipo: 'cancha', pagaAlFinal: true }),
+      );
+      createOrder.mockResolvedValue({ id: 'p9', metodo_pago: 'efectivo', qr_token: null });
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
+      await user.click(await screen.findByRole('radio', { name: /pago en caja/i }));
+      await user.click(screen.getByRole('button', { name: /continuar con pago en caja/i }));
+      await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1));
+      expect(createOrder.mock.calls[0]?.[1]).toMatchObject({
+        metodo_pago: 'efectivo',
+        destino: 'en_espacio',
+        pago_diferido: false,
+      });
+    });
+
     it('no se ofrece en un pedido para llevar', async () => {
       setup({ permite: true, enEspacio: false });
       const user = userEvent.setup();

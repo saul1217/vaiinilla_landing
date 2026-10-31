@@ -1,6 +1,8 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as pwaUpdate from '../lib/pwa-update';
 import { UpdateToast } from './update-toast';
 
 function fakeServiceWorker() {
@@ -38,9 +40,21 @@ async function flush() {
   });
 }
 
+function renderToast(initialPath = '/') {
+  return render(
+    <MemoryRouter initialEntries={[initialPath]}>
+      <UpdateToast />
+    </MemoryRouter>,
+  );
+}
+
 describe('UpdateToast', () => {
-  beforeEach(() => setVisibility('visible'));
+  beforeEach(() => {
+    setVisibility('visible');
+    vi.spyOn(pwaUpdate, 'canSilentlyApplyServiceWorkerUpdate').mockReturnValue(true);
+  });
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     Reflect.deleteProperty(navigator, 'serviceWorker');
   });
@@ -48,7 +62,7 @@ describe('UpdateToast', () => {
   it('una versión normal no muestra aviso y se aplica en silencio al ocultar la pestaña', async () => {
     const waiting = fakeServiceWorker();
     serveUpdateJson(false);
-    render(<UpdateToast />);
+    renderToast();
     await flush();
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
@@ -58,10 +72,10 @@ describe('UpdateToast', () => {
     expect(waiting).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
   });
 
-  it('una versión importante muestra el aviso y también se aplica solo al ocultar la pestaña', async () => {
+  it('una versión importante muestra el aviso y también se aplica sola al ocultar la pestaña', async () => {
     const waiting = fakeServiceWorker();
     serveUpdateJson(true);
-    render(<UpdateToast />);
+    renderToast();
     await flush();
 
     expect(screen.getByRole('status')).toHaveTextContent('Hay una versión nueva importante');
@@ -71,24 +85,32 @@ describe('UpdateToast', () => {
     expect(waiting).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
   });
 
-  it('importante: el botón Actualizar no activa el SW con la pestaña visible', async () => {
+  it('importante: el botón Actualizar activa el SW aunque la pestaña siga visible', async () => {
     const waiting = fakeServiceWorker();
     serveUpdateJson(true);
     const user = userEvent.setup();
-    render(<UpdateToast />);
+    renderToast();
     await flush();
 
     await user.click(screen.getByRole('button', { name: /actualizar/i }));
-    expect(waiting).not.toHaveBeenCalled();
+    expect(waiting).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+  });
+
+  it('no aplica al ocultar si el checkout no es seguro', async () => {
+    vi.mocked(pwaUpdate.canSilentlyApplyServiceWorkerUpdate).mockReturnValue(false);
+    const waiting = fakeServiceWorker();
+    serveUpdateJson(false);
+    renderToast();
+    await flush();
 
     act(() => setVisibility('hidden'));
-    expect(waiting).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+    expect(waiting).not.toHaveBeenCalled();
   });
 
   it('si no se puede leer update.json, la trata como normal', async () => {
     const waiting = fakeServiceWorker();
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
-    render(<UpdateToast />);
+    renderToast();
     await flush();
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument();

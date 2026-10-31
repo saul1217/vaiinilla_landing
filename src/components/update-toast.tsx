@@ -1,9 +1,14 @@
 // A new build waits as the "waiting" service worker (registerType 'prompt'), so it
-// never swaps code under an open checkout. Updates apply only while the tab is hidden
-// (SKIP_WAITING + reload on controllerchange). Normal updates do so in silence;
-// builds marked `public/update.json` as importante show a toast but still wait for
-// a hidden tab — never mid-checkout, including the "Actualizar" button.
+// never swaps code under an open checkout. Normal updates apply in silence when it is
+// safe (carrito vacío, sin envío ni pago en curso): al ocultar la pestaña, tras
+// inactividad con carrito vacío, o al volver a /pedir. Builds marked `update.json`
+// as importante show a toast; "Actualizar" llama SKIP_WAITING al instante.
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import {
+  PWA_UPDATE_IDLE_MS,
+  canSilentlyApplyServiceWorkerUpdate,
+} from '../lib/pwa-update';
 
 async function isImportant(): Promise<boolean> {
   try {
@@ -25,10 +30,13 @@ export function UpdateToast() {
   const [important, setImportant] = useState<ServiceWorker | null>(null);
   const pendingRef = useRef<ServiceWorker | null>(null);
   const appliedRef = useRef(false);
+  const location = useLocation();
 
-  const applyIfHidden = useCallback(() => {
+  const tryApplyPending = useCallback((options?: { requireHidden?: boolean }) => {
     const pending = pendingRef.current;
-    if (!pending || appliedRef.current || document.visibilityState !== 'hidden') return;
+    if (!pending || appliedRef.current) return;
+    if (options?.requireHidden && document.visibilityState !== 'hidden') return;
+    if (!canSilentlyApplyServiceWorkerUpdate()) return;
     appliedRef.current = true;
     activate(pending);
   }, []);
@@ -46,12 +54,12 @@ export function UpdateToast() {
       void isImportant().then((yes) => {
         pendingRef.current = waiting;
         if (yes) setImportant(waiting);
-        applyIfHidden();
+        tryApplyPending({ requireHidden: true });
       });
     };
     const onFound = () => registration?.installing?.addEventListener('statechange', check);
     const onVisibility = () => {
-      if (document.visibilityState === 'hidden') applyIfHidden();
+      if (document.visibilityState === 'hidden') tryApplyPending({ requireHidden: true });
       else void registration?.update().catch(() => {});
     };
 
@@ -65,14 +73,34 @@ export function UpdateToast() {
       registration?.removeEventListener('updatefound', onFound);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [applyIfHidden]);
+  }, [tryApplyPending]);
+
+  useEffect(() => {
+    if (location.pathname !== '/pedir') return;
+    tryApplyPending();
+  }, [location.pathname, tryApplyPending]);
+
+  useEffect(() => {
+    let idleTimer: number | undefined;
+    const bumpIdle = () => {
+      window.clearTimeout(idleTimer);
+      idleTimer = window.setTimeout(() => tryApplyPending(), PWA_UPDATE_IDLE_MS);
+    };
+    bumpIdle();
+    const events: (keyof WindowEventMap)[] = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+    for (const event of events) window.addEventListener(event, bumpIdle, { passive: true });
+    return () => {
+      window.clearTimeout(idleTimer);
+      for (const event of events) window.removeEventListener(event, bumpIdle);
+    };
+  }, [tryApplyPending]);
 
   if (!important) return null;
 
   return (
     <div className="alumno-update" role="status">
       <span>Hay una versión nueva importante</span>
-      <button type="button" onClick={() => applyIfHidden()}>
+      <button type="button" onClick={() => important && activate(important)}>
         Actualizar
       </button>
     </div>

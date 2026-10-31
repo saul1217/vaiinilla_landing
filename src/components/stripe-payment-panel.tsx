@@ -8,6 +8,7 @@ import { errorMessage } from '../lib/api-error';
 import type { AppEnvironment } from '../lib/env';
 import { useHideFloatingCall } from '../lib/floating-call';
 import { formatMoney } from '../lib/money';
+import { beginCheckoutSubmit } from '../lib/pwa-update';
 import { resolveStripePublishableKey, stripePublishableKey } from '../lib/stripe-public';
 import { STRIPE_TOTAL_LABEL } from '../lib/stripe-status';
 import type { OrderDetail, StripePaymentSession } from '../types/api';
@@ -121,6 +122,7 @@ function StripeCheckoutForm({
     setSubmitting(true);
     setError(null);
     onProcessing?.();
+    const endCheckoutGuard = beginCheckoutSubmit();
     try {
       const result = await stripe.confirmPayment({
         elements,
@@ -139,6 +141,7 @@ function StripeCheckoutForm({
       setError(errorMessage(cause));
       onProcessingFailed?.();
     } finally {
+      endCheckoutGuard();
       setSubmitting(false);
     }
   }
