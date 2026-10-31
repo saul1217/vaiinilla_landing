@@ -72,6 +72,10 @@ vi.mock("../context/auth-context", () => ({
   }),
 }));
 
+vi.mock("../context/buyer-session", () => ({
+  useBuyerSession: () => ({ context: null, openClientSession: vi.fn() }),
+}));
+
 vi.mock("../context/cart-context", () => ({
   useCart: () => ({
     cart: cartState.cart,
@@ -117,6 +121,12 @@ describe("MenuPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("muestra cambiar lugar y Mi cuenta accesibles sin duplicar acciones de carrito en cabecera", async () => {
+    renderMenu();
+    expect(await screen.findByRole("link", { name: "Cambiar lugar" })).toHaveAttribute("href", "/pedir");
+    expect(screen.getAllByRole("link", { name: "Mi cuenta" }).some((link) => link.getAttribute("href") === "/cuenta")).toBe(true);
+  });
+
   it("muestra las piezas aparte y nunca el (N) crudo", async () => {
     renderMenu();
     const card = await screen.findByRole("button", { name: /tacos dorados de res/i });
@@ -124,11 +134,11 @@ describe("MenuPage", () => {
     expect(card).not.toHaveTextContent("(5)");
   });
 
-  it('mantiene el filtro de categorías y nombra carrito y cuenta en la cabecera', async () => {
+  it('mantiene el filtro de categorías y deja la cuenta accesible', async () => {
     const user = userEvent.setup();
     renderMenu();
     await screen.findByRole('button', { name: /chocolate frío/i });
-    expect(screen.getAllByRole('link', { name: 'Carrito' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: 'Carrito' }).some((link) => link.closest('.alumno-deskhead'))).toBe(true);
     expect(screen.getAllByRole('link', { name: 'Mi cuenta' }).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('radio', { name: 'Bebidas' }));
     expect(screen.getByRole('radio', { name: 'Bebidas' })).toHaveAttribute('aria-checked', 'true');

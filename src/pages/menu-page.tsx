@@ -22,10 +22,18 @@ import { ProductSheet } from '../components/product-sheet';
 import { SlidingChips } from '../components/sliding-chips';
 import { SeatedToast } from '../components/seated-toast';
 import { peekResource, resourceKeys } from '../lib/resource-cache';
+import { useBuyerSession } from '../context/buyer-session';
+import { resolveClientSession } from '../lib/client-session';
+import { lastPlaceSlug } from '../lib/last-place';
+import { isActiveOrder, orderDestinationLabel } from '../lib/order-labels';
+import { statusAsPhrase } from '../lib/status-phrase';
+import { readSpace } from '../lib/space-session';
+import type { OrderDetail } from '../types/api';
 
 export function MenuPage() {
   const { slug = '' } = useParams();
   const { user } = useAuth();
+  const { context, openClientSession } = useBuyerSession();
   const { addLine, cart } = useCart();
   // Lo ya cargado se ve al instante; la carga de abajo lo actualiza en segundo plano.
   const [place, setPlace] = useState<PublicEstablishment | null>(() => peekResource(resourceKeys.establishment(slug)) ?? null);
@@ -49,6 +57,24 @@ export function MenuPage() {
     quantity: number;
     notes?: string;
   } | null>(null);
+  const [activeOrder, setActiveOrder] = useState<OrderDetail | null>(null);
+  const table = readSpace(slug);
+
+  useEffect(() => {
+    if (!user) { setActiveOrder(null); return; }
+    let active = true;
+    const load = async () => {
+      try {
+        const session = await resolveClientSession({ user, context, preferredSlug: slug || lastPlaceSlug(), openClientSession });
+        if (!session) return;
+        const result = await api.listOrders(session.context.access_token);
+        if (active) setActiveOrder(result.orders.find((order) => isActiveOrder(order)) ?? null);
+      } catch { if (active) setActiveOrder(null); }
+    };
+    void load();
+    const timer = window.setInterval(() => void load(), 5000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [context, openClientSession, slug, user]);
 
   // "Rentar cancha" solo se ofrece si el negocio tiene al menos una cancha con precio por hora.
   useEffect(() => {
@@ -175,20 +201,17 @@ export function MenuPage() {
     setSwitchCart(null);
     close();
   }
-  const cartCount = cart?.slug === slug ? cart.lines.reduce((sum, line) => sum + line.quantity, 0) : 0;
-  const menuActions = () => (
-    <>
-      <Link className="alumno-icon-btn alumno-menu-action" to={`/e/${slug}/carrito`} aria-label="Carrito">
-        <CartIcon />
-        <span>Carrito</span>
-        {cartCount > 0 ? <span className="alumno-badge">{cartCount}</span> : null}
-      </Link>
-      <Link className="alumno-avatar alumno-menu-action" to="/cuenta">
-        <span aria-hidden="true">{initialsFrom(user?.displayName, user?.email)}</span>
-        <span>Mi cuenta</span>
-      </Link>
-    </>
-  );
+  const menuActions = () => <Link className="alumno-avatar" to="/cuenta" aria-label="Mi cuenta" title="Mi cuenta">
+    <span aria-hidden="true">{initialsFrom(user?.displayName, user?.email)}</span>
+  </Link>;
+  const desktopMenuActions = <>
+    <Link className="alumno-icon-btn alumno-menu-action" to={`/e/${slug}/carrito`} aria-label="Carrito">
+      <span>Carrito</span>
+    </Link>
+    <Link className="alumno-icon-btn alumno-menu-action" to="/cuenta" aria-label="Cuenta" title="Cuenta">
+      <span>Cuenta</span>
+    </Link>
+  </>;
 
   if (missing) {
     return (
@@ -206,16 +229,22 @@ export function MenuPage() {
     <AppShell tab="menu">
       <SeatedToast />
       <main id="main-content" className="alumno-main alumno-main--catalog">
+        <div className="alumno-menu-cover" style={place?.imagen_url ? { backgroundImage: `linear-gradient(180deg, rgba(22,22,20,.5), rgba(244,241,231,.05) 55%, var(--bg) 100%), url("${place.imagen_url}")` } : undefined} aria-hidden="true">
+          {!place?.imagen_url ? <img src="/vaini/cutout-frente.png" alt="" /> : null}
+        </div>
+        <div className="alumno-menu-mobile-head">
+          <Link className="alumno-change-place" to="/pedir" aria-label="Cambiar lugar"><StoreIcon/><span>Cambiar lugar</span></Link>
+          {menuActions()}
+        </div>
         {/* Los vivos viven en su tab Pedidos; aquí solo un atajo compacto para no empujar el menú. */}
         <GuestOrdersBanner slug={slug} />
         <div className="alumno-deskhead">
           <AlumnoPageHeader
             kicker="Menú de hoy"
             title={place?.nombre ?? 'Menú'}
-            actions={menuActions()}
           />
           <div className="alumno-deskhead__utility">
-            <div className="alumno-top__actions">{menuActions()}</div>
+            <div className="alumno-top__actions">{desktopMenuActions}</div>
             <div className="alumno-search-wrap">
               <SearchIcon />
               <label className="sr-only" htmlFor="search-menu">
@@ -232,18 +261,8 @@ export function MenuPage() {
             </div>
           </div>
         </div>
+        {table?.tipo === 'mesa' ? <div className="alumno-table-chip"><b>{initialsFrom(place?.nombre, 'V')}</b><span>{table.nombre || `Mesa ${table.espacioId}`} · mesa</span></div> : null}
         {error && !selected ? <p className="alumno-error">{error}</p> : null}
-        {rentsCourts ? (
-          <Link className="alumno-courts-entry" to={`/e/${slug}/canchas`}>
-            <span>
-              <strong>Apartar una cancha</strong>
-              <small>Elige día y hora. Pagas al apartar.</small>
-            </span>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5 12h14m-5-5 5 5-5 5" />
-            </svg>
-          </Link>
-        ) : null}
         {loading ? <LoadingSkeleton shape="products" label="Cargando menú…" /> : null}
         <SlidingChips
           className="alumno-menu-categories"
@@ -259,6 +278,10 @@ export function MenuPage() {
               .map((category) => ({ key: String(category.id), label: category.nombre })) ?? []),
           ]}
         />
+        {activeOrder ? <Link className="alumno-active-order" to={`/cuenta/pedidos/${activeOrder.id}`}>
+          <span className="alumno-active-order__copy"><small>Pedido activo</small><strong>#{activeOrder.folio}</strong><span>{activeOrder.items.reduce((n, item) => n + item.cantidad, 0)} productos · {orderDestinationLabel(activeOrder)}</span></span>
+          <span className="alumno-active-order__state">{statusAsPhrase(activeOrder)}</span>
+        </Link> : null}
         <div className="alumno-grid alumno-arrive">
             {products.map((product) => {
               const thumb = productImageUrl(product.imagen_url);
@@ -288,6 +311,7 @@ export function MenuPage() {
               );
             })}
         </div>
+        {rentsCourts ? <Link className="alumno-courts-entry alumno-courts-entry--compact" to={`/e/${slug}/canchas`}><strong>Apartar una cancha</strong><span>Elige día y hora · paga al apartar</span><b aria-hidden="true">→</b></Link> : null}
         {catalog && searching && products.length === 0 ? (
           <div className="alumno-empty alumno-arrive" role="status">
             <img src="/vaini/cutout-frente.png" alt="" />
@@ -366,13 +390,4 @@ function SearchIcon() {
   );
 }
 
-function CartIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M7 6V5a5 5 0 0 1 10 0v1h2.2a1 1 0 0 1 .98 1.2l-1.5 8A2 2 0 0 1 16.7 17H8.3a2 2 0 0 1-1.97-1.8l-1.5-8A1 1 0 0 1 5.8 6H7Zm2 0h6V5a3 3 0 0 0-6 0v1Z"
-      />
-    </svg>
-  );
-}
+function StoreIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 10.5 4.4 5h15.2l1.4 5.5v1a2.5 2.5 0 0 1-2 2.45V20H5v-6.05A2.5 2.5 0 0 1 3 11.5v-1Zm3.5 4V18h3v-3.5h-3Zm5 0V18h5v-3.5h-5ZM5 9.5h14l-.65-2.5h-12.7L5 9.5Z"/></svg>; }

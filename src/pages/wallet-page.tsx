@@ -18,6 +18,7 @@ import type { CatalogProduct, WalletData } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
 import { RollingNumber } from '../components/rolling-number';
 import { peekResource, resourceKeys, storeResource } from '../lib/resource-cache';
+import { initialsFrom } from '../lib/initials';
 
 export function WalletPage() {
   const { user, ready } = useAuth();
@@ -118,6 +119,7 @@ export function WalletPage() {
             saldo={wallet.wallet.saldo}
             placeSlug={placeSlug}
             placeName={placeName}
+            accountInitials={initialsFrom(user?.displayName, user?.email)}
             reloadHref={reloadHref}
             allowsBalance={allowsBalance}
             movimientos={wallet.movimientos}
@@ -133,6 +135,7 @@ export function WalletBoardView({
   saldo,
   placeSlug,
   placeName = '',
+  accountInitials = 'V',
   reloadHref,
   allowsBalance = true,
   movimientos,
@@ -141,6 +144,7 @@ export function WalletBoardView({
   saldo: string;
   placeSlug: string | null;
   placeName?: string;
+  accountInitials?: string;
   reloadHref: string;
   /** Si el lugar apagó el saldo, no se ofrece recargar ni mostrar el QR. */
   allowsBalance?: boolean;
@@ -152,6 +156,10 @@ export function WalletBoardView({
     <div className="alumno-wallet-board">
       <div className="alumno-wallet-bento">
         <section className="alumno-wallet-hero">
+          <div className="alumno-wallet-mobile-top">
+            {placeName ? <span className="alumno-wallet-mobile-place">{placeName}</span> : <span />}
+            <Link className="alumno-avatar" to="/cuenta" aria-label="Mi cuenta"><span aria-hidden="true">{accountInitials}</span></Link>
+          </div>
           <div className="alumno-wallet-orb" aria-hidden="true">
             <ShortcutWallet />
           </div>

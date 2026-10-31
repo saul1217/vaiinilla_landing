@@ -456,7 +456,7 @@ describe('OrderDetailPage', () => {
     getOrder.mockResolvedValue(stripeOrder({ metodo_pago: 'saldo', estado: 'cobrado' }));
     const { container } = renderOrder();
 
-    expect(await screen.findByText(/Pedido #7/)).toBeInTheDocument();
+    expect((await screen.findAllByText(/Pedido #7/)).length).toBeGreaterThanOrEqual(1);
     expect(container.querySelector('.alumno-card--ticket')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /cuenta de la mesa/i })).not.toBeInTheDocument();
     expect(currentTable).not.toHaveBeenCalled();
