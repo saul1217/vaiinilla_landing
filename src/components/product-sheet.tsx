@@ -57,7 +57,7 @@ export function ProductSheet(props: ProductSheetProps) {
               {!photoUrl || !photoReady ? (
                 <img className="alumno-psheet__vaini" src="/vaini/cutout-frente.png" alt="" aria-hidden="true" />
               ) : null}
-              <button className="alumno-psheet__action alumno-psheet__action--close" type="button" onClick={close} aria-label="Cerrar">
+              <button className="alumno-psheet__action alumno-psheet__action--close" type="button" onClick={close} aria-label="Cerrar producto">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
                 </svg>
@@ -119,7 +119,7 @@ export function ProductSheet(props: ProductSheetProps) {
               })}
 
               <label className="alumno-field alumno-psheet__notes" style={{ marginTop: '1rem' }}>
-                <span>Instrucciones o especificaciones (opcional)</span>
+                <span>Instrucciones para preparar (opcional)</span>
                 <input
                   type="text"
                   placeholder="Ej. Sin cebolla, salsa aparte…"
@@ -135,7 +135,7 @@ export function ProductSheet(props: ProductSheetProps) {
             <div className="alumno-psheet__summary">
               <div>
                 <p className="alumno-psheet__summary-label">{customized ? 'Tu personalización' : 'Tu selección'}</p>
-                <p className="alumno-psheet__summary-value">{selectedNames.join(' · ') || 'Sin opciones adicionales'}</p>
+                <p className="alumno-psheet__summary-value">{selectedNames.join(' · ') || 'Sin extras'}</p>
               </div>
               <div className="alumno-psheet__qty">
                 <button type="button" onClick={() => props.onQuantityChange(-1)} aria-label="Menos" disabled={quantity <= 1}>

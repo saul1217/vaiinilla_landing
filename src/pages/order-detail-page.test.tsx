@@ -229,7 +229,7 @@ describe('OrderDetailPage', () => {
     });
     renderOrder();
     expect(await screen.findByRole('heading', { name: /#42/i })).toBeInTheDocument();
-    expect(await screen.findByRole('img', { name: /código qr del pedido/i })).toHaveAttribute(
+    expect(await screen.findByRole('img', { name: /código de retiro del pedido/i })).toHaveAttribute(
       'src',
       'data:image/png;base64,qr',
     );
@@ -252,7 +252,7 @@ describe('OrderDetailPage', () => {
       qr_token: undefined,
     });
     renderOrder();
-    expect(await screen.findByRole('img', { name: /código qr del pedido/i })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: /código de retiro del pedido/i })).toBeInTheDocument();
   });
 
   it('conserva el QR en localStorage si la visita nueva pierde sessionStorage', async () => {
@@ -264,7 +264,7 @@ describe('OrderDetailPage', () => {
       qr_token: undefined,
     });
     renderOrder();
-    expect(await screen.findByRole('img', { name: /código qr del pedido/i })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: /código de retiro del pedido/i })).toBeInTheDocument();
   });
 
   it('en listo muestra folio de retiro si el API no envía secreto', async () => {
@@ -297,7 +297,7 @@ describe('OrderDetailPage', () => {
     });
     getOrderQr.mockResolvedValue({ qr_token: 'recovered-token' });
     renderOrder();
-    expect(await screen.findByRole('img', { name: /código qr del pedido/i })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: /código de retiro del pedido/i })).toBeInTheDocument();
     expect(getOrderQr).toHaveBeenCalledWith('jwt', 'ord-1');
   });
 

@@ -319,7 +319,7 @@ describe("OrderTrackCard pickup", () => {
     rememberPickupQrToken("ord-1", "pickup-secret");
     renderCard(order({ qr_token: undefined }));
     expect(
-      await screen.findByRole("img", { name: /código qr del pedido/i }),
+      await screen.findByRole("img", { name: /código de retiro del pedido/i }),
     ).toHaveAttribute("src", "data:image/png;base64,qr");
   });
 

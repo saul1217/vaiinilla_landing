@@ -52,8 +52,8 @@ export function OrderPickupPanel({
       ? 'Muéstralo en caja o cocina para entregar.'
       : 'Muestra esto en la barra para recoger tu pedido.';
   const qrAlt = stripeOrder
-    ? 'Código QR del pedido para entregar'
-    : 'Código QR del pedido para mostrar en caja';
+    ? 'Código de retiro del pedido para entregar'
+    : 'Código de retiro del pedido para mostrar en caja';
 
   return (
     <div

@@ -330,7 +330,7 @@ export function CartPage() {
     }
     const pendingId = readPendingStripeOrderId();
     if (pendingId) {
-      setError('Tienes un pago Stripe pendiente. Resuélvelo antes de crear otro pedido.');
+      setError('Tienes un pago con tarjeta pendiente. Resuélvelo antes de crear otro pedido.');
       return;
     }
     confirming.current = true;
@@ -406,7 +406,7 @@ export function CartPage() {
         if (!(await currentScannedTable(session.access_token, target))) {
           setForHere(false);
           setSpaceVersion((v) => v + 1);
-          throw new Error('Tu mesa ya no está abierta. Escanea el QR de la mesa para pedir.');
+          throw new Error('Tu mesa ya no está abierta. Escribe el número de tu mesa para pedir.');
         }
         // /mesas/actual confirma que la sesión sigue abierta; este endpoint confirma
         // que el backend reconoce al participante local antes de crear el pedido.
@@ -523,7 +523,7 @@ export function CartPage() {
         {blocker ? <p className="alumno-banner alumno-banner--coral">{blocker}</p> : null}
         {pendingStripeOrderId ? (
           <p className="alumno-banner">
-            Tienes un pago Stripe pendiente.{' '}
+            Tienes un pago con tarjeta pendiente.{' '}
             <Link to={`/cuenta/pedidos/${pendingStripeOrderId}`}>Revisar pago pendiente</Link>
           </p>
         ) : null}
@@ -678,9 +678,9 @@ export function CartPage() {
               <PayOption
                 selected={payment === 'stripe'}
                 icon="card"
-                title="Pago con Stripe"
-                badge="Stripe"
-                subtitle={stripeEnabled ? 'Tarjeta de débito o crédito · Pago seguro con Stripe.' : STRIPE_UNAVAILABLE_COPY}
+                title="Tarjeta"
+                badge="Pago seguro"
+                subtitle={stripeEnabled ? 'Tarjeta de débito o crédito. Pago seguro.' : STRIPE_UNAVAILABLE_COPY}
                 disabled={!stripeEnabled}
                 onSelect={() => {
                   if (!stripeEnabled) return;
@@ -811,9 +811,10 @@ export function CartFilledView({
                 <button
                   className="alumno-line__remove"
                   type="button"
+                  aria-label={`Eliminar ${splitPieces(line.productName).name}`}
                   onClick={() => onRemoveLine(line.productId, line.optionIds, line.notes)}
                 >
-                  Quitar
+                  Eliminar producto
                 </button>
               </div>
             </div>
@@ -993,7 +994,7 @@ function CupIcon() {
   );
 }
 
-const PAY_LABEL: Record<string, string> = { efectivo: 'pago en caja', saldo: 'saldo', stripe: 'Stripe' };
+const PAY_LABEL: Record<string, string> = { efectivo: 'pago en caja', saldo: 'saldo', stripe: 'tarjeta' };
 
 const PAY_ICONS = {
   cash: 'M3 7h18v10H3zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM6 10v4m12-4v4',

@@ -240,7 +240,7 @@ describe('AlumnoQaOrdersPage', () => {
     expect(detailListo?.querySelector('.alumno-timeline li.is-current .alumno-timeline__mark')?.textContent).toBe(
       '4',
     );
-    expect(await screen.findByRole('img', { name: /código qr/i })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: /código de retiro del pedido/i })).toBeInTheDocument();
     expect(document.querySelectorAll('.alumno-pickup')).toHaveLength(1);
     expect((document.body.textContent?.match(/Recógelo en la barra/gi) ?? []).length).toBe(1);
 

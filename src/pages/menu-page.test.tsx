@@ -124,6 +124,17 @@ describe("MenuPage", () => {
     expect(card).not.toHaveTextContent("(5)");
   });
 
+  it('mantiene el filtro de categorías y nombra carrito y cuenta en la cabecera', async () => {
+    const user = userEvent.setup();
+    renderMenu();
+    await screen.findByRole('button', { name: /chocolate frío/i });
+    expect(screen.getAllByRole('link', { name: 'Carrito' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: 'Mi cuenta' }).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('radio', { name: 'Bebidas' }));
+    expect(screen.getByRole('radio', { name: 'Bebidas' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('button', { name: /chocolate frío/i })).toBeInTheDocument();
+  });
+
   it("búsqueda sin resultados dice qué no encontró y deja limpiarla", async () => {
     const user = userEvent.setup();
     renderMenu();

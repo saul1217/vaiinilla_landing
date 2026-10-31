@@ -180,6 +180,30 @@ body[data-shell='alumno'] {
   text-decoration: none;
 }
 
+.alumno-menu-action {
+  width: auto;
+  min-width: 44px;
+  min-height: 44px;
+  height: auto;
+  padding: 5px 9px;
+  gap: 6px;
+  border-radius: 16px;
+  text-decoration: none;
+  font-size: 0.75rem;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.alumno-menu-action > span:not(.alumno-badge) {
+  display: inline;
+}
+
+.alumno-menu-action.alumno-avatar {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 0 var(--line);
+}
+
 html[data-theme='dark'] .alumno-avatar,
 html[data-theme='amoled'] .alumno-avatar {
   background: var(--lime);
@@ -1521,6 +1545,12 @@ html[data-theme='amoled'] .alumno-antojo img {
   color: #f4f1e7;
 }
 
+.alumno-line .alumno-qty button {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+}
+
 .alumno-line__side {
   display: grid;
   justify-items: end;
@@ -1536,8 +1566,10 @@ html[data-theme='amoled'] .alumno-antojo img {
 .alumno-line__remove {
   background: none;
   border: 0;
-  padding: 0;
-  color: rgba(244, 241, 231, 0.55);
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px 8px;
+  color: #f4f1e7;
   font: inherit;
   font-size: 0.78rem;
   font-weight: 700;
@@ -4895,10 +4927,7 @@ html[data-theme='amoled'] .alumno-lockup img,
   color: var(--muted);
   font-size: 0.8125rem;
   line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 .alumno-psheet__group {
@@ -5016,9 +5045,8 @@ html[data-theme='amoled'] .alumno-lockup img,
   margin: 2px 0 0;
   font-size: 1.0625rem;
   font-weight: 900;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .alumno-psheet__qty {
@@ -5612,15 +5640,15 @@ html[data-theme='light'] .alumno-codesheet__slots > span.is-filled {
   .alumno-line .alumno-qty {
     display: inline-flex;
     align-items: center;
-    height: 44px;
+    min-height: 48px;
     padding: 0 4px;
     border: 1px solid color-mix(in srgb, var(--text) 22%, transparent);
     border-radius: 22px;
   }
 
   .alumno-line .alumno-qty button {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border: 0;
     border-radius: 50%;
     background: transparent;
@@ -6570,6 +6598,18 @@ body[data-shell='alumno'] {
 
 .alumno-seg__track::-webkit-scrollbar {
   display: none;
+}
+
+.alumno-seg__hint {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.alumno-menu-categories {
+  margin-top: 8px;
+  margin-bottom: 8px;
 }
 
 /* One highlight shared by every chip; JS springs its x and width. */

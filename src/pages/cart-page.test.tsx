@@ -305,7 +305,7 @@ describe('CartPage', () => {
     expect(document.querySelector('.alumno-cart-peek__row > img')).toHaveAttribute('src', QA_PHOTO_TACOS);
   });
 
-  it('sin la tarjeta activada por el dueño no ofrece pagar con Stripe', async () => {
+  it('sin la tarjeta activada por el dueño no ofrece pagar con tarjeta', async () => {
     getEstablishment.mockResolvedValue({ id: '1', nombre: 'Cafetería Demo A', slug: 'demo-a', acepta_tarjeta: false });
     cartState.cart = {
       slug: 'demo-a',
@@ -316,7 +316,7 @@ describe('CartPage', () => {
     renderCart();
     await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
     expect(await screen.findByRole('radio', { name: /pago en caja/i })).toBeInTheDocument();
-    expect(screen.queryByRole('radio', { name: /pago con stripe/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /tarjeta/i })).not.toBeInTheDocument();
   });
 
   it('abre el sheet de pago con efectivo, saldo y tarjeta', async () => {
@@ -343,12 +343,14 @@ describe('CartPage', () => {
     );
     expect(screen.getByText('$120 c/u')).toBeInTheDocument();
     expect(screen.getByText('Total $120')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /eliminar chocolate/i })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^continuar$/i }));
     expect(await screen.findByRole('heading', { name: /cómo quieres pagar/i })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /pago en caja/i })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /saldo vaiinilla/i })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /pago con stripe/i })).toBeEnabled();
-    expect(screen.getByText(/pago seguro con stripe/i)).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /tarjeta/i })).toBeEnabled();
+    expect(screen.getByText('Pago seguro')).toBeInTheDocument();
+    expect(screen.queryByText(/stripe/i)).not.toBeInTheDocument();
   });
 
   it('crea el pedido Stripe una sola vez y usa el total del backend', async () => {
@@ -388,7 +390,7 @@ describe('CartPage', () => {
     const user = userEvent.setup();
     renderCart();
     await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
-    await user.click(await screen.findByRole('radio', { name: /pago con stripe/i }));
+    await user.click(await screen.findByRole('radio', { name: /tarjeta/i }));
     await user.click(screen.getByRole('button', { name: /^continuar con/i }));
     expect(await screen.findByText(/pedido creado/i)).toBeInTheDocument();
     expect(createOrder).toHaveBeenCalledTimes(1);
@@ -642,7 +644,7 @@ describe('CartPage', () => {
       const user = userEvent.setup();
       renderCart();
       await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
-      expect(screen.queryByRole('radio', { name: /pago con stripe/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('radio', { name: /tarjeta/i })).not.toBeInTheDocument();
       expect(screen.getByRole('radio', { name: /pago en caja/i })).toBeInTheDocument();
     });
 
@@ -715,7 +717,7 @@ describe('CartPage', () => {
       await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
       await user.click(screen.getByRole('button', { name: /^continuar con/i }));
       await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(2));
-      expect(screen.queryByText(/pago stripe pendiente/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/pago con tarjeta pendiente/i)).not.toBeInTheDocument();
     });
 
     it('invitado con pago Stripe en seguimiento no llama savePendingStripeOrderId', () => {
@@ -953,7 +955,7 @@ describe('CartPage', () => {
       renderCart();
       await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
       await user.click(await screen.findByRole('radio', { name: /pagar al final/i }));
-      await user.click(await screen.findByRole('radio', { name: /pago con stripe/i }));
+      await user.click(await screen.findByRole('radio', { name: /tarjeta/i }));
       await user.click(screen.getByRole('button', { name: /^continuar con/i }));
       await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1));
       expect(toCreate).toHaveBeenCalled();
@@ -1048,7 +1050,7 @@ describe('CartPage', () => {
     expect(screen.queryByText(/no tienes saldo suficiente/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^continuar con/i })).toBeEnabled();
 
-    await user.click(screen.getByRole('radio', { name: /pago con stripe/i }));
+    await user.click(screen.getByRole('radio', { name: /tarjeta/i }));
     expect((await screen.findAllByText(/Total \$111(\.00)?$/)).length).toBeGreaterThan(0);
   });
 });

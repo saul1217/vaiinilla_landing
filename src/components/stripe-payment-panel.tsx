@@ -75,7 +75,7 @@ export function StripePaymentPanel({
     <section className="alumno-stripe-panel" aria-label="Pago con tarjeta">
       <StripeOrderTotal order={order} />
       {resolved.error || !stripePromise ? (
-        <p className="alumno-error">{resolved.error ?? 'No se pudo abrir Stripe.'}</p>
+        <p className="alumno-error">{resolved.error ?? 'No se pudo abrir el formulario de pago.'}</p>
       ) : (
         <Elements
           stripe={stripePromise}
