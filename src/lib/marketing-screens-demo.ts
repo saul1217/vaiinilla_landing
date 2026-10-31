@@ -1,5 +1,5 @@
 import type { CartLine, CatalogProduct, OrderDetail } from '../types/api';
-import { QA_PHOTO_POZOLE, QA_PHOTO_TACOS } from './qa-catalog-photos';
+import { QA_PHOTO_TACOS } from './qa-catalog-photos';
 
 /** Presentable demo data for marketing screenshots (?marketing=1 on /__qa routes). */
 export const MARKETING_SCREEN_PLACE = 'Café del Jardín';
@@ -77,7 +77,7 @@ export function marketingCatalogProducts(): CatalogProduct[] {
       precio_mostrador: '28.00',
       precio_digital: '28.00',
       disponible: true,
-      imagen_url: QA_PHOTO_POZOLE,
+      imagen_url: null,
       grupos_opcion: [],
     },
     {
@@ -114,7 +114,7 @@ export function marketingCartLines(): CartLine[] {
       optionIds: [],
       productName: MARKETING_PRODUCT_DRINK,
       unitPreview: '28.00',
-      imageUrl: QA_PHOTO_POZOLE,
+      imageUrl: null,
     },
   ];
 }

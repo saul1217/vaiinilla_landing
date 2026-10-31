@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { AlumnoPageHeader } from "../components/alumno-brand";
 import { AppShell } from "../components/app-shell";
@@ -20,23 +20,44 @@ import { isActiveOrder, openTab } from "../lib/order-labels";
 import { formatAmount } from "../lib/money";
 import type { ArrivalClient } from "../lib/arrival-api";
 import { createMockReservationsClient } from "../lib/reservations-mock";
-import {
-  isMarketingScreenCapture,
-  marketingCartLines,
-  marketingCatalogProducts,
-  marketingCheckoutOrder,
-  marketingDefaultExpandedOrderId,
-  marketingLiveOrders,
-  marketingMesaOrder,
-  MARKETING_SCREEN_PLACE,
-  MARKETING_SCREEN_TABLE,
-} from "../lib/marketing-screens-demo";
 import { PlaceEntry } from "../components/place-entry";
 import { ReservationsScreen } from "./reservations-page";
 
+type MarketingScreensDemo = typeof import("../lib/marketing-screens-demo");
+
+const MARKETING_PLACE_LABEL = "Café del Jardín";
+
 function useQaMarketing(): boolean {
   const [params] = useSearchParams();
-  return isMarketingScreenCapture(params);
+  return params.get("marketing") === "1";
+}
+
+function useMarketingScreensDemo(enabled: boolean): MarketingScreensDemo | null {
+  const [demo, setDemo] = useState<MarketingScreensDemo | null>(null);
+  useEffect(() => {
+    if (!enabled) {
+      setDemo(null);
+      return;
+    }
+    let active = true;
+    void import("../lib/marketing-screens-demo").then((mod) => {
+      if (active) setDemo(mod);
+    });
+    return () => {
+      active = false;
+    };
+  }, [enabled]);
+  return demo;
+}
+
+function QaMarketingHold({ children }: { children: ReactNode }) {
+  return (
+    <AppShell tab="menu">
+      <main id="main-content" className="alumno-main" role="status">
+        {children}
+      </main>
+    </AppShell>
+  );
 }
 
 function qaOrder(overrides: Partial<OrderDetail>): OrderDetail {
@@ -281,7 +302,7 @@ export function AlumnoQaMarketingEntryPage() {
         </div>
         <PlaceEntry prominent />
         <div className="alumno-card" style={{ marginTop: '1rem' }}>
-          <strong>{MARKETING_SCREEN_PLACE}</strong>
+          <strong>{MARKETING_PLACE_LABEL}</strong>
           <p className="alumno-muted">Café · Centro</p>
         </div>
       </main>
@@ -325,11 +346,14 @@ const FILL_KEKE: CartLine = {
 
 export function AlumnoQaFilledCartPage() {
   const [params] = useSearchParams();
-  const marketing = isMarketingScreenCapture(params);
+  const marketing = useQaMarketing();
+  const demo = useMarketingScreensDemo(marketing);
   const leftoverEmpty = params.get("leftover") === "0";
-  const [lines, setLines] = useState<CartLine[]>(() =>
-    marketing ? marketingCartLines() : [FILL_LUPIS, FILL_KEKE],
-  );
+  const [lines, setLines] = useState<CartLine[]>([FILL_LUPIS, FILL_KEKE]);
+  useEffect(() => {
+    if (marketing && demo) setLines(demo.marketingCartLines());
+    if (!marketing) setLines([FILL_LUPIS, FILL_KEKE]);
+  }, [marketing, demo]);
   const total = useMemo(() => {
     const totals = lines
       .map((line) => linePreview(line.unitPreview, line.quantity))
@@ -337,13 +361,16 @@ export function AlumnoQaFilledCartPage() {
     return cartPreview(totals);
   }, [lines]);
   if (!import.meta.env.DEV) return <Navigate to="/" replace />;
+  if (marketing && !demo) {
+    return <QaMarketingHold>Cargando vista de ejemplo…</QaMarketingHold>;
+  }
   return (
     <AppShell tab="cart">
       <main id="main-content" className="alumno-main">
         <AlumnoPageHeader
           kicker="Revisa y confirma"
           title="Tu pedido"
-          lead={marketing ? MARKETING_SCREEN_PLACE : undefined}
+          lead={marketing ? MARKETING_PLACE_LABEL : undefined}
         />
         <CartFilledView
           payment="efectivo"
@@ -381,7 +408,7 @@ export function AlumnoQaFilledCartPage() {
           onNotesChange={() => undefined}
           total={total}
           slug={QA_CATALOG_SLUG}
-          menuPeek={leftoverEmpty ? [] : marketing ? marketingCatalogProducts() : QA_CATALOG}
+          menuPeek={leftoverEmpty ? [] : marketing && demo ? demo.marketingCatalogProducts() : QA_CATALOG}
           payLabel="Pagar"
           payDisabled={false}
           onPay={() => undefined}
@@ -393,17 +420,21 @@ export function AlumnoQaFilledCartPage() {
 
 export function AlumnoQaWalletPage() {
   const marketing = useQaMarketing();
+  const demo = useMarketingScreensDemo(marketing);
   if (!import.meta.env.DEV) return <Navigate to="/" replace />;
+  if (marketing && !demo) {
+    return <QaMarketingHold>Cargando vista de ejemplo…</QaMarketingHold>;
+  }
   return (
     <AppShell tab="wallet">
       <main id="main-content" className="alumno-main">
-        <AlumnoPageHeader title="Cartera" lead={marketing ? MARKETING_SCREEN_PLACE : undefined} />
+        <AlumnoPageHeader title="Cartera" lead={marketing ? MARKETING_PLACE_LABEL : undefined} />
         <WalletBoardView
           saldo="125.00"
           placeSlug={QA_CATALOG_SLUG}
           reloadHref="/u/preview"
           movimientos={[]}
-          menuPeek={marketing ? marketingCatalogProducts() : [PEEK_LUPIS, PEEK_KEKE]}
+          menuPeek={marketing && demo ? demo.marketingCatalogProducts() : [PEEK_LUPIS, PEEK_KEKE]}
         />
       </main>
     </AppShell>
@@ -413,16 +444,20 @@ export function AlumnoQaWalletPage() {
 export function AlumnoQaOrdersPage() {
   const deskPane = useDeskPane();
   const marketing = useQaMarketing();
-  const live = marketing ? marketingLiveOrders() : [CASH, CARD, CARD_LISTO];
+  const demo = useMarketingScreensDemo(marketing);
+  const live = marketing && demo ? demo.marketingLiveOrders() : [CASH, CARD, CARD_LISTO];
   const [expandedId, setExpandedId] = useState<string | null>(
-    marketing ? marketingDefaultExpandedOrderId() : CARD.id,
+    marketing && demo ? demo.marketingDefaultExpandedOrderId() : CARD.id,
   );
   if (!import.meta.env.DEV) return <Navigate to="/" replace />;
+  if (marketing && !demo) {
+    return <QaMarketingHold>Cargando vista de ejemplo…</QaMarketingHold>;
+  }
   const selected = live.find((order) => order.id === expandedId) ?? null;
   return (
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
-        <AlumnoPageHeader title="Mis pedidos" lead={marketing ? MARKETING_SCREEN_PLACE : undefined} />
+        <AlumnoPageHeader title="Mis pedidos" lead={marketing ? MARKETING_PLACE_LABEL : undefined} />
         {!marketing ? <p className="alumno-place-name">ci-vaiinilla</p> : null}
         <div className="alumno-orders-desk">
           <div className="alumno-orders-desk__list">
@@ -492,15 +527,19 @@ export function AlumnoQaOrdersPage() {
 
 export function AlumnoQaOrderDetailPage() {
   const marketing = useQaMarketing();
-  const checkoutOrder = marketing ? marketingCheckoutOrder() : CARD_LISTO;
+  const demo = useMarketingScreensDemo(marketing);
+  const checkoutOrder = marketing && demo ? demo.marketingCheckoutOrder() : CARD_LISTO;
   if (!import.meta.env.DEV) return <Navigate to="/" replace />;
+  if (marketing && !demo) {
+    return <QaMarketingHold>Cargando vista de ejemplo…</QaMarketingHold>;
+  }
   return (
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
         <AlumnoPageHeader
           kicker={marketing ? "Revisa y confirma" : "Pedido"}
           title={marketing ? "Tu pedido" : `#${CARD_LISTO.folio}`}
-          lead={marketing ? MARKETING_SCREEN_PLACE : undefined}
+          lead={marketing ? MARKETING_PLACE_LABEL : undefined}
           back={marketing ? undefined : { to: "/cuenta/pedidos", label: "Volver" }}
         />
         <div className="alumno-detail-split">
@@ -524,15 +563,19 @@ export function AlumnoQaOrderDetailPage() {
 
 export function AlumnoQaTableOrderPage() {
   const marketing = useQaMarketing();
+  const demo = useMarketingScreensDemo(marketing);
   const [open, setOpen] = useState(true);
-  const order = marketing ? marketingMesaOrder() : MESA;
+  const order = marketing && demo ? demo.marketingMesaOrder() : MESA;
   if (!import.meta.env.DEV) return <Navigate to="/" replace />;
+  if (marketing && !demo) {
+    return <QaMarketingHold>Cargando vista de ejemplo…</QaMarketingHold>;
+  }
   return (
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
         <AlumnoPageHeader
           title={marketing ? "Pedido recibido" : "Mis pedidos"}
-          lead={marketing ? `Te lo llevan a ${MARKETING_SCREEN_TABLE}.` : undefined}
+          lead={marketing ? "Te lo llevan a Mesa 5." : undefined}
         />
         {!marketing ? <p className="alumno-place-name">ci-vaiinilla · Mesa 4</p> : null}
         <div className="alumno-detail-split">

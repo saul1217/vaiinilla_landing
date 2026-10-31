@@ -14,7 +14,7 @@ const marketing = '?marketing=1';
 
 const shots = [
   { path: `/__qa/entrada${marketing}`, file: 'screen-entry.jpg', wait: 800 },
-  { path: `/__qa/carrito-lleno${marketing}`, file: 'screen-cart.jpg', wait: 800 },
+  { path: `/__qa/carrito-lleno${marketing}`, file: 'screen-cart.jpg', wait: 1600 },
   { path: `/__qa/pedido${marketing}`, file: 'screen-checkout.jpg', wait: 800 },
   { path: `/__qa/pedidos${marketing}`, file: 'screen-orders.jpg', wait: 800 },
   { path: `/__qa/pedido-mesa${marketing}`, file: 'screen-table-order.jpg', wait: 800 },
