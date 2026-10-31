@@ -183,8 +183,8 @@ export function MenuPage() {
         <span>Carrito</span>
         {cartCount > 0 ? <span className="alumno-badge">{cartCount}</span> : null}
       </Link>
-      <Link className="alumno-avatar alumno-menu-action" to="/cuenta" aria-label="Mi cuenta">
-        {initialsFrom(user?.displayName, user?.email)}
+      <Link className="alumno-avatar alumno-menu-action" to="/cuenta">
+        <span aria-hidden="true">{initialsFrom(user?.displayName, user?.email)}</span>
         <span>Mi cuenta</span>
       </Link>
     </>
