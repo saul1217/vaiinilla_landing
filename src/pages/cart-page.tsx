@@ -504,7 +504,9 @@ export function CartPage() {
   return (
     <AppShell tab="cart">
       <main id="main-content" className="alumno-main">
+        {lines.length ? <div className="alumno-visual-hero alumno-cart-hero" style={lines[0]?.imageUrl ? { backgroundImage: `linear-gradient(180deg, transparent 35%, var(--bg) 100%), url("${productImageUrl(lines[0].imageUrl)}")` } : undefined} aria-hidden="true" /> : null}
         <AlumnoPageHeader kicker="Revisa y confirma" title="Tu pedido" />
+        {place?.nombre && lines.length ? <p className="alumno-place-name">{place.nombre}</p> : null}
         {error ? <p className="alumno-error">{error}</p> : null}
         {emailBlocked && user ? (
           <p className="alumno-banner">
@@ -555,6 +557,8 @@ export function CartPage() {
             total={total}
             slug={slug}
             menuPeek={leftoverPeek}
+            productCount={lines.reduce((sum, line) => sum + line.quantity, 0)}
+            paySubtitle={`${lines.reduce((sum, line) => sum + line.quantity, 0)} productos · ${forHere ? space?.nombre ?? 'En el lugar' : 'Para llevar'}`}
             payLabel={
               canCheckout
                 ? operationalVerificationPending
@@ -744,6 +748,8 @@ export function CartFilledView({
   slug,
   menuPeek = [],
   payment,
+  productCount,
+  paySubtitle,
 }: {
   lines: CartLine[];
   payment: PaymentMethod;
@@ -764,9 +770,20 @@ export function CartFilledView({
   onPay: () => void;
   slug?: string;
   menuPeek?: CatalogProduct[];
+  productCount: number;
+  paySubtitle: string;
 }) {
   return (
     <div className="alumno-cart-layout">
+      <div className="alumno-cart-actions">
+        <Link className="alumno-btn alumno-btn--lime" to={`/e/${slug ?? ''}`}>＋ <span>Agregar más</span></Link>
+        <label className="alumno-field alumno-cart-note">Nota para cocina<textarea value={notes} onChange={(event) => onNotesChange(event.target.value)} rows={1} /></label>
+      </div>
+      <div className="alumno-cart-stats" aria-label="Resumen del pedido">
+        <div><span>Productos</span><strong>{productCount}</strong></div>
+        <div><span>Entrega</span><strong>{forHere && space ? space.nombre : 'En barra'}</strong></div>
+        <div><span>Total</span><strong>{total ? formatAmount(total) : '—'}</strong></div>
+      </div>
       <div className="alumno-cart-layout__lines alumno-arrive">
         {lines.map((line) => {
           const thumb = productImageUrl(line.imageUrl);
@@ -856,17 +873,13 @@ export function CartFilledView({
               />
             </label>
           ) : null}
-          <label className="alumno-field">
-            Nota para cocina
-            <textarea value={notes} onChange={(event) => onNotesChange(event.target.value)} rows={2} />
-          </label>
           <div className="alumno-cart-layout__pay">
             <p className="alumno-cart-layout__total">
               <strong>Total {total ? formatAmount(total) : '—'}</strong>
             </p>
             <div className="alumno-sticky-pay">
-              <button className="alumno-btn alumno-btn--lime" type="button" disabled={payDisabled} onClick={onPay}>
-                <span>{payLabel}</span>
+              <button className="alumno-btn alumno-btn--lime" type="button" aria-label={payLabel} disabled={payDisabled} onClick={onPay}>
+                <span className="alumno-sticky-pay__copy"><strong>{payLabel}</strong><small>{paySubtitle}</small></span>
                 {total ? (
                   <span className="alumno-sticky-pay__total" aria-hidden="true">
                     <span key={total} className="alumno-ticker">{formatAmount(total)}</span>

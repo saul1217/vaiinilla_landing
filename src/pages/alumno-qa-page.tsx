@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { AlumnoPageHeader } from "../components/alumno-brand";
+import { statusAsPhrase } from "../lib/status-phrase";
 import { AppShell } from "../components/app-shell";
 import { OrderTrackCard } from "../components/order-track-card";
 import { WaitingArcade } from "../arcade/waiting-arcade";
@@ -367,6 +368,7 @@ export function AlumnoQaFilledCartPage() {
   return (
     <AppShell tab="cart">
       <main id="main-content" className="alumno-main">
+        {lines.length ? <div className="alumno-visual-hero alumno-cart-hero" style={lines[0]?.imageUrl ? { backgroundImage: `linear-gradient(180deg, transparent 35%, var(--bg) 100%), url("${lines[0].imageUrl}")` } : undefined} aria-hidden="true" /> : null}
         <AlumnoPageHeader
           kicker="Revisa y confirma"
           title="Tu pedido"
@@ -408,6 +410,8 @@ export function AlumnoQaFilledCartPage() {
           onNotesChange={() => undefined}
           total={total}
           slug={QA_CATALOG_SLUG}
+          productCount={lines.reduce((sum, line) => sum + line.quantity, 0)}
+          paySubtitle={`${lines.reduce((sum, line) => sum + line.quantity, 0)} productos · Para llevar`}
           menuPeek={leftoverEmpty ? [] : marketing && demo ? demo.marketingCatalogProducts() : QA_CATALOG}
           payLabel="Pagar"
           payDisabled={false}
@@ -432,6 +436,7 @@ export function AlumnoQaWalletPage() {
         <WalletBoardView
           saldo="125.00"
           placeSlug={QA_CATALOG_SLUG}
+          placeName={marketing ? MARKETING_PLACE_LABEL : 'ci-vaiinilla'}
           reloadHref="/u/preview"
           movimientos={[]}
           menuPeek={marketing && demo ? demo.marketingCatalogProducts() : [PEEK_LUPIS, PEEK_KEKE]}
@@ -457,8 +462,10 @@ export function AlumnoQaOrdersPage() {
   return (
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
-        <AlumnoPageHeader title="Mis pedidos" lead={marketing ? MARKETING_PLACE_LABEL : undefined} />
-        {!marketing ? <p className="alumno-place-name">ci-vaiinilla</p> : null}
+        <div className="alumno-visual-hero alumno-orders-hero" aria-hidden="true" />
+        <section className="alumno-visual-sheet"><h1>Mis pedidos</h1>
+          <p className="alumno-place-name">{marketing ? MARKETING_PLACE_LABEL : 'ci-vaiinilla'}</p>
+        </section>
         <div className="alumno-orders-desk">
           <div className="alumno-orders-desk__list">
             <section aria-labelledby="qa-orders-live">
@@ -536,12 +543,8 @@ export function AlumnoQaOrderDetailPage() {
   return (
     <AppShell tab="orders">
       <main id="main-content" className="alumno-main">
-        <AlumnoPageHeader
-          kicker={marketing ? "Revisa y confirma" : "Pedido"}
-          title={marketing ? "Tu pedido" : `#${CARD_LISTO.folio}`}
-          lead={marketing ? MARKETING_PLACE_LABEL : undefined}
-          back={marketing ? undefined : { to: "/cuenta/pedidos", label: "Volver" }}
-        />
+        <div className="alumno-visual-hero alumno-orders-hero" aria-hidden="true" />
+        <section className="alumno-visual-sheet alumno-detail-sheet"><p className="alumno-kicker">Pedido #{CARD_LISTO.folio}</p><h1>{statusAsPhrase(CARD_LISTO)}</h1><div className="alumno-detail-progress"><span className="is-done">Pedido</span><span className="is-current">Preparando</span><span>Listo</span></div></section>
         <div className="alumno-detail-split">
           {!marketing ? (
             <OrderTrackCard
