@@ -126,7 +126,7 @@ export function GuestOrdersPage() {
           <AlumnoPageHeader title="Pedidos" />
           <div className="alumno-empty">
             <img src="/vaini/cutout-frente.png" alt="" />
-            <p>Aún no hay pedidos en esta sesión.</p>
+            <p>Aún no has hecho pedidos.</p>
             <Link className="alumno-btn alumno-btn--lime" to="/pedir">
               Elegir lugar
             </Link>
@@ -190,7 +190,7 @@ export function GuestOrdersPage() {
         ) : live.orders.length === 0 && savedHere && !gone ? null : live.orders.length === 0 ? (
           <div className="alumno-empty">
             <img src="/vaini/cutout-frente.png" alt="" />
-            <p>Aún no hay pedidos en esta sesión.</p>
+            <p>Aún no has hecho pedidos.</p>
             <Link className="alumno-btn alumno-btn--lime" to={`/e/${slug}`}>
               Ver menú
             </Link>

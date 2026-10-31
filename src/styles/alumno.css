@@ -2012,16 +2012,16 @@ html[data-theme='amoled'] .alumno-wallet-menu__icon {
   color: rgba(244, 241, 231, 0.55);
 }
 
-.alumno-track-card__pill {
+.alumno-track-card .alumno-track-card__pill {
   display: inline-flex;
+  max-width: min(68%, 19rem);
   border-radius: 999px;
-  padding: 7px 12px;
+  padding: 8px 12px;
   background: #f4f1e7;
   color: #1a1b19;
-  font-size: 0.66rem;
+  font-size: 0.78rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  line-height: 1.2;
 }
 
 html[data-theme='dark'] .alumno-track-card,

@@ -81,7 +81,7 @@ test('registro con un correo que ya tiene cuenta: aviso amigable en el paso del 
 test('pedido en mesa: el invitado pide, paga en caja y lo ve en Mis pedidos', async ({ page }) => {
   await placeTableOrder(page);
   await expect(page.getByRole('heading', { name: /mis pedidos/i })).toBeVisible();
-  await expect(page.getByText(/aún no hay pedidos en esta sesión/i)).toBeHidden();
+  await expect(page.getByText(/aún no has hecho pedidos/i)).toBeHidden();
   await expect(page.getByText(new RegExp(seeded().product, 'i')).first()).toBeVisible({ timeout: 20_000 });
 });
 

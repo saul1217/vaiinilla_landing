@@ -30,7 +30,7 @@ vi.mock('../components/app-shell', () => ({ AppShell: ({ children }: { children:
 vi.mock('../components/order-track-card', () => ({
   OrderTrackCard: ({ order, pickupToken }: { order: TrackedOrder; pickupToken: string | null }) => (
     <p>
-      Estado {order.estado} · QR {pickupToken ?? 'ninguno'}
+      Estado {order.estado} · Código de retiro {pickupToken ?? 'ninguno'}
     </p>
   ),
 }));
@@ -316,14 +316,14 @@ describe('seguimiento sin cuenta', () => {
   it('ya pagado muestra el estado con el QR de recogida', async () => {
     getTracking.mockResolvedValue(order({ estado: 'listo', qr_token: 'v1.qr' }));
     renderAt(`/seguimiento/${TOKEN}`);
-    expect(await screen.findByText('Estado listo · QR v1.qr')).toBeInTheDocument();
+    expect(await screen.findByText('Estado listo · Código de retiro v1.qr')).toBeInTheDocument();
   });
 
   it('un pedido entregado sale de "Tu pedido #N" del menú, pero su seguimiento sigue abierto', async () => {
     rememberGuestOrder({ token: TOKEN, slug: 'padel', folio: 21, placeName: 'Pádel', createdAt: Date.now() });
     getTracking.mockResolvedValue(order({ estado: 'entregado', qr_token: 'v1.qr' }));
     renderAt(`/seguimiento/${TOKEN}`);
-    expect(await screen.findByText('Estado entregado · QR v1.qr')).toBeInTheDocument();
+    expect(await screen.findByText('Estado entregado · Código de retiro v1.qr')).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem('vaiinilla.buyer.guest-orders.v1') ?? '[]')).toEqual([]);
   });
 

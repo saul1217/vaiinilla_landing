@@ -55,7 +55,7 @@ test.describe('ticket de mesa compartida', () => {
             espacio: { id: 67, nombre: 'Mesa 67', tipo: 'mesa' },
             subtotal: '50.00',
             ahorro_combinado: '0.00',
-            cashback_otorgado: '0.00',
+            cashback_otorgado: '125.45',
             total: '50.00',
             version: 1,
             creado_en: '2026-10-05T20:00:00Z',
@@ -129,6 +129,9 @@ test.describe('ticket de mesa compartida', () => {
     });
 
     await page.goto(`/seguimiento/${trackingToken}`);
+
+    await expect(page.getByText(/cashback|125\.45/i)).toHaveCount(0);
+    await expect(page.locator('body')).not.toContainText(/\bQR\b|\bStripe\b|\bcashback\b/i);
 
     const ticket = page.locator('.alumno-card--ticket');
     await expect(ticket.getByRole('heading', { name: 'Cuenta de la mesa' })).toBeVisible();

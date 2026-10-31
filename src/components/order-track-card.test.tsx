@@ -75,15 +75,21 @@ describe("OrderTrackCard pickup", () => {
     vi.stubGlobal("cancelAnimationFrame", () => undefined);
   });
 
+  it("no muestra cashback recibido en texto ni nombres accesibles", () => {
+    renderCard(order({ cashback_otorgado: "125.00" }));
+    expect(document.body).not.toHaveTextContent(/cashback|125\.00/i);
+    expect(document.body.innerHTML).not.toMatch(/cashback/i);
+  });
+
   it("en cobrado expandido es timeline, sin Recógelo ni QR", () => {
     renderCard(order({ estado: "cobrado", folio: 94 }));
     expect(
       document.querySelector(".alumno-track-card__pill"),
-    ).toHaveTextContent("Cobrado");
+    ).toHaveTextContent("Recibimos tu pedido");
     expect(document.querySelector(".alumno-pickup")).toBeNull();
     expect(
       document.querySelector(".alumno-track-card__status"),
-    ).toHaveTextContent(/Cobrado\s+Cocina recibió la comanda/i);
+    ).toHaveTextContent(/Recibimos tu pedido\s+Cocina recibió la comanda/i);
     expect(
       document.querySelector(
         ".alumno-timeline li.is-current .alumno-timeline__mark",
@@ -115,7 +121,7 @@ describe("OrderTrackCard pickup", () => {
     );
     expect(
       document.querySelector(".alumno-track-card__status"),
-    ).toHaveTextContent(/^Listo$/);
+    ).toHaveTextContent(/^Tu pedido está listo$/);
     expect(
       document.querySelector(".alumno-track-card__status"),
     ).not.toHaveTextContent(/recógelo/i);
@@ -148,13 +154,13 @@ describe("OrderTrackCard pickup", () => {
     expect(listRow).toHaveAttribute("aria-current", "true");
     expect(
       listRow?.querySelector(".alumno-track-card__status"),
-    ).toHaveTextContent(/^Listo$/);
+    ).toHaveTextContent(/^Tu pedido está listo$/);
     expect(listRow?.querySelector(".alumno-pickup")).toBeNull();
     const statuses = [
       ...document.querySelectorAll(".alumno-track-card__status"),
     ];
     expect(statuses).toHaveLength(1);
-    expect(statuses[0]).toHaveTextContent(/^Listo$/);
+    expect(statuses[0]).toHaveTextContent(/^Tu pedido está listo$/);
     expect(
       screen.getByRole("region", { name: /código de retiro/i }),
     ).toHaveTextContent(/recógelo en la barra/i);
@@ -205,7 +211,7 @@ describe("OrderTrackCard pickup", () => {
     expect(document.querySelector(".alumno-track-bar")).toBeTruthy();
     expect(
       document.querySelector(".alumno-track-card__status"),
-    ).toHaveTextContent(/por cobrar/i);
+    ).toHaveTextContent(/falta pagar tu pedido/i);
     expect(
       screen.getByRole("button", { name: /ver seguimiento/i }),
     ).toBeInTheDocument();

@@ -94,7 +94,7 @@ describe('tus pedidos sin cuenta', () => {
 
     expect(listGuestOrders).toHaveBeenCalledWith('padel', LLAVE);
     expect(await screen.findByText('Tus pedidos')).toBeInTheDocument();
-    expect(screen.getAllByText('Preparando').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Estamos preparando tu pedido').length).toBeGreaterThan(0);
     expect(screen.getByText(/1 Torta/)).toBeInTheDocument();
     const link = screen.getByRole('link', { name: /ver seguimiento/i });
     expect(link.getAttribute('href')).toBe(`/seguimiento/${TOKEN}`);
@@ -112,7 +112,7 @@ describe('tus pedidos sin cuenta', () => {
     expect(sessionStorage.length).toBe(0);
     render(<Probe slug="padel" />);
     expect(await screen.findByText('Tus pedidos')).toBeInTheDocument();
-    expect(screen.getAllByText('Preparando').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Estamos preparando tu pedido').length).toBeGreaterThan(0);
   });
 
   it('solo filtra los activos: un entregado ya cobrado no estorba', async () => {
@@ -124,7 +124,7 @@ describe('tus pedidos sin cuenta', () => {
     render(<Probe slug="padel" />);
 
     await screen.findByText('Tus pedidos');
-    expect(screen.getAllByText('Preparando').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Estamos preparando tu pedido').length).toBeGreaterThan(0);
     expect(screen.queryByText('Entregado')).not.toBeInTheDocument();
   });
 

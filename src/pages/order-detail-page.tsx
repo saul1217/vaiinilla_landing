@@ -85,7 +85,7 @@ export function OrderDetailPage() {
           openClientSession,
         });
         if (!resolved) {
-          setError('Abre una sesión en un establecimiento para consultar este pedido.');
+          setError('Entra al establecimiento para consultar este pedido.');
           return;
         }
         setAccessToken(resolved.context.access_token);
@@ -300,7 +300,7 @@ export function OrderDetailPage() {
           />
         ) : null}
         {order && stripeOrder ? (
-          <section className="alumno-card alumno-stripe-status">
+          <section className="alumno-card alumno-stripe-status" aria-label="Estado del pago con tarjeta">
             {chargePhase ? null : <p role="status">{stripeMessage}</p>}
             {showPaymentForm && stripeSession ? (
               <StripePaymentPanel

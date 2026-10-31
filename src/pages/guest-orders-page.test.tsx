@@ -174,7 +174,7 @@ describe('pedidos del invitado', () => {
     expect(await screen.findByText('Mis pedidos')).toBeInTheDocument();
     expect(screen.getByText('Pádel')).toBeInTheDocument();
     expect(await screen.findByText('Tus pedidos')).toBeInTheDocument();
-    expect(screen.getAllByText('Preparando').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Estamos preparando tu pedido').length).toBeGreaterThan(0);
     const link = screen.getByRole('link', { name: /ver seguimiento/i });
     expect(link.getAttribute('href')).toBe(`/seguimiento/${TOKEN}`);
     expect(listGuestOrders).toHaveBeenCalledWith('padel', LLAVE);
@@ -235,7 +235,7 @@ describe('pedidos del invitado', () => {
     localStorage.clear();
     renderPage();
 
-    expect(await screen.findByText(/aún no hay pedidos/i)).toBeInTheDocument();
+    expect(await screen.findByText(/aún no has hecho pedidos/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /elegir lugar/i })).toHaveAttribute('href', '/pedir');
   });
 });

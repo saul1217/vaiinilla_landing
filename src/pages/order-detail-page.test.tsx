@@ -233,7 +233,7 @@ describe('OrderDetailPage', () => {
       'src',
       'data:image/png;base64,qr',
     );
-    expect(screen.getAllByRole('region', { name: /código de retiro/i })).toHaveLength(1);
+    expect(screen.getAllByRole('region', { name: /pedido número \d+\. código de (retiro|entrega)/i })).toHaveLength(1);
     expect(document.querySelector('.alumno-card--ticket .alumno-pickup')).toBeNull();
     expect(document.querySelector('.alumno-track-card__status')).toBeNull();
     expect(document.querySelector('.alumno-detail-split .alumno-card--ticket')).not.toBeNull();
@@ -282,7 +282,7 @@ describe('OrderDetailPage', () => {
       }),
     );
     renderOrder();
-    expect(await screen.findByRole('region', { name: /código de retiro/i })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: /pedido número 1\. código de retiro/i })).toBeInTheDocument();
     expect(screen.getAllByText('#1').length).toBeGreaterThan(1);
     expect((document.body.textContent?.match(/Recógelo en la barra/gi) ?? []).length).toBe(1);
     expect(document.querySelector('.alumno-card--ticket .alumno-pickup')).toBeNull();

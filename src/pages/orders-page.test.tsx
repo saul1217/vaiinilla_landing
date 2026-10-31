@@ -287,7 +287,7 @@ describe("OrdersPage", () => {
     listOrders.mockResolvedValue({ orders: [] });
     renderOrders();
     expect(
-      await screen.findByText(/aún no hay pedidos en esta sesión/i),
+      await screen.findByText(/aún no has hecho pedidos/i),
     ).toBeInTheDocument();
     expect(screen.queryByText("#42")).not.toBeInTheDocument();
     expect(screen.queryByText("#93")).not.toBeInTheDocument();
@@ -302,7 +302,7 @@ describe("OrdersPage", () => {
       await screen.findByText("No pudimos cargar tus pedidos."),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(/aún no hay pedidos en esta sesión/i),
+      screen.queryByText(/aún no has hecho pedidos/i),
     ).not.toBeInTheDocument();
     expect(screen.queryByText("#42")).not.toBeInTheDocument();
     expect(document.querySelector(".alumno-track-card")).toBeNull();

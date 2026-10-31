@@ -135,16 +135,16 @@ describe('AlumnoQaOrdersPage', () => {
 
     const listCards = [...document.querySelectorAll('.alumno-orders-desk__list .alumno-track-card')];
     expect(listCards.map((card) => card.querySelector('.alumno-track-card__pill')?.textContent)).toEqual([
-      'Por cobrar',
-      'Cobrado',
-      'Listo',
+      'Falta pagar tu pedido',
+      'Recibimos tu pedido',
+      'Tu pedido está listo',
     ]);
     const open = document.querySelector('.alumno-orders-desk__list .alumno-track-card.is-open');
     expect(open?.querySelector('.alumno-track-card__folio')).toHaveTextContent('#94');
-    expect(open?.querySelector('.alumno-track-card__pill')).toHaveTextContent('Cobrado');
+    expect(open?.querySelector('.alumno-track-card__pill')).toHaveTextContent('Recibimos tu pedido');
     expect(open?.querySelector('.alumno-pickup')).toBeNull();
     expect(open?.querySelector('.alumno-track-card__status')).toHaveTextContent(
-      /Cobrado\s+Cocina recibió la comanda/i,
+      /Recibimos tu pedido\s+Cocina recibió la comanda/i,
     );
     const steps = [...(open?.querySelectorAll('.alumno-timeline li') ?? [])];
     expect(steps.map((step) => step.querySelector('strong')?.textContent)).toEqual([
@@ -173,14 +173,14 @@ describe('AlumnoQaOrdersPage', () => {
     expect(siblingAbove).not.toHaveClass('is-open');
     expect(siblingAbove?.querySelector('.alumno-track-card__folio')).toHaveTextContent('#95');
     expect(siblingAbove?.querySelector('.alumno-track-bar')).toBeTruthy();
-    expect(siblingAbove?.querySelector('.alumno-track-card__status')).toHaveTextContent(/por cobrar/i);
+    expect(siblingAbove?.querySelector('.alumno-track-card__status')).toHaveTextContent(/falta pagar tu pedido/i);
     expect(siblingAbove?.querySelector('.alumno-track-card__toggle')).toHaveTextContent(/ver seguimiento/i);
 
     const listoRow = listCards[2];
     expect(listoRow?.querySelector('.alumno-track-card__folio')).toHaveTextContent('#93');
     await user.click(listoRow!.querySelector('.alumno-track-card__folio')!);
     const listo = document.querySelector('.alumno-orders-desk__list .alumno-track-card.is-open');
-    expect(listo?.querySelector('.alumno-track-card__pill')).toHaveTextContent('Listo');
+    expect(listo?.querySelector('.alumno-track-card__pill')).toHaveTextContent('Tu pedido está listo');
     expect(listo?.querySelector('.alumno-pickup')).toHaveTextContent(/recógelo en la barra/i);
     expect(listo?.querySelector('.alumno-timeline li.is-current .alumno-timeline__mark')?.textContent).toBe('4');
   });
@@ -210,10 +210,10 @@ describe('AlumnoQaOrdersPage', () => {
     expect(document.querySelector('.alumno-orders-desk__list .alumno-track-card.is-open')).toBeNull();
     const selected = document.querySelector('.alumno-orders-desk__list .alumno-track-card.is-selected');
     expect(selected?.querySelector('.alumno-track-card__folio')).toHaveTextContent('#94');
-    expect(selected?.querySelector('.alumno-track-card__pill')).toHaveTextContent('Cobrado');
+    expect(selected?.querySelector('.alumno-track-card__pill')).toHaveTextContent('Recibimos tu pedido');
     expect(selected?.querySelector('.alumno-pickup')).toBeNull();
     expect(selected?.querySelector('.alumno-track-card__status')).toHaveTextContent(
-      /Cobrado\s+Cocina recibió la comanda/i,
+      /Recibimos tu pedido\s+Cocina recibió la comanda/i,
     );
 
     const detail = document.querySelector('.alumno-orders-desk__detail .alumno-track-card');
@@ -223,13 +223,13 @@ describe('AlumnoQaOrdersPage', () => {
 
     const listoRow = listCards[2];
     expect(listoRow?.querySelector('.alumno-track-card__folio')).toHaveTextContent('#93');
-    expect(listoRow?.querySelector('.alumno-track-card__status')).toHaveTextContent(/^Listo$/);
+    expect(listoRow?.querySelector('.alumno-track-card__status')).toHaveTextContent(/^Tu pedido está listo$/);
     await user.click(listoRow!.querySelector('.alumno-track-card__folio')!);
 
     const selectedListo = document.querySelector('.alumno-orders-desk__list .alumno-track-card.is-selected');
     expect(selectedListo?.querySelector('.alumno-track-card__folio')).toHaveTextContent('#93');
     expect(selectedListo).toHaveAttribute('aria-current', 'true');
-    expect(selectedListo?.querySelector('.alumno-track-card__status')).toHaveTextContent(/^Listo$/);
+    expect(selectedListo?.querySelector('.alumno-track-card__status')).toHaveTextContent(/^Tu pedido está listo$/);
     expect(selectedListo?.querySelector('.alumno-pickup')).toBeNull();
     expect(document.querySelector('.alumno-orders-desk__list .alumno-pickup')).toBeNull();
 
