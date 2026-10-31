@@ -92,8 +92,8 @@ export function QrScannerSheet({ onResult, onClosed }: { onResult: (text: string
           <div className="alumno-codesheet__grab" {...dragHandle}>
             <span aria-hidden="true" />
           </div>
-          <h2 id="qr-scan-title">Escanea el QR</h2>
-          <p className="alumno-codesheet__lead">Apunta al QR de tu mesa, cancha o de la tienda.</p>
+          <h2 id="qr-scan-title">Usa la cámara</h2>
+          <p className="alumno-codesheet__lead">Apunta al código de tu mesa, cancha o restaurante.</p>
           <div className={status === 'scanning' ? 'alumno-scanner is-live' : 'alumno-scanner'}>
             <video ref={videoRef} playsInline muted aria-label="Vista de la cámara" />
             <span className="alumno-scanner__frame" aria-hidden="true" />
@@ -104,7 +104,7 @@ export function QrScannerSheet({ onResult, onClosed }: { onResult: (text: string
             <p className="alumno-codesheet__error">Este navegador no abre la cámara. Escribe el código de tu mesa.</p>
           ) : (
             <p className="alumno-codesheet__lead" role="status">
-              {status === 'starting' ? 'Abriendo la cámara…' : 'Buscando el QR…'}
+              {status === 'starting' ? 'Abriendo la cámara…' : 'Buscando el código…'}
             </p>
           )}
           <button className="alumno-link alumno-codesheet__cancel" type="button" onClick={close}>

@@ -22,6 +22,8 @@ describe('SupportPage', () => {
       'href',
       'mailto:equipo@vaiinilla.app',
     );
+    expect(screen.getByText(/los pagos con tarjeta se procesan de forma segura/i)).toBeInTheDocument();
+    expect(screen.queryByText(/stripe/i)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /términos/i })).toHaveAttribute(
       'href',
       'https://app.vaiinilla.app/legal/terminos/2026-07',

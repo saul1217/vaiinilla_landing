@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SharedTable } from '../types/api';
 import { SharedTableCard } from './shared-table-card';
@@ -43,8 +44,10 @@ describe('mesa agrupada por participante', () => {
 
   it('dos tocayos salen por separado (por id, no por alias)', async () => {
     apiMock.currentTable.mockResolvedValue(table());
+    const user = userEvent.setup();
     render(<SharedTableCard accessToken="jwt" qrToken={null} />);
     expect(await screen.findByRole('article', { name: 'Mesa 3' })).toBeInTheDocument();
+    await user.click(screen.getByText(/^Ver pedidos y elegir qué pago yo/));
     // Dos grupos "David": uno por cada participante.
     expect(screen.getAllByRole('heading', { name: 'David' })).toHaveLength(2);
   });
@@ -53,7 +56,9 @@ describe('mesa agrupada por participante', () => {
     apiMock.currentTable.mockResolvedValue({ ...table(), grupos: [
       { alias: null, participante_id: null, soy_yo: false, ...ZERO, pedidos: [order(9)] },
     ] });
+    const user = userEvent.setup();
     render(<SharedTableCard accessToken="jwt" qrToken={null} />);
+    await user.click(await screen.findByText(/^Ver pedidos y elegir qué pago yo/));
     expect(await screen.findByRole('heading', { name: /otros en la mesa/i })).toBeInTheDocument();
   });
 

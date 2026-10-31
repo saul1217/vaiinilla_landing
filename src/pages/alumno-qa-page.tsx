@@ -428,7 +428,7 @@ export function AlumnoQaWalletPage() {
   return (
     <AppShell tab="wallet">
       <main id="main-content" className="alumno-main">
-        <AlumnoPageHeader title="Cartera" lead={marketing ? MARKETING_PLACE_LABEL : undefined} />
+        <AlumnoPageHeader title="Mi saldo" lead={marketing ? MARKETING_PLACE_LABEL : undefined} />
         <WalletBoardView
           saldo="125.00"
           placeSlug={QA_CATALOG_SLUG}

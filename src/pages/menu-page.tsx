@@ -19,6 +19,7 @@ import type { CatalogProduct, CatalogResponse, PublicEstablishment } from '../ty
 import { LoadingSkeleton } from '../components/loading-skeleton';
 import { MotionSheet } from '../components/motion-sheet';
 import { ProductSheet } from '../components/product-sheet';
+import { SlidingChips } from '../components/sliding-chips';
 import { SeatedToast } from '../components/seated-toast';
 import { peekResource, resourceKeys } from '../lib/resource-cache';
 
@@ -177,12 +178,14 @@ export function MenuPage() {
   const cartCount = cart?.slug === slug ? cart.lines.reduce((sum, line) => sum + line.quantity, 0) : 0;
   const menuActions = () => (
     <>
-      <Link className="alumno-icon-btn" to={`/e/${slug}/carrito`} aria-label="Carrito">
+      <Link className="alumno-icon-btn alumno-menu-action" to={`/e/${slug}/carrito`} aria-label="Carrito">
         <CartIcon />
+        <span>Carrito</span>
         {cartCount > 0 ? <span className="alumno-badge">{cartCount}</span> : null}
       </Link>
-      <Link className="alumno-avatar" to="/cuenta" aria-label="Cuenta">
-        {initialsFrom(user?.displayName, user?.email)}
+      <Link className="alumno-avatar alumno-menu-action" to="/cuenta">
+        <span aria-hidden="true">{initialsFrom(user?.displayName, user?.email)}</span>
+        <span>Mi cuenta</span>
       </Link>
     </>
   );
@@ -233,8 +236,8 @@ export function MenuPage() {
         {rentsCourts ? (
           <Link className="alumno-courts-entry" to={`/e/${slug}/canchas`}>
             <span>
-              <strong>Rentar una cancha</strong>
-              <small>Elige día y hora. Se paga al apartar.</small>
+              <strong>Apartar una cancha</strong>
+              <small>Elige día y hora. Pagas al apartar.</small>
             </span>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M5 12h14m-5-5 5 5-5 5" />
@@ -242,24 +245,20 @@ export function MenuPage() {
           </Link>
         ) : null}
         {loading ? <LoadingSkeleton shape="products" label="Cargando menú…" /> : null}
-        <div className="alumno-chips">
-          <button className={categoryId == null ? 'alumno-chip is-on' : 'alumno-chip'} type="button" onClick={() => setCategoryId(null)}>
-            Todo
-          </button>
-          {catalog?.categorias
-            .slice()
-            .sort((a, b) => a.orden - b.orden)
-            .map((category) => (
-              <button
-                key={category.id}
-                className={categoryId === category.id ? 'alumno-chip is-on' : 'alumno-chip'}
-                type="button"
-                onClick={() => setCategoryId(category.id)}
-              >
-                {category.nombre}
-              </button>
-            ))}
-        </div>
+        <SlidingChips
+          className="alumno-menu-categories"
+          label="Categorías del menú"
+          hint="Desliza para ver más categorías"
+          selected={categoryId == null ? 'all' : String(categoryId)}
+          onSelect={(value) => setCategoryId(value === 'all' ? null : Number(value))}
+          items={[
+            { key: 'all', label: 'Todo' },
+            ...(catalog?.categorias
+              .slice()
+              .sort((a, b) => a.orden - b.orden)
+              .map((category) => ({ key: String(category.id), label: category.nombre })) ?? []),
+          ]}
+        />
         <div className="alumno-grid alumno-arrive">
             {products.map((product) => {
               const thumb = productImageUrl(product.imagen_url);

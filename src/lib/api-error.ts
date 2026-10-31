@@ -1,7 +1,7 @@
 import type { ApiErrorBody } from '../types/api';
 
 const friendlyMessages: Record<string, string> = {
-  UNAUTHENTICATED: 'Tu sesión terminó. Inicia sesión nuevamente.',
+  UNAUTHENTICATED: 'Tu acceso terminó. Entra de nuevo.',
   EMAIL_NOT_VERIFIED: 'Verifica tu correo antes de continuar.',
   IDENTITY_NOT_REGISTERED:
     'La cuenta existe, pero todavía no completó su registro de identidad.',
@@ -13,7 +13,7 @@ const friendlyMessages: Record<string, string> = {
   SPACE_NOT_FOUND: 'No encontramos esa mesa. Revisa el código e inténtalo de nuevo.',
   SPACE_INACTIVE: 'Esa mesa está inactiva. Pide ayuda en Caja.',
   SPACE_TOKEN_INVALID: 'Ese código de mesa no es válido.',
-  SPACE_TOKEN_REVOKED: 'Ese QR de mesa ya no sirve. Pide el código actualizado.',
+  SPACE_TOKEN_REVOKED: 'Ese código de mesa ya no sirve. Pide el código actualizado.',
   BACKEND_UNAVAILABLE: 'El servicio no está disponible. Inténtalo de nuevo en un momento.',
   CONTEXT_NOT_ALLOWED: 'Esta cuenta no puede pedir en este establecimiento.',
   RATE_LIMITED: 'Se alcanzó el límite temporal. Espera antes de volver a intentar.',
@@ -21,9 +21,9 @@ const friendlyMessages: Record<string, string> = {
   REAUTHENTICATION_REQUIRED: 'Confirma tu acceso otra vez para eliminar la cuenta.',
   INSUFFICIENT_BALANCE: 'No tienes saldo suficiente para este pedido.',
   PRODUCT_NOT_FOUND: 'Un producto del carrito ya no está disponible.',
-  ACCOUNT_REQUIRED: 'Para apartar una cancha necesitas iniciar sesión o crear tu cuenta.',
-  ENTRY_TOKEN_INVALID: 'El escaneo del lugar ya no es válido. Escanea de nuevo el NFC o QR, o inicia sesión.',
-  GUEST_RESERVATION_LIMIT: 'Llegaste al límite de reservas sin cuenta. Inicia sesión o crea tu cuenta para seguir apartando.',
+  ACCOUNT_REQUIRED: 'Para apartar una cancha, entra a tu cuenta o crea una.',
+  ENTRY_TOKEN_INVALID: 'El código del lugar ya no está disponible. Vuelve a intentarlo o entra a tu cuenta.',
+  GUEST_RESERVATION_LIMIT: 'Llegaste al límite de reservas sin cuenta. Entra o crea una para seguir apartando.',
   ORDER_INVALID_STATE: 'El pedido ya cambió de estado.',
 };
 
@@ -68,7 +68,7 @@ const firebaseAuthMessages: Record<string, string> = {
   'auth/popup-closed-by-user': 'Cerraste la ventana de Google antes de terminar.',
   'auth/user-mismatch': 'Elige la misma cuenta de Google con la que entraste.',
   'auth/popup-blocked': 'El navegador bloqueó la ventana de Google. Permite ventanas emergentes.',
-  'auth/email-already-in-use': 'Este correo ya tiene una cuenta. Inicia sesión o recupera tu contraseña.',
+  'auth/email-already-in-use': 'Este correo ya tiene una cuenta. Entra o recupera tu contraseña.',
   'auth/weak-password': 'La contraseña es muy débil. Usa al menos 8 caracteres.',
   'auth/missing-password': 'Escribe tu contraseña.',
   'auth/missing-email': 'Escribe tu correo.',
@@ -85,7 +85,7 @@ const firebaseAuthMessages: Record<string, string> = {
 const FIREBASE_GENERIC_MESSAGE = 'No pudimos completar el acceso. Inténtalo de nuevo.';
 
 // Configuración del proyecto (referer/dominio/API key), no un error del usuario: se distingue del genérico.
-export const FIREBASE_BLOCKED_MESSAGE = 'Este sitio no está autorizado para iniciar sesión. Avisa a soporte.';
+export const FIREBASE_BLOCKED_MESSAGE = 'Este sitio no está autorizado para acceder. Avisa a soporte.';
 const FIREBASE_BLOCKED_CODE =
   /^auth\/(requests-from-referer|unauthorized-domain|invalid-api-key|api-key-not-valid|app-not-authorized)/;
 

@@ -1,6 +1,4 @@
-// "¿Ya estás en el lugar?": la puerta de entrada cuando los negocios no están en el
-// directorio. Tres formas de llegar a la mesa o a la tienda: escanear su QR, escribir el
-// código de 4 dígitos de la mesa o acercar el teléfono a su etiqueta NFC.
+// "¿Ya estás en el lugar?": entrada por código, cámara o etiqueta NFC.
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
@@ -23,6 +21,7 @@ export function PlaceEntry({
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     if (autoOpen) setSheet(autoOpen);
@@ -31,7 +30,7 @@ export function PlaceEntry({
   async function enter(text: string) {
     const target = parseEntry(text);
     if (!target) {
-      setError('Ese código no es de Vaiinilla. Prueba con el QR o el código de tu mesa.');
+      setError('Ese código no es de Vaiinilla. Revisa el número de tu mesa o usa la cámara.');
       return;
     }
     if (target.kind === 'store') {
@@ -47,7 +46,7 @@ export function PlaceEntry({
     } catch (cause) {
       setError(
         cause instanceof VaiinillaApiError && cause.status === 404
-          ? 'Ese código no existe. Revísalo junto al QR de tu mesa.'
+          ? 'No encontramos ese código. Revisa los 4 números de la mesa o del papel del mesero.'
           : errorMessage(cause),
       );
     } finally {
@@ -62,21 +61,30 @@ export function PlaceEntry({
 
   return (
     <section className={prominent ? 'alumno-entry is-prominent' : 'alumno-entry'} aria-labelledby="place-entry-title">
-      <h2 id="place-entry-title">{prominent ? 'Escanea el QR de tu mesa o de la tienda' : '¿Ya estás en el lugar?'}</h2>
-      <p>Llega a tu mesa, cancha o a la tienda y pide desde ahí.</p>
+      <h2 id="place-entry-title">{prominent ? 'Escribe el número de tu mesa' : '¿Ya estás en el lugar?'}</h2>
+      <p>Escribe los 4 números que ves en la mesa o en el papel del mesero.</p>
       <div className="alumno-entry__options">
-        <button type="button" className="alumno-entry__option is-main" onClick={() => open('qr')}>
-          <EntryIcon kind="qr" />
-          <span>Escanear QR</span>
-        </button>
-        <button type="button" className="alumno-entry__option" onClick={() => open('code')}>
+        <button type="button" className="alumno-entry__option is-main" onClick={() => open('code')}>
           <EntryIcon kind="code" />
-          <span>Escribir código</span>
+          <span>Escribir número de mesa</span>
         </button>
-        <button type="button" className="alumno-entry__option" onClick={() => open('nfc')}>
-          <EntryIcon kind="nfc" />
-          <span>Acercar NFC</span>
+      </div>
+      <div className="alumno-entry__more">
+        <button className="alumno-entry__more-toggle" type="button" aria-expanded={moreOpen} onClick={() => setMoreOpen((open) => !open)}>
+          {moreOpen ? 'Ocultar opciones' : 'Más opciones'}
         </button>
+        {moreOpen ? (
+          <div className="alumno-entry__options">
+            <button type="button" className="alumno-entry__option" onClick={() => open('qr')}>
+              <EntryIcon kind="qr" />
+              <span>Usar cámara</span>
+            </button>
+            <button type="button" className="alumno-entry__option" onClick={() => open('nfc')}>
+              <EntryIcon kind="nfc" />
+              <span>Acercar el teléfono a la etiqueta</span>
+            </button>
+          </div>
+        ) : null}
       </div>
       {error && sheet === null ? <p className="alumno-error">{error}</p> : null}
 

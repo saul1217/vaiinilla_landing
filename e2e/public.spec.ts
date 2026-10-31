@@ -28,7 +28,7 @@ test('Pedir en la landing entra al app del comprador', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('banner').getByRole('link', { name: /empezar a pedir|pedir/i }).click();
   await expect(page).toHaveURL(/\/pedir$/);
-  await expect(page.getByRole('heading', { name: /dónde comes hoy/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /en qué restaurante estás/i })).toBeVisible();
   await expect(page.getByRole('navigation', { name: /^navegación$/i })).toBeVisible();
   await expect(page).not.toHaveURL(/app\.vaiinilla\.app/);
 });
@@ -45,9 +45,9 @@ test('soporte sigue publicando el correo oficial', async ({ page }) => {
 test('discovery y menú públicos responden contra el backend de development', async ({ page }) => {
   await assertCiStoreSeeded(page.request);
   await page.goto('/pedir');
-  await expect(page.getByRole('heading', { name: /dónde comes hoy/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /en qué restaurante estás/i })).toBeVisible();
   // Ya no existe el botón «Continuar»: con la tienda de CI listada se ofrece «Entrar al menú».
-  await page.getByRole('textbox', { name: /buscar establecimiento/i }).fill(CI_PLACE_NAME);
+  await page.getByRole('textbox', { name: /buscar restaurante/i }).fill(CI_PLACE_NAME);
   await expect(page.getByRole('radiogroup', { name: /establecimientos/i }).getByRole('radio').first()).toBeVisible({
     timeout: 20_000,
   });

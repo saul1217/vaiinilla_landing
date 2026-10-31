@@ -12,7 +12,6 @@ import {
   orderCancelReason,
   orderOperationalHint,
   orderProgressFilled,
-  orderStatusLabel,
   orderTrackSteps,
 } from '../lib/order-labels';
 import { RENTAL_STEPS, formatHoldCountdown, rentalHoldRemainingMs, rentalStep } from '../lib/rental-tracking';
@@ -21,6 +20,7 @@ import { useHeightMorph } from '../lib/use-height-morph';
 import { ArrivalButton } from './arrival-button';
 import type { ArrivalClient } from '../lib/arrival-api';
 import { OrderPickupPanel } from './order-pickup-panel';
+import { statusAsPhrase } from '../lib/status-phrase';
 
 export function OrderTrackCard({
   order,
@@ -66,7 +66,7 @@ export function OrderTrackCard({
   const steps = orderTrackSteps(order, now);
   const inFlow = rental ? rentalCurrent !== null : ORDER_FLOW.includes(order.estado);
   const active = isActiveOrder(order);
-  const statusLabel = orderStatusLabel(order, now);
+  const statusPhrase = statusAsPhrase(order, now);
   const showBar = inFlow;
   const cardRef = useRef<HTMLElement>(null);
   // Una foto que no carga vuelve a la mascota en vez de dejar el ícono de imagen rota.
@@ -126,7 +126,7 @@ export function OrderTrackCard({
     >
       <header className="alumno-track-card__top">
         <span className="alumno-track-card__folio">#{order.folio}</span>
-        <span className="alumno-track-card__pill">{statusLabel}</span>
+        <span className="alumno-track-card__pill">{statusPhrase}</span>
       </header>
       <div className="alumno-track-card__body">
         {imageUrl && failedImage !== imageUrl ? (
@@ -176,7 +176,7 @@ export function OrderTrackCard({
       ) : null}
       {showPickup && expanded ? null : (
         <p className="alumno-track-card__status">
-          <strong>{statusLabel}</strong>
+          <strong>{statusPhrase}</strong>
           {operationalHint ? ` ${operationalHint}` : collapsedStatusHint ? ` ${collapsedStatusHint}` : null}
         </p>
       )}

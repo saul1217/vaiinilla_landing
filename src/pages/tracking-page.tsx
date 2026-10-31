@@ -165,7 +165,7 @@ export function TrackingPage() {
           <div className="alumno-empty alumno-arrive" role="alert">
             <img src="/vaini/cutout-frente.png" alt="" />
             <h2>No encontramos este pedido</h2>
-            <p className="alumno-lead">El enlace no es válido o el pedido ya no existe.</p>
+            <p className="alumno-lead">No pudimos encontrar el pedido. Revisa el enlace o vuelve a Mis pedidos.</p>
             <div className="alumno-tracking__actions">
               <Link className="alumno-btn alumno-btn--lime" to="/cuenta/pedidos">
                 Ver mis pedidos
@@ -189,7 +189,7 @@ export function TrackingPage() {
         />
 
         {order ? (
-          <section className="alumno-tracking__keep" role="note" aria-label="Guarda este enlace">
+          <section className="alumno-tracking__keep" role="note" aria-label="Guarda este enlace para consultar tu pedido">
             <strong>{justOrdered ? '¡Listo! Guarda este enlace' : 'Guarda este enlace'}</strong>
             {storageOk ? (
               <p>
@@ -205,7 +205,7 @@ export function TrackingPage() {
                 <Link to="/cuenta/pedidos">Pedidos</Link> al cerrar.
               </p>
             )}
-            <code className="alumno-tracking__link">{link}</code>
+            <p className="alumno-muted">Comparte este enlace para consultar tu pedido en otro dispositivo.</p>
             <div className="alumno-tracking__actions">
               <button type="button" className="alumno-btn alumno-btn--lime" onClick={() => void copy()}>
                 {copied ? 'Enlace copiado' : 'Copiar enlace'}
@@ -225,7 +225,7 @@ export function TrackingPage() {
               ) : null}
             </div>
             {qr ? (
-              <img className="wallet-qr" src={qr} alt="Código QR de tu enlace de seguimiento" />
+              <img className="wallet-qr" src={qr} alt="Imagen para abrir el pedido en otro dispositivo" />
             ) : null}
           </section>
         ) : null}
@@ -246,7 +246,7 @@ export function TrackingPage() {
           ) : (
             <p className="alumno-banner" role="status">
               {paying
-                ? 'Confirmando tu pago con Stripe…'
+                ? 'Estamos confirmando tu pago con tarjeta…'
                 : 'Falta pagar con tarjeta. Termínalo en el dispositivo donde hiciste el pedido.'}
             </p>
           )

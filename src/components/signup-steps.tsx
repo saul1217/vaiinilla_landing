@@ -104,7 +104,7 @@ export function SignupSteps(props: SignupStepsProps) {
           </div>
           {step === 0 ? (
             <button className="alumno-signup__login" type="button" onClick={props.onLogin}>
-              Inicia sesión
+              Entra a tu cuenta
             </button>
           ) : (
             <span className="alumno-signup__login" aria-hidden="true" />
@@ -205,9 +205,9 @@ export function SignupSteps(props: SignupStepsProps) {
           {props.error ? <p className="alumno-error">{props.error}</p> : null}
           {props.emailTaken && current.key === 'email' ? (
             <div className="alumno-error" role="alert">
-              <p>Este correo ya tiene una cuenta. Inicia sesión o recupera tu contraseña.</p>
+              <p>Este correo ya tiene una cuenta. Entra o recupera tu contraseña.</p>
               <button className="alumno-link" type="button" onClick={props.onLogin}>
-                Iniciar sesión
+                Entrar a mi cuenta
               </button>
               {props.onRecover ? (
                 <>

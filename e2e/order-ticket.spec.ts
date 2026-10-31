@@ -55,7 +55,7 @@ test.describe('ticket de mesa compartida', () => {
             espacio: { id: 67, nombre: 'Mesa 67', tipo: 'mesa' },
             subtotal: '50.00',
             ahorro_combinado: '0.00',
-            cashback_otorgado: '0.00',
+            cashback_otorgado: '125.45',
             total: '50.00',
             version: 1,
             creado_en: '2026-10-05T20:00:00Z',
@@ -130,17 +130,22 @@ test.describe('ticket de mesa compartida', () => {
 
     await page.goto(`/seguimiento/${trackingToken}`);
 
+    await expect(page.getByText(/cashback|125\.45/i)).toHaveCount(0);
+    await expect(page.locator('body')).not.toContainText(/\bQR\b|\bStripe\b|\bcashback\b/i);
+
     const ticket = page.locator('.alumno-card--ticket');
+    await ticket.locator('.shared-table__details > summary').click();
     await expect(ticket.getByRole('heading', { name: 'Cuenta de la mesa' })).toBeVisible();
     await expect(ticket.getByText(/1 × Quesadilla/)).toHaveCount(2);
     await expect(ticket.getByText('Pedido #29')).toBeVisible();
     await expect(ticket.getByRole('heading', { name: 'David' })).toHaveCount(1);
     await expect(ticket.getByRole('heading', { name: 'David R.' })).toHaveCount(0);
     await expect(ticket.getByRole('heading', { name: 'Miguel' })).toHaveCount(0);
-    await expect(ticket.getByText('Total de la mesa', { exact: true }).locator('..')).toContainText('$90');
-    await expect(ticket.getByText('Pagado', { exact: true }).locator('..')).toContainText('$0');
-    await expect(ticket.getByText('Por pagar', { exact: true }).locator('..')).toContainText('$90');
-    await expect(ticket.getByText('Tu parte por pagar', { exact: true }).locator('..')).toContainText('$70');
+    const breakdown = ticket.locator('.shared-table__details');
+    await expect(breakdown.getByText('Total de la mesa', { exact: true }).locator('..')).toContainText('$90');
+    await expect(breakdown.getByText('Pagado', { exact: true }).locator('..')).toContainText('$0');
+    await expect(breakdown.getByText('Por pagar', { exact: true }).locator('..')).toContainText('$90');
+    await expect(breakdown.getByText('Tu parte por pagar', { exact: true }).locator('..')).toContainText('$70');
   });
 
   test('mantiene nombres y montos largos dentro del layout móvil', async ({ page }) => {
@@ -148,9 +153,11 @@ test.describe('ticket de mesa compartida', () => {
     await page.goto('/__qa/pedido-mesa');
 
     const ticket = page.locator('.alumno-card--ticket');
+    await ticket.locator('.shared-table__details > summary').click();
     await expect(ticket.getByRole('heading', { name: 'Cuenta de la mesa' })).toBeVisible();
     await expect(ticket.getByRole('heading', { name: 'Luis Fernando con otro alias largo' })).toBeVisible();
-    await expect(ticket.getByText('$1264999.99')).toHaveCount(2);
+    await expect(ticket.getByText('$1264999.99')).toHaveCount(3);
+    await ticket.locator('.shared-table__details > summary').click();
     await expect(ticket.locator('.alumno-ticket-table__group')).toHaveCount(2);
 
     const layout = await page.evaluate(() => {

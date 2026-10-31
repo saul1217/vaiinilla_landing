@@ -105,9 +105,9 @@ describe('AccountPage', () => {
       </MemoryRouter>,
     );
 
-    await user.click(screen.getByRole('button', { name: /iniciar sesión/i }));
+    await user.click(screen.getByRole('button', { name: /entrar a mi cuenta/i }));
     expect(screen.getByRole('button', { name: /^volver$/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /^inicia sesión$/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^entrar a mi cuenta$/i })).toBeInTheDocument();
     await user.type(screen.getByLabelText(/correo/i), 'jelm060716@gmail.com');
     await user.type(screen.getByLabelText(/contraseña/i), 'password1');
     await user.click(screen.getByRole('button', { name: /^entrar$/i }));
@@ -117,7 +117,7 @@ describe('AccountPage', () => {
     expect(screen.getByRole('button', { name: /confirmar y entrar/i })).toBeInTheDocument();
   });
 
-  it('muestra configuración con QR, temas, salir y eliminar cuenta', async () => {
+  it('muestra configuración con recarga, tres temas, salir y eliminar cuenta', async () => {
     authState.user = { email: 'ana@example.test', displayName: 'Ana Pérez' };
     render(
       <MemoryRouter>
@@ -128,11 +128,12 @@ describe('AccountPage', () => {
     );
     expect(await screen.findByRole('heading', { name: /configuración/i })).toBeInTheDocument();
     expect(screen.getByText('Ana Pérez · ana@example.test')).toBeInTheDocument();
-    expect(await screen.findByAltText(/código qr para recargar saldo en caja/i)).toBeInTheDocument();
+    expect(await screen.findByAltText(/código para identificar tu saldo/i)).toBeInTheDocument();
+    expect(screen.getByText(/muestra esta pantalla en caja/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sistema/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /claro/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /oscuro/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /amoled/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^(sistema|claro|oscuro)$/i })).toHaveLength(3);
     expect(screen.getByRole('button', { name: /cambiar tienda/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^salir$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /eliminar cuenta/i })).toBeInTheDocument();
@@ -181,17 +182,30 @@ describe('AccountPage', () => {
     expect(screen.getByRole('heading', { name: /tu lugar, a tu ritmo/i })).toBeInTheDocument();
   });
 
-  it('splash ofrece comprar sin cuenta junto a los logins', async () => {
+  it('prioriza pedir sin registrarse y conserva las alternativas de acceso', async () => {
     render(
       <MemoryRouter>
         <AccountPage />
       </MemoryRouter>,
     );
     expect(await screen.findByRole('heading', { name: /tu lugar, a tu ritmo/i })).toBeInTheDocument();
+    const guest = screen.getByRole('button', { name: /pedir sin registrarme/i });
+    const google = screen.getByRole('button', { name: /continuar con google/i });
+    expect(guest).toBeInTheDocument();
+    expect(guest.compareDocumentPosition(google) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole('button', { name: /crear cuenta/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /continuar con google/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /iniciar sesión/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /comprar sin cuenta/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /entrar a mi cuenta/i })).toBeInTheDocument();
+  });
+
+  it('no muestra la opción de pedir como invitado en flujos que no permiten explorar', async () => {
+    render(
+      <MemoryRouter initialEntries={['/cuenta?next=%2Fe%2Fdemo%2Fcarrito']}>
+        <AccountPage />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole('heading', { name: /tu lugar, a tu ritmo/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /pedir sin registrarme/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /continuar sin cuenta/i })).toBeInTheDocument();
   });
 
   it('verificado no muestra aviso de correo', async () => {

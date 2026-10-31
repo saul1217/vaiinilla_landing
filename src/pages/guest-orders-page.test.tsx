@@ -174,7 +174,7 @@ describe('pedidos del invitado', () => {
     expect(await screen.findByText('Mis pedidos')).toBeInTheDocument();
     expect(screen.getByText('Pádel')).toBeInTheDocument();
     expect(await screen.findByText('Tus pedidos')).toBeInTheDocument();
-    expect(screen.getAllByText('Preparando').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Estamos preparando tu pedido').length).toBeGreaterThan(0);
     const link = screen.getByRole('link', { name: /ver seguimiento/i });
     expect(link.getAttribute('href')).toBe(`/seguimiento/${TOKEN}`);
     expect(listGuestOrders).toHaveBeenCalledWith('padel', LLAVE);
@@ -198,13 +198,14 @@ describe('pedidos del invitado', () => {
     renderPage();
 
     // El alias viene del nombre del invitado; unirse usa su sesión de llave.
-    const alias = await screen.findByRole('textbox', { name: /tu nombre en la mesa/i });
+    const alias = await screen.findByRole('textbox', { name: /cómo te llamas en la mesa/i });
     expect(alias).toHaveValue('Lupi');
     await user.click(screen.getByRole('button', { name: /unirme a la mesa/i }));
 
     expect(joinTable).toHaveBeenCalledWith('guest-jwt', 'qr-5', 'Lupi');
     expect(await screen.findByRole('article', { name: 'Mesa 5' })).toBeInTheDocument();
     // Dos invitados en la misma mesa: solo alias, cada quien ve al otro.
+    await user.click(screen.getByText(/^Ver pedidos y elegir qué pago yo/));
     expect(screen.getByText('Lupi (tú)')).toBeInTheDocument();
     expect(screen.getAllByText('Beto').length).toBeGreaterThan(0);
     expect(screen.getByText('1× Torta')).toBeInTheDocument();
@@ -235,7 +236,7 @@ describe('pedidos del invitado', () => {
     localStorage.clear();
     renderPage();
 
-    expect(await screen.findByText(/aún no hay pedidos/i)).toBeInTheDocument();
+    expect(await screen.findByText(/aún no has hecho pedidos/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /elegir lugar/i })).toHaveAttribute('href', '/pedir');
   });
 });

@@ -109,7 +109,7 @@ export function WalletPage() {
   return (
     <AppShell tab="wallet">
       <main id="main-content" className="alumno-main">
-        <AlumnoPageHeader title="Cartera" />
+        <AlumnoPageHeader title="Mi saldo" />
         {error ? <p className="alumno-error">{error}</p> : null}
         {loading && !wallet && !error ? <LoadingSkeleton shape="wallet" label="Cargando saldo…" /> : null}
         {wallet ? (
@@ -143,6 +143,7 @@ export function WalletBoardView({
   movimientos: WalletData['movimientos'];
   menuPeek?: CatalogProduct[];
 }) {
+  const visibleMovimientos = movimientos.filter((item) => !/cashback/i.test(`${item.tipo} ${item.descripcion}`));
   return (
     <div className="alumno-wallet-board">
       <div className="alumno-wallet-bento">
@@ -177,7 +178,7 @@ export function WalletBoardView({
                   <ShortcutReload />
                 </span>
                 Recargar
-                <span aria-hidden="true">Mostrar QR</span>
+                <span aria-hidden="true">Muestra esta pantalla en caja</span>
               </Link>
             ) : null}
           </div>
@@ -196,13 +197,13 @@ export function WalletBoardView({
         </div>
       </div>
       <div className="alumno-wallet-fill">
-        {movimientos.length > 0 ? (
+        {visibleMovimientos.length > 0 ? (
           <section className="alumno-wallet-rest" aria-labelledby="wallet-moves">
             <h2 className="alumno-section-label" id="wallet-moves">
               Movimientos
             </h2>
             <ul className="alumno-moves alumno-arrive">
-              {movimientos.map((item) => (
+              {visibleMovimientos.map((item) => (
                 <li key={item.id}>
                   <span>
                     <strong>{item.descripcion}</strong>
@@ -235,11 +236,10 @@ export function WalletQrPage() {
           kicker="Recarga en caja"
           title="Código de recarga"
           back={{ to: '/cuenta/saldo', label: 'Volver' }}
-          lead="Este enlace identifica tu cuenta para recargar saldo en Caja. Si llegaste aquí por error, vuelve a tu cuenta."
+          lead="Muestra esta pantalla en caja para recargar saldo. Si llegaste aquí por error, vuelve a tu cuenta."
         />
         <section className="alumno-card alumno-card--qr">
-          {qr ? <img className="wallet-qr" src={qr} alt="Código QR de recarga" /> : null}
-          <p className="alumno-muted">{walletQrUrl(id)}</p>
+          {qr ? <img className="wallet-qr" src={qr} alt="Código para identificar tu saldo" /> : null}
         </section>
         <Link className="alumno-btn alumno-btn--lime" to="/cuenta/saldo">
           Ir a mi saldo

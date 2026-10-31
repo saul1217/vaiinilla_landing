@@ -1,7 +1,7 @@
 // A row of chips with ONE highlight that springs from the previous choice to the new one,
 // stretching with its velocity (motion-design: "shared indicators slide"). Labels flip colour
 // as the pill arrives. The row scrolls sideways when it doesn't fit.
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { createSpring, SNAPPY } from '../lib/spring';
 
 export interface ChipItem {
@@ -16,17 +16,34 @@ export function SlidingChips({
   onSelect,
   label,
   className,
+  hint = 'Desliza para ver más opciones',
 }: {
   items: ChipItem[];
   selected: string | null;
   onSelect: (key: string) => void;
   label: string;
   className?: string;
+  hint?: string;
 }) {
   const track = useRef<HTMLDivElement>(null);
   const pill = useRef<HTMLSpanElement>(null);
   const buttons = useRef(new Map<string, HTMLButtonElement>());
   const springs = useRef<{ x: ReturnType<typeof createSpring>; w: ReturnType<typeof createSpring> } | null>(null);
+  const [overflowing, setOverflowing] = useState(false);
+
+  useLayoutEffect(() => {
+    const row = track.current;
+    if (!row) return;
+    const measure = () => setOverflowing(row.scrollWidth > row.clientWidth + 1);
+    measure();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(row);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [items]);
 
   useLayoutEffect(() => {
     const el = pill.current;
@@ -95,6 +112,7 @@ export function SlidingChips({
           </button>
         ))}
       </div>
+      {overflowing ? <p className="alumno-seg__hint">{hint}</p> : null}
     </div>
   );
 }
