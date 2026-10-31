@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { STAFF_APP_URL } from '../types/api';
 import { useAuth } from '../context/auth-context';
@@ -36,12 +36,49 @@ export function BuyerEntryLink({
   );
 }
 
+const MARKETING_SECTION_LINKS = [
+  { href: '#como-funciona', label: 'Cómo funciona' },
+  { href: '#producto', label: 'Qué incluye' },
+  { href: '#apps', label: 'Apps' },
+  { href: '#para-establecimientos', label: 'Para negocios' },
+] as const;
+
+function MarketingNavPanel({
+  id,
+  open,
+  onClose,
+  accountLabel,
+}: {
+  id: string;
+  open: boolean;
+  onClose: () => void;
+  accountLabel: string;
+}) {
+  if (!open) return null;
+  return (
+    <nav id={id} className="nav__panel" aria-label="Secciones de la landing">
+      {MARKETING_SECTION_LINKS.filter((item) => item.href !== '#apps').map((item) => (
+        <a key={item.href} className="nav__panel-link" href={item.href} onClick={onClose}>
+          {item.label}
+        </a>
+      ))}
+      <Link className="nav__panel-link" to="/cuenta" onClick={onClose}>
+        {accountLabel}
+      </Link>
+    </nav>
+  );
+}
+
 export function SiteNav({ marketing = false }: { marketing?: boolean }) {
   const location = useLocation();
   const { user } = useAuth();
   const { cart } = useCart();
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuId = useId().replace(/:/g, '');
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const count = cart?.lines.reduce((sum, line) => sum + line.quantity, 0) ?? 0;
+  const accountLabel = user ? 'Mi cuenta' : 'Ya tengo cuenta';
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -49,6 +86,23 @@ export function SiteNav({ marketing = false }: { marketing?: boolean }) {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname, location.hash]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [menuOpen]);
 
   const logoHref = marketing ? `${location.pathname}#top` : '/';
 
@@ -60,11 +114,36 @@ export function SiteNav({ marketing = false }: { marketing?: boolean }) {
           <span translate="no">Vaiinilla</span>
         </Link>
         {marketing ? (
-          <nav className="nav__links" aria-label="Navegación principal">
-            <a href="#como-funciona">Cómo pedir</a>
-            <a href="#apps">Apps</a>
-            <a href="#para-establecimientos">Para negocios</a>
-          </nav>
+          <>
+            <nav className="nav__links nav__links--inline" aria-label="Navegación principal">
+              {MARKETING_SECTION_LINKS.map((item) => (
+                <a key={item.href} href={item.href}>
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+            <button
+              ref={menuButtonRef}
+              type="button"
+              className="nav__menu-btn"
+              aria-expanded={menuOpen}
+              aria-controls={menuId}
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              <span className="nav__menu-icon" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
+              <span className="sr-only">{menuOpen ? 'Cerrar menú de secciones' : 'Abrir menú de secciones'}</span>
+            </button>
+            <MarketingNavPanel
+              id={menuId}
+              open={menuOpen}
+              onClose={() => setMenuOpen(false)}
+              accountLabel={accountLabel}
+            />
+          </>
         ) : (
           <nav className="nav__links" aria-label="Navegación principal">
             <NavLink to="/pedir">Lugares</NavLink>
