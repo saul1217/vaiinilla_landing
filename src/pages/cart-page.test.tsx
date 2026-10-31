@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
 import { VaiinillaApiError } from '../lib/api-error';
+import * as cartLib from '../lib/cart';
 import { QA_PHOTO_TACOS } from '../lib/qa-catalog-photos';
 import { CartPage } from './cart-page';
 
@@ -849,6 +850,46 @@ describe('CartPage', () => {
       await user.click(screen.getByRole('button', { name: /continuar con pago en caja/i }));
       await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1));
       expect(createOrder.mock.calls[0]?.[1]).toMatchObject({ pago_diferido: false });
+    });
+
+    it('L4: creación pasa useTab al payload, no payAtEnd crudo si el método no es efectivo', async () => {
+      const toCreate = vi.spyOn(cartLib, 'toCreateOrderInput');
+      setup({ permite: true, enEspacio: true });
+      localStorage.setItem(
+        'vaiinilla.buyer.space.v1',
+        JSON.stringify({ slug: 'demo-a', espacioId: 12, nombre: 'Cancha 2', tipo: 'cancha', pagaAlFinal: true }),
+      );
+      createOrder.mockResolvedValue({
+        id: 'ord-stripe-mesa',
+        folio: 9,
+        estado: 'por_cobrar',
+        metodo_pago: 'stripe',
+        destino: 'en_espacio',
+        qr_token: 'pickup-token',
+        espacio: null,
+        total: '30.00',
+        items: [],
+        pago: {
+          payment_attempt_id: 'attempt-1',
+          payment_intent_id: 'pi_test',
+          stripe_account_id: 'acct_test',
+          payment_status: 'pendiente_pago',
+          client_secret: 'secret',
+          publishable_key: 'pk_test',
+        },
+      });
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
+      await user.click(await screen.findByRole('radio', { name: /pagar al final/i }));
+      await user.click(await screen.findByRole('radio', { name: /pago con stripe/i }));
+      await user.click(screen.getByRole('button', { name: /^continuar con/i }));
+      await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1));
+      expect(toCreate).toHaveBeenCalled();
+      const payAtEndArg = toCreate.mock.calls.at(-1)?.[5];
+      expect(payAtEndArg).toBe(false);
+      expect(createOrder.mock.calls[0]?.[1]).toMatchObject({ pago_diferido: false, metodo_pago: 'stripe' });
+      toCreate.mockRestore();
     });
 
     it('no se ofrece si el negocio no lo permite', async () => {

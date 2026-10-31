@@ -1,10 +1,9 @@
 // A new build waits as the "waiting" service worker (registerType 'prompt'), so it
-// never swaps code under an open checkout. Normal updates apply in silence: the new
-// worker takes over only while the tab is hidden, and the hidden tab reloads, so the
-// buyer comes back to the new version without seeing anything. Only a build that
-// marks `public/update.json` as importante (a change that breaks the old version)
-// shows the toast.
-import { useEffect, useState } from 'react';
+// never swaps code under an open checkout. Updates apply only while the tab is hidden
+// (SKIP_WAITING + reload on controllerchange). Normal updates do so in silence;
+// builds marked `public/update.json` as importante show a toast but still wait for
+// a hidden tab — never mid-checkout, including the "Actualizar" button.
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 async function isImportant(): Promise<boolean> {
   try {
@@ -24,30 +23,29 @@ function activate(waiting: ServiceWorker) {
 
 export function UpdateToast() {
   const [important, setImportant] = useState<ServiceWorker | null>(null);
+  const pendingRef = useRef<ServiceWorker | null>(null);
+  const appliedRef = useRef(false);
+
+  const applyIfHidden = useCallback(() => {
+    const pending = pendingRef.current;
+    if (!pending || appliedRef.current || document.visibilityState !== 'hidden') return;
+    appliedRef.current = true;
+    activate(pending);
+  }, []);
 
   useEffect(() => {
     const sw = typeof navigator === 'undefined' ? undefined : navigator.serviceWorker;
     if (!sw) return;
     let registration: ServiceWorkerRegistration | undefined;
     let seen: ServiceWorker | null = null;
-    let pending: ServiceWorker | null = null;
-    let applied = false;
 
-    const applyIfHidden = () => {
-      if (!pending || applied || document.visibilityState !== 'hidden') return;
-      applied = true;
-      activate(pending);
-    };
     const check = () => {
       const waiting = registration?.waiting;
       if (!waiting || !sw.controller || waiting === seen) return;
       seen = waiting;
       void isImportant().then((yes) => {
-        if (yes) {
-          setImportant(waiting);
-          return;
-        }
-        pending = waiting;
+        pendingRef.current = waiting;
+        if (yes) setImportant(waiting);
         applyIfHidden();
       });
     };
@@ -67,14 +65,14 @@ export function UpdateToast() {
       registration?.removeEventListener('updatefound', onFound);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, []);
+  }, [applyIfHidden]);
 
   if (!important) return null;
 
   return (
     <div className="alumno-update" role="status">
       <span>Hay una versión nueva importante</span>
-      <button type="button" onClick={() => activate(important)}>
+      <button type="button" onClick={() => applyIfHidden()}>
         Actualizar
       </button>
     </div>

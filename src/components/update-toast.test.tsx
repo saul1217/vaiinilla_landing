@@ -1,4 +1,5 @@
 import { act, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UpdateToast } from './update-toast';
 
@@ -57,15 +58,31 @@ describe('UpdateToast', () => {
     expect(waiting).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
   });
 
-  it('una versión importante muestra el aviso y no se aplica sola', async () => {
+  it('una versión importante muestra el aviso y también se aplica solo al ocultar la pestaña', async () => {
     const waiting = fakeServiceWorker();
     serveUpdateJson(true);
     render(<UpdateToast />);
     await flush();
 
     expect(screen.getByRole('status')).toHaveTextContent('Hay una versión nueva importante');
-    act(() => setVisibility('hidden'));
     expect(waiting).not.toHaveBeenCalled();
+
+    act(() => setVisibility('hidden'));
+    expect(waiting).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+  });
+
+  it('importante: el botón Actualizar no activa el SW con la pestaña visible', async () => {
+    const waiting = fakeServiceWorker();
+    serveUpdateJson(true);
+    const user = userEvent.setup();
+    render(<UpdateToast />);
+    await flush();
+
+    await user.click(screen.getByRole('button', { name: /actualizar/i }));
+    expect(waiting).not.toHaveBeenCalled();
+
+    act(() => setVisibility('hidden'));
+    expect(waiting).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
   });
 
   it('si no se puede leer update.json, la trata como normal', async () => {
