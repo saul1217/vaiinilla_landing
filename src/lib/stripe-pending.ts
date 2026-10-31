@@ -45,3 +45,13 @@ export function clearStripeConfirming(orderId?: string): void {
   }
   keys.forEach((key) => sessionStorage.removeItem(key));
 }
+
+/** 3DS u otra confirmación Stripe aún en curso en esta pestaña. */
+export function stripeConfirmingInProgress(): boolean {
+  if (typeof sessionStorage === 'undefined') return false;
+  for (let index = 0; index < sessionStorage.length; index += 1) {
+    const key = sessionStorage.key(index);
+    if (key?.startsWith(CONFIRMING_PREFIX)) return true;
+  }
+  return false;
+}

@@ -22,6 +22,7 @@ import { rememberPickupQrToken } from '../lib/pickup-qr';
 import { rememberSpace } from '../lib/space-session';
 import { savePendingStripeOrderId } from '../lib/stripe-pending';
 import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '../lib/stripe-session';
+import { beginReservationFormDraft } from '../lib/pwa-update';
 import { useHeightMorph } from '../lib/use-height-morph';
 import {
   canReserve,
@@ -189,6 +190,26 @@ export function ReservationsScreen({
 
   const vm = useReservations(client, onPaid);
   const { state } = vm;
+
+  useEffect(() => {
+    const drafting = Boolean(
+      state.pending ||
+        state.working ||
+        (state.selectedCourtId !== null &&
+          (state.selectedStart !== null || state.rentNow || state.selectedDuration !== null)),
+    );
+    if (!drafting) return undefined;
+    return beginReservationFormDraft(`reservations:${slug}`);
+  }, [
+    slug,
+    state.pending,
+    state.rentNow,
+    state.selectedCourtId,
+    state.selectedDuration,
+    state.selectedStart,
+    state.working,
+  ]);
+
   const day = state.day;
   const court = selectedCourt(state);
   const zone = day?.timeZone ?? 'UTC';

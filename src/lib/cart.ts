@@ -111,7 +111,7 @@ export function toCreateOrderInput(
     destino: destination,
     espacio_id: destination === 'en_espacio' ? spaceId : null,
     notas_cocina: combinedKitchenNotes || null,
-    ...(payAtEnd ? { pago_diferido: true } : {}),
+    pago_diferido: payAtEnd,
     items: lines.map((line) => {
       if (line.quantity < 1 || line.quantity > 20) {
         throw new Error('Cada producto admite entre 1 y 20 piezas.');

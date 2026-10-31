@@ -14,6 +14,7 @@ import { canAcceptOrders, canPayAtEnd, cardFee, cartTotal, toCreateOrderInput, u
 import { leftoverPeekProducts, peekCatalogProducts, productImageUrl } from '../lib/catalog-images';
 import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
 import { formatAmount, linePreview, moneyToCents } from '../lib/money';
+import { beginCheckoutSubmit } from '../lib/pwa-update';
 import { piecesLabel, splitPieces } from '../lib/product-pieces';
 import { resolveClientSession } from '../lib/client-session';
 import { lastPlaceSlug } from '../lib/last-place';
@@ -334,6 +335,7 @@ export function CartPage() {
     }
     confirming.current = true;
     setSubmitting(true);
+    const endCheckoutGuard = beginCheckoutSubmit();
     try {
       const storedId = clientId || sessionStorage.getItem(`vaiinilla.buyer.client-id.${slug}`) || undefined;
       const asGuest = !user || fallbackGuest;
@@ -429,8 +431,8 @@ export function CartPage() {
       if (payment === 'stripe') {
         const stripeSession = stripeSessionFromCreatedOrder(order);
         rememberStripeCheckoutSession(order.id, stripeSession);
-        // Sin cuenta el pago se termina en el enlace de seguimiento, no en Mis pedidos.
-        if (user) savePendingStripeOrderId(order.id);
+        // Invitados pagan en seguimiento; la marca pendiente solo aplica en Mis pedidos.
+        if (user && !guestLike) savePendingStripeOrderId(order.id);
       }
       reset();
       // La mesa se conserva para pedir otra ronda sin volver a escanear.
@@ -478,6 +480,7 @@ export function CartPage() {
       setEmailBlocked(cause instanceof VaiinillaApiError && cause.code === 'EMAIL_NOT_VERIFIED');
       setError(errorMessage(cause));
     } finally {
+      endCheckoutGuard();
       if (!retried) confirming.current = false;
       setSubmitting(false);
     }

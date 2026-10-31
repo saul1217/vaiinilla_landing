@@ -1,10 +1,15 @@
 // A new build waits as the "waiting" service worker (registerType 'prompt'), so it
-// never swaps code under an open checkout. Normal updates apply in silence: the new
-// worker takes over only while the tab is hidden, and the hidden tab reloads, so the
-// buyer comes back to the new version without seeing anything. Only a build that
-// marks `public/update.json` as importante (a change that breaks the old version)
-// shows the toast.
-import { useEffect, useState } from 'react';
+// never swaps code under an open checkout. Normal updates apply in silence when it is
+// safe (carrito vacío, sin envío ni pago en curso): al ocultar la pestaña, tras
+// inactividad con carrito vacío, o al volver a /pedir. Builds marked `update.json`
+// as importante show a toast; "Actualizar" llama SKIP_WAITING al instante.
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import {
+  PWA_REGISTRATION_UPDATE_MS,
+  PWA_UPDATE_IDLE_MS,
+  canSilentlyApplyServiceWorkerUpdate,
+} from '../lib/pwa-update';
 
 async function isImportant(): Promise<boolean> {
   try {
@@ -23,58 +28,98 @@ function activate(waiting: ServiceWorker) {
 }
 
 export function UpdateToast() {
+  const location = useLocation();
   const [important, setImportant] = useState<ServiceWorker | null>(null);
+  const pendingRef = useRef<ServiceWorker | null>(null);
+  const appliedRef = useRef(false);
+  const bumpIdleRef = useRef<(() => void) | null>(null);
+  const pathnameRef = useRef(location.pathname);
+  pathnameRef.current = location.pathname;
+
+  const tryApplyPending = useCallback((options?: { requireHidden?: boolean }) => {
+    const pending = pendingRef.current;
+    if (!pending || appliedRef.current) return;
+    if (options?.requireHidden && document.visibilityState !== 'hidden') return;
+    if (!canSilentlyApplyServiceWorkerUpdate()) return;
+    appliedRef.current = true;
+    activate(pending);
+  }, []);
 
   useEffect(() => {
     const sw = typeof navigator === 'undefined' ? undefined : navigator.serviceWorker;
     if (!sw) return;
     let registration: ServiceWorkerRegistration | undefined;
     let seen: ServiceWorker | null = null;
-    let pending: ServiceWorker | null = null;
-    let applied = false;
+    let updateTimer: number | undefined;
 
-    const applyIfHidden = () => {
-      if (!pending || applied || document.visibilityState !== 'hidden') return;
-      applied = true;
-      activate(pending);
+    const scheduleRegistrationUpdate = () => {
+      window.clearTimeout(updateTimer);
+      updateTimer = window.setTimeout(() => {
+        void registration?.update().catch(() => {});
+        scheduleRegistrationUpdate();
+      }, PWA_REGISTRATION_UPDATE_MS);
     };
+
     const check = () => {
       const waiting = registration?.waiting;
       if (!waiting || !sw.controller || waiting === seen) return;
       seen = waiting;
       void isImportant().then((yes) => {
-        if (yes) {
-          setImportant(waiting);
-          return;
-        }
-        pending = waiting;
-        applyIfHidden();
+        pendingRef.current = waiting;
+        if (yes) setImportant(waiting);
+        bumpIdleRef.current?.();
+        tryApplyPending({ requireHidden: true });
+        if (pathnameRef.current === '/pedir') tryApplyPending();
       });
     };
     const onFound = () => registration?.installing?.addEventListener('statechange', check);
     const onVisibility = () => {
-      if (document.visibilityState === 'hidden') applyIfHidden();
+      if (document.visibilityState === 'hidden') tryApplyPending({ requireHidden: true });
       else void registration?.update().catch(() => {});
     };
 
     void sw.getRegistration().then((found) => {
       registration = found;
       check();
+      scheduleRegistrationUpdate();
       registration?.addEventListener('updatefound', onFound);
     });
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
+      window.clearTimeout(updateTimer);
       registration?.removeEventListener('updatefound', onFound);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, []);
+  }, [tryApplyPending]);
+
+  useEffect(() => {
+    if (location.pathname !== '/pedir') return;
+    tryApplyPending();
+  }, [location.pathname, tryApplyPending]);
+
+  useEffect(() => {
+    let idleTimer: number | undefined;
+    const bumpIdle = () => {
+      window.clearTimeout(idleTimer);
+      idleTimer = window.setTimeout(() => tryApplyPending(), PWA_UPDATE_IDLE_MS);
+    };
+    bumpIdleRef.current = bumpIdle;
+    bumpIdle();
+    const events: (keyof WindowEventMap)[] = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+    for (const event of events) window.addEventListener(event, bumpIdle, { passive: true });
+    return () => {
+      bumpIdleRef.current = null;
+      window.clearTimeout(idleTimer);
+      for (const event of events) window.removeEventListener(event, bumpIdle);
+    };
+  }, [tryApplyPending]);
 
   if (!important) return null;
 
   return (
     <div className="alumno-update" role="status">
       <span>Hay una versión nueva importante</span>
-      <button type="button" onClick={() => activate(important)}>
+      <button type="button" onClick={() => important && activate(important)}>
         Actualizar
       </button>
     </div>

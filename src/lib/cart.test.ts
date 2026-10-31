@@ -66,7 +66,29 @@ describe('cart contract', () => {
       destino: 'para_llevar',
       espacio_id: null,
       notas_cocina: 'Sin cebolla',
+      pago_diferido: false,
       items: [{ producto_id: 103, cantidad: 1, opcion_ids: [310, 314] }],
+    });
+  });
+
+  it('manda pago_diferido explícito en mesa con efectivo', () => {
+    const line = {
+      productId: 103,
+      quantity: 1,
+      optionIds: [314, 310],
+      productName: 'Burrito norteño',
+      unitPreview: '82.00',
+      imageUrl: null,
+    };
+    expect(toCreateOrderInput([line], 'efectivo', '', 'en_espacio', 12, true)).toMatchObject({
+      destino: 'en_espacio',
+      metodo_pago: 'efectivo',
+      pago_diferido: true,
+    });
+    expect(toCreateOrderInput([line], 'efectivo', '', 'en_espacio', 12, false)).toMatchObject({
+      destino: 'en_espacio',
+      metodo_pago: 'efectivo',
+      pago_diferido: false,
     });
   });
 
@@ -92,6 +114,7 @@ describe('cart contract', () => {
       metodo_pago: 'stripe',
       destino: 'en_espacio',
       espacio_id: 12,
+      pago_diferido: false,
       items: [{ producto_id: 103, cantidad: 1, opcion_ids: [310, 314] }],
     });
     expect(raw).not.toContain('"total"');
