@@ -116,7 +116,7 @@ export async function signIn(page: Page) {
   await page.getByLabel(/correo/i).first().fill(env.E2E_CLIENTE_EMAIL!);
   await page.getByLabel(/contraseña/i).first().fill(env.E2E_PASSWORD!);
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();
-  const heading = page.getByRole('heading', { name: 'Inicia sesión' });
+  const heading = page.getByRole('heading', { name: 'Entrar a mi cuenta' });
   const alert = page.getByRole('alert').first();
   const outcome = await Promise.race([
     heading.waitFor({ state: 'hidden', timeout: 45_000 }).then(() => 'ok' as const),

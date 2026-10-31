@@ -70,7 +70,7 @@ const AUTH_COPY = {
     ),
     lead: 'Pide, sigue tu pedido y paga desde un solo lugar.',
     panelKicker: 'Acceso seguro',
-    panelTitle: 'Inicia sesión',
+    panelTitle: 'Entrar a mi cuenta',
   },
   alta: {
     kicker: 'Nueva cuenta',

@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShell } from './app-shell';
 
-const authState: { user: null | { email: string } } = {
+const authState: { user: null | { email: string; displayName?: string } } = {
   user: { email: 'ana@example.test' },
 };
 
@@ -41,12 +41,12 @@ describe('AppShell', () => {
     expect(menu).toHaveAttribute('href', '/e/demo-a');
     expect(menu.querySelector('svg path')?.getAttribute('d') ?? '').toMatch(/12 /);
     expect(screen.getByRole('link', { name: /pedidos/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /cartera/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /mi saldo/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /carrito/i })).toHaveAttribute('href', '/e/demo-a/carrito');
     expect(screen.queryByRole('link', { name: /abrir el panel/i })).not.toBeInTheDocument();
   });
 
-  it('invitado con llave: Menú, Pedidos y Carrito, sin Cartera', () => {
+  it('invitado con llave: Menú, Pedidos y Carrito, sin Mi saldo', () => {
     authState.user = null;
     localStorage.setItem('vaiinilla.buyer.guest.v1', JSON.stringify({ nombre: 'Lupi', llave: 'K'.repeat(43) }));
     render(
@@ -59,7 +59,7 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: /menú/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /pedidos/i })).toHaveAttribute('href', '/cuenta/pedidos');
     expect(screen.getByRole('link', { name: /carrito/i })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /cartera/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /mi saldo/i })).not.toBeInTheDocument();
   });
 
   it('invitado de mesa sin llave guardada: el dock no manda a iniciar sesión', () => {
@@ -76,7 +76,7 @@ describe('AppShell', () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole('link', { name: /pedidos/i })).toHaveAttribute('href', '/cuenta/pedidos');
-    expect(screen.queryByRole('link', { name: /cartera/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /mi saldo/i })).not.toBeInTheDocument();
     for (const link of screen.getAllByRole('link')) {
       expect(link.getAttribute('href') ?? '').not.toMatch(/^\/cuenta\?next=/);
     }
@@ -93,7 +93,7 @@ describe('AppShell', () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole('link', { name: /pedidos/i })).toHaveAttribute('href', '/cuenta/pedidos');
-    expect(screen.queryByRole('link', { name: /cartera/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /mi saldo/i })).not.toBeInTheDocument();
     for (const link of screen.getAllByRole('link')) {
       expect(link.getAttribute('href') ?? '').not.toMatch(/^\/cuenta\?next=/);
     }
@@ -109,6 +109,16 @@ describe('AppShell', () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole('link', { name: /pedidos/i })).toHaveAttribute('href', '/cuenta?next=/cuenta/pedidos');
+  });
+
+  it('muestra Mi saldo y conserva la ruta de saldo', () => {
+    authState.user = { email: 'ana@example.test', displayName: 'Ana' };
+    render(
+      <MemoryRouter>
+        <AppShell tab="wallet"><main>contenido</main></AppShell>
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: /mi saldo/i })).toHaveAttribute('href', '/cuenta/saldo');
   });
 
   it('el logo no abre solo un lugar visitado antes: lleva a elegir con QR o código', () => {

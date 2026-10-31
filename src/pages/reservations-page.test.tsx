@@ -272,8 +272,8 @@ describe('ReservationsScreen', () => {
     );
     await user.click(await screen.findByRole('radio', { name: '09:00' }));
     await user.click(await screen.findByRole('button', { name: /apartar cancha/i }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/inicia sesión o crea tu cuenta para reservar/i);
-    expect(screen.getByRole('link', { name: /iniciar sesión o crear cuenta/i })).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(/entra a tu cuenta o crea una para reservar/i);
+    expect(screen.getByRole('link', { name: /entrar a mi cuenta o crear una/i })).toBeInTheDocument();
   });
 
   it.each([
@@ -281,7 +281,7 @@ describe('ReservationsScreen', () => {
     [429, 'RATE_LIMITED', /espera un momento y vuelve a intentar.*RATE_LIMITED/i],
     [500, 'INTERNAL_ERROR', /problema del servicio.*INTERNAL_ERROR/i],
     [0, 'BACKEND_UNAVAILABLE', /servicio no está disponible.*BACKEND_UNAVAILABLE/i],
-    [403, 'ENTRY_TOKEN_INVALID', /inicia sesión o crea tu cuenta para reservar/i],
+    [403, 'ENTRY_TOKEN_INVALID', /entra a tu cuenta o crea una para reservar/i],
   ])('apartar con error %i (%s) muestra un aviso junto al botón', async (status, code, text) => {
     const user = userEvent.setup();
     const failure = new VaiinillaApiError(status, { code, message: 'x' });

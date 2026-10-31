@@ -245,7 +245,7 @@ function GuestAccountInvite({ name }: { name?: string }) {
   return (
     <p className="alumno-muted alumno-tracking__account">
       {name ? `Pides como ${name} sin cuenta. ` : 'Pides sin cuenta. '}
-      ¿Quieres saldo e historial? <Link to="/cuenta">Crea tu cuenta</Link> (opcional).
+      ¿Quieres guardar tus pedidos y consultar tu saldo? <Link to="/cuenta">Crea tu cuenta</Link> (opcional).
     </p>
   );
 }

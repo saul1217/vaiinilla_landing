@@ -55,7 +55,7 @@ export function orderCancelReason(order: Pick<OrderDetail, 'estado' | 'motivo_ca
   return order.estado === 'cancelado' && motivo ? `Motivo: ${motivo}` : null;
 }
 
-export const PAYMENT_CONFIRMED_HINT = 'Stripe confirmó el pago; Vaiinilla actualizará el pedido.';
+export const PAYMENT_CONFIRMED_HINT = 'El pago con tarjeta se confirmó; Vaiinilla actualizará el pedido.';
 
 export const ORDER_FLOW: OrderStatus[] = ['por_cobrar', 'cobrado', 'preparando', 'listo', 'entregado'];
 

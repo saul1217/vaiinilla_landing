@@ -105,7 +105,7 @@ describe('DiscoveryPage', () => {
   });
 
   it.each([
-    ['qr', /escanea el qr/i],
+    ['qr', /usa la cámara/i],
     ['codigo', /ingresa el código de mesa/i],
     ['nfc', /acerca tu teléfono/i],
   ] as const)('?entrada=%s abre la hoja correcta en PlaceEntry', async (entrada, heading) => {

@@ -229,7 +229,7 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
 
   async function send(reason: CallReason) {
     if (!client) {
-      setError('Estamos conectando tu sesión. Intenta de nuevo en unos segundos.');
+      setError('Estamos preparando la llamada. Intenta de nuevo en unos segundos.');
       return;
     }
     setBusy(true);

@@ -1,15 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { resolveTheme, themeColorFor } from './theme';
+import { readThemePreference, resolveTheme, themeColorFor, THEME_STORAGE_KEY } from './theme';
 import { normalizeResolvedSpace } from './resolved-space';
 
 describe('theme', () => {
   it('resuelve sistema a oscuro cuando el OS lo pide', () => {
     expect(resolveTheme('system', true)).toBe('dark');
     expect(resolveTheme('system', false)).toBe('light');
-    expect(resolveTheme('amoled', false)).toBe('amoled');
+    expect(resolveTheme('dark', false)).toBe('dark');
     expect(themeColorFor('light')).toBe('#F4F1E7');
     expect(themeColorFor('dark')).toBe('#171817');
-    expect(themeColorFor('amoled')).toBe('#000000');
+    expect(themeColorFor('dark')).toBe('#171817');
+  });
+
+  it('migra una preferencia AMOLED guardada a oscuro sin cambiar la clave', () => {
+    localStorage.setItem(THEME_STORAGE_KEY, 'amoled');
+    expect(readThemePreference()).toBe('dark');
+    expect(THEME_STORAGE_KEY).toBe('vaiinilla.buyer.theme.v1');
   });
 });
 

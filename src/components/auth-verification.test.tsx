@@ -125,7 +125,7 @@ describe('verificación de correo al crear cuenta', () => {
     expect(await screen.findByText(/Este correo ya tiene una cuenta/)).toBeInTheDocument();
     expect(screen.queryByText(/Firebase/)).not.toBeInTheDocument();
     expect(screen.getByLabelText('Correo')).toHaveValue('nuevo@example.test');
-    expect(screen.getByRole('button', { name: 'Iniciar sesión' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Entrar a mi cuenta' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Recuperar contraseña' })).toBeInTheDocument();
   });
 

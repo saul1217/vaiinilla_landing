@@ -205,7 +205,7 @@ export function TrackingPage() {
                 <Link to="/cuenta/pedidos">Pedidos</Link> al cerrar.
               </p>
             )}
-            <code className="alumno-tracking__link">{link}</code>
+            <p className="alumno-muted">Comparte este enlace para consultar tu pedido en otro dispositivo.</p>
             <div className="alumno-tracking__actions">
               <button type="button" className="alumno-btn alumno-btn--lime" onClick={() => void copy()}>
                 {copied ? 'Enlace copiado' : 'Copiar enlace'}

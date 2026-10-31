@@ -240,7 +240,7 @@ test.describe('alumno responsive', () => {
       await actions.getByRole('link', { name: 'Cuenta' }).click();
       await expect(page).toHaveURL(/\/cuenta$/);
       await page.getByRole('button', { name: 'Entrar a mi cuenta', exact: true }).click();
-      await expect(page.getByRole('heading', { name: 'Inicia sesión' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Entrar a mi cuenta' })).toBeVisible();
 
       const auth = await authMetrics(page);
       expect(auth.authWidth).toBe(width);
@@ -256,7 +256,7 @@ test.describe('alumno responsive', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/cuenta');
     await page.getByRole('button', { name: 'Entrar a mi cuenta', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Inicia sesión' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Entrar a mi cuenta' })).toBeVisible();
 
     const auth = await authMetrics(page);
     expect(auth.mosaicDisplay).toBe('grid');

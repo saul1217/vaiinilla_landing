@@ -181,7 +181,7 @@ export function DiscoveryPage() {
     return (
       <AppShell tab="none">
         <main id="main-content" className="alumno-main" role="status">
-          Validando sesión…
+          Preparando la lista…
         </main>
       </AppShell>
     );

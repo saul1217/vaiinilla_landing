@@ -295,7 +295,8 @@ describe('seguimiento sin cuenta', () => {
     expect(await screen.findByText('¡Listo! Guarda este enlace')).toBeInTheDocument();
     expect(screen.getByText(/como respaldo para otro/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ver en Mis pedidos' })).toHaveAttribute('href', '/cuenta/pedidos');
-    expect(screen.getByText(`${window.location.origin}/seguimiento/${TOKEN}`)).toBeInTheDocument();
+    expect(screen.queryByText(`${window.location.origin}/seguimiento/${TOKEN}`)).not.toBeInTheDocument();
+    expect(screen.getByText(/comparte este enlace para consultar tu pedido/i)).toBeInTheDocument();
     expect(await screen.findByText('Pedido #21')).toBeInTheDocument();
     expect(screen.getByText('Cafetería Demo A')).toBeInTheDocument();
     expect(getTracking).toHaveBeenCalledWith(TOKEN);

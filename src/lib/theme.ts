@@ -1,5 +1,5 @@
-export type ThemePreference = 'system' | 'light' | 'dark' | 'amoled';
-export type ResolvedTheme = 'light' | 'dark' | 'amoled';
+export type ThemePreference = 'system' | 'light' | 'dark';
+export type ResolvedTheme = 'light' | 'dark';
 
 export const THEME_STORAGE_KEY = 'vaiinilla.buyer.theme.v1';
 
@@ -7,16 +7,16 @@ export const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'system', label: 'Sistema' },
   { value: 'light', label: 'Claro' },
   { value: 'dark', label: 'Oscuro' },
-  { value: 'amoled', label: 'AMOLED' },
 ];
 
 export function isThemePreference(value: string | null): value is ThemePreference {
-  return value === 'system' || value === 'light' || value === 'dark' || value === 'amoled';
+  return value === 'system' || value === 'light' || value === 'dark';
 }
 
 export function readThemePreference(): ThemePreference {
   if (typeof window === 'undefined') return 'system';
   const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (stored === 'amoled') return 'dark';
   return isThemePreference(stored) ? stored : 'system';
 }
 
@@ -30,7 +30,6 @@ export function resolveTheme(preference: ThemePreference, prefersDark: boolean):
 }
 
 export function themeColorFor(resolved: ResolvedTheme): string {
-  if (resolved === 'amoled') return '#000000';
   if (resolved === 'dark') return '#171817';
   return '#F4F1E7';
 }

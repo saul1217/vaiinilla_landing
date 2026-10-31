@@ -130,7 +130,7 @@ export function ReservationsPage() {
             guest={!user}
           />
         ) : error ? null : (
-          <LoadingSkeleton shape="rows" label="Abriendo tu sesión…" />
+          <LoadingSkeleton shape="rows" label="Cargando tus reservaciones…" />
         )}
       </main>
     </AppShell>
@@ -720,12 +720,12 @@ function Summary({
         <div className="alumno-error" role="alert">
           <p>
             {guest && state.denied
-              ? 'Inicia sesión o crea tu cuenta para reservar. También puedes escanear el NFC o QR del lugar para apartar sin cuenta.'
+              ? 'Entra a tu cuenta o crea una para reservar. También puedes acercar el teléfono a la etiqueta del lugar para apartar sin cuenta.'
               : state.error}
           </p>
           {guest && state.denied ? (
             <p>
-              <Link to={`/cuenta?next=${encodeURIComponent(`/e/${slug}/canchas`)}`}>Iniciar sesión o crear cuenta</Link>
+              <Link to={`/cuenta?next=${encodeURIComponent(`/e/${slug}/canchas`)}`}>Entrar a mi cuenta o crear una</Link>
             </p>
           ) : null}
         </div>

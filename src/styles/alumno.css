@@ -416,6 +416,7 @@ html[data-theme='amoled'] .alumno-nav {
   font-size: 0.68rem;
   font-weight: 600;
   padding: 8px 0 6px;
+  min-height: 44px;
   position: relative;
   border-radius: 999px;
 }
@@ -1919,7 +1920,7 @@ html[data-theme='amoled'] .alumno-wallet-menu__icon {
 
 .alumno-themes {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin: 12px 0 18px;
 }
@@ -2824,7 +2825,7 @@ html[data-theme='amoled'] .alumno-track-card.is-selected {
   }
 
   .alumno-themes {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .alumno-order-list {

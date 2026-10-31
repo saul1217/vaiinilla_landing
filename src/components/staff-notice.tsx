@@ -22,7 +22,7 @@ export function StaffNotice({
         Ir a mi panel
       </a>
       <p className="alumno-muted alumno-staff-notice__hint">
-        El panel está en otro sitio y te pedirá iniciar sesión otra vez.
+        El panel está en otro sitio y te pedirá entrar de nuevo.
       </p>
       <button className="alumno-btn alumno-btn--ghost alumno-staff-notice__client" type="button" onClick={onContinueAsClient}>
         Si quieres entrar como cliente, pica aquí

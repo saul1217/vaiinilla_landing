@@ -223,12 +223,14 @@ describe('OrderDetailPage', () => {
       destino: 'en_espacio',
       espacio: { id: 4, nombre: 'Mesa 4', tipo: 'mesa' },
       total: '70.00',
+      cashback_otorgado: '125.45',
       notas_cocina: 'Sin cebolla',
       qr_token: 'ticket-token',
       items: [{ id: 1, nombre_producto: 'Burrito', cantidad: 1, subtotal: '70.00' }],
     });
     renderOrder();
     expect(await screen.findByRole('heading', { name: /#42/i })).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/cashback|125\.45/i);
     expect(await screen.findByRole('img', { name: /código de retiro del pedido/i })).toHaveAttribute(
       'src',
       'data:image/png;base64,qr',
