@@ -1,3 +1,4 @@
+import { saveTableDeviceToken, tableDeviceToken } from './table-device-token';
 import { VaiinillaApiError } from './api-error';
 import { createIdempotencyKey } from './idempotency';
 import { VERIFICATION_EMAIL_LANGUAGE, resolveApiUrl, verificationReturnUrl } from './env';
@@ -330,8 +331,19 @@ export const api = {
         ? { token: qrToken, alias: input }
         : 'alias' in input
           ? { token: qrToken, alias: input.alias }
-          : { token: qrToken, participante_id: input.participanteId };
-    return (await request<SharedTable>('/mesas/unirse', { token, method: 'POST', body })).data;
+          : {
+              token: qrToken,
+              participante_id: input.participanteId,
+              // Prueba de que este teléfono es ese participante (si alguna vez lo fue).
+              ...(tableDeviceToken(input.participanteId)
+                ? { dispositivo_token: tableDeviceToken(input.participanteId) }
+                : {}),
+            };
+    const table = (await request<SharedTable>('/mesas/unirse', { token, method: 'POST', body })).data;
+    if (table?.dispositivo_token && table.mi_participante?.id) {
+      saveTableDeviceToken(table.mi_participante.id, table.dispositivo_token);
+    }
+    return table;
   },
 
   /** La mesa del cliente, o null si no está en ninguna. */

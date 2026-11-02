@@ -441,6 +441,8 @@ export interface SharedTable {
   grupos: SharedTableGroup[];
   totales: SharedTableAmounts;
   mi_parte: SharedTableAmounts;
+  /** Solo en POST /mesas/unirse: token de este dispositivo para su participante (se guarda local). */
+  dispositivo_token?: string;
 }
 
 /** Sesión de invitado (compra sin cuenta): una sesión de cliente más su identidad. */
