@@ -119,6 +119,7 @@ describe('TableWhoPage', () => {
     expect(screen.getByRole('button', { name: 'Jesús' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'David' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /agregarme a la mesa/i })).toBeInTheDocument();
+    expect(screen.getByText(/toca tu nombre solo si eres tú/i)).toBeInTheDocument();
   });
 
   it('con yo ofrece continuar y "No soy" muestra la lista', async () => {
