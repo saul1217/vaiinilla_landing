@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useMenuQaFixture } from '../lib/menu-qa-fixture';
 import { GuestOrdersBanner } from '../components/guest-orders-banner';
 import { Link, useParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
@@ -28,7 +29,8 @@ import { statusAsPhrase } from '../lib/status-phrase';
 import { readSpace } from '../lib/space-session';
 import type { OrderDetail } from '../types/api';
 
-export function MenuPage({ qaFixture }: { qaFixture?: { user: { displayName: string; email: string }; place: PublicEstablishment; catalog: CatalogResponse; order: OrderDetail } } = {}) {
+export function MenuPage() {
+  const qaFixture = useMenuQaFixture();
   const { slug = '' } = useParams();
   const { user: authUser } = useAuth();
   const user = qaFixture?.user as typeof authUser ?? authUser;

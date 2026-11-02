@@ -3,6 +3,7 @@
 // espacio escaneado y sus enlaces guardados. Sin Cartera: el saldo es de cuentas;
 // abajo va la invitación opcional a crearla. Contrato: backend
 // docs/compra-sin-cuenta.md (tercera vuelta).
+import { SHOW_WALLET } from '../lib/features';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
@@ -245,7 +246,7 @@ function GuestAccountInvite({ name }: { name?: string }) {
   return (
     <p className="alumno-muted alumno-tracking__account">
       {name ? `Pides como ${name} sin cuenta. ` : 'Pides sin cuenta. '}
-      ¿Quieres guardar tus pedidos y consultar tu saldo? <Link to="/cuenta">Crea tu cuenta</Link> (opcional).
+      ¿Quieres guardar tus pedidos{SHOW_WALLET ? ' y consultar tu saldo' : ''}? <Link to="/cuenta">Crea tu cuenta</Link> (opcional).
     </p>
   );
 }

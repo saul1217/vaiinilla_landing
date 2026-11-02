@@ -8,7 +8,6 @@ import { DiscoveryPage } from '../pages/discovery-page';
 import { EmailVerificationPage, PasswordResetPage } from '../pages/email-action-page';
 import { HomePage } from '../pages/home-page';
 import { MenuPage } from '../pages/menu-page';
-import { MenuMesaQaPage } from '../pages/menu-mesa-qa-page';
 import { NotFoundPage } from '../pages/not-found-page';
 import { OrderDetailPage } from '../pages/order-detail-page';
 import { OrdersPage } from '../pages/orders-page';
@@ -26,6 +25,7 @@ import {
   AlumnoQaCourtsPage,
   AlumnoQaWalletPage,
   AlumnoQaMarketingEntryPage,
+  MenuMesaQaPage,
 } from '../pages/alumno-qa-page';
 
 export function AppRouter() {

@@ -8,6 +8,7 @@ import { StepsCarousel, type Step } from '../components/steps-carousel';
 import { PhoneShot } from '../components/phone-shot';
 import { CafeFilm } from '../components/cafe-film';
 import { markBuyerExplore } from '../lib/buyer-entry';
+import { SHOW_WALLET } from '../lib/features';
 
 const STEPS: readonly Step[] = [
   {
@@ -246,7 +247,7 @@ export function HomePage() {
               </h2>
             </div>
             <ul className="features__grid features__grid--five">
-              {FEATURES.map((feature) => (
+              {FEATURES.filter((feature) => SHOW_WALLET || feature.title !== 'Cartera Vaiinilla').map((feature) => (
                 <li key={feature.title} className="feature" data-reveal>
                   <span className="feature__icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24">
@@ -274,7 +275,7 @@ export function HomePage() {
                 <ul>
                   <li>Menú y disponibilidad al día</li>
                   <li>Pedidos activos e historial</li>
-                  <li>Caja, saldo y retiro con código</li>
+                  {SHOW_WALLET ? <li>Caja, saldo y retiro con código</li> : null}
                   <li>Reservas de canchas en clubes</li>
                 </ul>
                 <a className="btn btn--lime-outline" href={STAFF_APP_URL} target="_blank" rel="noreferrer">
