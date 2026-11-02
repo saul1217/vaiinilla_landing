@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DiscoveryPage } from './discovery-page';
 import { TableCodeSheet } from '../components/table-code-sheet';
@@ -58,12 +58,50 @@ describe('DiscoveryPage', () => {
     expect(screen.getByText(/la ubicación es opcional/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /escribir número de mesa/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /más opciones/i })).toBeInTheDocument();
-    expect(await screen.findByRole('radio', { name: /cafetería demo a/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /cafetería demo a/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /entrar al menú/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Abrir Instagram' })).toHaveAttribute('href', 'https://instagram.com/cafeteria-demo');
     await userEvent.setup().click(screen.getByRole('button', { name: /entrar al menú/i }));
     expect(await screen.findByRole('heading', { name: /cafetería demo a/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /usar código/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /abrir menú/i })).toBeInTheDocument();
+  });
+
+  it('la card de un lugar de acceso libre abre su menú directo', async () => {
+    listEstablishments.mockResolvedValue({
+      establishments: [
+        {
+          id: '2',
+          nombre: 'Local Libre',
+          slug: 'local-libre',
+          identificador_cliente_etiqueta: 'Identificador',
+          identificador_cliente_obligatorio: false,
+        },
+      ],
+      cursor: null,
+    });
+    render(
+      <MemoryRouter initialEntries={['/pedir']}>
+        <Routes>
+          <Route path="/pedir" element={<DiscoveryPage />} />
+          <Route path="/e/:slug" element={<p>Menú abierto</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await userEvent.setup().click(await screen.findByRole('button', { name: /local libre/i }));
+    expect(await screen.findByText('Menú abierto')).toBeInTheDocument();
+    expect(localStorage.getItem('vaiinilla.buyer.last-place.v1')).toBe('local-libre');
+  });
+
+  it('la card de un lugar que pide identificador lo captura antes del menú', async () => {
+    render(
+      <MemoryRouter>
+        <DiscoveryPage />
+      </MemoryRouter>,
+    );
+    await userEvent.setup().click(await screen.findByRole('button', { name: /cafetería demo a/i }));
+    expect(await screen.findByRole('heading', { name: /cafetería demo a/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /matrícula/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /abrir menú/i })).toBeInTheDocument();
   });
 
@@ -142,8 +180,7 @@ describe('DiscoveryPage', () => {
         <DiscoveryPage />
       </MemoryRouter>,
     );
-    await user.click(await screen.findByRole('radio', { name: /cafetería demo a/i }));
-    await user.click(screen.getByRole('button', { name: /entrar al menú/i }));
+    await user.click(await screen.findByRole('button', { name: /entrar al menú/i }));
     await user.click(screen.getByRole('button', { name: /usar código/i }));
     for (const digit of ['1', '2', '3', '4', '5', '6', '7', '8']) {
       await user.click(screen.getByRole('button', { name: digit }));

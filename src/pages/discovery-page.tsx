@@ -133,11 +133,22 @@ export function DiscoveryPage() {
     }
   }
 
-  function openPicker() {
-    if (!selected) return;
+  function openPicker(place: PublicEstablishment | null = selected) {
+    if (!place) return;
+    setSelectedId(place.id);
     setError(null);
-    setClientId(sessionStorage.getItem(`vaiinilla.buyer.client-id.${selected.slug}`) ?? '');
+    setClientId(sessionStorage.getItem(`vaiinilla.buyer.client-id.${place.slug}`) ?? '');
     setStep('picker');
+  }
+
+  // La card abre el menú directo; solo el lugar que pide identificador pasa antes por el paso.
+  function enterPlace(place: PublicEstablishment) {
+    if (place.identificador_cliente_obligatorio) {
+      openPicker(place);
+      return;
+    }
+    rememberPlace(place.slug);
+    void navigate(`/e/${place.slug}`);
   }
 
   function continueToMenu() {
@@ -294,7 +305,7 @@ export function DiscoveryPage() {
                 </div>
               ) : null
             ) : (
-              <div className="alumno-radio-list alumno-arrive" role="radiogroup" aria-label="Establecimientos">
+              <div className="alumno-radio-list alumno-arrive" role="group" aria-label="Establecimientos">
                 {items.map((place) => {
                   const isRecommended = recommended?.id === place.id;
                   const access = place.identificador_cliente_obligatorio
@@ -304,10 +315,8 @@ export function DiscoveryPage() {
                     <button
                       key={place.id}
                       type="button"
-                      role="radio"
-                      aria-checked={selected?.id === place.id}
                       className={selected?.id === place.id ? 'alumno-radio is-on' : 'alumno-radio'}
-                      onClick={() => setSelectedId(place.id)}
+                      onClick={() => enterPlace(place)}
                     >
                       <span className="alumno-place-thumb" aria-hidden="true">
                         <PlaceImage src={place.imagen_url} alt="" />
@@ -370,7 +379,7 @@ export function DiscoveryPage() {
                     </ul>
                   </div>
                 ) : null}
-                <button className="alumno-btn alumno-btn--lime" type="button" onClick={openPicker}>
+                <button className="alumno-btn alumno-btn--lime" type="button" onClick={() => openPicker()}>
                   Entrar al menú
                 </button>
               </div>
