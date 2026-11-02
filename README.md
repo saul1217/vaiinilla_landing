@@ -33,3 +33,7 @@ npm run test:e2e
 | `/u/:id` | QR de recarga en Caja |
 
 `app.vaiinilla.app` queda para staff.
+
+## Monitoreo (Sentry)
+
+Opcional. En Vercel define `VITE_SENTRY_DSN` (DSN del proyecto `vaiinilla-landing-production` en Production y `vaiinilla-landing-develop` en el build de develop) y `VITE_APP_ENV` (`production` / `development`). Sin `VITE_SENTRY_DSN` no se inicializa. No envía PII (el SDK de navegador no adjunta IP/cookies por defecto; `tracesSampleRate: 0`).

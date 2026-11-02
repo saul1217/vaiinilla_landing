@@ -14,6 +14,7 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_AUTH_EMULATOR_URL?: string;
   readonly VITE_ALLOW_UNPUBLISHED_LEGAL_TESTING?: string;
   readonly VITE_STRIPE_PUBLISHABLE_KEY?: string;
+  readonly VITE_SENTRY_DSN?: string;
 }
 
 interface ImportMeta {
