@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { OrderDetail } from '../types/api';
 import {
   orderCancelReason,
+  orderOperationalHint,
   orderRejectedItemsHint,
   orderCollapsedStatusHint,
   orderCompactPayLabel,
@@ -191,5 +192,13 @@ describe('pedido sin cocina: Preparando omitido', () => {
     const base = order({ estado: 'listo', pago_diferido: true });
     const steps = orderTrackSteps({ ...base, items: [...base.items, drink] });
     expect(steps.find((step) => step.key === 'preparando')?.state).toBe('done');
+  });
+});
+
+describe('orderOperationalHint con motivo obsoleto', () => {
+  it('no dice que Caja lo procesará si el pedido ya está listo', () => {
+    expect(orderOperationalHint({ motivo_pendiente_operativo: 'caja_inactiva', estado: 'listo' })).toBeNull();
+    expect(orderOperationalHint({ motivo_pendiente_operativo: 'cocina_inactiva', estado: 'listo' })).toBeNull();
+    expect(orderOperationalHint({ motivo_pendiente_operativo: 'caja_inactiva', estado: 'por_cobrar' })).toMatch(/Caja/);
   });
 });

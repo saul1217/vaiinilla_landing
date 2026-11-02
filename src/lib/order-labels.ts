@@ -40,10 +40,14 @@ export function orderOperationalHint(
   if (order.reserva) return null;
   // Un pedido ya entregado (una renta pagada se da por entregada) o caído no espera a nadie.
   if (order.estado && TERMINAL.includes(order.estado)) return null;
-  if (order.motivo_pendiente_operativo === 'caja_inactiva') {
+  // El motivo se queda guardado aunque el pedido ya avanzó: solo vale mientras espera a esa área.
+  if (order.motivo_pendiente_operativo === 'caja_inactiva' && (!order.estado || order.estado === 'por_cobrar')) {
     return 'Pedido recibido. Caja lo procesará al recuperar la operación.';
   }
-  if (order.motivo_pendiente_operativo === 'cocina_inactiva') {
+  if (
+    order.motivo_pendiente_operativo === 'cocina_inactiva' &&
+    (!order.estado || order.estado === 'por_cobrar' || order.estado === 'cobrado')
+  ) {
     return 'Pedido recibido. Cocina lo preparará al recuperar la operación.';
   }
   return null;
