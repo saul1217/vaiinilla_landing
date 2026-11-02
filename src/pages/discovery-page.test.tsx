@@ -57,6 +57,8 @@ describe('DiscoveryPage', () => {
     expect(await screen.findByRole('heading', { name: /dónde comemos/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /escribir número de mesa/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /más opciones/i })).toBeInTheDocument();
+    const establishments = await screen.findByRole('list', { name: 'Establecimientos' });
+    expect(establishments).toContainElement(await screen.findByRole('listitem'));
     const menu = await screen.findByRole('link', { name: /cafetería demo a.*ver menú/i });
     expect(menu).toHaveAttribute('href', '/e/demo-a');
     expect(screen.getByRole('button', { name: /usar mi ubicación/i })).toBeInTheDocument();

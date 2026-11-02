@@ -45,6 +45,7 @@ describe('verificar correo', () => {
   it('aplica el código del enlace y quita el código de la barra', async () => {
     open('/acceso/verificar', '?mode=verifyEmail&oobCode=abc');
     expect(await screen.findByRole('heading', { name: 'Correo verificado' })).toBeInTheDocument();
+    expect(await screen.findByRole('status')).toHaveTextContent('Ya puedes pagar con tarjeta');
     expect(mocks.applyEmailVerificationCode).toHaveBeenCalledExactlyOnceWith('abc');
     expect(window.location.search).toBe('');
     expect(screen.getByRole('link', { name: 'Ir a mi cuenta' })).toHaveAttribute('href', '/cuenta');

@@ -38,6 +38,8 @@ describe('AppShell', () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole('navigation', { name: /^navegación$/i })).toBeInTheDocument();
+    const navItems = screen.getByRole('navigation', { name: /^navegación$/i }).querySelector('.alumno-nav__items')!;
+    expect(navItems).toHaveStyle({ '--nav-count': String(navItems.querySelectorAll(':scope > a').length) });
     const menu = screen.getByRole('link', { name: /menú/i });
     expect(menu).toHaveAttribute('href', '/e/demo-a');
     expect(menu.querySelector('svg path')?.getAttribute('d') ?? '').toMatch(/12 /);

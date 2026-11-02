@@ -67,7 +67,7 @@ for (const scheme of themes) {
     test('invitado: descubrir, menú, producto y carrito', async ({ page }, info) => {
       const shot = (name: string) => snap(page, name, scheme, info.project.name);
       await page.goto('/pedir');
-      await page.getByRole('radiogroup', { name: 'Establecimientos' }).waitFor();
+      await page.getByRole('list', { name: 'Establecimientos' }).waitFor();
       await shot('01-pedir');
 
       await page.goto(`/e/${SLUG}`);

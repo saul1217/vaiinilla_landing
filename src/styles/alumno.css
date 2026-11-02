@@ -65,6 +65,7 @@ html[data-theme='dark'] {
   --lime-text: var(--lime);
   --bg: #171817;
   --bg-2: #1e1f1c;
+  --cream-2: #2a2b26;
   --surface: #22231f;
   --text: #f4f1e7;
   --text-soft: #c9c7bb;
@@ -8282,11 +8283,12 @@ html[data-theme='dark'] .alumno-actions-3[data-count='2'] a:first-child { backgr
 .alumno-main--discover > .alumno-discovery-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; margin: 14px 0; }
 .alumno-main--discover > .alumno-discovery-tools .alumno-search-wrap { margin: 0; }
 .alumno-main--discover > .alumno-discovery-tools .alumno-search { min-height: 48px; background: var(--surface); color: var(--text); border: 1px solid var(--line); box-shadow: none; }
-.alumno-main--discover > .alumno-discovery-tools .alumno-location-btn { width: 48px; height: 48px; padding: 0; justify-self: stretch; }
+.alumno-main--discover > .alumno-discovery-tools .alumno-location-btn { min-width: 48px; min-height: 48px; height: auto; padding: 8px 12px; justify-self: stretch; white-space: normal; overflow-wrap: anywhere; }
 .alumno-main--discover > .alumno-discovery-tools .alumno-location-note { font-size: .7rem; }
 .alumno-main--discover .alumno-radio-list { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; padding: 2px 2px 12px; margin: 0 -2px 20px; scrollbar-width: none; }
 .alumno-main--discover .alumno-radio-list::-webkit-scrollbar { display: none; }
-.alumno-main--discover .alumno-discovery-card { flex: 0 0 min(310px, 84vw); min-height: 96px; scroll-snap-align: start; text-decoration: none; }
+.alumno-main--discover .alumno-radio-list > [role='listitem'] { flex: 0 0 min(310px, 84vw); scroll-snap-align: start; display: flex; }
+.alumno-main--discover .alumno-discovery-card { width: 100%; min-height: 96px; scroll-snap-align: start; text-decoration: none; }
 .alumno-main--discover .alumno-discovery-card__menu { display: inline-flex; align-items: center; gap: 5px; color: var(--lime-text); background: var(--bg-2); padding: 8px 11px; border-radius: 999px; font-size: .76rem; font-weight: 800; white-space: nowrap; }
 html[data-theme='dark'] body[data-shell='alumno'] .alumno-product > div { color: var(--text); }
 html[data-theme='dark'] body[data-shell='alumno'] .alumno-product p { color: var(--text-soft); }

@@ -1,4 +1,3 @@
-import { SHOW_WALLET } from '../lib/features';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
@@ -51,7 +50,7 @@ export function EmailVerificationPage() {
         await applyEmailVerificationCode(action.code);
         if (!active) return;
         setState('success');
-        setMessage(SHOW_WALLET ? 'Tu correo quedó verificado. Ya puedes usar saldo y tarjeta.' : 'Tu correo quedó verificado.');
+        setMessage('Ya puedes pagar con tarjeta');
       } catch (cause) {
         if (!active) return;
         setState('error');

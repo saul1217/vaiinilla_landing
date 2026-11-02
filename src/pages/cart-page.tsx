@@ -27,6 +27,7 @@ import { isStripeCheckoutEnabled, offersCardPayment, STRIPE_UNAVAILABLE_COPY } f
 import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '../lib/stripe-session';
 import { readGuest } from '../lib/guest-session';
 import { clientSessionForPlace } from '../lib/client-session-for-place';
+import { SHOW_WALLET } from '../lib/features';
 import { currentScannedTable, joinedScannedTable } from '../lib/scanned-table';
 import { rememberGuestOrder, trackingPath } from '../lib/guest-orders';
 import type { SpaceSession } from '../lib/space-session';
@@ -697,7 +698,7 @@ export function CartPage() {
               {insufficientBalance ? (
                 <p className="alumno-error">
                   No tienes saldo suficiente para este pedido.{' '}
-                  <Link to="/cuenta/saldo">Ver mi saldo y cómo recargar en caja</Link>
+                  {SHOW_WALLET ? <Link to="/cuenta/saldo">Ver mi saldo y cómo recargar en caja</Link> : null}
                 </p>
               ) : null}
               {guestLike ? (
