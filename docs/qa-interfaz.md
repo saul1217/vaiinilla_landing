@@ -23,6 +23,8 @@ Si la API responde 5xx, falla la red hacia `/api/v1/` o no aparece el contenido 
 
 Solo se generan en el contenedor fijo de Playwright en CI (`mcr.microsoft.com/playwright:v<versión de @playwright/test>-noble`) con `PLAYWRIGHT_CONTAINER=1 npx playwright test -c playwright.ui.config.ts visual --update-snapshots`. `playwright.ui.config.ts` rechaza `--update-snapshots` fuera de ese contenedor. Las referencias quedan en `e2e-ui/__screenshots__/`.
 
+Corre `qa-interfaz` a mano con `update_snapshots`, baja el artefacto `capturas-referencia` y súbelo a `e2e-ui/__screenshots__/`: sin ese commit, cada prueba falla con «snapshot doesn't exist», no por diferencias.
+
 ## axe
 
 Bloquea solo violaciones `serious` y `critical` (WCAG 2/2.1 A y AA, 390 px, ambos temas). Excepciones en `e2e-ui/a11y-exceptions.json`; cada una exige `ticket` con formato `owner/repo#N`.

@@ -50,6 +50,14 @@ jobs:
           if [ "$UPDATE_SNAPSHOTS" = "true" ]; then args+=(--update-snapshots); fi
           npx playwright test -c playwright.ui.config.ts "${args[@]}"
       - run: npx --yes @lhci/cli@0.15.x autorun --config=lighthouserc.json --collect.url="$E2E_BASE_URL/pedir" --collect.url="$E2E_BASE_URL/e/ci-canchas/canchas" --collect.url="$E2E_BASE_URL/e/ci-tienda"
+      # Las referencias nuevas viven en este contenedor: se suben para versionarlas en el repo.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ inputs.update_snapshots }}
+        with:
+          name: capturas-referencia
+          path: e2e-ui/__screenshots__
+          retention-days: 7
+          if-no-files-found: error
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         # Solo si falla, 3 días. Solo el reporte HTML: nunca storageState ni archivos de sesión.
         if: failure()
