@@ -6,10 +6,13 @@ import { BuyerSessionProvider } from './context/buyer-session';
 import { CartProvider } from './context/cart-context';
 import { ThemeProvider } from './context/theme-context';
 import { installPreloadErrorRecovery } from './lib/preload-recovery';
+import { initMonitoring } from './lib/monitoring';
 import './styles/global.css';
 import './styles/marketing.css';
 import './styles/app.css';
 import './styles/alumno.css';
+
+initMonitoring();
 
 // iOS Safari only applies :active (our press feedback) when a touch listener exists.
 document.addEventListener('touchstart', () => undefined, { passive: true });

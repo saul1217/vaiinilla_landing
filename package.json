@@ -19,6 +19,7 @@
     "lhci": "npx --yes @lhci/cli@0.15.x autorun --config=lighthouserc.json"
   },
   "dependencies": {
+    "@sentry/react": "^11.10.0",
     "@stripe/react-stripe-js": "^6.10.0",
     "@stripe/stripe-js": "^9.16.0",
     "firebase": "^12.17.1",
