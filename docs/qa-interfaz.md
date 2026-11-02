@@ -14,6 +14,7 @@ Capturas comparadas, axe, pruebas de teclado y Lighthouse CI para `/pedir`, men√
 - Animaciones y transiciones desactivadas; horas, contadores y folios ocultos (`VOLATILE_SELECTORS` en `e2e-ui/support.ts`; para ocultar otro elemento basta `data-volatile`).
 - Cada captura espera a que terminen las fuentes, la red y a que aparezca el contenido sembrado.
 - Tama√±os 390x844 y 1280x800, tema claro y oscuro.
+- En `/pedir` solo se deja la tienda de CI en la respuesta de la API, para que un negocio nuevo no cambie la captura.
 
 ## Corridas bloqueadas (datos de develop)
 

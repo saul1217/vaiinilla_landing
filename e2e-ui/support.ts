@@ -106,6 +106,21 @@ export async function gotoReady(page: Page, path: string, apiProblems: ApiProble
   await stabilize(page);
 }
 
+/**
+ * /pedir lista todos los negocios de develop: con otro negocio cambiaría la altura de la captura
+ * y una máscara no lo evita. Deja solo la tienda de CI en la respuesta real.
+ */
+export async function soloTiendaDeCi(page: Page) {
+  await page.route(/\/publico\/establecimientos(\?|$)/, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { data: { slug: string }[] };
+    await route.fulfill({
+      response,
+      json: { ...body, data: body.data.filter((place) => place.slug === SHOP_SLUG) },
+    });
+  });
+}
+
 export async function signIn(page: Page) {
   if (!env.E2E_CLIENTE_EMAIL || !env.E2E_PASSWORD) {
     test.skip(true, 'BLOQUEADA: falta la cuenta cliente de CI (E2E_CLIENTE_EMAIL / E2E_PASSWORD).');
