@@ -25,6 +25,7 @@ import { deliveredAtLabel, isSharableSpace, spaceNoun } from '../lib/space-words
 import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
 import { isStripeCheckoutEnabled, offersCardPayment, STRIPE_UNAVAILABLE_COPY } from '../lib/stripe-public';
 import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '../lib/stripe-session';
+import { isAwaitingAcceptance } from '../lib/stripe-status';
 import { readGuest } from '../lib/guest-session';
 import { clientSessionForPlace } from '../lib/client-session-for-place';
 import { currentScannedTable, joinedScannedTable } from '../lib/scanned-table';
@@ -428,7 +429,8 @@ export function CartPage() {
       const key = idempotencyKeyFor(fingerprint);
       const order = await api.createOrder(session.access_token, payload, key);
       rememberPickupQrToken(order.id, order.qr_token);
-      if (payment === 'stripe') {
+      // Un encargo con tarjeta llega sin `pago`: se cobra cuando el negocio lo acepte.
+      if (payment === 'stripe' && !isAwaitingAcceptance(order)) {
         const stripeSession = stripeSessionFromCreatedOrder(order);
         rememberStripeCheckoutSession(order.id, stripeSession);
         // Invitados pagan en seguimiento; la marca pendiente solo aplica en Mis pedidos.

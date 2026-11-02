@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
 import { VaiinillaApiError } from '../lib/api-error';
 import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
-import { rememberStripeCheckoutSession } from '../lib/stripe-session';
+import { clearStripeCheckoutSession, rememberStripeCheckoutSession } from '../lib/stripe-session';
 import { CASH_COUNTER_COPY, STRIPE_COPY, STRIPE_TOTAL_LABEL } from '../lib/stripe-status';
 import type { OrderDetail, SharedTable, SharedTableOrder } from '../types/api';
 import { OrderDetailPage } from './order-detail-page';
@@ -345,6 +345,81 @@ describe('OrderDetailPage', () => {
     await user.click(await screen.findByRole('button', { name: /pagar ahora/i }));
     expect(await screen.findByText(STRIPE_COPY.processing)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /pagar ahora/i })).not.toBeInTheDocument();
+  });
+
+  describe('encargo con tarjeta', () => {
+    const HORA = 60 * 60 * 1000;
+    const enUnDia = () => new Date(Date.now() + 24 * HORA).toISOString();
+    const session = {
+      payment_attempt_id: 'attempt-1',
+      payment_intent_id: 'pi_test_001',
+      client_secret: 'pi_test_001_secret_test',
+      stripe_account_id: 'acct_test_001',
+      publishable_key: 'pk_test_51Vaiinilla',
+      payment_status: 'pendiente_pago' as const,
+    };
+
+    it('sin aceptar no ofrece pagar y dice que espera al negocio', async () => {
+      getOrder.mockResolvedValue(stripeOrder({ estado: 'por_aceptar', pago: null }));
+      renderOrder();
+      expect(await screen.findByText(STRIPE_COPY.awaitingAcceptance)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('El negocio está revisando tu pedido');
+      expect(screen.queryByRole('button', { name: /pagar|reintentar/i })).not.toBeInTheDocument();
+      expect(retryStripePayment).not.toHaveBeenCalled();
+    });
+
+    it('pagado antes de este cambio no pide pagar otra vez', async () => {
+      getOrder.mockResolvedValue(
+        stripeOrder({
+          estado: 'por_aceptar',
+          pago: {
+            payment_attempt_id: 'attempt-1',
+            payment_intent_id: 'pi_test_001',
+            stripe_account_id: 'acct_test_001',
+            payment_status: 'confirmado',
+          },
+        }),
+      );
+      renderOrder();
+      expect(await screen.findByText(STRIPE_COPY.paidAwaitingAcceptance)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /pagar|reintentar/i })).not.toBeInTheDocument();
+    });
+
+    it('aceptado muestra el anticipo y abre el pago con POST /pedidos/:id/pago/stripe', async () => {
+      getOrder.mockResolvedValue(stripeOrder({ pago: null, anticipo: '50.00', pagar_antes_de: enUnDia() }));
+      retryStripePayment.mockResolvedValue(session);
+      const user = userEvent.setup();
+      renderOrder();
+      expect(await screen.findByText(/tienes hasta .* para pagar/i)).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Pagar anticipo de $50' }));
+
+      expect(retryStripePayment).toHaveBeenCalledWith('jwt', 'ord-1', expect.any(String));
+      expect(await screen.findByTestId('stripe-payment-element')).toBeInTheDocument();
+      expect(screen.getByText('Anticipo a pagar').closest('.alumno-stripe-total')).toHaveTextContent('$50.00 MXN');
+    });
+
+    it('aceptado sin anticipo paga el pedido, también si recargó con un intento abierto', async () => {
+      clearStripeCheckoutSession();
+      getOrder.mockResolvedValue(stripeOrder({ pagar_antes_de: enUnDia() }));
+      renderOrder();
+      expect(await screen.findByRole('button', { name: 'Pagar pedido' })).toBeInTheDocument();
+    });
+
+    it('con el plazo vencido ya no ofrece pagar', async () => {
+      getOrder.mockResolvedValue(
+        stripeOrder({ pago: null, pagar_antes_de: new Date(Date.now() - HORA).toISOString() }),
+      );
+      renderOrder();
+      expect(await screen.findByText(STRIPE_COPY.paymentWindowExpired)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /pagar|reintentar/i })).not.toBeInTheDocument();
+    });
+
+    it('un pedido normal por cobrar no muestra el botón', async () => {
+      getOrder.mockResolvedValue(stripeOrder({}));
+      renderOrder();
+      expect(await screen.findByText(STRIPE_COPY.waiting)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /pagar|reintentar/i })).not.toBeInTheDocument();
+    });
   });
 
   it('processing no se muestra como cobrado ni permite retry', async () => {

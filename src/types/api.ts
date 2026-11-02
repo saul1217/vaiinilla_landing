@@ -1,6 +1,7 @@
 import { resolveStaffAppUrl } from '../lib/env';
 
 export type OrderStatus =
+  | 'por_aceptar'
   | 'por_cobrar'
   | 'cobrado'
   | 'preparando'
@@ -287,6 +288,12 @@ export interface OrderDetail {
   /** Cuándo avisó "ya llegué" (drive-thru); `null` si no lo ha hecho. */
   llegada_en?: string | null;
   reserva?: OrderReservation | null;
+  /** Encargo: lo que cobra la tarjeta si no es el total; el resto se paga al recibir. */
+  anticipo?: string | null;
+  /** Encargo: hasta cuándo contesta el negocio. */
+  aceptar_antes_de?: string | null;
+  /** Encargo con tarjeta ya aceptado: hasta cuándo puede pagar el cliente. */
+  pagar_antes_de?: string | null;
 }
 
 export interface OrderPayment {
