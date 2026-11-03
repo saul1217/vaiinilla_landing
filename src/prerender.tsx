@@ -13,8 +13,8 @@ import { ThemeProvider } from './context/theme-context';
 export { applyMetaToHtml, metaForPath } from './lib/seo';
 
 /**
- * Sin VITE_STAFF_APP_URL los enlaces al panel caen en el respaldo de env.ts (app.vaiinilla.app en
- * builds production). Ese respaldo es un diagnóstico del bundle, no contenido: el prerender no lo
+ * Sin VITE_STAFF_APP_URL los enlaces al panel caen en el respaldo de env.ts (el panel de
+ * producción en builds production). Ese respaldo es un diagnóstico del bundle, no contenido: el prerender no lo
  * escribe en el HTML y deja esas rutas solo con su head.
  */
 export const staffAppUrlConfigured = Boolean(import.meta.env.VITE_STAFF_APP_URL?.trim());
