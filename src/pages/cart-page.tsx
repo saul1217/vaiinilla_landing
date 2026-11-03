@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
@@ -853,7 +853,7 @@ export function CartFilledView({
     <div className="alumno-cart-layout">
       <div className="alumno-cart-actions">
         <Link className="alumno-btn alumno-btn--lime" to={`/e/${slug ?? ''}`}>＋ <span>Agregar más</span></Link>
-        <label className="alumno-field alumno-cart-note">Nota para cocina<textarea value={notes} onChange={(event) => onNotesChange(event.target.value)} rows={1} /></label>
+        <label className="alumno-field alumno-cart-note">Nota para cocina<CartNoteInput value={notes} onChange={onNotesChange} /></label>
       </div>
       <div className="alumno-cart-stats" aria-label="Resumen del pedido">
         <div><span>Productos</span><strong>{productCount}</strong></div>
@@ -881,6 +881,9 @@ export function CartFilledView({
                 </strong>
                 {line.notes ? <p className="alumno-muted alumno-line__notes" style={{ margin: '0.15rem 0', fontSize: '0.85rem' }}>{line.notes}</p> : null}
                 <p>{formatAmount(unitFor(line, payment))} c/u</p>
+              </div>
+              <span className="alumno-line__price">{lineTotal ? formatAmount(lineTotal) : '—'}</span>
+              <div className="alumno-line__controls">
                 <div className="alumno-qty">
                   <button
                     type="button"
@@ -898,9 +901,6 @@ export function CartFilledView({
                     +
                   </button>
                 </div>
-              </div>
-              <div className="alumno-line__side">
-                <span className="alumno-line__price">{lineTotal ? formatAmount(lineTotal) : '—'}</span>
                 <button
                   className="alumno-line__remove"
                   type="button"
@@ -1059,6 +1059,18 @@ export function CartEmptyView({
       ) : null}
     </div>
   );
+}
+
+/** Crece con el texto; el tope de 6 líneas lo pone el CSS y de ahí se desplaza. */
+export function CartNoteInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    node.style.height = 'auto';
+    node.style.height = `${node.scrollHeight}px`;
+  }, [value]);
+  return <textarea ref={ref} value={value} onChange={(event) => onChange(event.target.value)} rows={1} />;
 }
 
 function NoteIcon() {
