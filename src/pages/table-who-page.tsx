@@ -179,6 +179,9 @@ export function TableWhoPage() {
           <>
             {session.participantes.length === 0 ? null : (
               <div className="alumno-arrive table-who__stack">
+                <p className="alumno-muted">
+                  Ya están en la mesa. Toca tu nombre solo si eres tú; si no, agrégate abajo.
+                </p>
                 {session.participantes.map((person) => (
                   <button
                     key={person.id}

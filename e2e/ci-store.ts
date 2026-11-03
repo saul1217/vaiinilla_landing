@@ -13,7 +13,7 @@ export const CI_CART_URL_RE = new RegExp(`/e/${escape(CI_SLUG)}/carrito$`);
 /**
  * Precondición de datos/entorno: la tienda de CI debe existir y estar listada en el backend de
  * develop. Si no, falla de inmediato con el estado HTTP real en lugar de agotar 20 s buscando un
- * radio que nunca llega (distingue backend inalcanzable, tienda no sembrada y tienda no pública).
+ * card que nunca llega (distingue backend inalcanzable, tienda no sembrada y tienda no pública).
  */
 export async function assertCiStoreSeeded(request: APIRequestContext): Promise<void> {
   const detail = await request

@@ -1,7 +1,8 @@
 import { defineConfig } from 'vitest/config';
-import type { ProxyOptions } from 'vite';
+import { loadEnv, type ProxyOptions } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { seoPlugin } from './scripts/vite-plugin-seo';
 
 // E2E_API_ORIGIN apunta el proxy al backend del stack de CI (QA-044) en lugar de development.
 const developmentApiOrigin = process.env.E2E_API_ORIGIN || 'https://vaiinillaback-development.up.railway.app';
@@ -18,11 +19,18 @@ const apiProxy: Record<string, ProxyOptions> = {
   },
 };
 
-export default defineConfig({
+// El build SSR (--ssr src/prerender.tsx) solo produce el render de las rutas públicas: sin PWA ni SEO.
+export default defineConfig(({ mode, isSsrBuild }) => ({
   plugins: [
     react(),
+    !isSsrBuild &&
+      seoPlugin({
+        vercelEnv: process.env.VERCEL_ENV,
+        siteVerification: loadEnv(mode, process.cwd(), 'VITE_').VITE_GOOGLE_SITE_VERIFICATION,
+      }),
     // Installable buyer app. Updates wait for every tab to close (registerType
     // 'prompt' with no prompt) so a new build never reloads a checkout mid-payment.
+    !isSsrBuild &&
     VitePWA({
       registerType: 'prompt',
       injectRegister: 'script-defer',
@@ -53,7 +61,9 @@ export default defineConfig({
       workbox: {
         // App shell only. API, Stripe and Firebase always go to the network.
         globPatterns: ['**/*.{js,css,html,woff2}', 'icons/*.png', 'brand/*.png'],
-        navigateFallback: '/index.html',
+        // index.html trae la home prerenderizada; las demás rutas arrancan del shell vacío.
+        navigateFallback: '/spa.html',
+        globIgnores: ['google*.html', 'brand/og.png'],
         navigateFallbackDenylist: [/^\/api\//, /^\/\.well-known\//, /^\/__/],
         cleanupOutdatedCaches: true,
         runtimeCaching: [
@@ -88,4 +98,4 @@ export default defineConfig({
       VITE_API_URL: 'https://vaiinillaback-development.up.railway.app/api/v1',
     },
   },
-});
+}));

@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && node scripts/check-bundle-domains.mjs",
+    "build": "tsc -b && vite build && vite build --ssr src/prerender.tsx --outDir dist-ssr && node scripts/prerender.mjs && node scripts/check-bundle-domains.mjs",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
@@ -19,6 +19,7 @@
     "lhci": "npx --yes @lhci/cli@0.15.x autorun --config=lighthouserc.json"
   },
   "dependencies": {
+    "@sentry/react": "^11.10.0",
     "@stripe/react-stripe-js": "^6.10.0",
     "@stripe/stripe-js": "^9.16.0",
     "firebase": "^12.17.1",

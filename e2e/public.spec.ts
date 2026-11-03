@@ -48,7 +48,7 @@ test('discovery y menú públicos responden contra el backend de development', a
   await expect(page.getByRole('heading', { name: /en qué restaurante estás/i })).toBeVisible();
   // Ya no existe el botón «Continuar»: con la tienda de CI listada se ofrece «Entrar al menú».
   await page.getByRole('textbox', { name: /buscar restaurante/i }).fill(CI_PLACE_NAME);
-  await expect(page.getByRole('radiogroup', { name: /establecimientos/i }).getByRole('radio').first()).toBeVisible({
+  await expect(page.getByRole('group', { name: /establecimientos/i }).getByRole('button').first()).toBeVisible({
     timeout: 20_000,
   });
   await expect(page.getByRole('button', { name: /entrar al menú/i })).toBeVisible();
