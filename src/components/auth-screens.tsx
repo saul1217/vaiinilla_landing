@@ -803,9 +803,6 @@ function AuthSplit({
       <section className="alumno-auth__panel">
         {onBack ? <AlumnoBack onClick={onBack}>Volver</AlumnoBack> : null}
         <AlumnoLogo className="alumno-auth__window-logo" alt="" />
-        <div className="alumno-auth__mark" aria-hidden="true">
-          <img src="/brand/vaiinilla-mark.png" alt="" />
-        </div>
         <p className="alumno-kicker">{copy.panelKicker}</p>
         <h1>{copy.panelTitle}</h1>
         {children}

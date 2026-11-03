@@ -65,6 +65,7 @@ html[data-theme='dark'] {
   --lime-text: var(--lime);
   --bg: #171817;
   --bg-2: #1e1f1c;
+  --cream-2: #2a2b26;
   --surface: #22231f;
   --text: #f4f1e7;
   --text-soft: #c9c7bb;
@@ -444,8 +445,9 @@ html[data-theme='dark'] .alumno-nav {
 
 .alumno-nav__items {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 2px;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0;
 }
 
 .alumno-nav__items a {
@@ -478,7 +480,7 @@ html[data-theme='dark'] .alumno-nav {
 .alumno-nav__pill {
   position: absolute;
   inset: 0 auto 0 0;
-  width: calc((100% - 6px) / 4);
+  width: calc(100% / var(--nav-count, 4));
   border-radius: 999px;
   background: color-mix(in srgb, var(--text) 8%, var(--nav-bg));
   will-change: transform;
@@ -1763,7 +1765,7 @@ body[data-shell='alumno'] .alumno-product > div {
 }
 
 body[data-shell='alumno'] .alumno-product h2 { font-size: 1rem; font-weight: 900; }
-body[data-shell='alumno'] .alumno-product p { color: #fff; font-size: .92rem; }
+body[data-shell='alumno'] .alumno-product p { color: inherit; font-size: .92rem; }
 body[data-shell='alumno'] .alumno-product__ph--vaini { background: var(--cream-2); }
 body[data-shell='alumno'] .alumno-product__ph--vaini img { object-fit: contain; }
 body[data-shell='alumno'] .alumno-product:has(.alumno-product__ph)::after { display: none; }
@@ -1810,7 +1812,7 @@ body[data-shell='alumno'] .alumno-btn { min-height: 52px; border-radius: 999px; 
   body[data-shell='alumno'] .alumno-main--catalog { position:relative; padding-top:0; }
   body[data-shell='alumno'] .alumno-menu-cover { display:flex; position:absolute; z-index:0; top:0; left:-20px; right:-20px; height:280px; background-color:#d9cfb6; background-position:center 42%; background-size:cover; background-image:linear-gradient(180deg,rgba(32,32,29,.62),rgba(244,241,231,.08) 62%,var(--bg) 100%); overflow:hidden; }
   body[data-shell='alumno'] .alumno-menu-cover img { width:100%;height:100%;object-fit:cover;opacity:.45; }
-  body[data-shell='alumno'] .alumno-menu-cover--brand { background-image: linear-gradient(160deg, #a8cf38 0%, #d9e7a0 38%, #f4f1e7 100%); }
+  body[data-shell='alumno'] .alumno-menu-cover--brand { background-image: linear-gradient(160deg, #a8cf38 0%, #d9e7a0 38%, var(--bg) 100%); }
   body[data-shell='alumno'] .alumno-menu-mobile-head { display:flex; position:relative; z-index:2; justify-content:space-between; align-items:center; padding:14px 0 30px; }
   body[data-shell='alumno'] .alumno-change-place { display:flex;align-items:center;gap:10px;min-height:52px;padding:0 18px;border-radius:999px;color:#fff;background:rgba(27,27,25,.48);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);text-decoration:none;font-weight:800; }
   body[data-shell='alumno'] .alumno-change-place svg { width:26px;height:26px; }
@@ -1837,7 +1839,9 @@ body[data-shell='alumno'] .alumno-btn { min-height: 52px; border-radius: 999px; 
   body[data-shell='alumno'] .alumno-deskhead .alumno-pagehead h1 {
     font-size: clamp(2.5rem, 11vw, 3.4rem); text-transform: uppercase; max-width: 13ch;
   }
-  body[data-shell='alumno'] .alumno-search { min-height: 52px; border-radius: 999px; background: var(--cream-2); }
+  body[data-shell='alumno'] .alumno-search { min-height: 52px; border-radius: 999px; background: var(--surface); color: var(--text); }
+  body[data-shell='alumno'] .alumno-search-wrap svg { color: var(--muted); }
+  html[data-theme='dark'] body[data-shell='alumno'] .alumno-menu-cover--brand { background-image: linear-gradient(160deg, #4d6021 0%, #333c24 38%, var(--bg) 100%); }
 }
 
 .alumno-ticket-note {
@@ -1846,14 +1850,15 @@ body[data-shell='alumno'] .alumno-btn { min-height: 52px; border-radius: 999px; 
 }
 
 .alumno-card--ticket .alumno-card--qr {
-  background: #fff;
+  background: var(--surface);
+  color: var(--text);
   border-radius: 22px;
   padding: 16px 16px 12px;
   margin: 4px 0 16px;
 }
 
 .alumno-card--ticket .alumno-card--qr .alumno-muted {
-  color: #6b6c64;
+  color: var(--muted);
 }
 
 .alumno-card--ticket .alumno-ticket-items li {
@@ -4343,16 +4348,6 @@ html[data-theme='dark'] .alumno-track-card.is-selected {
   height: 28px;
   object-fit: contain;
   flex: 0 0 auto;
-  border-radius: 8px;
-}
-
-html[data-theme='light'] .alumno-lockup img {
-  mix-blend-mode: multiply;
-}
-
-html[data-theme='dark'] .alumno-lockup img,
-.alumno-lockup--on-dark img {
-  mix-blend-mode: screen;
 }
 
 .alumno-back {
@@ -4373,7 +4368,8 @@ html[data-theme='dark'] .alumno-lockup img,
 }
 
 body[data-shell='alumno'] .alumno-nav__items a.is-on svg { color: #a8cf38; }
-body[data-shell='alumno'] .alumno-nav__items a:not(.is-on) svg { color: #4b4b43; }
+body[data-shell='alumno'] .alumno-nav__items a:not(.is-on) svg { color: var(--muted); }
+html[data-theme='dark'] body[data-shell='alumno'] .alumno-nav__items a:not(.is-on) svg { color: var(--text-soft); }
 
 .alumno-back svg {
   flex: 0 0 auto;
@@ -4459,7 +4455,6 @@ body[data-shell='alumno'] .alumno-nav__items a:not(.is-on) svg { color: #4b4b43;
 }
 
 .alumno-auth__logo {
-  mix-blend-mode: lighten;
   margin-bottom: 18px;
 }
 
@@ -4530,23 +4525,6 @@ body[data-shell='alumno'] .alumno-nav__items a:not(.is-on) svg { color: #4b4b43;
   letter-spacing: -0.05em;
   margin: 4px 0 16px;
   color: #171817;
-}
-
-.alumno-auth__mark {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
-  background: #b9d86d;
-  display: grid;
-  place-items: center;
-  margin: 4px 0 14px;
-}
-
-.alumno-auth__mark img {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  mix-blend-mode: multiply;
 }
 
 .alumno-auth__panel form {
@@ -4674,10 +4652,6 @@ body[data-shell='alumno'] .alumno-nav__items a:not(.is-on) svg { color: #4b4b43;
     width: 100px;
     height: auto;
     margin: 0 0 16px;
-  }
-
-  .alumno-auth__panel .alumno-auth__mark {
-    display: none;
   }
 
   .alumno-auth__panel {
@@ -8302,3 +8276,20 @@ html[data-theme='dark'] .alumno-actions-3[data-count='2'] a:first-child { backgr
   .alumno-fcw.alumno-fcw > * { pointer-events: auto; }
   .alumno-fcw .alumno-fcw__fab.alumno-fcw__fab { width: auto; justify-self: start; margin-right: auto; padding: 10px 20px; border-radius: 999px; }
 }
+
+/* Discovery: table entry first, with a compact search/location row and native-feeling cards. */
+.alumno-main--discover > .alumno-deskhead { display: block; margin-bottom: 4px; }
+.alumno-main--discover > .alumno-deskhead .alumno-pagehead h1 { font-size: clamp(1.8rem, 5vw, 2.35rem); margin-bottom: 8px; }
+.alumno-main--discover > .alumno-discovery-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; margin: 14px 0; }
+.alumno-main--discover > .alumno-discovery-tools .alumno-search-wrap { margin: 0; }
+.alumno-main--discover > .alumno-discovery-tools .alumno-search { min-height: 48px; background: var(--surface); color: var(--text); border: 1px solid var(--line); box-shadow: none; }
+.alumno-main--discover > .alumno-discovery-tools .alumno-location-btn { min-width: 48px; min-height: 48px; height: auto; padding: 8px 12px; justify-self: stretch; white-space: normal; overflow-wrap: anywhere; }
+.alumno-main--discover > .alumno-discovery-tools .alumno-location-note { font-size: .7rem; }
+.alumno-main--discover .alumno-radio-list { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; padding: 2px 2px 12px; margin: 0 -2px 20px; scrollbar-width: none; }
+.alumno-main--discover .alumno-radio-list::-webkit-scrollbar { display: none; }
+.alumno-main--discover .alumno-radio-list > [role='listitem'] { flex: 0 0 min(310px, 84vw); scroll-snap-align: start; display: flex; }
+.alumno-main--discover .alumno-discovery-card { width: 100%; min-height: 96px; scroll-snap-align: start; text-decoration: none; }
+.alumno-main--discover .alumno-discovery-card__menu { display: inline-flex; align-items: center; gap: 5px; color: var(--lime-text); background: var(--bg-2); padding: 8px 11px; border-radius: 999px; font-size: .76rem; font-weight: 800; white-space: nowrap; }
+html[data-theme='dark'] body[data-shell='alumno'] .alumno-product > div { color: var(--text); }
+html[data-theme='dark'] body[data-shell='alumno'] .alumno-product p { color: var(--text-soft); }
+html[data-theme='dark'] body[data-shell='alumno'] .alumno-card--ticket .alumno-card--qr { background: var(--surface); color: var(--text); }

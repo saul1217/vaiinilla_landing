@@ -1,3 +1,4 @@
+import { SHOW_WALLET } from '../lib/features';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -37,11 +38,14 @@ describe('AppShell', () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole('navigation', { name: /^navegación$/i })).toBeInTheDocument();
+    const navItems = screen.getByRole('navigation', { name: /^navegación$/i }).querySelector('.alumno-nav__items')!;
+    expect(navItems).toHaveStyle({ '--nav-count': String(navItems.querySelectorAll(':scope > a').length) });
     const menu = screen.getByRole('link', { name: /menú/i });
     expect(menu).toHaveAttribute('href', '/e/demo-a');
     expect(menu.querySelector('svg path')?.getAttribute('d') ?? '').toMatch(/12 /);
     expect(screen.getByRole('link', { name: /pedidos/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /mi saldo/i })).toBeInTheDocument();
+    if (SHOW_WALLET) expect(screen.getByRole('link', { name: /mi saldo/i })).toBeInTheDocument();
+    else expect(screen.queryByRole('link', { name: /mi saldo/i })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /carrito/i })).toHaveAttribute('href', '/e/demo-a/carrito');
     expect(screen.queryByRole('link', { name: /abrir el panel/i })).not.toBeInTheDocument();
   });
@@ -118,7 +122,8 @@ describe('AppShell', () => {
         <AppShell tab="wallet"><main>contenido</main></AppShell>
       </MemoryRouter>,
     );
-    expect(screen.getByRole('link', { name: /mi saldo/i })).toHaveAttribute('href', '/cuenta/saldo');
+    if (SHOW_WALLET) expect(screen.getByRole('link', { name: /mi saldo/i })).toHaveAttribute('href', '/cuenta/saldo');
+    else expect(screen.queryByRole('link', { name: /mi saldo/i })).not.toBeInTheDocument();
   });
 
   it('el logo no abre solo un lugar visitado antes: lleva a elegir con QR o código', () => {

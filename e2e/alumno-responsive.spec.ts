@@ -3,7 +3,7 @@ import { assertCiStoreSeeded, CI_CART_URL_RE, CI_MENU_URL, CI_PLACE_NAME, CI_PLA
 
 // El selector de lugar ya no tiene botón «Continuar»: con la tienda de CI listada aparece «Entrar al menú».
 async function waitForDiscovery(page: Page) {
-  await expect(page.getByRole('heading', { name: /en qué restaurante estás/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /dónde comemos/i })).toBeVisible();
   await page.getByRole('textbox', { name: /buscar restaurante/i }).fill(CI_PLACE_NAME);
   await expect(page.getByRole('group', { name: /establecimientos/i }).getByRole('button').first()).toBeVisible({
     timeout: 20_000,

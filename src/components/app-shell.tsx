@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link, NavigationType, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { onUnauthorizedSession } from '../lib/unauthorized';
 import { applyAlumnoTheme, useTheme } from '../context/theme-context';
@@ -9,6 +9,7 @@ import { readGuest } from '../lib/guest-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { readTableParticipant } from '../lib/table-participant';
 import { canAnimate, createSpring } from '../lib/spring';
+import { SHOW_WALLET } from '../lib/features';
 
 // A touch of overshoot that never leaves the bar (BOUNCY overshoots ~40%).
 const PILL_SPRING = { stiffness: 460, damping: 30 };
@@ -143,7 +144,7 @@ export function BottomNav({ tab }: { tab: Exclude<AlumnoTab, 'none'> }) {
   const items = [
     { id: 'menu' as const, href: menuHref, label: 'Menú', Icon: IconMenu, active: menuActive && tab !== 'cart' },
     { id: 'orders' as const, href: ordersHref, label: 'Pedidos', Icon: IconOrders, active: tab === 'orders' },
-    ...(guest
+    ...(guest || !SHOW_WALLET
       ? []
       : [{ id: 'wallet' as const, href: walletHref, label: 'Mi saldo', Icon: IconWallet, active: tab === 'wallet' }]),
     // Sin lugar no hay carrito al que ir: el atajo no lleva de vuelta al selector.
@@ -159,7 +160,7 @@ export function BottomNav({ tab }: { tab: Exclude<AlumnoTab, 'none'> }) {
       <div className="alumno-nav__brand">
         <AlumnoLockup />
       </div>
-      <div className="alumno-nav__items">
+      <div className="alumno-nav__items" style={{ '--nav-count': items.length } as CSSProperties}>
         <NavPill index={activeIndex} />
         {items.map((item) => (
           <Link
@@ -191,7 +192,7 @@ function NavPill({ index }: { index: number }) {
     const x = createSpring(from, PILL_SPRING);
     const unsubscribe = x.subscribe((value, velocity) => {
       const stretch = Math.min(0.28, Math.abs(velocity) / 26);
-      el.style.transform = `translateX(calc(${value} * (100% + 2px))) scaleX(${1 + stretch}) scaleY(${1 - stretch * 0.4})`;
+      el.style.transform = `translateX(calc(${value} * 100%)) scaleX(${1 + stretch}) scaleY(${1 - stretch * 0.4})`;
     });
     x.set(index);
     return () => {
