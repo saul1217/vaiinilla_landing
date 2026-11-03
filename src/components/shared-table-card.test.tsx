@@ -140,9 +140,9 @@ describe('mesa compartida', () => {
     expect(screen.getAllByText('Tu parte por pagar')[0]?.nextElementSibling).toHaveTextContent('$10.10');
   });
 
-  it('muestra quién reclamó por alias e id, y deja al dueño rechazarlo', async () => {
+  it('muestra quién reclamó y permite rechazar solo al participante dueño del pedido', async () => {
     apiMock.currentTable.mockResolvedValue(table({ grupos: [
-      { alias: 'Luis', participante_id: 'p-luis', soy_yo: true, ...ZERO,
+      { alias: 'Ana', participante_id: 'p-ana', soy_yo: false, ...ZERO,
         pedidos: [{ id: 'o1', folio: 71, estado: 'listo', items_resumen: 'Torta', total: '20.00', pendiente_cobro: true, creado_en: 'c', pagara: { id: 'p-luis', alias: 'Ana' } }] },
     ] }));
     apiMock.rejectTableClaim.mockResolvedValue(table());
@@ -152,6 +152,17 @@ describe('mesa compartida', () => {
     expect(screen.getByText(/Paga Ana/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Rechazar a Ana' }));
     expect(apiMock.rejectTableClaim).toHaveBeenCalledWith('jwt', 71);
+  });
+
+  it('oculta rechazar a no dueños aunque el grupo esté marcado soy_yo', async () => {
+    apiMock.currentTable.mockResolvedValue(table({ grupos: [
+      { alias: 'Luis', participante_id: 'p-luis', soy_yo: true, ...ZERO,
+        pedidos: [{ id: 'o1', folio: 71, estado: 'listo', items_resumen: 'Torta', total: '20.00', pendiente_cobro: true, creado_en: 'c', pagara: { id: 'p-luis', alias: 'Ana' } }] },
+    ] }));
+    render(<SharedTableCard accessToken="jwt" qrToken={null} />);
+    await userEvent.setup().click(await screen.findByText(/ver pedidos y elegir/i));
+    expect(screen.getByText(/Paga Ana/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Rechazar a Ana' })).not.toBeInTheDocument();
   });
 
   it('acepta pagara legado como alias sin inferir identidad por nombre', async () => {

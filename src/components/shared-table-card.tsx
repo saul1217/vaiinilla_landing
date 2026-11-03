@@ -243,7 +243,7 @@ export function SharedTableCard({
                           order.pagara && (typeof order.pagara === 'string' ? !order.lo_pago_yo : order.pagara.id !== table.mi_participante?.id) ? (
                             <>
                               <span className="shared-table__state">Paga {typeof order.pagara === 'string' ? order.pagara : order.pagara.alias}</span>
-                              {group.soy_yo ? (
+                              {group.participante_id === table.mi_participante?.id ? (
                                 <button type="button" className="alumno-chip" disabled={busy} onClick={() => void rejectClaim(order.folio)}>
                                   Rechazar a {typeof order.pagara === 'string' ? order.pagara : order.pagara.alias}
                                 </button>
