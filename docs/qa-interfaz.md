@@ -5,7 +5,7 @@ Capturas comparadas, axe, pruebas de teclado y Lighthouse CI para `/pedir`, men�
 ## Cómo corre
 
 - Contra el preview de Vercel del mismo commit y la API de develop: `E2E_BASE_URL=<preview> npm run test:ui`.
-- Datos del establecimiento de CI sembrados con `/dev/test-setup` (horarios, productos y fotos fijos, sin edición manual). Slugs por defecto `ci-vaiinilla` (la tienda de CI de develop, la misma de `e2e/`, o `E2E_PLACE_SLUG`); se cambian con `E2E_UI_SHOP_SLUG` y `E2E_UI_COURTS_SLUG`. «Mis pedidos» y «Mis reservas» usan `E2E_CLIENTE_EMAIL` y `E2E_PASSWORD`.
+- Datos del establecimiento de CI: la tienda ya existe en develop y `/dev/test-setup` no la siembra (ese endpoint solo crea `sandbox-agentes`). Sus horarios, productos y fotos son fijos; un cambio ahí altera las capturas. Slugs por defecto `ci-vaiinilla` (la tienda de CI de develop, la misma de `e2e/`, o `E2E_PLACE_SLUG`); se cambian con `E2E_UI_SHOP_SLUG` y `E2E_UI_COURTS_SLUG`. «Mis pedidos» y «Mis reservas» usan `E2E_CLIENTE_EMAIL` y `E2E_PASSWORD`.
 - Lighthouse CI: `npm run lhci` con `lighthouserc.json` (umbrales de performance, accesibilidad y buenas prácticas en `/pedir`, canchas y menú). Se ejecuta con el preview como `--collect.url` absoluto.
 
 ## Estabilidad
@@ -14,6 +14,7 @@ Capturas comparadas, axe, pruebas de teclado y Lighthouse CI para `/pedir`, men�
 - Animaciones y transiciones desactivadas; horas, contadores y folios ocultos (`VOLATILE_SELECTORS` en `e2e-ui/support.ts`; para ocultar otro elemento basta `data-volatile`).
 - Cada captura espera a que terminen las fuentes, la red y a que aparezca el contenido sembrado.
 - Tamaños 390x844 y 1280x800, tema claro y oscuro.
+- En `/pedir` solo se deja la tienda de CI en la respuesta de la API, para que un negocio nuevo no cambie la captura.
 
 ## Corridas bloqueadas (datos de develop)
 
@@ -22,6 +23,8 @@ Si la API responde 5xx, falla la red hacia `/api/v1/` o no aparece el contenido 
 ## Referencias de capturas
 
 Solo se generan en el contenedor fijo de Playwright en CI (`mcr.microsoft.com/playwright:v<versión de @playwright/test>-noble`) con `PLAYWRIGHT_CONTAINER=1 npx playwright test -c playwright.ui.config.ts visual --update-snapshots`. `playwright.ui.config.ts` rechaza `--update-snapshots` fuera de ese contenedor. Las referencias quedan en `e2e-ui/__screenshots__/`.
+
+Corre `qa-interfaz` a mano con `update_snapshots`, baja el artefacto `capturas-referencia` y súbelo a `e2e-ui/__screenshots__/`: sin ese commit, cada prueba falla con «snapshot doesn't exist», no por diferencias.
 
 ## axe
 
