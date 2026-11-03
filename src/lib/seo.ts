@@ -1,8 +1,8 @@
 // Metadatos SEO por ruta. Lo usan la app (useRouteMeta), el plugin de build (robots y sitemap)
 // y el prerender, así que no depende de import.meta.env ni del DOM.
 
-/** Dominio canónico único: sin www (la redirección www → apex vive en Vercel). */
-export const SITE_URL = 'https://vaiinilla.app';
+/** Dominio canónico: producción sirve en www y el apex redirige (308) a www. */
+export const SITE_URL = 'https://www.vaiinilla.app';
 export const SITE_NAME = 'Vaiinilla';
 
 export interface PageMeta {

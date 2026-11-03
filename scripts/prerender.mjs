@@ -14,15 +14,18 @@ const ROUTES = [
 ];
 const ROOT = '<div id="root"></div>';
 
-const { render, metaForPath, applyMetaToHtml } = await import(
+const { render, metaForPath, applyMetaToHtml, staffAppUrlConfigured } = await import(
   pathToFileURL(join(SSR_DIST, 'prerender.js')).href
 );
+if (!staffAppUrlConfigured) {
+  console.warn('prerender: falta VITE_STAFF_APP_URL; las rutas salen solo con su head, sin contenido.');
+}
 const shell = readFileSync(join(DIST, 'index.html'), 'utf8');
 if (!shell.includes(ROOT)) throw new Error(`dist/index.html no tiene ${ROOT}`);
 
 for (const route of ROUTES) {
   let html = applyMetaToHtml(shell, metaForPath(route.path));
-  if (route.body) html = html.replace(ROOT, `<div id="root">${render(route.path)}</div>`);
+  if (route.body && staffAppUrlConfigured) html = html.replace(ROOT, `<div id="root">${render(route.path)}</div>`);
   const target = join(DIST, route.file);
   mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, html);

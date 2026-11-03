@@ -58,7 +58,7 @@
       "missing": [
         {
           "type": "host",
-          "value": "vaiinilla.app"
+          "value": "^(?:www\\.)?vaiinilla\\.app$"
         }
       ],
       "headers": [
