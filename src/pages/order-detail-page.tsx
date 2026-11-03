@@ -31,7 +31,10 @@ import {
   takeStripeCheckoutSession,
 } from '../lib/stripe-session';
 import {
+  canPayAcceptedOrder,
   canRetryStripePayment,
+  isAcceptedOrderToPay,
+  isPaymentWindowExpired,
   isStripePaymentConfirmedByBackend,
   pollStripePaymentConfirmation,
   STRIPE_COPY,
@@ -231,6 +234,7 @@ export function OrderDetailPage() {
   if (ready && !user) return <Navigate to={`/cuenta?next=/cuenta/pedidos/${id}`} replace />;
 
   const chargePhase = celebrate ? 'success' : awaitingCharge ? 'processing' : null;
+  const windowExpired = order ? isPaymentWindowExpired(order) : false;
   const staleTerminalStripeSession = Boolean(
     stripeSession &&
       order &&
@@ -246,10 +250,12 @@ export function OrderDetailPage() {
     !timedOut &&
     !celebrate &&
     !staleTerminalStripeSession &&
+    !windowExpired &&
     paymentStatus !== 'processing' &&
     paymentStatus !== 'requires_action';
   const showRetry =
-    Boolean(order && (canRetryStripePayment(order) || localCanceled)) &&
+    Boolean(order && (canRetryStripePayment(order) || canPayAcceptedOrder(order) || localCanceled)) &&
+    !windowExpired &&
     !showPaymentForm &&
     !stripePolling &&
     !panelProcessing &&
@@ -340,7 +346,7 @@ export function OrderDetailPage() {
                 disabled={retrying}
                 onClick={() => void retryStripe()}
               >
-                {retrying ? 'Preparando pago…' : 'Reintentar pago'}
+                {retrying ? 'Preparando pago…' : order ? stripePayLabel(order) : 'Reintentar pago'}
               </button>
             ) : null}
           </section>
@@ -517,6 +523,11 @@ export function OrderTicketView({
       ) : null}
     </section>
   );
+}
+
+function stripePayLabel(order: OrderDetail): string {
+  if (!isAcceptedOrderToPay(order) || order.pago?.payment_status === 'fallido') return 'Reintentar pago';
+  return order.anticipo ? `Pagar anticipo de ${formatAmount(order.anticipo)}` : 'Pagar pedido';
 }
 
 function hasStripeRedirectParams(): boolean {

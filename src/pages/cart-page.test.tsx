@@ -7,6 +7,7 @@ import { VaiinillaApiError } from '../lib/api-error';
 import * as cartLib from '../lib/cart';
 import * as stripePendingLib from '../lib/stripe-pending';
 import { clearStripeCheckoutSession } from '../lib/stripe-session';
+import * as stripeSessionLib from '../lib/stripe-session';
 import { canSilentlyApplyServiceWorkerUpdate, resetPwaUpdateGuardsForTests } from '../lib/pwa-update';
 import { QA_PHOTO_TACOS } from '../lib/qa-catalog-photos';
 import { CartPage } from './cart-page';
@@ -403,6 +404,66 @@ describe('CartPage', () => {
     expect(createOrder.mock.calls[0]?.[2]).toEqual(expect.any(String));
     expect(localStorage.getItem('vaiinilla.buyer.pickup-qr.v1.ord-stripe')).toBe('pickup-token');
     expect(stripePendingLib.readPendingStripeOrderId()).toBe('ord-stripe');
+  });
+
+  describe('encargo con tarjeta que espera al negocio', () => {
+    const encargo = {
+      id: 'ord-encargo',
+      folio: 8,
+      estado: 'por_aceptar',
+      metodo_pago: 'stripe',
+      destino: 'para_llevar',
+      qr_token: 'pickup-token',
+      espacio: null,
+      total: '123.60',
+      items: [],
+    };
+
+    beforeEach(() => {
+      cartState.cart = {
+        slug: 'demo-a',
+        establishmentName: 'Cafetería Demo A',
+        lines: [{ productId: 1, quantity: 1, optionIds: [], productName: 'Chocolate', unitPreview: '120.00', imageUrl: null }],
+      };
+    });
+
+    async function confirmWithCard(user: ReturnType<typeof userEvent.setup>) {
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
+      await user.click(await screen.findByRole('radio', { name: /tarjeta/i }));
+      await user.click(screen.getByRole('button', { name: /^continuar con/i }));
+    }
+
+    it('sin `pago` no abre sesión de Stripe y lleva a la pantalla del pedido', async () => {
+      const fromOrder = vi.spyOn(stripeSessionLib, 'stripeSessionFromCreatedOrder');
+      const remember = vi.spyOn(stripeSessionLib, 'rememberStripeCheckoutSession');
+      const savePending = vi.spyOn(stripePendingLib, 'savePendingStripeOrderId');
+      createOrder.mockResolvedValue(encargo);
+      const user = userEvent.setup();
+      renderCart();
+      await confirmWithCard(user);
+
+      expect(await screen.findByText(/pedido creado/i)).toBeInTheDocument();
+      expect(fromOrder).not.toHaveBeenCalled();
+      expect(remember).not.toHaveBeenCalled();
+      expect(savePending).not.toHaveBeenCalled();
+      expect(stripePendingLib.readPendingStripeOrderId()).toBeNull();
+      expect(stripeSessionLib.peekStripeCheckoutSession('ord-encargo')).toBeNull();
+      expect(retryStripePayment).not.toHaveBeenCalled();
+    });
+
+    it('un reintento tras un fallo de red repite la llave y no crea otro pedido', async () => {
+      createOrder.mockRejectedValueOnce(new Error('sin red')).mockResolvedValue(encargo);
+      const user = userEvent.setup();
+      renderCart();
+      await confirmWithCard(user);
+      expect((await screen.findAllByText(/sin red/i)).length).toBeGreaterThan(0);
+
+      await user.click(screen.getByRole('button', { name: /^continuar con/i }));
+      expect(await screen.findByText(/pedido creado/i)).toBeInTheDocument();
+
+      expect(createOrder).toHaveBeenCalledTimes(2);
+      expect(createOrder.mock.calls[1]?.[2]).toBe(createOrder.mock.calls[0]?.[2]);
+    });
   });
 
   it('espera la validación operativa sin mostrar un error transitorio', async () => {
