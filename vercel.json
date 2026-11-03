@@ -55,6 +55,21 @@
     },
     {
       "source": "/(.*)",
+      "missing": [
+        {
+          "type": "host",
+          "value": "^(?:www\\.)?vaiinilla\\.app$"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
       "headers": [
         {
           "key": "Content-Security-Policy",
@@ -73,8 +88,20 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!assets/).*)",
+      "source": "/",
       "destination": "/index.html"
+    },
+    {
+      "source": "/pedir",
+      "destination": "/pedir/index.html"
+    },
+    {
+      "source": "/soporte",
+      "destination": "/soporte/index.html"
+    },
+    {
+      "source": "/((?!assets/|robots\\.txt$|sitemap\\.xml$|\\.well-known/|google[^/]*\\.html$).*)",
+      "destination": "/spa.html"
     }
   ]
 }
