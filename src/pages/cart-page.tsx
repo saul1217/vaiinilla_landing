@@ -44,6 +44,7 @@ import type {
 } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
 import { MotionSheet } from '../components/motion-sheet';
+import { PlaceEntry } from '../components/place-entry';
 
 export function CartPage() {
   const { slug = '' } = useParams();
@@ -592,6 +593,7 @@ export function CartPage() {
             onRemoveLine={removeLine}
             forHere={forHere}
             space={space}
+            placeEntryEnabled
             onToggleDestination={() => {
               if (space) setForHere((value) => !value);
             }}
@@ -811,6 +813,7 @@ export function CartFilledView({
   onRemoveLine,
   forHere,
   space,
+  placeEntryEnabled = false,
   onToggleDestination,
   onLeaveSpace,
   place,
@@ -834,6 +837,7 @@ export function CartFilledView({
   onRemoveLine: (productId: number, optionIds: number[], notes?: string) => void;
   forHere: boolean;
   space: SpaceSession | null;
+  placeEntryEnabled?: boolean;
   onToggleDestination: () => void;
   onLeaveSpace?: () => void;
   place: PublicEstablishment | null;
@@ -850,6 +854,7 @@ export function CartFilledView({
   productCount: number;
   paySubtitle: string;
 }) {
+  const [placeEntryOpen, setPlaceEntryOpen] = useState(false);
   return (
     <div className="alumno-cart-layout">
       <div className="alumno-cart-actions">
@@ -917,7 +922,15 @@ export function CartFilledView({
       </div>
       <aside className="alumno-cart-layout__side">
         <div className="alumno-cart-layout__checkout">
-          <button type="button" className="alumno-card" onClick={onToggleDestination}>
+          <button
+            type="button"
+            className={`alumno-card alumno-cart-destination${!space && placeEntryEnabled ? ' is-place-entry' : ''}`}
+            aria-label={!space && placeEntryEnabled ? 'Para llevar. ¿Estás en una mesa? Escribe su código' : undefined}
+            onClick={() => {
+              if (space) onToggleDestination();
+              else if (placeEntryEnabled) setPlaceEntryOpen(true);
+            }}
+          >
             <h2>{forHere && space ? space.nombre : 'Para llevar'}</h2>
             <p className="alumno-muted">
               {forHere && space
@@ -926,9 +939,12 @@ export function CartFilledView({
                   : `${deliveredAtLabel(space?.tipo)}. Toca para cambiar a para llevar.`
                 : space
                   ? `Toca para pedir en ${space.nombre}.`
+                : placeEntryEnabled
+                  ? 'Para llevar · ¿Estás en una mesa? Escribe su código'
                   : 'Recoges en mostrador cuando esté listo.'}
             </p>
           </button>
+          {!space && placeEntryEnabled && placeEntryOpen ? <PlaceEntry autoOpen="code" onClosed={() => setPlaceEntryOpen(false)} /> : null}
           {space && onLeaveSpace ? (
             <button
               type="button"

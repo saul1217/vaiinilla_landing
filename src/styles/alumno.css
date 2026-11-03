@@ -1215,6 +1215,20 @@ html[data-theme='dark'] .alumno-antojo img {
   margin: 12px 0;
 }
 
+.alumno-cart-destination {
+  display: block;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.alumno-cart-destination:focus-visible {
+  outline: 3px solid var(--lime);
+  outline-offset: 3px;
+}
+
 .alumno-card h2 {
   font-size: 1.05rem;
   margin-bottom: 6px;
