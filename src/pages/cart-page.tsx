@@ -980,6 +980,7 @@ export function CartFilledView({
                 ) : null}
               </button>
             </div>
+            {!space && placeEntryEnabled ? <p className="alumno-cart-join-help">Para pedir a la mesa, primero escribe el código de tu mesa.</p> : null}
           </div>
         </div>
       </aside>
