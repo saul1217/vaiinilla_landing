@@ -25,6 +25,8 @@ const friendlyMessages: Record<string, string> = {
   ENTRY_TOKEN_INVALID: 'El código del lugar ya no está disponible. Vuelve a intentarlo o entra a tu cuenta.',
   GUEST_RESERVATION_LIMIT: 'Llegaste al límite de reservas sin cuenta. Entra o crea una para seguir apartando.',
   ORDER_INVALID_STATE: 'El pedido ya cambió de estado.',
+  PARTICIPANT_DEVICE_REQUIRED:
+    'No pudimos confirmar que esta silla sea tuya desde este dispositivo. Agrega tu nombre a la mesa o pide ayuda en Caja para recuperar tu lugar.',
 };
 
 export const RATE_LIMIT_MESSAGE = 'Hay demasiados intentos en poco tiempo. Espera un momento y vuelve a intentar.';

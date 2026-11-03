@@ -119,6 +119,20 @@ export function SharedTableCard({
     }
   }
 
+  async function rejectClaim(folio: number) {
+    if (!token) return;
+    setBusy(true);
+    setError(null);
+    try {
+      setTable(await api.rejectTableClaim(token, folio));
+    } catch (cause) {
+      if (isUnauthorized(cause)) onUnauthorized?.();
+      setError(errorMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function leave() {
     forgetSpace();
     if (token) {
@@ -226,17 +240,29 @@ export function SharedTableCard({
                       <span className="shared-table__right">
                         <span className="alumno-track-card__price">{formatAmount(order.total)}</span>
                         {order.pendiente_cobro ? (
-                          order.pagara && !order.lo_pago_yo ? (
-                            <span className="shared-table__state">Paga {order.pagara}</span>
+                          order.pagara && (typeof order.pagara === 'string' ? !order.lo_pago_yo : order.pagara.id !== table.mi_participante?.id) ? (
+                            <>
+                              <span className="shared-table__state">Paga {typeof order.pagara === 'string' ? order.pagara : order.pagara.alias}</span>
+                              {group.soy_yo ? (
+                                <button type="button" className="alumno-chip" disabled={busy} onClick={() => void rejectClaim(order.folio)}>
+                                  Rechazar a {typeof order.pagara === 'string' ? order.pagara : order.pagara.alias}
+                                </button>
+                              ) : null}
+                            </>
                           ) : (
                             <button
                               type="button"
                               className={order.lo_pago_yo ? 'alumno-chip is-on' : 'alumno-chip'}
                               aria-pressed={order.lo_pago_yo === true}
                               disabled={busy}
-                              onClick={() => void claim(order.folio, !order.lo_pago_yo)}
+                              onClick={() => void claim(
+                                order.folio,
+                                !(order.pagara && (typeof order.pagara === 'string'
+                                  ? order.lo_pago_yo
+                                  : order.pagara.id === table.mi_participante?.id)),
+                              )}
                             >
-                              {order.lo_pago_yo ? 'Lo pago yo ✓' : 'Esto lo pago yo'}
+                              {order.pagara && (typeof order.pagara === 'string' ? order.lo_pago_yo : order.pagara.id === table.mi_participante?.id) ? 'Lo pago yo ✓' : 'Esto lo pago yo'}
                             </button>
                           )
                         ) : null}

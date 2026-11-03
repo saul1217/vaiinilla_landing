@@ -400,8 +400,8 @@ export interface SharedTableOrder {
   total: string;
   pendiente_cobro: boolean;
   creado_en: string | null;
-  /** "Esto lo pago yo": alias de quien dijo que lo paga. */
-  pagara?: string | null;
+  /** "Esto lo pago yo": participante que dijo que lo paga (legacy: alias). */
+  pagara?: { id: string; alias: string } | string | null;
   lo_pago_yo?: boolean;
 }
 
