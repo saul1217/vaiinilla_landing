@@ -801,7 +801,10 @@ function AuthSplit({
         <p className="alumno-auth__brand-lead">{copy.lead}</p>
       </section>
       <section className="alumno-auth__panel">
-        {onBack ? <AlumnoBack onClick={onBack}>Volver</AlumnoBack> : null}
+        <div className="alumno-auth__mobile-header">
+          {onBack ? <AlumnoBack onClick={onBack}>Volver</AlumnoBack> : <span />}
+          <img src="/vaini/cutout-frente.png" alt="" />
+        </div>
         <AlumnoLogo className="alumno-auth__window-logo" alt="" />
         <p className="alumno-kicker">{copy.panelKicker}</p>
         <h1>{copy.panelTitle}</h1>
