@@ -12,7 +12,8 @@ export function joinedScannedTable(space: SpaceSession): boolean {
 /**
  * La mesa escaneada según el servidor. Solo lee (`GET /mesas/actual`): nunca abre
  * una sesión. Si el cliente ya no está unido a una sesión abierta de esa mesa
- * (el mesero la liberó), el teléfono olvida la mesa y su identidad, y devuelve null.
+ * (el mesero la liberó), conserva mesa e identidad para que el usuario pueda
+ * reingresar explícitamente desde "Quién eres"; devuelve null.
  */
 export async function currentScannedTable(accessToken: string, space: SpaceSession): Promise<SharedTable | null> {
   const table = await api.currentTable(accessToken);
@@ -20,7 +21,11 @@ export async function currentScannedTable(accessToken: string, space: SpaceSessi
     dropTableParticipantOnSessionChange(table.sesion_id);
     return table;
   }
-  forgetSpace();
-  forgetTableParticipant();
+  // GET puede responder null transitoriamente antes de que el participante
+  // reingrese. No destruir la única pista que permite ofrecer "Continuar como".
+  if (!joinedScannedTable(space)) {
+    forgetSpace();
+    forgetTableParticipant();
+  }
   return null;
 }

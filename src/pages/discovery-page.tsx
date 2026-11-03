@@ -30,9 +30,9 @@ export function DiscoveryPage() {
   const focusSearch = searchParams.get('entrada') === 'buscar';
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<PublicEstablishment[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tableCode, setTableCode] = useState('');
   const [codeSheetOpen, setCodeSheetOpen] = useState(false);
   const [clientId, setClientId] = useState('');
@@ -69,42 +69,46 @@ export function DiscoveryPage() {
 
   useEffect(() => {
     let active = true;
-    const handle = window.setTimeout(() => {
-      setLoading(true);
-      void api
-        .listEstablishments(query, undefined, 50, location ?? undefined)
-        .then((result) => {
-          if (!active) return;
-          setItems(result.establishments);
-          setError(null);
-          const remembered = lastPlaceSlug();
-          setSelectedId((current) => {
-            if (current && result.establishments.some((item) => item.id === current)) return current;
-            const preferred = result.establishments.find((item) => item.slug === remembered);
-            return preferred?.id ?? result.establishments[0]?.id ?? null;
+    const handle = window.setTimeout(
+      () => {
+        setLoading(true);
+        void api
+          .listEstablishments(query, undefined, 50, location ?? undefined)
+          .then((result) => {
+            if (!active) return;
+            setItems(result.establishments);
+            setError(null);
+            const remembered = lastPlaceSlug();
+            setSelectedId((current) => {
+              if (current && result.establishments.some((item) => item.id === current)) return current;
+              const preferred = result.establishments.find((item) => item.slug === remembered);
+              return preferred?.id ?? result.establishments[0]?.id ?? null;
+            });
+          })
+          .catch((cause: unknown) => {
+            if (!active) return;
+            setError(errorMessage(cause));
+          })
+          .finally(() => {
+            if (active) setLoading(false);
           });
-        })
-        .catch((cause: unknown) => {
-          if (!active) return;
-          setError(errorMessage(cause));
-        })
-        .finally(() => {
-          if (active) setLoading(false);
-        });
-    }, query ? 250 : 0);
+      },
+      query ? 250 : 0,
+    );
     return () => {
       active = false;
       window.clearTimeout(handle);
     };
   }, [location, query]);
 
-  const selected = useMemo(
-    () => items.find((item) => item.id === selectedId) ?? null,
-    [items, selectedId],
-  );
+  const selected = useMemo(() => items.find((item) => item.id === selectedId) ?? null, [items, selectedId]);
   const recommended = useMemo(() => {
     const remembered = lastPlaceSlug();
     return items.find((item) => item.slug === remembered) ?? items[0] ?? null;
+  }, [items]);
+  const orderedItems = useMemo(() => {
+    const remembered = lastPlaceSlug();
+    return [...items].sort((a, b) => Number(b.slug === remembered) - Number(a.slug === remembered));
   }, [items]);
 
   async function resolveTableCode() {
@@ -218,11 +222,7 @@ export function DiscoveryPage() {
               {selected.identificador_cliente_obligatorio ? (
                 <label className="alumno-field">
                   {selected.identificador_cliente_etiqueta}
-                  <input
-                    value={clientId}
-                    onChange={(event) => setClientId(event.target.value)}
-                    autoComplete="off"
-                  />
+                  <input value={clientId} onChange={(event) => setClientId(event.target.value)} autoComplete="off" />
                 </label>
               ) : null}
               <button className="alumno-btn alumno-btn--lime" type="button" onClick={continueToMenu}>
@@ -231,7 +231,9 @@ export function DiscoveryPage() {
             </div>
             <div className="alumno-card">
               <h2>Mesa</h2>
-              <p className="alumno-muted">Si ya estás sentado, escribe los 4 números que ves en la mesa o en el papel del mesero.</p>
+              <p className="alumno-muted">
+                Si ya estás sentado, escribe los 4 números que ves en la mesa o en el papel del mesero.
+              </p>
               <button className="alumno-btn alumno-btn--ghost" type="button" onClick={() => setCodeSheetOpen(true)}>
                 Usar código de mesa
               </button>
@@ -257,43 +259,41 @@ export function DiscoveryPage() {
       <main id="main-content" className="alumno-main alumno-main--discover">
         <GuestOrdersBanner />
         <div className="alumno-deskhead">
-          <AlumnoPageHeader
-            kicker="Hoy"
-            title="¿En qué restaurante estás?"
-            lead={
-              !loading && items.length === 0 && !query
-                ? 'Busca el restaurante o escribe el número de tu mesa. Puedes ver el menú sin registrarte.'
-                : 'Busca el nombre del restaurante o escribe el número de tu mesa.'
-            }
-          />
-          <div className="alumno-discovery-tools">
-            <div className="alumno-search-wrap">
-              <SearchIcon />
-              <label className="sr-only" htmlFor="search-places">
-                Buscar restaurante
-              </label>
-              <input
-                id="search-places"
-                className="alumno-search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Buscar restaurante por nombre"
-                autoComplete="off"
-              />
-            </div>
-            <p className="alumno-location-hint">La ubicación es opcional; sirve para ordenar los restaurantes por cercanía.</p>
-            <button className={location ? 'alumno-location-btn is-on' : 'alumno-location-btn'} type="button" onClick={useMyLocation} disabled={locating}>
-              <LocationIcon />
-              {locating ? 'Buscando lugares…' : location ? 'Cerca de mí' : 'Usar mi ubicación'}
-            </button>
-            {locationMessage ? <span className="alumno-location-note" role="status">{locationMessage}</span> : null}
-          </div>
+          <AlumnoPageHeader kicker="Hoy" title="¿Dónde comemos?" />
         </div>
         {error ? <p className="alumno-error">{error}</p> : null}
-        <PlaceEntry
-          prominent={!loading && items.length === 0 && !query}
-          autoOpen={entrySheet}
-        />
+        <PlaceEntry prominent autoOpen={entrySheet} />
+        <div className="alumno-discovery-tools">
+          <div className="alumno-search-wrap">
+            <SearchIcon />
+            <label className="sr-only" htmlFor="search-places">
+              Buscar restaurante
+            </label>
+            <input
+              id="search-places"
+              className="alumno-search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar restaurante por nombre"
+              autoComplete="off"
+            />
+          </div>
+          {locationMessage ? (
+            <span className="alumno-location-note" role="status">
+              {locationMessage}
+            </span>
+          ) : null}
+          <button
+            className={location ? 'alumno-location-btn is-on' : 'alumno-location-btn'}
+            type="button"
+            onClick={useMyLocation}
+            disabled={locating}
+            title="La ubicación es opcional; sirve para ordenar los restaurantes por cercanía."
+          >
+            <LocationIcon />
+            {locating ? 'Buscando lugares…' : location ? 'Cerca de mí' : 'Usar mi ubicación'}
+          </button>
+        </div>
         {loading && items.length === 0 ? <LoadingSkeleton shape="places" label="Cargando establecimientos…" /> : null}
         <div className="alumno-discovery">
           <div className="alumno-discovery__list">
@@ -306,7 +306,7 @@ export function DiscoveryPage() {
               ) : null
             ) : (
               <div className="alumno-radio-list alumno-arrive" role="group" aria-label="Establecimientos">
-                {items.map((place) => {
+                {orderedItems.map((place) => {
                   const isRecommended = recommended?.id === place.id;
                   const access = place.identificador_cliente_obligatorio
                     ? place.identificador_cliente_etiqueta
@@ -315,7 +315,7 @@ export function DiscoveryPage() {
                     <button
                       key={place.id}
                       type="button"
-                      className={selected?.id === place.id ? 'alumno-radio is-on' : 'alumno-radio'}
+                      className={selected?.id === place.id ? 'alumno-radio alumno-discovery-card is-on' : 'alumno-radio alumno-discovery-card'}
                       onClick={() => enterPlace(place)}
                     >
                       <span className="alumno-place-thumb" aria-hidden="true">
@@ -331,7 +331,9 @@ export function DiscoveryPage() {
                           {access}
                         </span>
                       </span>
-                      <span className="alumno-radio__arrow" aria-hidden="true">↗</span>
+                      <span className="alumno-discovery-card__menu">
+                        Ver menú <span aria-hidden="true">↗</span>
+                      </span>
                     </button>
                   );
                 })}
@@ -341,10 +343,7 @@ export function DiscoveryPage() {
           {selected ? (
             <section className="alumno-sticky-cafe" aria-label="Lugar activo">
               <div className="alumno-place-hero">
-                <PlaceImage
-                  src={selected.imagen_url}
-                  alt={`${selected.nombre} en Vaiinilla`}
-                />
+                <PlaceImage src={selected.imagen_url} alt={`${selected.nombre} en Vaiinilla`} />
                 <span className="alumno-place-badge">Menú disponible</span>
               </div>
               <div className="alumno-sticky-cafe__content">
@@ -352,17 +351,36 @@ export function DiscoveryPage() {
                 <strong>{selected.nombre}</strong>
                 {selected.descripcion ? <span>{selected.descripcion}</span> : null}
                 <div className="alumno-place-facts">
-                  <span><span className="alumno-status-dot" aria-hidden="true" /> {selected.identificador_cliente_obligatorio ? `Pide ${selected.identificador_cliente_etiqueta.toLowerCase()}` : 'Acceso libre'}</span>
+                  <span>
+                    <span className="alumno-status-dot" aria-hidden="true" />{' '}
+                    {selected.identificador_cliente_obligatorio
+                      ? `Pide ${selected.identificador_cliente_etiqueta.toLowerCase()}`
+                      : 'Acceso libre'}
+                  </span>
                   {selected.direccion ? <span>⌖ {selected.direccion}</span> : null}
                   {selected.horario ? <span>◷ {selected.horario}</span> : null}
                 </div>
-                {(selected.instagram_url || selected.facebook_url || selected.tiktok_url || selected.whatsapp_url || selected.sitio_web_url) ? (
+                {selected.instagram_url ||
+                selected.facebook_url ||
+                selected.tiktok_url ||
+                selected.whatsapp_url ||
+                selected.sitio_web_url ? (
                   <div className="alumno-place-socials" aria-label="Redes y enlaces del establecimiento">
-                    {selected.instagram_url ? <SocialLink href={selected.instagram_url} label="Instagram" kind="instagram" /> : null}
-                    {selected.facebook_url ? <SocialLink href={selected.facebook_url} label="Facebook" kind="facebook" /> : null}
-                    {selected.tiktok_url ? <SocialLink href={selected.tiktok_url} label="TikTok" kind="tiktok" /> : null}
-                    {selected.whatsapp_url ? <SocialLink href={selected.whatsapp_url} label="WhatsApp" kind="whatsapp" /> : null}
-                    {selected.sitio_web_url ? <SocialLink href={selected.sitio_web_url} label="Sitio web" kind="website" /> : null}
+                    {selected.instagram_url ? (
+                      <SocialLink href={selected.instagram_url} label="Instagram" kind="instagram" />
+                    ) : null}
+                    {selected.facebook_url ? (
+                      <SocialLink href={selected.facebook_url} label="Facebook" kind="facebook" />
+                    ) : null}
+                    {selected.tiktok_url ? (
+                      <SocialLink href={selected.tiktok_url} label="TikTok" kind="tiktok" />
+                    ) : null}
+                    {selected.whatsapp_url ? (
+                      <SocialLink href={selected.whatsapp_url} label="WhatsApp" kind="whatsapp" />
+                    ) : null}
+                    {selected.sitio_web_url ? (
+                      <SocialLink href={selected.sitio_web_url} label="Sitio web" kind="website" />
+                    ) : null}
                   </div>
                 ) : null}
                 {selected.videos_local?.length ? (
@@ -409,17 +427,10 @@ function PlaceImage({ src, alt }: { src?: string | null; alt: string }) {
     setImageSrc(src || '/vaini/cutout-frente.png');
   }, [src]);
 
-  return (
-    <img
-      src={imageSrc}
-      alt={alt}
-      onError={() => setImageSrc('/vaini/cutout-frente.png')}
-    />
-  );
+  return <img src={imageSrc} alt={alt} onError={() => setImageSrc('/vaini/cutout-frente.png')} />;
 }
 
 type SocialKind = 'instagram' | 'facebook' | 'tiktok' | 'whatsapp' | 'website';
-
 function SocialLink({ href, label, kind }: { href: string; label: string; kind: SocialKind }) {
   return (
     <a
@@ -436,31 +447,56 @@ function SocialLink({ href, label, kind }: { href: string; label: string; kind: 
     </a>
   );
 }
-
 function socialColor(kind: SocialKind) {
-  return {
-    instagram: '#E4405F',
-    facebook: '#1877F2',
-    tiktok: '#69C9D0',
-    whatsapp: '#25D366',
-    website: '#B4E04D',
-  }[kind];
+  return { instagram: '#E4405F', facebook: '#1877F2', tiktok: '#69C9D0', whatsapp: '#25D366', website: '#B4E04D' }[
+    kind
+  ];
 }
-
 function SocialIcon({ kind }: { kind: SocialKind }) {
-  if (kind === 'instagram') {
-    return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" strokeWidth="2" /><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="2" /><circle cx="17.5" cy="6.5" r="1" fill="currentColor" /></svg>;
-  }
-  if (kind === 'facebook') {
-    return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14 8h3V4h-3c-3.31 0-5 1.79-5 5v3H6v4h3v4h4v-4h3.2l.8-4H13V9c0-.67.33-1 1-1Z" /></svg>;
-  }
-  if (kind === 'tiktok') {
-    return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.2 3h3.1c.28 1.74 1.25 2.83 2.7 3.2v3.13c-1.05-.02-2.02-.29-2.83-.77v6.25A6.18 6.18 0 1 1 11 8.67v3.24a2.94 2.94 0 1 0 2.94 2.9V3h.26Z" /></svg>;
-  }
-  if (kind === 'whatsapp') {
-    return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a8.8 8.8 0 0 0-7.6 13.25L3 21l4.9-1.28A8.8 8.8 0 1 0 12 3Zm0 15.95a7.1 7.1 0 0 1-3.62-.99l-.26-.16-2.9.76.77-2.82-.17-.28A7.1 7.1 0 1 1 12 18.95Zm3.9-5.3c-.21-.1-1.24-.61-1.43-.68-.19-.07-.33-.1-.47.1-.14.2-.54.68-.66.82-.12.14-.24.15-.45.05-.21-.1-.87-.32-1.66-1.03-.61-.54-1.03-1.2-1.15-1.4-.12-.2-.01-.31.09-.41.09-.09.21-.24.31-.36.1-.12.14-.2.21-.34.07-.14.04-.26-.02-.36-.05-.1-.47-1.13-.65-1.55-.17-.4-.34-.35-.47-.36h-.4c-.14 0-.36.05-.55.26-.19.2-.72.7-.72 1.72s.74 2  .84 2.14c.1.14 1.46 2.23 3.54 3.13.49.21.87.34 1.17.44.49.16.94.14 1.3.08.4-.06 1.24-.51 1.41-1 .17-.5.17-.92.12-1.01-.05-.09-.19-.14-.4-.24Z" /></svg>;
-  }
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M3.5 5.5h17v13h-17zM4 6l8 6 8-6" /></svg>;
+  if (kind === 'instagram')
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" strokeWidth="2" />
+        <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="2" />
+        <circle cx="17.5" cy="6.5" r="1" fill="currentColor" />
+      </svg>
+    );
+  if (kind === 'facebook')
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M14 8h3V4h-3c-3.31 0-5 1.79-5 5v3H6v4h3v4h4v-4h3.2l.8-4H13V9c0-.67.33-1 1-1Z" />
+      </svg>
+    );
+  if (kind === 'tiktok')
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          fill="currentColor"
+          d="M14.2 3h3.1c.28 1.74 1.25 2.83 2.7 3.2v3.13c-1.05-.02-2.02-.29-2.83-.77v6.25A6.18 6.18 0 1 1 11 8.67v3.24a2.94 2.94 0 1 0 2.94 2.9V3h.26Z"
+        />
+      </svg>
+    );
+  if (kind === 'whatsapp')
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          fill="currentColor"
+          d="M12 3a8.8 8.8 0 0 0-7.6 13.25L3 21l4.9-1.28A8.8 8.8 0 1 0 12 3Zm0 15.95a7.1 7.1 0 0 1-3.62-.99l-.26-.16-2.9.76.77-2.82-.17-.28A7.1 7.1 0 1 1 12 18.95Zm3.9-5.3c-.21-.1-1.24-.61-1.43-.68-.19-.07-.33-.1-.47.1-.14.2-.54.68-.66.82-.12.14-.24.15-.45.05-.21-.1-.87-.32-1.66-1.03-.61-.54-1.03-1.2-1.15-1.4-.12-.2-.01-.31.09-.41.09-.09.21-.24.31-.36.1-.12.14-.2.21-.34.07-.14.04-.26-.02-.36-.05-.1-.47-1.13-.65-1.55-.17-.4-.34-.35-.47-.36h-.4c-.14 0-.36.05-.55.26-.19.2-.72.7-.72 1.72s.74 2 .84 2.14c.1.14 1.46 2.23 3.54 3.13.49.21.87.34 1.17.44.49.16.94.14 1.3.08.4-.06 1.24-.51 1.41-1 .17-.5.17-.92.12-1.01-.05-.09-.19-.14-.4-.24Z"
+        />
+      </svg>
+    );
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+        d="M3.5 5.5h17v13h-17zM4 6l8 6 8-6"
+      />
+    </svg>
+  );
 }
 
 function LocationIcon() {

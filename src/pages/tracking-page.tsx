@@ -3,6 +3,7 @@
 // otro dispositivo o si borra los datos. La tarjeta se termina de pagar aquí mismo.
 // Abajo, el pedido completo (estado, artículos, total y método de pago).
 // Contrato: vaiinilla_back docs/compra-sin-cuenta.md.
+import { SHOW_WALLET } from '../lib/features';
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import QRCode from 'qrcode';
@@ -270,7 +271,7 @@ export function TrackingPage() {
         ) : null}
 
         <p className="alumno-muted alumno-tracking__account">
-          ¿Quieres tener tus pedidos y tu saldo en un solo lugar?{' '}
+          ¿Quieres tener tus pedidos{SHOW_WALLET ? ' y tu saldo' : ''} en un solo lugar?{' '}
           <Link to="/cuenta">Crea tu cuenta</Link> (opcional).
         </p>
       </main>

@@ -50,7 +50,7 @@ export function EmailVerificationPage() {
         await applyEmailVerificationCode(action.code);
         if (!active) return;
         setState('success');
-        setMessage('Tu correo quedó verificado. Ya puedes usar saldo y tarjeta.');
+        setMessage('Tu correo quedó verificado. Ya puedes pagar con tarjeta.');
       } catch (cause) {
         if (!active) return;
         setState('error');

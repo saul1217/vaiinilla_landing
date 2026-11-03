@@ -1,5 +1,6 @@
 import { STAFF_APP_URL } from '../types/api';
 import { PageShell } from '../components/shell';
+import { SHOW_WALLET } from '../lib/features';
 
 export function SupportPage() {
   return (
@@ -11,7 +12,7 @@ export function SupportPage() {
             ¿Necesitas <span className="highlight">ayuda</span>?
           </h1>
           <p className="support__lead">
-            Estamos para ayudarte con tu pedido, tu saldo, un pago o tu cuenta. Escríbenos y te
+            Estamos para ayudarte con tu pedido, {SHOW_WALLET ? 'tu saldo, ' : ''}un pago o tu cuenta. Escríbenos y te
             respondemos lo antes posible.
           </p>
 
@@ -28,10 +29,9 @@ export function SupportPage() {
 
           <div className="support__grid">
             <article className="support__card">
-              <h3>Pedidos y saldo</h3>
+              <h3>{SHOW_WALLET ? 'Pedidos y saldo' : 'Pedidos'}</h3>
               <p>
-                Si tu pedido no aparece, tardó más de lo indicado o tu saldo no se refleja después
-                de una recarga, escríbenos con la hora aproximada y el establecimiento donde lo hiciste.
+                {SHOW_WALLET ? 'Si tu pedido no aparece, tardó más de lo indicado o tu saldo no se refleja después de una recarga, escríbenos con la hora aproximada y el establecimiento donde lo hiciste.' : 'Si tu pedido no aparece o tardó más de lo indicado, escríbenos con la hora aproximada y el establecimiento donde lo hiciste.'}
               </p>
             </article>
             <article className="support__card">
