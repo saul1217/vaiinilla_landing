@@ -73,9 +73,9 @@ function joined(over: Partial<SharedTable> = {}): SharedTable {
   };
 }
 
-function renderWho(entry = '/e/demo-a/m/qr-1/quien?next=/e/demo-a') {
+function renderWho(entry = '/e/demo-a/m/qr-1/quien?next=/e/demo-a', state?: unknown) {
   return render(
-    <MemoryRouter initialEntries={[entry]}>
+    <MemoryRouter initialEntries={[{ pathname: entry.split('?')[0], search: entry.includes('?') ? `?${entry.split('?')[1]}` : '', state }]}>
       <Routes>
         <Route path="/e/:slug/m/:token/quien" element={<TableWhoPage />} />
         <Route path="/e/:slug" element={<p>Menú demo-a</p>} />
@@ -109,6 +109,19 @@ describe('TableWhoPage', () => {
       invitado: { nombre: '', llave: 'L'.repeat(43) },
     });
     renewGuest.mockRejectedValue(new Error('sin llave'));
+  });
+
+  it('muestra el aviso solo cuando vuelve a confirmar su identidad de mesa', async () => {
+    tableSession.mockResolvedValue(session());
+    const { unmount } = renderWho(undefined, { tableReconfirm: true });
+    expect(await screen.findByRole('status')).toHaveTextContent('Vuelve a confirmar quién eres en la mesa.');
+    expect(joinTable).not.toHaveBeenCalled();
+    unmount();
+    tableSession.mockResolvedValue(session());
+    renderWho();
+    expect(await screen.findByRole('heading', { name: /cómo te llamas en la mesa/i })).toBeInTheDocument();
+    expect(screen.queryByText('Vuelve a confirmar quién eres en la mesa.')).not.toBeInTheDocument();
+    expect(joinTable).not.toHaveBeenCalled();
   });
 
   it('lista los participantes para elegir quién se es', async () => {

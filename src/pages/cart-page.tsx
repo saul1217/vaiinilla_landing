@@ -439,7 +439,7 @@ export function CartPage() {
           return;
         }
         if (!(await currentScannedTable(session.access_token, target))) {
-          void navigate(whoHref);
+          void navigate(whoHref, { state: { tableReconfirm: true } });
           return;
         }
         // /mesas/actual confirma que la sesión sigue abierta; este endpoint confirma
