@@ -925,7 +925,6 @@ export function CartFilledView({
           <button
             type="button"
             className={`alumno-card alumno-cart-destination${!space && placeEntryEnabled ? ' is-place-entry' : ''}`}
-            aria-label={!space && placeEntryEnabled ? 'Para llevar. ¿Estás en una mesa? Escribe su código' : undefined}
             onClick={() => {
               if (space) onToggleDestination();
               else if (placeEntryEnabled) setPlaceEntryOpen(true);

@@ -225,7 +225,7 @@ body[data-shell='alumno'] {
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--surface, var(--cream));
-  color: var(--ink);
+  color: var(--text);
   font-size: .9rem;
 }
 .alumno-join-table button { flex: 0 0 auto; min-height: 44px; font-weight: 700; }
@@ -1839,7 +1839,8 @@ body[data-shell='alumno'] .alumno-btn { min-height: 52px; border-radius: 999px; 
   body[data-shell='alumno'] .alumno-wallet-mobile-place { display:flex;align-items:center;min-height:52px;padding:0 18px;border-radius:999px;color:#fff;background:rgba(27,27,25,.48);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);font-weight:800; }
   body[data-shell='alumno'] .alumno-wallet-mobile-top .alumno-avatar { width:52px;height:52px;background:rgba(255,250,228,.82);color:#342f1c;box-shadow:0 8px 16px rgba(0,0,0,.18); }
   body[data-shell='alumno'] .alumno-main--catalog { position:relative; padding-top:0; }
-  body[data-shell='alumno'] .alumno-menu-cover { display:flex; position:absolute; z-index:0; top:0; left:-20px; right:-20px; height:280px; background-color:#d9cfb6; background-position:center 42%; background-size:cover; background-image:linear-gradient(180deg,rgba(32,32,29,.62),rgba(244,241,231,.08) 62%,var(--bg) 100%); overflow:hidden; }
+  body[data-shell='alumno'] .alumno-menu-cover { display:flex; position:absolute; z-index:0; top:0; left:-20px; right:-20px; height:280px; background-color:#d9cfb6; background-position:center 42%; background-size:cover; background-image:linear-gradient(180deg,rgba(32,32,29,.62),rgba(244,241,231,.08) 62%,var(--bg) 100%); overflow:hidden; pointer-events:none; }
+  body[data-shell='alumno'] .alumno-join-table { position:relative; z-index:1; }
   body[data-shell='alumno'] .alumno-menu-cover img { width:100%;height:100%;object-fit:cover;opacity:.45; }
   body[data-shell='alumno'] .alumno-menu-cover--brand { background-image: linear-gradient(160deg, #a8cf38 0%, #d9e7a0 38%, var(--bg) 100%); }
   body[data-shell='alumno'] .alumno-menu-mobile-head { display:flex; position:relative; z-index:2; justify-content:space-between; align-items:center; padding:14px 0 30px; }

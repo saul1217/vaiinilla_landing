@@ -1,17 +1,18 @@
 import { expect, test, type Page } from '@playwright/test';
 
-async function openCart(page: Page, space?: { slug: string; espacioId: number; nombre: string; tipo: string }) {
+async function openCart(page: Page, space?: { slug: string; espacioId: number; nombre: string; tipo: string }, theme: 'light' | 'dark' = 'light') {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.addInitScript((savedSpace) => {
+  await page.addInitScript(({ savedSpace, theme }) => {
     sessionStorage.setItem('vaiinilla.buyer.guest-buy.v1', '1');
     sessionStorage.setItem('vaiinilla.buyer.guest-explore.v1', '1');
     localStorage.setItem('vaiinilla.buyer.guest.v1', JSON.stringify({ nombre: 'Ana', llave: 'L'.repeat(43) }));
+    localStorage.setItem('vaiinilla.buyer.theme.v1', theme);
     localStorage.setItem('vaiinilla.buyer.cart.v1', JSON.stringify({
       slug: 'demo', establishmentName: 'Demo',
       lines: [{ productId: 1, quantity: 1, optionIds: [], productName: 'Agua', unitPreview: '30.00', imageUrl: null }],
     }));
     if (savedSpace) localStorage.setItem('vaiinilla.buyer.space.v1', JSON.stringify(savedSpace));
-  }, space ?? null);
+  }, { savedSpace: space ?? null, theme });
   await page.route('**/*', async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname.includes('/publico/establecimientos/demo/catalogo')) return route.fulfill({ json: { data: { categorias: [], productos: [] } } });
@@ -29,7 +30,8 @@ async function openCart(page: Page, space?: { slug: string; espacioId: number; n
 test('sin mesa: la tarjeta invita a escribir el código y abre PlaceEntry al tocar y con teclado', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await openCart(page);
-  const card = page.getByRole('button', { name: /Para llevar\. ¿Estás en una mesa\? Escribe su código/i });
+  const card = page.locator('.alumno-cart-destination');
+  await expect(card).toHaveAccessibleName(/Para llevar.*¿Estás en una mesa\? Escribe su código/i);
   await expect(card).toContainText('Para llevar · ¿Estás en una mesa? Escribe su código');
   await expect(page.locator('.alumno-cart-join-help')).toBeVisible();
   if (process.env.CART_SCREENSHOTS) {
@@ -54,6 +56,73 @@ test('sin mesa: la tarjeta invita a escribir el código y abre PlaceEntry al toc
   await card.focus();
   await card.press('Space');
   await expect(page.getByRole('dialog')).toBeVisible();
+});
+
+test('el aviso para unirse a la mesa no bloquea Continuar sin mesa', async ({ page }) => {
+  await openCart(page);
+  await expect(page.locator('.alumno-cart-join-help')).toBeVisible();
+  const continueButton = page.getByRole('button', { name: /^Continuar/ });
+  await expect(continueButton).toBeEnabled();
+  await continueButton.click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+});
+
+test('vista QA conserva su tarjeta de muestra sin activar PlaceEntry', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/__qa/carrito-lleno');
+  await expect(page.getByRole('heading', { name: 'Tu pedido' })).toBeVisible();
+  await expect(page.getByText('CI Bebida de prueba').first()).toBeVisible();
+  await expect(page.getByText('CI Tacos de prueba').first()).toBeVisible();
+  const destination = page.locator('.alumno-cart-destination');
+  await expect(destination).toContainText('Para llevar');
+  await destination.click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+test('capturas QA: menú y carrito en claro y oscuro a 390×844', async ({ page }) => {
+  test.skip(!process.env.CART_QA_SCREENSHOTS, 'Capturas QA se generan bajo demanda.');
+  const fs = await import('node:fs/promises');
+  const output = '/workspace/vaiinilla-pm/carrito-1103/despues-qa';
+  await fs.mkdir(output, { recursive: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  for (const theme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
+    await page.addInitScript((selectedTheme) => {
+      localStorage.setItem('vaiinilla.buyer.theme.v1', selectedTheme);
+      sessionStorage.setItem('vaiinilla.buyer.guest-explore.v1', '1');
+    }, theme);
+    await page.route('**/*', async (route) => {
+      const url = new URL(route.request().url());
+      if (url.pathname.includes('/publico/establecimientos/demo/catalogo')) return route.fulfill({ json: { data: { categorias: [], productos: [] } } });
+      if (url.pathname.includes('/publico/establecimientos/demo')) return route.fulfill({ json: { data: { id: 'e1', slug: 'demo', nombre: 'Demo', permite_pago_al_final: false } } });
+      if (url.pathname.includes('/llamadas') || url.pathname.includes('/reservas')) return route.fulfill({ json: { data: [] } });
+      return route.continue();
+    });
+    await page.goto('/e/demo');
+    const banner = page.locator('.alumno-join-table');
+    await expect(banner).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+    const bannerVisible = await banner.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const text = element.querySelector('span')!.getBoundingClientRect();
+      const x = Math.max(0, Math.min(innerWidth - 1, text.left + 2));
+      const y = Math.max(0, Math.min(innerHeight - 1, text.top + text.height / 2));
+      return rect.top >= 0 && rect.bottom <= innerHeight && document.elementFromPoint(x, y)?.closest('.alumno-join-table') === element;
+    });
+    expect(bannerVisible).toBe(true);
+    await page.screenshot({ path: `${output}/menu-${theme}.png` });
+
+    await openCart(page, undefined, theme);
+    const destination = page.locator('.alumno-cart-destination');
+    await destination.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${output}/cart-closed-${theme}.png` });
+    await page.locator('.alumno-sticky-pay').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${output}/continuar-${theme}.png` });
+    await destination.click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.screenshot({ path: `${output}/cart-code-open-${theme}.png` });
+  }
 });
 
 test('con mesa: conserva el cambio de destino existente', async ({ page }) => {
