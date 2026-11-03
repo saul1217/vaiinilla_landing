@@ -18,7 +18,7 @@ jobs:
     environment: develop-e2e
     # Toca develop: una corrida a la vez en todos los repos; las demás esperan en cola.
     concurrency:
-      group: develop-e2e
+      group: develop-e2e-${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: false
     env:
       E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}

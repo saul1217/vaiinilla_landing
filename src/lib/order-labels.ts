@@ -12,6 +12,7 @@ import {
 } from './rental-tracking';
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
+  por_aceptar: 'Por aceptar',
   por_cobrar: 'Por cobrar',
   cobrado: 'Cobrado',
   preparando: 'Preparando',
@@ -23,6 +24,7 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
 };
 
 export const ORDER_STATUS_HINT: Record<OrderStatus, string> = {
+  por_aceptar: 'El negocio está revisando tu pedido.',
   por_cobrar: 'Caja espera el pago en efectivo.',
   cobrado: 'Cocina recibió la comanda.',
   preparando: 'Tu comida se está preparando.',
@@ -64,7 +66,7 @@ export const PAYMENT_CONFIRMED_HINT = 'El pago con tarjeta se confirmó; Vaiinil
 export const ORDER_FLOW: OrderStatus[] = ['por_cobrar', 'cobrado', 'preparando', 'listo', 'entregado'];
 
 const TERMINAL: OrderStatus[] = ['entregado', 'cancelado', 'no_recogido', 'expirado'];
-const ACTIVE: OrderStatus[] = ['por_cobrar', 'cobrado', 'preparando', 'listo'];
+const ACTIVE: OrderStatus[] = ['por_aceptar', 'por_cobrar', 'cobrado', 'preparando', 'listo'];
 
 export function isTerminalOrderStatus(status: OrderStatus): boolean {
   return TERMINAL.includes(status);
@@ -188,6 +190,9 @@ export function orderCollapsedHint(order: OrderDetail, now: Date = new Date()): 
       : 'Cocina recibió tu pedido. Pagas al final.';
   }
   if (isUnpaidTab(order) && order.estado === 'entregado') return 'Pídele la cuenta a tu mesero para pagar.';
+  if (order.estado === 'por_cobrar' && order.pagar_antes_de) {
+    return 'El negocio aceptó tu pedido. Empiezan a prepararlo cuando lo pagues.';
+  }
   return orderCollapsedStatusHint(order.estado, courtName);
 }
 
@@ -198,7 +203,7 @@ function paymentFailed(order: OrderDetail): boolean {
 
 export function orderStatusTone(status: OrderStatus): 'ready' | 'warn' | 'danger' | 'muted' | 'default' {
   if (status === 'listo') return 'ready';
-  if (status === 'preparando' || status === 'por_cobrar') return 'warn';
+  if (status === 'preparando' || status === 'por_cobrar' || status === 'por_aceptar') return 'warn';
   if (status === 'cancelado' || status === 'expirado' || status === 'no_recogido') return 'danger';
   if (status === 'entregado') return 'muted';
   return 'default';
