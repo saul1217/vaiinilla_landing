@@ -328,6 +328,8 @@ export interface CreateOrderInput {
   items: CreateOrderItemInput[];
   /** Pagar al final: efectivo y en un espacio, solo si el negocio lo permite. */
   pago_diferido?: boolean;
+  /** El cliente confirmó explícitamente pedir para llevar con una silla activa. */
+  confirmar_para_llevar?: boolean;
 }
 
 export interface StripePaymentSession {
