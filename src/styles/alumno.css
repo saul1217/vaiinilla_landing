@@ -4676,6 +4676,135 @@ html[data-theme='dark'] body[data-shell='alumno'] .alumno-nav__items a:not(.is-o
   }
 }
 
+/* Auth screens share the compact, dark client welcome visual language. */
+.alumno-auth {
+  --auth-bg: #1e1e1c;
+  --auth-surface: #292a26;
+  --auth-text: #f4f1e7;
+  --auth-muted: #b9b8ae;
+  --auth-line: rgba(244, 241, 231, .14);
+  background: var(--auth-bg);
+  color: var(--auth-text);
+}
+
+.alumno-auth__panel {
+  --bg: var(--auth-bg);
+  --bg-2: var(--auth-surface);
+  --surface: var(--auth-surface);
+  --text: var(--auth-text);
+  --text-soft: var(--auth-muted);
+  --muted: var(--auth-muted);
+  --white: var(--auth-text);
+  --line: var(--auth-line);
+  background: var(--auth-bg);
+  color: var(--auth-text);
+}
+
+.alumno-auth__panel h1,
+.alumno-auth__panel .alumno-field { color: var(--auth-text); }
+.alumno-auth__panel .alumno-field input,
+.alumno-auth__panel .alumno-totp {
+  color: var(--auth-text);
+  background: var(--auth-surface);
+  border: 1px solid var(--auth-line);
+  border-radius: 18px;
+  min-height: 54px;
+}
+.alumno-auth__panel .alumno-lead,
+.alumno-auth__panel .alumno-muted,
+.alumno-auth__panel .alumno-check { color: var(--auth-muted); }
+.alumno-auth__panel .alumno-link { color: #c9e77e; }
+.alumno-auth__panel .alumno-btn--google {
+  background: #292a26;
+  border: 1px solid var(--auth-line);
+  color: var(--auth-text);
+  border-radius: 999px;
+  min-height: 56px;
+}
+.alumno-auth__panel .alumno-btn--lime {
+  background: #c9e77e;
+  color: #24251f;
+  border-radius: 999px;
+  min-height: 56px;
+  font-weight: 850;
+}
+.alumno-auth__mobile-header { display: contents; }
+.alumno-auth__mobile-header img { display: none; }
+
+html[data-theme="dark"] .alumno-auth {
+  --auth-bg: #1e1e1c;
+  --auth-surface: #292a26;
+  --auth-text: #f4f1e7;
+  --auth-muted: #b9b8ae;
+  --auth-line: rgba(244, 241, 231, .14);
+}
+html[data-theme="dark"] .alumno-auth__panel .alumno-btn--google { background: #292a26; color: #f4f1e7; }
+html[data-theme="dark"] .alumno-auth__panel .alumno-link { color: #c9e77e; }
+
+html[data-theme="light"] .alumno-auth {
+    --auth-bg: #f4f1e7;
+    --auth-surface: #fffdf7;
+    --auth-text: #1e1e1c;
+    --auth-muted: #62645a;
+    --auth-line: rgba(23, 24, 23, .14);
+}
+html[data-theme="light"] .alumno-auth__panel .alumno-btn--google { background: #fffdf7; color: #1e1e1c; }
+html[data-theme="light"] .alumno-auth__panel .alumno-link { color: #4f6c12; }
+
+@media (max-width: 767px) {
+  .alumno-auth {
+    display: block;
+    min-height: 100dvh;
+    padding: 0;
+    background: var(--auth-bg);
+  }
+  .alumno-auth__panel {
+    min-height: 100dvh;
+    padding: max(12px, env(safe-area-inset-top)) 22px max(18px, env(safe-area-inset-bottom));
+  }
+  .alumno-auth__mobile-header {
+    display: grid;
+    grid-template-columns: auto 42px;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    margin-bottom: 8px;
+  }
+  .alumno-auth__mobile-header .alumno-back { justify-self: start; }
+  .alumno-auth__mobile-header img { display: block; width: 38px; height: 44px; object-fit: contain; }
+  .alumno-auth__panel > h1 {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0;
+    margin: 0 0 14px;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+    border: 0;
+    font-size: 1.75rem;
+    font-weight: 850;
+    letter-spacing: -.05em;
+    line-height: 1.05;
+  }
+  .alumno-auth__window-logo,
+  .alumno-auth__mark,
+  .alumno-auth__panel > .alumno-kicker { display: none; }
+  .alumno-auth__panel form { gap: 8px; }
+  .alumno-auth__panel .alumno-field { gap: 6px; }
+  .alumno-auth__panel .alumno-field input { min-height: 50px; }
+  .alumno-auth__forgot { margin: -2px 0 4px; }
+  .alumno-auth__panel .alumno-btn--google { margin-top: 6px; }
+  .alumno-auth__legal { margin-top: 10px; }
+  .alumno-auth .alumno-auth__mosaic,
+  .alumno-auth .alumno-auth__brand { display: none !important; }
+}
+
+@media (min-width: 768px) {
+  .alumno-auth { background: radial-gradient(circle at 50% 0%, rgba(201,231,126,.12), transparent 36%), var(--auth-bg); }
+  .alumno-auth__panel { border-color: var(--auth-line); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .alumno-splash__orbit,
   .alumno-splash__bubble,

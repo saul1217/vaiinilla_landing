@@ -254,15 +254,20 @@ test.describe('alumno responsive', () => {
     }
   });
 
-  test('móvil 390: el acceso conserva su mosaico y no muestra la ventana de escritorio', async ({ page }) => {
+  test('móvil 390: el acceso muestra el formulario sin scroll ni ventana de escritorio', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/cuenta');
     await page.getByRole('button', { name: 'Entrar a mi cuenta', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Entrar a mi cuenta' })).toBeVisible();
 
     const auth = await authMetrics(page);
-    expect(auth.mosaicDisplay).toBe('grid');
+    expect(auth.mosaicDisplay).toBe('none');
     expect(auth.windowLogoDisplay).toBe('none');
     expect(auth.hasHorizontalOverflow).toBe(false);
+
+    const enterButton = page.getByRole('button', { name: 'Entrar', exact: true });
+    const enterButtonBox = await enterButton.boundingBox();
+    expect(enterButtonBox).not.toBeNull();
+    expect(enterButtonBox!.y + enterButtonBox!.height).toBeLessThanOrEqual(844);
   });
 });
