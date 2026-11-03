@@ -5,7 +5,7 @@ import { assertCiStoreSeeded, CI_CART_URL_RE, CI_MENU_URL, CI_PLACE_NAME, CI_PLA
 async function waitForDiscovery(page: Page) {
   await expect(page.getByRole('heading', { name: /dónde comemos/i })).toBeVisible();
   await page.getByRole('textbox', { name: /buscar restaurante/i }).fill(CI_PLACE_NAME);
-  await expect(page.getByRole('list', { name: /establecimientos/i }).getByRole('listitem').first()).toBeVisible({
+  await expect(page.getByRole('group', { name: /establecimientos/i }).getByRole('button').first()).toBeVisible({
     timeout: 20_000,
   });
   await expect(page.getByRole('button', { name: /entrar al menú/i })).toBeVisible();

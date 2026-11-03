@@ -25,6 +25,7 @@ import { deliveredAtLabel, isSharableSpace, spaceNoun } from '../lib/space-words
 import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
 import { isStripeCheckoutEnabled, offersCardPayment, STRIPE_UNAVAILABLE_COPY } from '../lib/stripe-public';
 import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '../lib/stripe-session';
+import { isAwaitingAcceptance } from '../lib/stripe-status';
 import { readGuest } from '../lib/guest-session';
 import { clientSessionForPlace } from '../lib/client-session-for-place';
 import { SHOW_WALLET } from '../lib/features';
@@ -84,9 +85,34 @@ export function CartPage() {
   const [rentalSpace, setRentalSpace] = useState<SpaceSession | null>(null);
   const space = scanned ?? rentalSpace;
   const [forHere, setForHere] = useState(Boolean(space));
+  const [confirmTakeout, setConfirmTakeout] = useState(false);
+  const takeoutConfirmed = useRef(false);
   useEffect(() => {
     if (rentalSpace && !scanned) setForHere(true);
   }, [rentalSpace, scanned]);
+  // Re-sincroniza forHere cuando la mesa (re)aparece: al volver al carrito tras re-escanear
+  // en otra pestaña o tras 'Quién eres', la mesa vuelve a ser el destino. Solo al cambiar
+  // de mesa (null -> mesa u otra mesa), para no pisar un 'para llevar' elegido a mano.
+  const lastTableId = useRef<number | null>(scanned?.tipo === 'mesa' ? scanned.espacioId : null);
+  useEffect(() => {
+    const tableId = scanned?.tipo === 'mesa' ? scanned.espacioId : null;
+    if (tableId !== null && tableId !== lastTableId.current) setForHere(true);
+    lastTableId.current = tableId;
+  }, [scanned]);
+  useEffect(() => {
+    const reread = () => setSpaceVersion((v) => v + 1);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') reread();
+    };
+    window.addEventListener('storage', reread);
+    window.addEventListener('focus', reread);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('storage', reread);
+      window.removeEventListener('focus', reread);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
   const handleLeaveSpace = () => {
     forgetSpace();
     setForHere(false);
@@ -114,6 +140,10 @@ export function CartPage() {
   const [guestName, setGuestName] = useState(() => readGuest()?.nombre ?? '');
   // En mesa con participante vigente no se pide nombre: el pedido ya va a su nombre.
   const qrToken = scanned?.qrToken ?? null;
+  const whoHref =
+    qrToken != null && isSharableSpace(scanned?.tipo)
+      ? `/e/${slug}/m/${encodeURIComponent(qrToken)}/quien?next=${encodeURIComponent(`/e/${slug}/carrito`)}`
+      : null;
   const [tableAlias, setTableAlias] = useState<string | null>(null);
   useEffect(() => {
     // Sin identidad de participante no hay nada que confirmar: no se consulta la mesa.
@@ -139,8 +169,12 @@ export function CartPage() {
         if (!activeTable || !joinedScannedTable(scanned)) {
           setTableAlias(null);
           if (!activeTable) {
-            setForHere(false);
-            setSpaceVersion((v) => v + 1);
+            // null puede ser transitorio mientras el dispositivo vuelve a unirse.
+            // Conserva mesa e identidad; el enlace Quién eres permite reingresar.
+            if (!joinedScannedTable(scanned)) {
+              setForHere(false);
+              setSpaceVersion((v) => v + 1);
+            }
           }
           return;
         }
@@ -160,11 +194,9 @@ export function CartPage() {
     return () => {
       active = false;
     };
-  }, [context, qrToken, scanned, slug, user, place]);
+  }, [context, qrToken, scanned, slug, user, place, navigate, whoHref]);
   const guestNameValid = tableAlias ? true : guestName.trim().length >= 2;
   // Elegir participante es de mesas compartidas: una cancha no se comparte así (se renta).
-  const whoHref =
-    qrToken != null && isSharableSpace(scanned?.tipo) ? `/e/${slug}/m/${encodeURIComponent(qrToken)}/quien?next=${encodeURIComponent(`/e/${slug}/carrito`)}` : null;
   const [legal, setLegal] = useState<LegalVersions | null>(null);
   useEffect(() => {
     if (!guest || legal) return;
@@ -393,6 +425,10 @@ export function CartPage() {
         if (target) setRentalSpace(target);
       }
       const destination = here && target ? 'en_espacio' : 'para_llevar';
+      if (destination === 'para_llevar' && scanned?.tipo === 'mesa' && !takeoutConfirmed.current) {
+        setConfirmTakeout(true);
+        return;
+      }
       if (useTab && !canPayAtEnd(operational, destination === 'en_espacio')) {
         throw new Error('Este negocio ya no permite pagar al final. Elige otra forma de pago.');
       }
@@ -405,9 +441,8 @@ export function CartPage() {
           return;
         }
         if (!(await currentScannedTable(session.access_token, target))) {
-          setForHere(false);
-          setSpaceVersion((v) => v + 1);
-          throw new Error('Tu mesa ya no está abierta. Escribe el número de tu mesa para pedir.');
+          void navigate(whoHref, { state: { tableReconfirm: true } });
+          return;
         }
         // /mesas/actual confirma que la sesión sigue abierta; este endpoint confirma
         // que el backend reconoce al participante local antes de crear el pedido.
@@ -425,11 +460,22 @@ export function CartPage() {
         destination === 'en_espacio' && target ? target.espacioId : null,
         useTab,
       );
+      if (takeoutConfirmed.current && destination === 'para_llevar') payload.confirmar_para_llevar = true;
       const fingerprint = orderFingerprint(payload);
       const key = idempotencyKeyFor(fingerprint);
-      const order = await api.createOrder(session.access_token, payload, key);
+      let order;
+      try {
+        order = await api.createOrder(session.access_token, payload, key);
+      } catch (cause) {
+        if (cause instanceof VaiinillaApiError && cause.status === 409 && cause.code === 'PEDIDO_PARA_LLEVAR_CON_SILLA_ACTIVA') {
+          setConfirmTakeout(true);
+          return;
+        }
+        throw cause;
+      }
       rememberPickupQrToken(order.id, order.qr_token);
-      if (payment === 'stripe') {
+      // Un encargo con tarjeta llega sin `pago`: se cobra cuando el negocio lo acepte.
+      if (payment === 'stripe' && !isAwaitingAcceptance(order)) {
         const stripeSession = stripeSessionFromCreatedOrder(order);
         rememberStripeCheckoutSession(order.id, stripeSession);
         // Invitados pagan en seguimiento; la marca pendiente solo aplica en Mis pedidos.
@@ -724,6 +770,36 @@ export function CartPage() {
             </div>
           )}
         </MotionSheet>
+      ) : null}
+      {confirmTakeout ? (
+        <section
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="takeout-title"
+          className="alumno-confirm-dialog"
+        >
+          <h2 id="takeout-title">¿Pedir para llevar?</h2>
+          <p>Este dispositivo tiene una mesa asociada. Confirma si quieres enviar el pedido para llevar.</p>
+          <button
+            type="button"
+            onClick={() => {
+              takeoutConfirmed.current = true;
+              setConfirmTakeout(false);
+              void confirm();
+            }}
+          >
+            Sí, pedir para llevar
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              takeoutConfirmed.current = false;
+              setConfirmTakeout(false);
+            }}
+          >
+            Cancelar
+          </button>
+        </section>
       ) : null}
     </AppShell>
   );

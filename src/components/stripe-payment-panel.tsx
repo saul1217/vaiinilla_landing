@@ -10,7 +10,7 @@ import { useHideFloatingCall } from '../lib/floating-call';
 import { formatMoney } from '../lib/money';
 import { beginCheckoutSubmit, beginStripePaymentPanel } from '../lib/pwa-update';
 import { resolveStripePublishableKey, stripePublishableKey } from '../lib/stripe-public';
-import { STRIPE_TOTAL_LABEL } from '../lib/stripe-status';
+import { STRIPE_ADVANCE_LABEL, STRIPE_TOTAL_LABEL } from '../lib/stripe-status';
 import type { OrderDetail, StripePaymentSession } from '../types/api';
 
 interface StripePaymentPanelProps {
@@ -28,10 +28,11 @@ export function StripeOrderTotal({ order }: { order: OrderDetail }) {
   return (
     <div className="alumno-stripe-total">
       <div className="alumno-stripe-total__label">
-        <span>{STRIPE_TOTAL_LABEL}</span>
+        <span>{order.anticipo ? STRIPE_ADVANCE_LABEL : STRIPE_TOTAL_LABEL}</span>
         <strong>Pedido #{order.folio}</strong>
       </div>
-      <p className="alumno-wallet-balance">{formatMoney(order.total)}</p>
+      {/* Con anticipo el back crea el PaymentIntent por esa parte, no por el total. */}
+      <p className="alumno-wallet-balance">{formatMoney(order.anticipo ?? order.total)}</p>
     </div>
   );
 }

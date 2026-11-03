@@ -24,6 +24,7 @@ export function statusAsPhrase(order: OrderDetail, now: Date = new Date()): stri
   }
 
   switch (order.estado) {
+    case 'por_aceptar': return 'El negocio está revisando tu pedido';
     case 'por_cobrar': return 'Falta pagar tu pedido';
     case 'cobrado': return 'Recibimos tu pedido';
     case 'preparando': return 'Estamos preparando tu pedido';

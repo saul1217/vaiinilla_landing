@@ -45,3 +45,5 @@ c4dc5176a544623a5a2c67544d789b76549e8d01:src/lib/verification.ts:generic-api-key
 9de5cf59c6b1c58b085b3200a7ce702d5dac0415:src/lib/guest-session.ts:generic-api-key:9
 ac9f4364e5ac5d4ee694acdbc0849ace13f37fc7:.env.development:gcp-api-key:10
 d225a833b1fffe00c16ee1cd0794a455e8b7166c:src/lib/env.ts:generic-api-key:25
+# Stripe publishable key de prueba ficticia (fixture pk_test_)
+20c377667ff3f83043ae00555f49a78a65479505:src/pages/order-detail-page.test.tsx:generic-api-key:358

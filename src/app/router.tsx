@@ -15,6 +15,7 @@ import { SupportPage } from '../pages/support-page';
 import { TableJoinPage } from '../pages/table-join-page';
 import { TableWhoPage } from '../pages/table-who-page';
 import { WalletPage, WalletQrPage } from '../pages/wallet-page';
+import { useRouteMeta } from '../lib/use-route-meta';
 import {
   AlumnoQaCartPage,
   AlumnoQaFilledCartPage,
@@ -37,6 +38,7 @@ export function AppRouter() {
 }
 
 export function AppRoutes() {
+  useRouteMeta();
   return (
     <>
       <Routes>

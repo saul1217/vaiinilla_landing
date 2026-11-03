@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DiscoveryPage } from './discovery-page';
 import { TableCodeSheet } from '../components/table-code-sheet';
@@ -57,10 +57,8 @@ describe('DiscoveryPage', () => {
     expect(await screen.findByRole('heading', { name: /dónde comemos/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /escribir número de mesa/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /más opciones/i })).toBeInTheDocument();
-    const establishments = await screen.findByRole('list', { name: 'Establecimientos' });
-    expect(establishments).toContainElement(await screen.findByRole('listitem'));
-    const menu = await screen.findByRole('link', { name: /cafetería demo a.*ver menú/i });
-    expect(menu).toHaveAttribute('href', '/e/demo-a');
+    const establishments = await screen.findByRole('group', { name: 'Establecimientos' });
+    expect(establishments).toContainElement(await screen.findByRole('button', { name: /cafetería demo a.*ver menú/i }));
     expect(screen.getByRole('button', { name: /usar mi ubicación/i })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /buscar restaurante/i })).toHaveAttribute('placeholder', 'Buscar restaurante por nombre');
     expect(screen.getByRole('button', { name: /entrar al menú/i })).toBeInTheDocument();
@@ -71,6 +69,44 @@ describe('DiscoveryPage', () => {
     expect(screen.getByRole('button', { name: /abrir menú/i })).toBeInTheDocument();
   });
 
+  it('la card de un lugar de acceso libre abre su menú directo', async () => {
+    listEstablishments.mockResolvedValue({
+      establishments: [
+        {
+          id: '2',
+          nombre: 'Local Libre',
+          slug: 'local-libre',
+          identificador_cliente_etiqueta: 'Identificador',
+          identificador_cliente_obligatorio: false,
+        },
+      ],
+      cursor: null,
+    });
+    render(
+      <MemoryRouter initialEntries={['/pedir']}>
+        <Routes>
+          <Route path="/pedir" element={<DiscoveryPage />} />
+          <Route path="/e/:slug" element={<p>Menú abierto</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await userEvent.setup().click(await screen.findByRole('button', { name: /local libre/i }));
+    expect(await screen.findByText('Menú abierto')).toBeInTheDocument();
+    expect(localStorage.getItem('vaiinilla.buyer.last-place.v1')).toBe('local-libre');
+  });
+
+  it('la card de un lugar que pide identificador lo captura antes del menú', async () => {
+    render(
+      <MemoryRouter>
+        <DiscoveryPage />
+      </MemoryRouter>,
+    );
+    await userEvent.setup().click(await screen.findByRole('button', { name: /cafetería demo a/i }));
+    expect(await screen.findByRole('heading', { name: /cafetería demo a/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /matrícula/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /abrir menú/i })).toBeInTheDocument();
+  });
+
   it('muestra los videos del local como enlaces que abren en otra pestaña', async () => {
     listEstablishments.mockResolvedValue({ establishments: [{ id: '1', nombre: 'Cafetería Demo A', slug: 'demo-a', identificador_cliente_etiqueta: 'Matrícula', identificador_cliente_obligatorio: true, videos_local: [{ titulo: 'Así preparamos el café', url: 'https://www.youtube.com/watch?v=abc' }] }], cursor: null });
     render(<MemoryRouter><DiscoveryPage /></MemoryRouter>);
@@ -78,11 +114,6 @@ describe('DiscoveryPage', () => {
     expect(video).toHaveAttribute('href', 'https://www.youtube.com/watch?v=abc');
     expect(video).toHaveAttribute('target', '_blank');
     expect(video).toHaveAttribute('rel', 'noopener noreferrer');
-  });
-
-  it('lleva directo al menú desde la tarjeta del establecimiento', async () => {
-    render(<MemoryRouter><DiscoveryPage /></MemoryRouter>);
-    expect(await screen.findByRole('link', { name: /cafetería demo a.*ver menú/i })).toHaveAttribute('href', '/e/demo-a');
   });
 
   it('abre el picker de establecimientos sin pedir splash ni cuenta', async () => {

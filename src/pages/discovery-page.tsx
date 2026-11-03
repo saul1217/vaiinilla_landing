@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { GuestOrdersBanner } from '../components/guest-orders-banner';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { useAuth } from '../context/auth-context';
@@ -137,6 +137,24 @@ export function DiscoveryPage() {
     }
   }
 
+  function openPicker(place: PublicEstablishment | null = selected) {
+    if (!place) return;
+    setSelectedId(place.id);
+    setError(null);
+    setClientId(sessionStorage.getItem(`vaiinilla.buyer.client-id.${place.slug}`) ?? '');
+    setStep('picker');
+  }
+
+  // La card abre el menú directo; solo el lugar que pide identificador pasa antes por el paso.
+  function enterPlace(place: PublicEstablishment) {
+    if (place.identificador_cliente_obligatorio) {
+      openPicker(place);
+      return;
+    }
+    rememberPlace(place.slug);
+    void navigate(`/e/${place.slug}`);
+  }
+
   function continueToMenu() {
     if (!selected) return;
     if (selected.identificador_cliente_obligatorio && !clientId.trim()) {
@@ -148,13 +166,6 @@ export function DiscoveryPage() {
     }
     rememberPlace(selected.slug);
     void navigate(`/e/${selected.slug}`);
-  }
-
-  function openPicker() {
-    if (!selected) return;
-    setError(null);
-    setClientId(sessionStorage.getItem(`vaiinilla.buyer.client-id.${selected.slug}`) ?? '');
-    setStep('picker');
   }
 
   function useMyLocation() {
@@ -294,33 +305,36 @@ export function DiscoveryPage() {
                 </div>
               ) : null
             ) : (
-              <div className="alumno-radio-list alumno-arrive" role="list" aria-label="Establecimientos">
+              <div className="alumno-radio-list alumno-arrive" role="group" aria-label="Establecimientos">
                 {orderedItems.map((place) => {
                   const isRecommended = recommended?.id === place.id;
                   const access = place.identificador_cliente_obligatorio
                     ? place.identificador_cliente_etiqueta
                     : 'Acceso libre';
                   return (
-                    <div key={place.id} role="listitem">
-                      <Link to={`/e/${place.slug}`} className="alumno-radio alumno-discovery-card">
-                        <span className="alumno-place-thumb" aria-hidden="true">
-                          <PlaceImage src={place.imagen_url} alt="" />
+                    <button
+                      key={place.id}
+                      type="button"
+                      className={selected?.id === place.id ? 'alumno-radio alumno-discovery-card is-on' : 'alumno-radio alumno-discovery-card'}
+                      onClick={() => enterPlace(place)}
+                    >
+                      <span className="alumno-place-thumb" aria-hidden="true">
+                        <PlaceImage src={place.imagen_url} alt="" />
+                      </span>
+                      <span className="alumno-radio__body">
+                        <span className="alumno-place-kicker">
+                          {location ? 'Cerca de ti' : isRecommended ? 'Recomendado para ti' : 'Establecimiento'}
                         </span>
-                        <span className="alumno-radio__body">
-                          <span className="alumno-place-kicker">
-                            {location ? 'Cerca de ti' : isRecommended ? 'Recomendado para ti' : 'Establecimiento'}
-                          </span>
-                          <strong>{place.nombre}</strong>
-                          <span className="alumno-radio__meta">
-                            <span className="alumno-status-dot" aria-hidden="true" />
-                            {access}
-                          </span>
+                        <strong>{place.nombre}</strong>
+                        <span className="alumno-radio__meta">
+                          <span className="alumno-status-dot" aria-hidden="true" />
+                          {access}
                         </span>
-                        <span className="alumno-discovery-card__menu">
-                          Ver menú <span aria-hidden="true">↗</span>
-                        </span>
-                      </Link>
-                    </div>
+                      </span>
+                      <span className="alumno-discovery-card__menu">
+                        Ver menú <span aria-hidden="true">↗</span>
+                      </span>
+                    </button>
                   );
                 })}
               </div>
@@ -383,7 +397,7 @@ export function DiscoveryPage() {
                     </ul>
                   </div>
                 ) : null}
-                <button className="alumno-btn alumno-btn--lime" type="button" onClick={openPicker}>
+                <button className="alumno-btn alumno-btn--lime" type="button" onClick={() => openPicker()}>
                   Entrar al menú
                 </button>
               </div>

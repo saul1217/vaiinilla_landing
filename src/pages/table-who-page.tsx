@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { useAuth } from '../context/auth-context';
@@ -33,6 +33,8 @@ export function TableWhoPage() {
   const { slug = '', token: qrToken = '' } = useParams();
   const [search] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const tableReconfirm = (location.state as { tableReconfirm?: boolean } | null)?.tableReconfirm === true;
   const { user } = useAuth();
   const { context, openClientSession } = useBuyerSession();
   const openClientSessionRef = useRef(openClientSession);
@@ -141,6 +143,7 @@ export function TableWhoPage() {
           title={heading}
           lead={session && !(offerContinue && me) ? 'Elige tu nombre o escribe uno para continuar.' : undefined}
         />
+        {tableReconfirm ? <p className="alumno-ok" role="status">Vuelve a confirmar quién eres en la mesa.</p> : null}
         {loading ? (
           <p role="status">Viendo quién está en la mesa…</p>
         ) : error && !session ? (
@@ -179,6 +182,9 @@ export function TableWhoPage() {
           <>
             {session.participantes.length === 0 ? null : (
               <div className="alumno-arrive table-who__stack">
+                <p className="alumno-muted">
+                  Ya están en la mesa. Toca tu nombre solo si eres tú; si no, agrégate abajo.
+                </p>
                 {session.participantes.map((person) => (
                   <button
                     key={person.id}

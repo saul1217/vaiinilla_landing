@@ -73,9 +73,9 @@ function joined(over: Partial<SharedTable> = {}): SharedTable {
   };
 }
 
-function renderWho(entry = '/e/demo-a/m/qr-1/quien?next=/e/demo-a') {
+function renderWho(entry = '/e/demo-a/m/qr-1/quien?next=/e/demo-a', state?: unknown) {
   return render(
-    <MemoryRouter initialEntries={[entry]}>
+    <MemoryRouter initialEntries={[{ pathname: entry.split('?')[0], search: entry.includes('?') ? `?${entry.split('?')[1]}` : '', state }]}>
       <Routes>
         <Route path="/e/:slug/m/:token/quien" element={<TableWhoPage />} />
         <Route path="/e/:slug" element={<p>Menú demo-a</p>} />
@@ -111,6 +111,19 @@ describe('TableWhoPage', () => {
     renewGuest.mockRejectedValue(new Error('sin llave'));
   });
 
+  it('muestra el aviso solo cuando vuelve a confirmar su identidad de mesa', async () => {
+    tableSession.mockResolvedValue(session());
+    const { unmount } = renderWho(undefined, { tableReconfirm: true });
+    expect(await screen.findByRole('status')).toHaveTextContent('Vuelve a confirmar quién eres en la mesa.');
+    expect(joinTable).not.toHaveBeenCalled();
+    unmount();
+    tableSession.mockResolvedValue(session());
+    renderWho();
+    expect(await screen.findByRole('heading', { name: /cómo te llamas en la mesa/i })).toBeInTheDocument();
+    expect(screen.queryByText('Vuelve a confirmar quién eres en la mesa.')).not.toBeInTheDocument();
+    expect(joinTable).not.toHaveBeenCalled();
+  });
+
   it('lista los participantes para elegir quién se es', async () => {
     tableSession.mockResolvedValue(session());
     renderWho();
@@ -119,6 +132,7 @@ describe('TableWhoPage', () => {
     expect(screen.getByRole('button', { name: 'Jesús' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'David' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /agregarme a la mesa/i })).toBeInTheDocument();
+    expect(screen.getByText(/toca tu nombre solo si eres tú/i)).toBeInTheDocument();
   });
 
   it('con yo ofrece continuar y "No soy" muestra la lista', async () => {
@@ -191,14 +205,21 @@ describe('TableWhoPage', () => {
     expect(screen.queryByText('Menú demo-a')).not.toBeInTheDocument();
   });
 
-  it('restaura la identidad local cuando el servidor aún no me reconoce', async () => {
+  it('restaura identidad sin unirse automáticamente; solo se une al continuar', async () => {
     localStorage.setItem(
       'vaiinilla.buyer.table-participant.v1',
       JSON.stringify({ slug: 'demo-a', espacioId: 5, sesionId: 'ses-5', participanteId: 'p-david', alias: 'David' }),
     );
     tableSession.mockResolvedValue(session());
+    const user = userEvent.setup();
     renderWho();
     expect(await screen.findByRole('heading', { name: /continuar como david/i })).toBeInTheDocument();
+    // Deja completar la hidratación y sus microtareas antes de comprobar que montar no reingresa.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(joinTable).not.toHaveBeenCalled(); // POST /mesas/unirse
+    joinTable.mockResolvedValue(joined({ mi_participante: { id: 'p-david', alias: 'David' }, mi_alias: 'David' }));
+    await user.click(screen.getByRole('button', { name: 'Continuar como David' }));
+    expect(joinTable).toHaveBeenCalledWith('client-jwt', 'qr-1', { participanteId: 'p-david' });
   });
 
   it('si la sesión cambió, la identidad local se borra y se muestra la lista', async () => {

@@ -3,7 +3,7 @@ import { useEffect, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { StripeOrderTotal, StripePaymentPanel } from '../components/stripe-payment-panel';
 import { canSilentlyApplyServiceWorkerUpdate } from '../lib/pwa-update';
-import { STRIPE_TOTAL_LABEL } from '../lib/stripe-status';
+import { STRIPE_ADVANCE_LABEL, STRIPE_TOTAL_LABEL } from '../lib/stripe-status';
 import type { OrderDetail, StripePaymentSession } from '../types/api';
 
 vi.mock('../lib/api', () => ({
@@ -47,6 +47,13 @@ describe('StripePaymentPanel', () => {
     expect(screen.getByText(STRIPE_TOTAL_LABEL)).toBeInTheDocument();
     expect(screen.getByText('$123.60 MXN')).toBeInTheDocument();
     expect(screen.queryByText('$120.00 MXN')).not.toBeInTheDocument();
+  });
+
+  it('con anticipo muestra lo que cobra la tarjeta, no el total', () => {
+    render(<StripeOrderTotal order={{ ...order, anticipo: '50.00' }} />);
+    expect(screen.getByText(STRIPE_ADVANCE_LABEL)).toBeInTheDocument();
+    expect(screen.getByText('$50.00 MXN')).toBeInTheDocument();
+    expect(screen.queryByText('$123.60 MXN')).not.toBeInTheDocument();
   });
 
   it('abre Payment Element con la cuenta conectada y sin copy de caja', () => {
