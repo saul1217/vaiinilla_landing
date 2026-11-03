@@ -402,6 +402,8 @@ export interface SharedTableOrder {
   creado_en: string | null;
   /** "Esto lo pago yo": participante que dijo que lo paga (legacy: alias). */
   pagara?: { id: string; alias: string } | string | null;
+  /** El usuario actual creó el pedido y otra persona tiene una reclamación activa. */
+  puedo_rechazar?: boolean;
   lo_pago_yo?: boolean;
 }
 

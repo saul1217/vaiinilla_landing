@@ -13,7 +13,7 @@ vi.mock('../lib/firebase', () => ({
 
 function SignOutButton() {
   const { signOut } = useAuth();
-  return <button onClick={() => void signOut()}>Cerrar sesión</button>;
+  return <button onClick={() => void signOut().catch(() => undefined)}>Cerrar sesión</button>;
 }
 
 describe('AuthProvider', () => {
@@ -33,5 +33,16 @@ describe('AuthProvider', () => {
     expect(firebaseMock.signOut).toHaveBeenCalledOnce();
     expect(tableDeviceToken('p-ana')).toBeNull();
     expect(tableDeviceToken('p-luis')).toBeNull();
+  });
+
+  it('borra los tokens aunque Firebase rechace cerrar sesión', async () => {
+    saveTableDeviceToken('p-ana', 'token-ana', 'ses-1');
+    firebaseMock.signOut.mockRejectedValueOnce(new Error('Firebase no disponible'));
+    render(<AuthProvider><SignOutButton /></AuthProvider>);
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Cerrar sesión' }));
+
+    expect(firebaseMock.signOut).toHaveBeenCalledOnce();
+    expect(tableDeviceToken('p-ana')).toBeNull();
   });
 });

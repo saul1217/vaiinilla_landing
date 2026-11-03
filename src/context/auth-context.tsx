@@ -48,9 +48,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await firebaseSignOut();
     clearResourceCache();
     clearTableDeviceTokens();
+    await firebaseSignOut();
     setUser(null);
   }, []);
 

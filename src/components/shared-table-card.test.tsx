@@ -140,10 +140,10 @@ describe('mesa compartida', () => {
     expect(screen.getAllByText('Tu parte por pagar')[0]?.nextElementSibling).toHaveTextContent('$10.10');
   });
 
-  it('muestra quién reclamó y permite rechazar solo al participante dueño del pedido', async () => {
+  it('muestra quién reclamó y permite rechazar cuando el backend lo autoriza', async () => {
     apiMock.currentTable.mockResolvedValue(table({ grupos: [
       { alias: 'Ana', participante_id: 'p-ana', soy_yo: false, ...ZERO,
-        pedidos: [{ id: 'o1', folio: 71, estado: 'listo', items_resumen: 'Torta', total: '20.00', pendiente_cobro: true, creado_en: 'c', pagara: { id: 'p-luis', alias: 'Ana' } }] },
+        pedidos: [{ id: 'o1', folio: 71, estado: 'listo', items_resumen: 'Torta', total: '20.00', pendiente_cobro: true, creado_en: 'c', pagara: { id: 'p-luis', alias: 'Ana' }, puedo_rechazar: true }] },
     ] }));
     apiMock.rejectTableClaim.mockResolvedValue(table());
     const user = userEvent.setup();
@@ -154,15 +154,25 @@ describe('mesa compartida', () => {
     expect(apiMock.rejectTableClaim).toHaveBeenCalledWith('jwt', 71);
   });
 
-  it('oculta rechazar a no dueños aunque el grupo esté marcado soy_yo', async () => {
+  it('oculta rechazar si retomó un asiento pero el backend no autoriza (aunque coincida el participante)', async () => {
     apiMock.currentTable.mockResolvedValue(table({ grupos: [
       { alias: 'Luis', participante_id: 'p-luis', soy_yo: true, ...ZERO,
-        pedidos: [{ id: 'o1', folio: 71, estado: 'listo', items_resumen: 'Torta', total: '20.00', pendiente_cobro: true, creado_en: 'c', pagara: { id: 'p-luis', alias: 'Ana' } }] },
+        pedidos: [{ id: 'o1', folio: 71, estado: 'listo', items_resumen: 'Torta', total: '20.00', pendiente_cobro: true, creado_en: 'c', pagara: { id: 'p-otro', alias: 'Ana' }, puedo_rechazar: false }] },
     ] }));
     render(<SharedTableCard accessToken="jwt" qrToken={null} />);
     await userEvent.setup().click(await screen.findByText(/ver pedidos y elegir/i));
     expect(screen.getByText(/Paga Ana/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Rechazar a Ana' })).not.toBeInTheDocument();
+  });
+
+  it('permite rechazar al creador aunque ahora tenga otro participante', async () => {
+    apiMock.currentTable.mockResolvedValue(table({ grupos: [
+      { alias: 'Ana', participante_id: 'p-creador-original', soy_yo: false, ...ZERO,
+        pedidos: [{ id: 'o1', folio: 71, estado: 'listo', items_resumen: 'Torta', total: '20.00', pendiente_cobro: true, creado_en: 'c', pagara: { id: 'p-otro', alias: 'Luis' }, puedo_rechazar: true }] },
+    ] }));
+    render(<SharedTableCard accessToken="jwt" qrToken={null} />);
+    await userEvent.setup().click(await screen.findByText(/ver pedidos y elegir/i));
+    expect(screen.getByRole('button', { name: 'Rechazar a Luis' })).toBeInTheDocument();
   });
 
   it('acepta pagara legado como alias sin inferir identidad por nombre', async () => {
