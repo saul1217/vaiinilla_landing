@@ -5,7 +5,7 @@ import type { SharedTable } from '../types/api';
 import { SharedTableCard } from './shared-table-card';
 import { orderedGroups, tableOrderState } from '../lib/shared-table';
 
-const apiMock = vi.hoisted(() => ({ currentTable: vi.fn(), joinTable: vi.fn(), leaveTable: vi.fn(), claimTableOrder: vi.fn() }));
+const apiMock = vi.hoisted(() => ({ currentTable: vi.fn(), joinTable: vi.fn(), leaveTable: vi.fn(), claimTableOrder: vi.fn(), rejectTableClaim: vi.fn() }));
 vi.mock('../lib/api', () => ({ api: apiMock }));
 
 const ZERO = { total: '0.00', pagado: '0.00', pendiente: '0.00' };
@@ -52,6 +52,7 @@ describe('mesa compartida', () => {
     apiMock.currentTable.mockReset();
     apiMock.joinTable.mockReset();
     apiMock.leaveTable.mockReset();
+    apiMock.rejectTableClaim.mockReset();
   });
 
   it('a la cuenta y sin pagar no dice "Cobrado"', () => {
@@ -137,6 +138,51 @@ describe('mesa compartida', () => {
     expect(screen.getByText('1× Torta')).toBeInTheDocument();
     expect(screen.getByText(/listo · pagado/i)).toBeInTheDocument();
     expect(screen.getAllByText('Tu parte por pagar')[0]?.nextElementSibling).toHaveTextContent('$10.10');
+  });
+
+  it('muestra quién reclamó y permite rechazar cuando el backend lo autoriza', async () => {
+    apiMock.currentTable.mockResolvedValue(table({ grupos: [
+      { alias: 'Ana', participante_id: 'p-ana', soy_yo: false, ...ZERO,
+        pedidos: [{ id: 'o1', folio: 71, estado: 'listo', items_resumen: 'Torta', total: '20.00', pendiente_cobro: true, creado_en: 'c', pagara: { id: 'p-luis', alias: 'Ana' }, puedo_rechazar: true }] },
+    ] }));
+    apiMock.rejectTableClaim.mockResolvedValue(table());
+    const user = userEvent.setup();
+    render(<SharedTableCard accessToken="jwt" qrToken={null} />);
+    await user.click(await screen.findByText(/ver pedidos y elegir/i));
+    expect(screen.getByText(/Paga Ana/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Rechazar a Ana' }));
+    expect(apiMock.rejectTableClaim).toHaveBeenCalledWith('jwt', 71);
+  });
+
+  it('oculta rechazar si retomó un asiento pero el backend no autoriza (aunque coincida el participante)', async () => {
+    apiMock.currentTable.mockResolvedValue(table({ grupos: [
+      { alias: 'Luis', participante_id: 'p-luis', soy_yo: true, ...ZERO,
+        pedidos: [{ id: 'o1', folio: 71, estado: 'listo', items_resumen: 'Torta', total: '20.00', pendiente_cobro: true, creado_en: 'c', pagara: { id: 'p-otro', alias: 'Ana' }, puedo_rechazar: false }] },
+    ] }));
+    render(<SharedTableCard accessToken="jwt" qrToken={null} />);
+    await userEvent.setup().click(await screen.findByText(/ver pedidos y elegir/i));
+    expect(screen.getByText(/Paga Ana/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Rechazar a Ana' })).not.toBeInTheDocument();
+  });
+
+  it('permite rechazar al creador aunque ahora tenga otro participante', async () => {
+    apiMock.currentTable.mockResolvedValue(table({ grupos: [
+      { alias: 'Ana', participante_id: 'p-creador-original', soy_yo: false, ...ZERO,
+        pedidos: [{ id: 'o1', folio: 71, estado: 'listo', items_resumen: 'Torta', total: '20.00', pendiente_cobro: true, creado_en: 'c', pagara: { id: 'p-otro', alias: 'Luis' }, puedo_rechazar: true }] },
+    ] }));
+    render(<SharedTableCard accessToken="jwt" qrToken={null} />);
+    await userEvent.setup().click(await screen.findByText(/ver pedidos y elegir/i));
+    expect(screen.getByRole('button', { name: 'Rechazar a Luis' })).toBeInTheDocument();
+  });
+
+  it('acepta pagara legado como alias sin inferir identidad por nombre', async () => {
+    apiMock.currentTable.mockResolvedValue(table({ grupos: [{
+      alias: 'Luis', participante_id: 'p-luis', soy_yo: true, ...ZERO,
+      pedidos: [{ id: 'o2', folio: 72, estado: 'listo', items_resumen: 'Agua', total: '5.00', pendiente_cobro: true, creado_en: 'c', pagara: 'Ana', lo_pago_yo: false }],
+    }] }));
+    render(<SharedTableCard accessToken="jwt" qrToken={null} />);
+    await userEvent.setup().click(await screen.findByText(/ver pedidos y elegir/i));
+    expect(screen.getByText('Paga Ana')).toBeInTheDocument();
   });
 
   it('resume pedidos marcados para pagar y pendientes de asignar', async () => {

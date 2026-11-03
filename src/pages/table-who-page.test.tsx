@@ -143,6 +143,17 @@ describe('TableWhoPage', () => {
     expect(await screen.findByText('Menú demo-a')).toBeInTheDocument();
   });
 
+  it('muestra una explicación clara si el servidor exige el secreto del dispositivo', async () => {
+    tableSession.mockResolvedValue(session({ yo: { id: 'p-jesus', alias: 'Jesús' } }));
+    joinTable.mockRejectedValue(new VaiinillaApiError(403, {
+      code: 'PARTICIPANT_DEVICE_REQUIRED', message: 'Falta token',
+    }));
+    const user = userEvent.setup();
+    renderWho();
+    await user.click(await screen.findByRole('button', { name: 'Continuar como Jesús' }));
+    expect(await screen.findByText(/no pudimos confirmar que esta silla sea tuya/i)).toBeInTheDocument();
+  });
+
   it('elegir un nombre existente llama a unirse con su participanteId', async () => {
     tableSession.mockResolvedValue(session());
     joinTable.mockResolvedValue(joined({ mi_participante: { id: 'p-david', alias: 'David' }, mi_alias: 'David' }));
