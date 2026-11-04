@@ -19,6 +19,7 @@ import { NotFoundPage } from './not-found-page';
 import type { CatalogProduct, CatalogResponse, PublicEstablishment } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
 import { MotionSheet } from '../components/motion-sheet';
+import { PlaceEntry } from '../components/place-entry';
 import { ProductSheet } from '../components/product-sheet';
 import { SlidingChips } from '../components/sliding-chips';
 import { SeatedToast } from '../components/seated-toast';
@@ -60,6 +61,7 @@ export function MenuPage() {
   } | null>(null);
   const [activeOrder, setActiveOrder] = useState<OrderDetail | null>(qaFixture?.order ?? null);
   const table = readSpace(slug);
+  const [placeEntryOpen, setPlaceEntryOpen] = useState(false);
 
   useEffect(() => {
     if (qaFixture) return;
@@ -270,6 +272,13 @@ export function MenuPage() {
           </div>
         </div>
         {table?.tipo === 'mesa' ? <div className="alumno-table-chip"><b>{initialsFrom(place?.nombre, 'V')}</b><span>{table.nombre || `Mesa ${table.espacioId}`} · mesa</span></div> : null}
+        {!table ? (
+          <div className="alumno-join-table" role="note">
+            <span>¿Estás en el local? Escanea el QR o escribe el código de tu mesa para pedir a la mesa</span>
+            <button type="button" className="alumno-link" onClick={() => setPlaceEntryOpen(true)}>Escribir código</button>
+          </div>
+        ) : null}
+        {!table && placeEntryOpen ? <PlaceEntry autoOpen="code" onClosed={() => setPlaceEntryOpen(false)} /> : null}
         {error && !selected ? <p className="alumno-error">{error}</p> : null}
         {loading ? <LoadingSkeleton shape="products" label="Cargando menú…" /> : null}
         <SlidingChips

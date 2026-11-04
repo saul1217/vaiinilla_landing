@@ -12,9 +12,11 @@ type Sheet = 'qr' | 'code' | 'nfc' | null;
 export function PlaceEntry({
   prominent = false,
   autoOpen = null,
+  onClosed,
 }: {
   prominent?: boolean;
   autoOpen?: Sheet;
+  onClosed?: () => void;
 }) {
   const navigate = useNavigate();
   const [sheet, setSheet] = useState<Sheet>(autoOpen);
@@ -116,7 +118,10 @@ export function PlaceEntry({
             setError(null);
           }}
           onConfirm={() => void enter(code)}
-          onClosed={() => setSheet((current) => (current === 'code' ? null : current))}
+          onClosed={() => {
+            setSheet((current) => (current === 'code' ? null : current));
+            onClosed?.();
+          }}
         />
       ) : null}
     </section>
