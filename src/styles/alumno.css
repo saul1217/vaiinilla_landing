@@ -215,6 +215,21 @@ body[data-shell='alumno'] {
 .alumno-menu-cover,.alumno-menu-mobile-head { display:none; }
 .alumno-table-chip { display:flex; align-items:center; gap:10px; margin:8px 0 16px; font-weight:700; }
 .alumno-table-chip b { display:grid; place-items:center; width:44px; height:44px; border-radius:12px; color:var(--cream); background:var(--ink); }
+.alumno-join-table {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface, var(--cream));
+  color: var(--text);
+  font-size: .9rem;
+}
+.alumno-join-table button { flex: 0 0 auto; min-height: 44px; font-weight: 700; }
+.alumno-cart-join-help { margin: 8px 2px 0; color: var(--muted); font-size: .8rem; line-height: 1.35; }
 .alumno-active-order { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 18px; padding:14px 16px; min-height:88px; text-decoration:none; color:var(--text); background:var(--surface); border:1px solid var(--line); border-radius:24px; }
 .alumno-active-order__copy { display:grid; gap:2px; }
 .alumno-active-order__copy small { color:var(--muted); font-weight:800; }
@@ -1215,6 +1230,20 @@ html[data-theme='dark'] .alumno-antojo img {
   margin: 12px 0;
 }
 
+.alumno-cart-destination {
+  display: block;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.alumno-cart-destination:focus-visible {
+  outline: 3px solid var(--lime);
+  outline-offset: 3px;
+}
+
 .alumno-card h2 {
   font-size: 1.05rem;
   margin-bottom: 6px;
@@ -1810,7 +1839,8 @@ body[data-shell='alumno'] .alumno-btn { min-height: 52px; border-radius: 999px; 
   body[data-shell='alumno'] .alumno-wallet-mobile-place { display:flex;align-items:center;min-height:52px;padding:0 18px;border-radius:999px;color:#fff;background:rgba(27,27,25,.48);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);font-weight:800; }
   body[data-shell='alumno'] .alumno-wallet-mobile-top .alumno-avatar { width:52px;height:52px;background:rgba(255,250,228,.82);color:#342f1c;box-shadow:0 8px 16px rgba(0,0,0,.18); }
   body[data-shell='alumno'] .alumno-main--catalog { position:relative; padding-top:0; }
-  body[data-shell='alumno'] .alumno-menu-cover { display:flex; position:absolute; z-index:0; top:0; left:-20px; right:-20px; height:280px; background-color:#d9cfb6; background-position:center 42%; background-size:cover; background-image:linear-gradient(180deg,rgba(32,32,29,.62),rgba(244,241,231,.08) 62%,var(--bg) 100%); overflow:hidden; }
+  body[data-shell='alumno'] .alumno-menu-cover { display:flex; position:absolute; z-index:0; top:0; left:-20px; right:-20px; height:280px; background-color:#d9cfb6; background-position:center 42%; background-size:cover; background-image:linear-gradient(180deg,rgba(32,32,29,.62),rgba(244,241,231,.08) 62%,var(--bg) 100%); overflow:hidden; pointer-events:none; }
+  body[data-shell='alumno'] .alumno-join-table { position:relative; z-index:1; }
   body[data-shell='alumno'] .alumno-menu-cover img { width:100%;height:100%;object-fit:cover;opacity:.45; }
   body[data-shell='alumno'] .alumno-menu-cover--brand { background-image: linear-gradient(160deg, #a8cf38 0%, #d9e7a0 38%, var(--bg) 100%); }
   body[data-shell='alumno'] .alumno-menu-mobile-head { display:flex; position:relative; z-index:2; justify-content:space-between; align-items:center; padding:14px 0 30px; }
