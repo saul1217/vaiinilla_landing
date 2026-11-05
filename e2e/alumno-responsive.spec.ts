@@ -8,6 +8,9 @@ async function waitForDiscovery(page: Page) {
   await expect(page.getByRole('group', { name: /establecimientos/i }).getByRole('button').first()).toBeVisible({
     timeout: 20_000,
   });
+  // Ningún lugar viene desplegado: tocar la card abre su detalle justo debajo.
+  await expect(page.getByRole('button', { name: /entrar al menú/i })).toHaveCount(0);
+  await page.getByRole('group', { name: /establecimientos/i }).getByRole('button').first().click();
   await expect(page.getByRole('button', { name: /entrar al menú/i })).toBeVisible();
 }
 
@@ -73,6 +76,8 @@ async function metrics(page: Page) {
         utilityActionsRect && utilitySearchRect ? Math.round(utilitySearchRect.top - utilityActionsRect.bottom) : null,
       menuCols: grid ? cols(cs(grid)?.gridTemplateColumns) : 0,
       discoveryCols: discovery ? cols(cs(discovery)?.gridTemplateColumns) : 0,
+      discoveryListCols: cols(cs(document.querySelector('.alumno-main--discover .alumno-radio-list'))?.gridTemplateColumns),
+      hasHorizontalOverflow: document.documentElement.scrollWidth > window.innerWidth,
       cartCols: cart ? cols(cs(cart)?.gridTemplateColumns) : 0,
       splashCols: splash ? cols(cs(splash)?.gridTemplateColumns) : 0,
       sheetMax: sheet ? cs(sheet)?.maxWidth : null,
@@ -115,6 +120,7 @@ test.describe('alumno responsive', () => {
     const discovery = await metrics(page);
     expect(discovery.alumnoMax).toBe('none');
     expect(discovery.alumnoWidth).toBe(390);
+    expect(discovery.hasHorizontalOverflow).toBe(false);
     expect(discovery.navInsetLeft).toBe(14);
     expect(discovery.navInsetRight).toBe(14);
     expect(discovery.navPos).toBe('fixed');
@@ -198,7 +204,10 @@ test.describe('alumno responsive', () => {
     await page.goto('/pedir');
     await waitForDiscovery(page);
     const discovery = await metrics(page);
-    expect(discovery.discoveryCols).toBe(2);
+    // Lista vertical: el detalle del lugar se despliega bajo su card, ya no en una columna lateral.
+    expect(discovery.discoveryCols).toBe(1);
+    expect(discovery.discoveryListCols).toBe(1);
+    expect(discovery.hasHorizontalOverflow).toBe(false);
 
     await page.goto('/cuenta');
     await expect(page.getByRole('heading', { name: /tu lugar, a tu ritmo/i })).toBeVisible();
