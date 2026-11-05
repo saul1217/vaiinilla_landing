@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { Fragment, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { GuestOrdersBanner } from '../components/guest-orders-banner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
@@ -78,12 +78,10 @@ export function DiscoveryPage() {
             if (!active) return;
             setItems(result.establishments);
             setError(null);
-            const remembered = lastPlaceSlug();
-            setSelectedId((current) => {
-              if (current && result.establishments.some((item) => item.id === current)) return current;
-              const preferred = result.establishments.find((item) => item.slug === remembered);
-              return preferred?.id ?? result.establishments[0]?.id ?? null;
-            });
+            // Nada viene desplegado: el detalle de un lugar se abre bajo su card al tocarla.
+            setSelectedId((current) =>
+              current && result.establishments.some((item) => item.id === current) ? current : null,
+            );
           })
           .catch((cause: unknown) => {
             if (!active) return;
@@ -145,7 +143,19 @@ export function DiscoveryPage() {
     setStep('picker');
   }
 
-  // La card abre el menú directo; solo el lugar que pide identificador pasa antes por el paso.
+  // La card despliega el detalle del lugar justo debajo de ella; tocarla otra vez lo cierra.
+  function togglePlace(place: PublicEstablishment) {
+    const opening = selectedId !== place.id;
+    setSelectedId(opening ? place.id : null);
+    if (!opening) return;
+    // Si se cerró un detalle que estaba arriba, la card sube: se trae de vuelta a la vista.
+    window.requestAnimationFrame(() => {
+      const card = document.getElementById(`place-card-${place.id}`);
+      if (card && card.getBoundingClientRect().top < 0) card.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+    });
+  }
+
+  // «Entrar al menú» abre el menú directo; solo el lugar que pide identificador pasa antes por el paso.
   function enterPlace(place: PublicEstablishment) {
     if (place.identificador_cliente_obligatorio) {
       openPicker(place);
@@ -311,101 +321,115 @@ export function DiscoveryPage() {
                   const access = place.identificador_cliente_obligatorio
                     ? place.identificador_cliente_etiqueta
                     : 'Acceso libre';
+                  const open = selected?.id === place.id;
                   return (
-                    <button
-                      key={place.id}
-                      type="button"
-                      className={selected?.id === place.id ? 'alumno-radio alumno-discovery-card is-on' : 'alumno-radio alumno-discovery-card'}
-                      onClick={() => enterPlace(place)}
-                    >
-                      <span className="alumno-place-thumb" aria-hidden="true">
-                        <PlaceImage src={place.imagen_url} alt="" />
-                      </span>
-                      <span className="alumno-radio__body">
-                        <span className="alumno-place-kicker">
-                          {location ? 'Cerca de ti' : isRecommended ? 'Recomendado para ti' : 'Establecimiento'}
+                    <Fragment key={place.id}>
+                      <button
+                        id={`place-card-${place.id}`}
+                        type="button"
+                        className={open ? 'alumno-radio alumno-discovery-card is-on' : 'alumno-radio alumno-discovery-card'}
+                        aria-expanded={open}
+                        aria-controls={open ? `place-detail-${place.id}` : undefined}
+                        onClick={() => togglePlace(place)}
+                      >
+                        <span className="alumno-place-thumb" aria-hidden="true">
+                          <PlaceImage src={place.imagen_url} alt="" />
                         </span>
-                        <strong>{place.nombre}</strong>
-                        <span className="alumno-radio__meta">
-                          <span className="alumno-status-dot" aria-hidden="true" />
-                          {access}
+                        <span className="alumno-radio__body">
+                          <span className="alumno-place-kicker">
+                            {location ? 'Cerca de ti' : isRecommended ? 'Recomendado para ti' : 'Establecimiento'}
+                          </span>
+                          <strong>{place.nombre}</strong>
+                          <span className="alumno-radio__meta">
+                            <span className="alumno-status-dot" aria-hidden="true" />
+                            {access}
+                          </span>
                         </span>
-                      </span>
-                      <span className="alumno-discovery-card__menu">
-                        Ver menú <span aria-hidden="true">↗</span>
-                      </span>
-                    </button>
+                        <span className="alumno-discovery-card__menu">
+                          Ver menú <span aria-hidden="true">{open ? '↑' : '↓'}</span>
+                        </span>
+                      </button>
+                      {open ? <PlaceDetail place={place} onEnter={() => enterPlace(place)} /> : null}
+                    </Fragment>
                   );
                 })}
               </div>
             )}
           </div>
-          {selected ? (
-            <section className="alumno-sticky-cafe" aria-label="Lugar activo">
-              <div className="alumno-place-hero">
-                <PlaceImage src={selected.imagen_url} alt={`${selected.nombre} en Vaiinilla`} />
-                <span className="alumno-place-badge">Menú disponible</span>
-              </div>
-              <div className="alumno-sticky-cafe__content">
-                <p>Tu próximo antojo</p>
-                <strong>{selected.nombre}</strong>
-                {selected.descripcion ? <span>{selected.descripcion}</span> : null}
-                <div className="alumno-place-facts">
-                  <span>
-                    <span className="alumno-status-dot" aria-hidden="true" />{' '}
-                    {selected.identificador_cliente_obligatorio
-                      ? `Pide ${selected.identificador_cliente_etiqueta.toLowerCase()}`
-                      : 'Acceso libre'}
-                  </span>
-                  {selected.direccion ? <span>⌖ {selected.direccion}</span> : null}
-                  {selected.horario ? <span>◷ {selected.horario}</span> : null}
-                </div>
-                {selected.instagram_url ||
-                selected.facebook_url ||
-                selected.tiktok_url ||
-                selected.whatsapp_url ||
-                selected.sitio_web_url ? (
-                  <div className="alumno-place-socials" aria-label="Redes y enlaces del establecimiento">
-                    {selected.instagram_url ? (
-                      <SocialLink href={selected.instagram_url} label="Instagram" kind="instagram" />
-                    ) : null}
-                    {selected.facebook_url ? (
-                      <SocialLink href={selected.facebook_url} label="Facebook" kind="facebook" />
-                    ) : null}
-                    {selected.tiktok_url ? (
-                      <SocialLink href={selected.tiktok_url} label="TikTok" kind="tiktok" />
-                    ) : null}
-                    {selected.whatsapp_url ? (
-                      <SocialLink href={selected.whatsapp_url} label="WhatsApp" kind="whatsapp" />
-                    ) : null}
-                    {selected.sitio_web_url ? (
-                      <SocialLink href={selected.sitio_web_url} label="Sitio web" kind="website" />
-                    ) : null}
-                  </div>
-                ) : null}
-                {selected.videos_local?.length ? (
-                  <div className="alumno-place-videos">
-                    <p className="alumno-place-kicker">Videos del local</p>
-                    <ul>
-                      {selected.videos_local.map((video, index) => (
-                        <li key={`${index}-${video.url}`}>
-                          <a href={video.url} target="_blank" rel="noopener noreferrer">
-                            {video.titulo}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-                <button className="alumno-btn alumno-btn--lime" type="button" onClick={() => openPicker()}>
-                  Entrar al menú
-                </button>
-              </div>
-            </section>
-          ) : null}
         </div>
       </main>
     </AppShell>
+  );
+}
+
+// Detalle del lugar desplegado bajo su card: foto, datos, redes, videos y la entrada al menú.
+function PlaceDetail({ place: selected, onEnter }: { place: PublicEstablishment; onEnter: () => void }) {
+  return (
+    <section
+      id={`place-detail-${selected.id}`}
+      className="alumno-sticky-cafe alumno-sticky-cafe--inline"
+      aria-label={`Detalle de ${selected.nombre}`}
+    >
+      <div className="alumno-place-hero">
+        <PlaceImage src={selected.imagen_url} alt={`${selected.nombre} en Vaiinilla`} />
+        <span className="alumno-place-badge">Menú disponible</span>
+      </div>
+      <div className="alumno-sticky-cafe__content">
+        <p>Tu próximo antojo</p>
+        <strong>{selected.nombre}</strong>
+        {selected.descripcion ? <span>{selected.descripcion}</span> : null}
+        <div className="alumno-place-facts">
+          <span>
+            <span className="alumno-status-dot" aria-hidden="true" />{' '}
+            {selected.identificador_cliente_obligatorio
+              ? `Pide ${selected.identificador_cliente_etiqueta.toLowerCase()}`
+              : 'Acceso libre'}
+          </span>
+          {selected.direccion ? <span>⌖ {selected.direccion}</span> : null}
+          {selected.horario ? <span>◷ {selected.horario}</span> : null}
+        </div>
+        {selected.instagram_url ||
+        selected.facebook_url ||
+        selected.tiktok_url ||
+        selected.whatsapp_url ||
+        selected.sitio_web_url ? (
+          <div className="alumno-place-socials" aria-label="Redes y enlaces del establecimiento">
+            {selected.instagram_url ? (
+              <SocialLink href={selected.instagram_url} label="Instagram" kind="instagram" />
+            ) : null}
+            {selected.facebook_url ? (
+              <SocialLink href={selected.facebook_url} label="Facebook" kind="facebook" />
+            ) : null}
+            {selected.tiktok_url ? (
+              <SocialLink href={selected.tiktok_url} label="TikTok" kind="tiktok" />
+            ) : null}
+            {selected.whatsapp_url ? (
+              <SocialLink href={selected.whatsapp_url} label="WhatsApp" kind="whatsapp" />
+            ) : null}
+            {selected.sitio_web_url ? (
+              <SocialLink href={selected.sitio_web_url} label="Sitio web" kind="website" />
+            ) : null}
+          </div>
+        ) : null}
+        {selected.videos_local?.length ? (
+          <div className="alumno-place-videos">
+            <p className="alumno-place-kicker">Videos del local</p>
+            <ul>
+              {selected.videos_local.map((video, index) => (
+                <li key={`${index}-${video.url}`}>
+                  <a href={video.url} target="_blank" rel="noopener noreferrer">
+                    {video.titulo}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        <button className="alumno-btn alumno-btn--lime" type="button" onClick={onEnter}>
+          Entrar al menú
+        </button>
+      </div>
+    </section>
   );
 }
 
