@@ -45,7 +45,9 @@ export function OrderPickupPanel({
   // En mesa o cancha lo lleva el mesero: el código solo se muestra si te lo pide.
   const toSpace = order.destino === 'en_espacio';
   const hint = toSpace
-    ? 'Tu mesero te lo lleva. Si te pide el código, muéstrale este.'
+    ? listo
+      ? 'Tu mesero te lo lleva.'
+      : 'Tu mesero te lo lleva. Si te pide el código, muéstrale este.'
     : listo
     ? ORDER_STATUS_HINT.listo
     : atCounter

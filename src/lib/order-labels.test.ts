@@ -106,6 +106,19 @@ describe('order-labels Android tracking', () => {
     expect(steps[4]?.state).toBe('todo');
   });
 
+  it('indica que el mesero lleva los pedidos LISTOS en el espacio', () => {
+    const inSpace = order({
+      estado: 'listo',
+      destino: 'en_espacio',
+      espacio: { id: 1, nombre: 'Mesa 1', tipo: 'mesa' },
+    });
+    expect(orderTrackSteps(inSpace)[3]?.hint).toBe('Tu mesero te lo lleva.');
+    expect(orderTrackSteps(order({ estado: 'listo' }))[3]?.hint).toBe('');
+
+    const tab = orderTrackSteps({ ...inSpace, pago_diferido: true, pago_pendiente: true });
+    expect(tab.find((step) => step.key === 'listo')?.hint).toBe('Tu mesero te lo lleva.');
+  });
+
   it('deja Recógelo en la barra para LISTO futuro', () => {
     const preparing = order({
       estado: 'preparando',

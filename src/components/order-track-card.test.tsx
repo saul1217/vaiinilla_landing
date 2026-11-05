@@ -193,6 +193,17 @@ describe("OrderTrackCard pickup", () => {
     expect(document.querySelector(".alumno-timeline li.is-skipped")).toHaveTextContent(/no aplica/i);
   });
 
+  it("en listo para en_espacio indica entrega del mesero", () => {
+    renderCard(order({
+      destino: "en_espacio",
+      espacio: { id: 1, nombre: "Mesa 1", tipo: "mesa" },
+    }));
+    expect(document.querySelector(".alumno-pickup__hint")).toHaveTextContent(/^Tu mesero te lo lleva\.$/);
+    expect(document.querySelector(".alumno-timeline li.is-current .alumno-timeline__hint"))
+      .toHaveTextContent(/^Tu mesero te lo lleva\.$/);
+    expect(document.body).not.toHaveTextContent(/Recógelo en la barra/i);
+  });
+
   it("colapsada conserva chrome Android (barra, status y Ver seguimiento)", async () => {
     const onToggle = vi.fn();
     const user = userEvent.setup();
