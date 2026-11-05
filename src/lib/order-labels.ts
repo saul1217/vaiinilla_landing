@@ -272,8 +272,8 @@ function flowTrackSteps(order: OrderDetail): OrderTrackStep[] {
   const labels = stripe
     ? ['Pago confirmado', 'Cobrado', 'Preparando', 'Listo', 'Entregado']
     : ['Por cobrar', 'Cobrado', 'Preparando', 'Listo', 'Entregado'];
-  const listoHint = courtName
-    ? `Se te llevará a tu ${courtName}.`
+  const listoHint = order.destino === 'en_espacio'
+    ? 'Tu mesero te lo lleva.'
     : order.estado === 'listo'
       ? ''
       : ORDER_STATUS_HINT.listo;
@@ -353,7 +353,7 @@ function tabTrackSteps(order: OrderDetail): OrderTrackStep[] {
       key: 'listo',
       label: 'Listo',
       hint: order.estado === 'listo'
-        ? (courtName ? `Se te llevará a tu ${courtName}.` : '')
+        ? (order.destino === 'en_espacio' ? 'Tu mesero te lo lleva.' : '')
         : (courtName ? `Se te llevará a tu ${courtName}.` : 'Tu mesero te lo lleva.'),
     },
     { key: 'entregado', label: 'Entregado', hint: ORDER_STATUS_HINT.entregado },
