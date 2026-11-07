@@ -51,6 +51,9 @@ test('discovery y menú públicos responden contra el backend de development', a
   await expect(page.getByRole('group', { name: /establecimientos/i }).getByRole('button').first()).toBeVisible({
     timeout: 20_000,
   });
+  // Ningún lugar viene desplegado: tocar la card abre su detalle justo debajo.
+  await expect(page.getByRole('button', { name: /entrar al menú/i })).toHaveCount(0);
+  await page.getByRole('group', { name: /establecimientos/i }).getByRole('button').first().click();
   await expect(page.getByRole('button', { name: /entrar al menú/i })).toBeVisible();
   await page.goto(CI_MENU_URL);
   await expect(page.getByRole('heading', { level: 1, name: CI_PLACE_NAME_RE })).toBeVisible({

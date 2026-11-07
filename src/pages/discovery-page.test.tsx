@@ -61,15 +61,52 @@ describe('DiscoveryPage', () => {
     expect(establishments).toContainElement(await screen.findByRole('button', { name: /cafetería demo a.*ver menú/i }));
     expect(screen.getByRole('button', { name: /usar mi ubicación/i })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /buscar restaurante/i })).toHaveAttribute('placeholder', 'Buscar restaurante por nombre');
-    expect(screen.getByRole('button', { name: /entrar al menú/i })).toBeInTheDocument();
+    // Al cargar no hay ningún lugar desplegado.
+    expect(screen.queryByRole('button', { name: /entrar al menú/i })).not.toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /cafetería demo a/i }));
     expect(screen.getByRole('link', { name: 'Abrir Instagram' })).toHaveAttribute('href', 'https://instagram.com/cafeteria-demo');
-    await userEvent.setup().click(screen.getByRole('button', { name: /entrar al menú/i }));
+    await user.click(screen.getByRole('button', { name: /entrar al menú/i }));
     expect(await screen.findByRole('heading', { name: /cafetería demo a/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /usar código/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /abrir menú/i })).toBeInTheDocument();
   });
 
-  it('la card de un lugar de acceso libre abre su menú directo', async () => {
+  it('la card despliega su detalle justo debajo de ella y se cierra al tocarla otra vez', async () => {
+    listEstablishments.mockResolvedValue({
+      establishments: ['Uno', 'Dos', 'Tres'].map((nombre, index) => ({
+        id: String(index + 1),
+        nombre: `Local ${nombre}`,
+        slug: `local-${index + 1}`,
+        identificador_cliente_etiqueta: 'Identificador',
+        identificador_cliente_obligatorio: false,
+        horario: `Horario ${nombre}`,
+      })),
+      cursor: null,
+    });
+    const user = userEvent.setup();
+    render(<MemoryRouter><DiscoveryPage /></MemoryRouter>);
+    const middle = await screen.findByRole('button', { name: /local dos/i });
+    const last = screen.getByRole('button', { name: /local tres/i });
+    expect(screen.queryByRole('region', { name: /detalle de/i })).not.toBeInTheDocument();
+
+    await user.click(middle);
+    const middleDetail = screen.getByRole('region', { name: 'Detalle de Local Dos' });
+    expect(middle).toHaveAttribute('aria-expanded', 'true');
+    expect(middle.nextElementSibling).toBe(middleDetail);
+    expect(middleDetail).toHaveTextContent('Horario Dos');
+
+    await user.click(last);
+    expect(screen.queryByRole('region', { name: 'Detalle de Local Dos' })).not.toBeInTheDocument();
+    expect(last.nextElementSibling).toBe(screen.getByRole('region', { name: 'Detalle de Local Tres' }));
+    expect(screen.getAllByRole('region', { name: /detalle de/i })).toHaveLength(1);
+
+    await user.click(last);
+    expect(last).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('region', { name: /detalle de/i })).not.toBeInTheDocument();
+  });
+
+  it('«Entrar al menú» de un lugar de acceso libre abre su menú directo', async () => {
     listEstablishments.mockResolvedValue({
       establishments: [
         {
@@ -90,18 +127,22 @@ describe('DiscoveryPage', () => {
         </Routes>
       </MemoryRouter>,
     );
-    await userEvent.setup().click(await screen.findByRole('button', { name: /local libre/i }));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /local libre/i }));
+    await user.click(screen.getByRole('button', { name: /entrar al menú/i }));
     expect(await screen.findByText('Menú abierto')).toBeInTheDocument();
     expect(localStorage.getItem('vaiinilla.buyer.last-place.v1')).toBe('local-libre');
   });
 
-  it('la card de un lugar que pide identificador lo captura antes del menú', async () => {
+  it('un lugar que pide identificador lo captura antes del menú', async () => {
     render(
       <MemoryRouter>
         <DiscoveryPage />
       </MemoryRouter>,
     );
-    await userEvent.setup().click(await screen.findByRole('button', { name: /cafetería demo a/i }));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /cafetería demo a/i }));
+    await user.click(screen.getByRole('button', { name: /entrar al menú/i }));
     expect(await screen.findByRole('heading', { name: /cafetería demo a/i })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /matrícula/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /abrir menú/i })).toBeInTheDocument();
@@ -110,6 +151,7 @@ describe('DiscoveryPage', () => {
   it('muestra los videos del local como enlaces que abren en otra pestaña', async () => {
     listEstablishments.mockResolvedValue({ establishments: [{ id: '1', nombre: 'Cafetería Demo A', slug: 'demo-a', identificador_cliente_etiqueta: 'Matrícula', identificador_cliente_obligatorio: true, videos_local: [{ titulo: 'Así preparamos el café', url: 'https://www.youtube.com/watch?v=abc' }] }], cursor: null });
     render(<MemoryRouter><DiscoveryPage /></MemoryRouter>);
+    await userEvent.setup().click(await screen.findByRole('button', { name: /cafetería demo a/i }));
     const video = await screen.findByRole('link', { name: 'Así preparamos el café' });
     expect(video).toHaveAttribute('href', 'https://www.youtube.com/watch?v=abc');
     expect(video).toHaveAttribute('target', '_blank');
