@@ -50,7 +50,7 @@ jobs:
           if [ "$UPDATE_SNAPSHOTS" = "true" ]; then args+=(--update-snapshots); fi
           npx playwright test -c playwright.ui.config.ts "${args[@]}"
       # Las referencias nuevas viven en este contenedor: se suben para versionarlas en el repo.
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         # Antes de Lighthouse y aunque falle un paso posterior: las referencias no dependen de él.
         if: ${{ !cancelled() && inputs.update_snapshots }}
         with:
@@ -74,7 +74,7 @@ jobs:
             --collect.chromePath="$CHROME_PATH" \
             --collect.settings.chromeFlags="--headless=new --no-sandbox --disable-dev-shm-usage" \
             --collect.url="$E2E_BASE_URL/pedir" --collect.url="$E2E_BASE_URL/e/ci-vaiinilla/canchas" --collect.url="$E2E_BASE_URL/e/ci-vaiinilla"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         # Solo si falla, 3 días. Solo el reporte HTML: nunca storageState ni archivos de sesión.
         if: failure()
         with:
