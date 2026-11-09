@@ -34,12 +34,12 @@ describe('seo', () => {
     expect(canonicalUrl('/e/cafe-norte')).toBe('https://vaiinilla.app/e/cafe-norte');
   });
 
-  it.each(['/cuenta', '/cuenta/pedidos/7', '/acceso/verificar', '/seguimiento/abc', '/u/12', '/e/cafe/m/tok', '/cafe/m/tok/quien', '/__qa/carrito'])(
+  it.each(['/cuenta', '/cuenta/pedidos/7', '/acceso/verificar', '/seguimiento/abc', '/u/12', '/e/cafe/m/tok', '/cafe/m/tok/quien', '/__qa/carrito', '/e/hotel-sol/hotel', '/e/hotel-sol/hotel/codigo', '/e/hotel-sol/hotel/cuenta', '/e/hotel-sol/hotel/pedido', '/e/hotel-sol/hotel/solicitudes/'])(
     '%s es privada',
     (path) => expect(isPrivatePath(path)).toBe(true),
   );
 
-  it.each(['/', '/pedir', '/soporte', '/e/cafe-norte', '/e/cafe-norte/canchas', '/cuentas-claras'])(
+  it.each(['/', '/pedir', '/soporte', '/e/cafe-norte', '/e/cafe-norte/canchas', '/cuentas-claras', '/e/hotel-sol', '/e/hotelero', '/e/cafe/hoteles'])(
     '%s es indexable',
     (path) => expect(isPrivatePath(path)).toBe(false),
   );
@@ -65,6 +65,15 @@ describe('seo', () => {
     expect(robotsTxt(true)).toContain('Disallow: /cuenta$\nDisallow: /cuenta/\n');
     expect(robotsTxt(true)).toContain('Sitemap: https://vaiinilla.app/sitemap.xml');
     expect(robotsTxt(false)).toBe('User-agent: *\nDisallow: /\n');
+  });
+
+  it('las rutas del huésped de hotel son noindex sin cambiar su canonical ni el menú público', () => {
+    expect(metaForPath('/e/hotel-sol/hotel/cuenta')).toMatchObject({
+      noindex: true,
+      canonical: 'https://vaiinilla.app/e/hotel-sol/hotel/cuenta',
+    });
+    expect(metaForPath('/e/hotel-sol')).toMatchObject({ noindex: false, canonical: 'https://vaiinilla.app/e/hotel-sol' });
+    expect(robotsTxt(true)).toContain('Disallow: /e/*/hotel$\nDisallow: /e/*/hotel/\n');
   });
 
   it('el sitemap lista solo las rutas públicas con URL absoluta', () => {
