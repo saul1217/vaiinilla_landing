@@ -285,6 +285,23 @@ describe('pedido al cuarto (H03)', () => {
     expect(afterOrder).toHaveBeenCalledWith({ id: 'o1', folio: 14 }, 'efectivo');
   });
 
+  it('un reintento del cargo a la habitación reutiliza la llave para no cargar dos veces', async () => {
+    fillCart();
+    const user = userEvent.setup();
+    const createOrder = vi
+      .fn<HotelClient['createOrder']>()
+      .mockRejectedValueOnce(new VaiinillaApiError(0, { code: 'BACKEND_UNAVAILABLE', message: 'Sin red' }))
+      .mockResolvedValueOnce({ id: 'o1', folio: 14 } as OrderDetail);
+    const { afterOrder } = renderHotel('/e/hotel-sol/hotel/pedido', makeClient({ createOrder }));
+    await user.click(await screen.findByRole('button', { name: 'Pedir · $220' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Pedir · $220' }));
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(2));
+    expect(createOrder.mock.calls[0]?.[1]).toBe(createOrder.mock.calls[1]?.[1]);
+    expect(createOrder.mock.calls[1]?.[0]).toMatchObject({ metodo_pago: 'efectivo', pago_diferido: true, espacio_id: 12 });
+    expect(afterOrder).toHaveBeenCalledTimes(1);
+  });
+
   it('con tarjeta manda stripe sin cargo a la cuenta', async () => {
     fillCart();
     const user = userEvent.setup();
