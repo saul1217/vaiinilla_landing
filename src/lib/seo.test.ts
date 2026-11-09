@@ -60,6 +60,22 @@ describe('seo', () => {
     expect(isIndexable('development')).toBe(false);
   });
 
+  it('vercel.json pone noindex por host a todo lo que no es vaiinilla.app ni www', () => {
+    const { headers, redirects } = JSON.parse(readFileSync('vercel.json', 'utf8')) as {
+      headers: { source: string; missing?: { type: string; value: string }[]; headers: { key: string; value: string }[] }[];
+      redirects: { has?: { type: string; value: string }[] }[];
+    };
+    // La redirección de www va antes que las demás, para que /privacidad en www pase primero al apex.
+    expect(redirects[0]?.has).toEqual([{ type: 'host', value: 'www.vaiinilla.app' }]);
+    const rule = headers.find((h) => h.headers.some((x) => x.key === 'X-Robots-Tag'));
+    expect(rule).toMatchObject({ source: '/(.*)', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] });
+    const indexedHost = new RegExp(rule!.missing!.find((m) => m.type === 'host')!.value);
+    for (const host of ['vaiinilla.app', 'www.vaiinilla.app']) expect(indexedHost.test(host)).toBe(true);
+    for (const host of ['dev.vaiinilla.app', 'sand-user.vaiinilla.app', 'vaiinilla-landing-git-develop-saul.vercel.app', 'vaiinilla.app.evil.com']) {
+      expect(indexedHost.test(host)).toBe(false);
+    }
+  });
+
   it('robots.txt de producción apunta al sitemap y el de preview bloquea todo', () => {
     expect(robotsTxt(true)).toContain('Allow: /\n');
     expect(robotsTxt(true)).toContain('Disallow: /cuenta$\nDisallow: /cuenta/\n');
