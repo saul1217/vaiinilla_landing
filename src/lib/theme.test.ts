@@ -1,5 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { readThemePreference, resolveTheme, themeColorFor, THEME_STORAGE_KEY, writeThemePreference } from './theme';
+import {
+  isDarkTheme,
+  nextThemePreference,
+  readThemePreference,
+  resolveTheme,
+  themeColorFor,
+  THEME_OPTIONS,
+  THEME_STORAGE_KEY,
+  vaiThemeFor,
+  writeThemePreference,
+} from './theme';
 import { normalizeResolvedSpace } from './resolved-space';
 
 describe('theme', () => {
@@ -8,27 +18,47 @@ describe('theme', () => {
     expect(resolveTheme('system', true)).toBe('dark');
     expect(resolveTheme('system', false)).toBe('light');
     expect(resolveTheme('dark', false)).toBe('dark');
-    expect(themeColorFor('light')).toBe('#F4F1E7');
-    expect(themeColorFor('dark')).toBe('#171817');
-    expect(themeColorFor('dark')).toBe('#171817');
+    expect(resolveTheme('amoled', false)).toBe('amoled');
   });
 
-  it('migra una preferencia AMOLED guardada a oscuro sin cambiar la clave', () => {
+  it('pinta la barra del navegador con el papel de cada modo', () => {
+    expect(themeColorFor('light')).toBe('#F4F1E7');
+    expect(themeColorFor('dark')).toBe('#171817');
+    expect(themeColorFor('amoled')).toBe('#000000');
+  });
+
+  it('rota como VaiinillaThemeMode.next() de Android: sistema, claro, oscuro, AMOLED', () => {
+    expect(nextThemePreference('system')).toBe('light');
+    expect(nextThemePreference('light')).toBe('dark');
+    expect(nextThemePreference('dark')).toBe('amoled');
+    expect(nextThemePreference('amoled')).toBe('system');
+    expect(THEME_OPTIONS.map((option) => option.value)).toEqual(['system', 'light', 'dark', 'amoled']);
+  });
+
+  it('AMOLED usa las reglas oscuras y marca su modo exacto para los tokens de Android', () => {
+    expect(isDarkTheme('amoled')).toBe(true);
+    expect(isDarkTheme('dark')).toBe(true);
+    expect(isDarkTheme('light')).toBe(false);
+    expect(vaiThemeFor('light')).toBe('claro');
+    expect(vaiThemeFor('dark')).toBe('oscuro');
+    expect(vaiThemeFor('amoled')).toBe('amoled');
+  });
+
+  it('conserva una preferencia AMOLED guardada', () => {
     localStorage.setItem(THEME_STORAGE_KEY, 'amoled');
-    expect(readThemePreference()).toBe('dark');
-    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
+    expect(readThemePreference()).toBe('amoled');
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('amoled');
     expect(THEME_STORAGE_KEY).toBe('vaiinilla.buyer.theme.v1');
+  });
+
+  it('ignora un valor guardado que no es un modo', () => {
+    localStorage.setItem(THEME_STORAGE_KEY, 'neon');
+    expect(readThemePreference()).toBe('system');
   });
 
   it('usa sistema si falla la lectura del almacenamiento', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked'); });
     expect(readThemePreference()).toBe('system');
-  });
-
-  it('mantiene oscuro si falla guardar la migración AMOLED', () => {
-    vi.spyOn(Storage.prototype, 'getItem').mockReturnValue('amoled');
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('full'); });
-    expect(readThemePreference()).toBe('dark');
   });
 
   it('no lanza si falla guardar una preferencia', () => {
