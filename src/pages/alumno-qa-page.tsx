@@ -357,6 +357,7 @@ export function AlumnoQaFilledCartPage() {
   const demo = useMarketingScreensDemo(marketing);
   const leftoverEmpty = params.get("leftover") === "0";
   const [lines, setLines] = useState<CartLine[]>([FILL_LUPIS, FILL_KEKE]);
+  const [notes, setNotes] = useState("");
   useEffect(() => {
     if (marketing && demo) setLines(demo.marketingCartLines());
     if (!marketing) setLines([FILL_LUPIS, FILL_KEKE]);
@@ -412,8 +413,8 @@ export function AlumnoQaFilledCartPage() {
           place={null}
           clientId=""
           onClientIdChange={() => undefined}
-          notes=""
-          onNotesChange={() => undefined}
+          notes={notes}
+          onNotesChange={setNotes}
           total={total}
           slug={QA_CATALOG_SLUG}
           productCount={lines.reduce((sum, line) => sum + line.quantity, 0)}
