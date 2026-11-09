@@ -11,6 +11,7 @@ import './styles/global.css';
 import './styles/marketing.css';
 import './styles/app.css';
 import './styles/alumno.css';
+import './styles/hotel.css';
 
 initMonitoring();
 
