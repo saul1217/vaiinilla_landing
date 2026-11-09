@@ -14,8 +14,11 @@ for (const theme of THEMES) {
       }
 
       test('canchas con día seleccionado y apartado', async ({ prepared: page, apiProblems }) => {
-        await gotoReady(page, `/e/${COURTS_SLUG}/canchas`, apiProblems, '.alumno-res');
-        await page.locator('.alumno-res__hours button:not([disabled])').first().click();
+        // Sin un horario libre sembrado no hay qué apartar: gotoReady la omite como bloqueada por datos
+        // de develop en vez de esperar 30 s a un botón que no existe.
+        const freeHour = '.alumno-res__hours button:not([disabled])';
+        await gotoReady(page, `/e/${COURTS_SLUG}/canchas`, apiProblems, freeHour);
+        await page.locator(freeHour).first().click();
         await expect(page).toHaveScreenshot(`canchas-apartado-${theme}-${vp.name}.png`, { fullPage: true });
       });
 
