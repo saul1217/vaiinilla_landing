@@ -30,10 +30,10 @@ describe('useRouteMeta', () => {
 
     expect(document.title).toBe('Soporte - Vaiinilla');
     expect(content('meta[name="description"]')).toMatch(/equipo@vaiinilla\.app/);
-    expect(content('meta[property="og:url"]')).toBe('https://www.vaiinilla.app/soporte');
+    expect(content('meta[property="og:url"]')).toBe('https://vaiinilla.app/soporte');
     expect(content('meta[name="twitter:title"]')).toBe('Soporte - Vaiinilla');
     expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
-      'https://www.vaiinilla.app/soporte',
+      'https://vaiinilla.app/soporte',
     );
   });
 
