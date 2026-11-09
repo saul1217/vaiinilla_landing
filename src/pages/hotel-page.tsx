@@ -39,6 +39,7 @@ import {
   type Stay,
 } from '../lib/hotel';
 import { createHotelClient, type HotelClient } from '../lib/hotel-client';
+import { HOTEL_CARD_TEST_ONLY_COPY, isHotelCardTestModeAllowed, isLiveStripeOrder } from '../lib/hotel-stripe-gate';
 import { hotelPath, type HotelView } from '../lib/hotel-routes';
 import { createIdempotencyKey, forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
 import { linePreview } from '../lib/money';
@@ -161,10 +162,21 @@ interface HotelScreenProps {
   /** La habitación del QR escaneado; sin ella el código no se puede ligar. */
   room: SpaceSession | null;
   afterOrder: (order: OrderDetail, method: PaymentMethod) => void;
+  /** Compuerta de Stripe del hotel: la tarjeta solo va en modo prueba (hotel-stripe-gate.ts). */
+  stripeTestMode?: boolean;
 }
 
 /** El flujo completo sin red ni router propio: se prueba con un cliente falso. */
-export function HotelScreen({ client, slug, view, venueName, cardOffered, room, afterOrder }: HotelScreenProps) {
+export function HotelScreen({
+  client,
+  slug,
+  view,
+  venueName,
+  cardOffered,
+  room,
+  afterOrder,
+  stripeTestMode = isHotelCardTestModeAllowed(),
+}: HotelScreenProps) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [stay, setStay] = useState<Stay | null>(null);
@@ -245,6 +257,7 @@ export function HotelScreen({ client, slug, view, venueName, cardOffered, room, 
         stay={stay}
         config={config}
         cardOffered={cardOffered}
+        stripeTestMode={stripeTestMode}
         roomId={stay.roomId ?? roomId}
         home={home}
         afterOrder={afterOrder}
@@ -746,6 +759,7 @@ function HotelCheckout({
   stay,
   config,
   cardOffered,
+  stripeTestMode,
   roomId,
   home,
   afterOrder,
@@ -756,6 +770,7 @@ function HotelCheckout({
   stay: Stay;
   config: HotelConfig;
   cardOffered: boolean;
+  stripeTestMode: boolean;
   roomId: number | null;
   home: string;
   afterOrder: (order: OrderDetail, method: PaymentMethod) => void;
@@ -764,7 +779,8 @@ function HotelCheckout({
   const { cart, reset } = useCart();
   const lines = useMemo(() => (cart?.slug === slug ? cart.lines : []), [cart, slug]);
   const roomEnabled = config.chargeToRoom;
-  const cardEnabled = config.cardAtOrderEnabled && cardOffered;
+  // Tarjeta solo si el hotel la tiene, la web del negocio cobra con Stripe y estamos en modo prueba.
+  const cardEnabled = config.cardAtOrderEnabled && cardOffered && stripeTestMode;
   const [choice, setChoice] = useState<PayChoice | null>(roomEnabled ? 'room' : cardEnabled ? 'card' : null);
   const [notes, setNotes] = useState('');
   const [creating, setCreating] = useState(false);
@@ -776,6 +792,10 @@ function HotelCheckout({
 
   async function confirm() {
     if (busy.current || !choice || lines.length === 0 || roomId == null) return;
+    if (choice === 'card' && !cardEnabled) {
+      setError(HOTEL_CARD_TEST_ONLY_COPY);
+      return;
+    }
     busy.current = true;
     setCreating(true);
     setError(null);
@@ -785,6 +805,12 @@ function HotelCheckout({
       const fingerprint = orderFingerprint(payload);
       const order = await client.createOrder(payload, idempotencyKeyFor(fingerprint));
       forgetIdempotencyKey(fingerprint);
+      if (method === 'stripe' && isLiveStripeOrder(order)) {
+        // El servidor respondió con una clave live: no se abre el pago, así que no hay cobro. El
+        // carrito se queda para que el huésped pueda cargarlo a la habitación.
+        setError(HOTEL_CARD_TEST_ONLY_COPY);
+        return;
+      }
       reset();
       afterOrder(order, method);
     } catch (cause) {

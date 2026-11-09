@@ -66,7 +66,19 @@ function Where() {
   return <output data-testid="where">{location.pathname}</output>;
 }
 
-function Screen({ client, room, afterOrder, cardOffered }: { client: HotelClient; room: SpaceSession | null; afterOrder: () => void; cardOffered: boolean }) {
+function Screen({
+  client,
+  room,
+  afterOrder,
+  cardOffered,
+  stripeTestMode,
+}: {
+  client: HotelClient;
+  room: SpaceSession | null;
+  afterOrder: () => void;
+  cardOffered: boolean;
+  stripeTestMode: boolean;
+}) {
   const { view } = useParams();
   return (
     <HotelScreen
@@ -77,6 +89,7 @@ function Screen({ client, room, afterOrder, cardOffered }: { client: HotelClient
       cardOffered={cardOffered}
       room={room}
       afterOrder={afterOrder}
+      stripeTestMode={stripeTestMode}
     />
   );
 }
@@ -84,15 +97,19 @@ function Screen({ client, room, afterOrder, cardOffered }: { client: HotelClient
 function renderHotel(
   path: string,
   client = makeClient(),
-  { room = ROOM, cardOffered = false }: { room?: SpaceSession | null; cardOffered?: boolean } = {},
+  {
+    room = ROOM,
+    cardOffered = false,
+    stripeTestMode = true,
+  }: { room?: SpaceSession | null; cardOffered?: boolean; stripeTestMode?: boolean } = {},
 ) {
   const afterOrder = vi.fn();
   render(
     <CartProvider>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
-          <Route path="/e/:slug/hotel" element={<Screen client={client} room={room} afterOrder={afterOrder} cardOffered={cardOffered} />} />
-          <Route path="/e/:slug/hotel/:view" element={<Screen client={client} room={room} afterOrder={afterOrder} cardOffered={cardOffered} />} />
+          <Route path="/e/:slug/hotel" element={<Screen client={client} room={room} afterOrder={afterOrder} cardOffered={cardOffered} stripeTestMode={stripeTestMode} />} />
+          <Route path="/e/:slug/hotel/:view" element={<Screen client={client} room={room} afterOrder={afterOrder} cardOffered={cardOffered} stripeTestMode={stripeTestMode} />} />
           <Route path="/e/:slug" element={<p>Menú del hotel</p>} />
         </Routes>
         <Where />
@@ -276,6 +293,57 @@ describe('pedido al cuarto (H03)', () => {
     await user.click(screen.getByRole('button', { name: 'Pedir · $240' }));
     await waitFor(() => expect(client.createOrder).toHaveBeenCalled());
     expect(vi.mocked(client.createOrder).mock.calls[0]?.[0]).toMatchObject({ metodo_pago: 'stripe', pago_diferido: false });
+  });
+
+  it('compuerta de Stripe: fuera de modo prueba no ofrece tarjeta y solo carga a la habitación', async () => {
+    fillCart();
+    const user = userEvent.setup();
+    const { client } = renderHotel('/e/hotel-sol/hotel/pedido', makeClient(), { cardOffered: true, stripeTestMode: false });
+    expect(await screen.findByRole('radio', { name: /Cargar a la habitación 101/ })).toBeChecked();
+    expect(screen.queryByRole('radio', { name: /Tarjeta ahora/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Pedir · $220' }));
+    await waitFor(() => expect(client.createOrder).toHaveBeenCalled());
+    expect(vi.mocked(client.createOrder).mock.calls[0]?.[0]).toMatchObject({ metodo_pago: 'efectivo', pago_diferido: true });
+  });
+
+  it('compuerta de Stripe: fuera de modo prueba y sin cargo a la habitación no se crea ningún pedido', async () => {
+    fillCart();
+    const client = makeClient({
+      myStay: vi.fn(() =>
+        Promise.resolve(
+          stay({
+            ajustes: { cargo_habitacion_activo: false, tarjeta_al_pedir: true, solicitudes_activas: true, no_molestar_activo: true },
+          }),
+        ),
+      ),
+    });
+    renderHotel('/e/hotel-sol/hotel/pedido', client, { cardOffered: true, stripeTestMode: false });
+    expect(await screen.findByText('Este hotel no recibe pedidos desde la app en este momento.')).toBeInTheDocument();
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Pedir ·/ })).toBeDisabled();
+    expect(client.createOrder).not.toHaveBeenCalled();
+  });
+
+  it('compuerta de Stripe: si el servidor responde con clave live no abre el pago', async () => {
+    fillCart();
+    const user = userEvent.setup();
+    const liveOrder = {
+      id: 'o9',
+      folio: 15,
+      pago: {
+        payment_attempt_id: 'pa_1',
+        payment_intent_id: 'pi_1',
+        stripe_account_id: 'acct_1',
+        payment_status: 'pendiente_pago',
+        publishable_key: 'pk_live_ejemplo',
+      },
+    } as unknown as OrderDetail;
+    const client = makeClient({ createOrder: vi.fn(() => Promise.resolve(liveOrder)) });
+    const { afterOrder } = renderHotel('/e/hotel-sol/hotel/pedido', client, { cardOffered: true });
+    await user.click(await screen.findByRole('radio', { name: /Tarjeta ahora/ }));
+    await user.click(screen.getByRole('button', { name: 'Pedir · $240' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('solo funciona en modo de prueba');
+    expect(afterOrder).not.toHaveBeenCalled();
   });
 
   it('si el servidor ya no ve la estancia, vuelve a pedir el código', async () => {
