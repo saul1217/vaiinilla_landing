@@ -38,6 +38,15 @@ describe('theme', () => {
 });
 
 describe('mesa QR', () => {
+  it('marca la habitación de un hotel solo cuando el backend manda es_habitacion', () => {
+    expect(
+      normalizeResolvedSpace({ espacio: { id: 12, nombre: 'Habitación 101', tipo: 'mesa', es_habitacion: true }, establecimiento: { slug: 'hotel-sol' } }),
+    ).toMatchObject({ espacio_id: 12, es_habitacion: true });
+    expect(
+      normalizeResolvedSpace({ espacio: { id: 3, nombre: 'Mesa 3', es_habitacion: false }, establecimiento: { slug: 'hotel-sol' } }),
+    ).not.toHaveProperty('es_habitacion');
+  });
+
   it('normaliza el payload anidado de /publico/espacios/resolver', () => {
     expect(
       normalizeResolvedSpace(

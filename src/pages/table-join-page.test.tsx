@@ -38,6 +38,7 @@ function renderJoin() {
       <Routes>
         <Route path="/:slug/m/:token" element={<TableJoinPage />} />
         <Route path="/e/:slug" element={<p>Menú demo-a</p>} />
+        <Route path="/e/:slug/hotel" element={<p>Estancia del huésped</p>} />
         <Route path="/e/:slug/m/:token/quien" element={<WhoProbe />} />
         <Route path="/cuenta" element={<AccessProbe />} />
       </Routes>
@@ -48,6 +49,20 @@ function renderJoin() {
 describe('TableJoinPage', () => {
   beforeEach(() => {
     resolveSpace.mockReset();
+  });
+
+  it('el QR de una habitación de hotel no pregunta quién eres: abre la estancia', async () => {
+    resolveSpace.mockResolvedValue({
+      espacio_id: 12,
+      espacio_nombre: 'Habitación 101',
+      espacio_tipo: 'mesa',
+      establecimiento_slug: 'demo-a',
+      establecimiento_nombre: 'Hotel demo',
+      es_habitacion: true,
+    });
+    renderJoin();
+    expect(await screen.findByText('Estancia del huésped')).toBeInTheDocument();
+    expect(screen.queryByText(/Quién eres/)).not.toBeInTheDocument();
   });
 
   it('muestra error y vuelta a discovery si el código de mesa no existe', async () => {
