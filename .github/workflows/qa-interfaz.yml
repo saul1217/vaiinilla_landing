@@ -60,8 +60,12 @@ jobs:
           if-no-files-found: error
       # El contenedor de Playwright no trae Google Chrome: Lighthouse usa el Chromium de Playwright.
       # Corre como root y con /dev/shm chico, por eso --no-sandbox y --disable-dev-shm-usage.
+      # Misma tienda de CI que las pruebas y lighthouserc.json (ci-vaiinilla), no los slugs viejos ci-tienda y ci-canchas.
       - name: Lighthouse
         shell: bash
+        env:
+          # Dentro del contenedor `git rev-parse HEAD` falla: lhci toma el commit de aquí.
+          LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.event.deployment.sha || github.sha }}
         run: |
           CHROME_PATH="$(node -p "require('@playwright/test').chromium.executablePath()")"
           export CHROME_PATH
@@ -69,7 +73,7 @@ jobs:
           npx --yes @lhci/cli@0.15.x autorun --config=lighthouserc.json \
             --collect.chromePath="$CHROME_PATH" \
             --collect.settings.chromeFlags="--headless=new --no-sandbox --disable-dev-shm-usage" \
-            --collect.url="$E2E_BASE_URL/pedir" --collect.url="$E2E_BASE_URL/e/ci-canchas/canchas" --collect.url="$E2E_BASE_URL/e/ci-tienda"
+            --collect.url="$E2E_BASE_URL/pedir" --collect.url="$E2E_BASE_URL/e/ci-vaiinilla/canchas" --collect.url="$E2E_BASE_URL/e/ci-vaiinilla"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         # Solo si falla, 3 días. Solo el reporte HTML: nunca storageState ni archivos de sesión.
         if: failure()
