@@ -6,6 +6,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { LoadingSkeleton } from '../components/loading-skeleton';
+import { VaiButton } from '../components/vai';
 import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
@@ -201,9 +202,9 @@ export function HotelScreen({ client, slug, view, venueName, cardOffered, room, 
         <p className="alumno-error" role="alert">
           {error}
         </p>
-        <button type="button" className="alumno-btn alumno-btn--lime hotel-tap" onClick={() => void load()}>
+        <VaiButton variant="accent" block onClick={() => void load()}>
           Reintentar
-        </button>
+        </VaiButton>
       </>
     );
   }
@@ -333,18 +334,14 @@ function HotelStayCode({
             </p>
           ) : null}
           <p className="alumno-muted">¿No lo tienes? Pídelo en recepción.</p>
-          <button
-            type="submit"
-            className={linking ? 'alumno-btn alumno-btn--lime hotel-tap is-working' : 'alumno-btn alumno-btn--lime hotel-tap'}
-            disabled={!complete || linking}
-          >
+          <VaiButton type="submit" variant="accent" block loading={linking} disabled={!complete}>
             {linking ? 'Entrando…' : 'Entrar a mi habitación'}
-          </button>
+          </VaiButton>
         </>
       ) : (
         <>
           <p className="alumno-muted">Escanea el QR de la puerta de tu habitación para escribir tu código.</p>
-          <Link className="alumno-btn alumno-btn--lime hotel-tap" to="/pedir">
+          <Link className="vai-button vai-button--accent vai-button--block" to="/pedir">
             Escanear el QR
           </Link>
         </>
@@ -403,7 +400,7 @@ function HotelWelcome({
           </Link>
         ))}
       </nav>
-      <Link className="alumno-btn alumno-btn--lime hotel-tap hotel-primary" to={`/e/${slug}`}>
+      <Link className="vai-button vai-button--accent vai-button--block hotel-primary" to={`/e/${slug}`}>
         Pedir al cuarto
       </Link>
     </section>
@@ -576,7 +573,7 @@ function HotelRequests({
         <p className="alumno-muted">Este hotel no recibe solicitudes desde la app. Llama a recepción.</p>
       )}
       {open.length > 0 ? (
-        <div className="alumno-card hotel-panel">
+        <div className="vai-card hotel-panel">
           <h2>Tus solicitudes</h2>
           <ul className="hotel-open-list">
             {open.map((request) => (
@@ -589,15 +586,15 @@ function HotelRequests({
                   <small>{REQUEST_STATUS_LABEL[request.status]}</small>
                 </span>
                 {request.status === 'pendiente' ? (
-                  <button
-                    type="button"
-                    className="alumno-btn alumno-btn--ghost hotel-tap hotel-inline-btn"
+                  <VaiButton
+                    variant="secondary"
+                    className="hotel-inline-btn"
                     disabled={cancelling !== null}
                     onClick={() => void cancel(request.id)}
                     aria-label={`Cancelar ${REQUEST_LABEL[request.type]}`}
                   >
                     {cancelling === request.id ? 'Cancelando…' : 'Cancelar'}
-                  </button>
+                  </VaiButton>
                 ) : null}
               </li>
             ))}
@@ -615,14 +612,15 @@ function HotelRequests({
         </p>
       ) : null}
       {config.requestsEnabled || config.doNotDisturbEnabled ? (
-        <button
-          type="button"
-          className="alumno-btn alumno-btn--lime hotel-tap hotel-primary"
+        <VaiButton
+          variant="accent"
+          block
+          className="hotel-primary"
           disabled={pendingCount === 0 || submitting}
           onClick={() => void submit()}
         >
           {submitting ? 'Enviando…' : pendingCount > 0 ? `Enviar solicitud · ${pendingCount}` : 'Elige lo que necesitas'}
-        </button>
+        </VaiButton>
       ) : null}
     </section>
   );
@@ -679,7 +677,7 @@ function HotelAccount({ stay, config, home, slug }: { stay: Stay; config: HotelC
       <p className="hotel-account__total" data-testid="hotel-account-total">
         {moneyLabel(headline.amount)}
       </p>
-      <div className="alumno-card hotel-panel">
+      <div className="vai-card hotel-panel">
         {lines.length === 0 ? (
           <p className="alumno-muted">Todavía no tienes cargos. Lo que pidas al cuarto aparece aquí.</p>
         ) : (
@@ -697,7 +695,7 @@ function HotelAccount({ stay, config, home, slug }: { stay: Stay; config: HotelC
         )}
       </div>
       {cost ? (
-        <div className="alumno-card hotel-panel">
+        <div className="vai-card hotel-panel">
           <ul className="hotel-lines">
             <li>
               <span>
@@ -709,7 +707,7 @@ function HotelAccount({ stay, config, home, slug }: { stay: Stay; config: HotelC
           </ul>
         </div>
       ) : null}
-      <div className="alumno-card hotel-panel" aria-labelledby="hotel-checkout-title">
+      <div className="vai-card hotel-panel" aria-labelledby="hotel-checkout-title">
         <h2 id="hotel-checkout-title">Tu salida</h2>
         {closed ? (
           <p className="alumno-muted">Ya hiciste el check-out. Gracias por tu estancia.</p>
@@ -721,7 +719,7 @@ function HotelAccount({ stay, config, home, slug }: { stay: Stay; config: HotelC
               habitación y pagar tu cuenta.
             </p>
             {config.requestsEnabled && config.lateCheckoutTime ? (
-              <Link className="alumno-btn alumno-btn--ghost hotel-tap" to={hotelPath(slug, 'solicitudes')}>
+              <Link className="vai-button vai-button--secondary vai-button--block" to={hotelPath(slug, 'solicitudes')}>
                 Pedir salida tardía · {lateCheckoutNote(config)}
               </Link>
             ) : null}
@@ -806,7 +804,7 @@ function HotelCheckout({
       <section className="hotel-checkout">
         <AlumnoPageHeader back={{ to: home, label: 'Volver' }} kicker="Pedido" title="Entrega a tu cuarto" />
         <p className="alumno-muted">Tu carrito está vacío. Elige algo del menú para pedirlo a tu habitación.</p>
-        <Link className="alumno-btn alumno-btn--lime hotel-tap" to={`/e/${slug}`}>
+        <Link className="vai-button vai-button--accent vai-button--block" to={`/e/${slug}`}>
           Ver el menú
         </Link>
       </section>
@@ -820,7 +818,7 @@ function HotelCheckout({
         kicker="Pedido"
         title={<span id="hotel-checkout-heading">Entrega a tu cuarto</span>}
       />
-      <div className="alumno-card hotel-panel">
+      <div className="vai-card hotel-panel">
         <h2>Resumen</h2>
         <ul className="hotel-lines">
           {lines.map((line) => (
@@ -836,14 +834,14 @@ function HotelCheckout({
           ))}
         </ul>
       </div>
-      <div className="alumno-card hotel-panel">
+      <div className="vai-card hotel-panel">
         <h2>Cuándo lo quieres</h2>
         <p className="hotel-radio is-selected" aria-current="true">
           <strong>Lo antes posible</strong>
           <small>La cocina lo prepara y te lo lleva</small>
         </p>
       </div>
-      <fieldset className="alumno-card hotel-panel hotel-pay">
+      <fieldset className="vai-card hotel-panel hotel-pay">
         <legend>Cómo pagas</legend>
         {roomEnabled ? (
           <label className={choice === 'room' ? 'hotel-radio hotel-tap is-selected' : 'hotel-radio hotel-tap'}>
@@ -881,14 +879,16 @@ function HotelCheckout({
           {error}
         </p>
       ) : null}
-      <button
-        type="button"
-        className={creating ? 'alumno-btn alumno-btn--lime hotel-tap hotel-primary is-working' : 'alumno-btn alumno-btn--lime hotel-tap hotel-primary'}
-        disabled={!choice || creating || roomId == null}
+      <VaiButton
+        variant="accent"
+        block
+        className="hotel-primary"
+        loading={creating}
+        disabled={!choice || roomId == null}
         onClick={() => void confirm()}
       >
         {creating ? 'Enviando…' : `Pedir · ${moneyLabel(total)}`}
-      </button>
+      </VaiButton>
     </section>
   );
 }
