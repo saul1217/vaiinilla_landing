@@ -15,7 +15,7 @@ function loadEnv(): Record<string, string> {
 
 export const env = { ...loadEnv(), ...process.env };
 
-// Datos sembrados en CI con `/dev/test-setup`; nunca se editan a mano.
+// Tienda de CI de develop (ci-vaiinilla): dato fijo de esa base, /dev/test-setup no la siembra.
 export const SHOP_SLUG = env.E2E_UI_SHOP_SLUG ?? env.E2E_PLACE_SLUG ?? 'ci-vaiinilla';
 export const COURTS_SLUG = env.E2E_UI_COURTS_SLUG ?? env.E2E_PLACE_SLUG ?? 'ci-vaiinilla';
 export const FROZEN_NOW = new Date('2026-10-20T15:00:00.000Z');
@@ -104,6 +104,21 @@ export async function gotoReady(page: Page, path: string, apiProblems: ApiProble
   }
   skipIfBlocked(apiProblems);
   await stabilize(page);
+}
+
+/**
+ * /pedir lista todos los negocios de develop: con otro negocio cambiaría la altura de la captura
+ * y una máscara no lo evita. Deja solo la tienda de CI en la respuesta real.
+ */
+export async function soloTiendaDeCi(page: Page) {
+  await page.route(/\/publico\/establecimientos(\?|$)/, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { data: { slug: string }[] };
+    await route.fulfill({
+      response,
+      json: { ...body, data: body.data.filter((place) => place.slug === SHOP_SLUG) },
+    });
+  });
 }
 
 export async function signIn(page: Page) {

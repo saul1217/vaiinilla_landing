@@ -1,4 +1,4 @@
-import { COURTS_SLUG, SCREENS, THEMES, VIEWPORTS, expect, gotoReady, signIn, test } from './support';
+import { COURTS_SLUG, SCREENS, THEMES, VIEWPORTS, expect, gotoReady, signIn, soloTiendaDeCi, test } from './support';
 
 for (const theme of THEMES) {
   for (const vp of VIEWPORTS) {
@@ -8,14 +8,17 @@ for (const theme of THEMES) {
       for (const screen of SCREENS) {
         test(screen.key, async ({ prepared: page, apiProblems }) => {
           if (screen.auth) await signIn(page);
+          if (screen.key === 'pedir') await soloTiendaDeCi(page);
           await gotoReady(page, screen.path, apiProblems, screen.ready);
           await expect(page).toHaveScreenshot(`${screen.key}-${theme}-${vp.name}.png`, { fullPage: true });
         });
       }
 
       test('canchas con día seleccionado y apartado', async ({ prepared: page, apiProblems }) => {
-        await gotoReady(page, `/e/${COURTS_SLUG}/canchas`, apiProblems, '.alumno-res');
-        await page.locator('.alumno-res__hours button:not([disabled])').first().click();
+        // Sin horarios libres (cancha sin precio en la tienda de CI) la corrida queda bloqueada.
+        const libre = '.alumno-res__hours button:not([disabled])';
+        await gotoReady(page, `/e/${COURTS_SLUG}/canchas`, apiProblems, libre);
+        await page.locator(libre).first().click();
         await expect(page).toHaveScreenshot(`canchas-apartado-${theme}-${vp.name}.png`, { fullPage: true });
       });
 

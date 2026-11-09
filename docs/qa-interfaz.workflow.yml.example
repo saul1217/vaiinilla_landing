@@ -25,7 +25,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm ci
-      # Sembrar el establecimiento de CI con /dev/test-setup de la API de develop antes de correr.
+      # Usa la tienda ci-vaiinilla de develop, que ya debe existir: /dev/test-setup no la siembra.
       - run: npx playwright test -c playwright.ui.config.ts ${{ inputs.update_snapshots && '--update-snapshots' || '' }}
       - run: npx --yes @lhci/cli@0.15.x autorun --config=lighthouserc.json --collect.url="$E2E_BASE_URL/pedir" --collect.url="$E2E_BASE_URL/e/ci-vaiinilla/canchas" --collect.url="$E2E_BASE_URL/e/ci-vaiinilla"
       - uses: actions/upload-artifact@v4
