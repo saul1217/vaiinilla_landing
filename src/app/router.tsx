@@ -7,6 +7,7 @@ import { ReservationsPage } from '../pages/reservations-page';
 import { DiscoveryPage } from '../pages/discovery-page';
 import { EmailVerificationPage, PasswordResetPage } from '../pages/email-action-page';
 import { HomePage } from '../pages/home-page';
+import { CartRoute, HotelPage } from '../pages/hotel-page';
 import { MenuPage } from '../pages/menu-page';
 import { NotFoundPage } from '../pages/not-found-page';
 import { OrderDetailPage } from '../pages/order-detail-page';
@@ -46,7 +47,9 @@ export function AppRoutes() {
         <Route path="/soporte" element={<SupportPage />} />
         <Route path="/pedir" element={<DiscoveryPage />} />
         <Route path="/e/:slug" element={<MenuPage />} />
-        <Route path="/e/:slug/carrito" element={<CartPage />} />
+        <Route path="/e/:slug/carrito" element={<CartRoute><CartPage /></CartRoute>} />
+        <Route path="/e/:slug/hotel" element={<HotelPage />} />
+        <Route path="/e/:slug/hotel/:view" element={<HotelPage />} />
         <Route path="/e/:slug/canchas" element={<ReservationsPage />} />
         <Route path="/e/:slug/m/:token" element={<TableJoinPage />} />
         <Route path="/:slug/m/:token" element={<TableJoinPage />} />
