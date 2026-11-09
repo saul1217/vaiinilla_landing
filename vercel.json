@@ -1,6 +1,17 @@
 {
   "redirects": [
     {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.vaiinilla.app"
+        }
+      ],
+      "destination": "https://vaiinilla.app/$1",
+      "permanent": true
+    },
+    {
       "source": "/privacidad",
       "destination": "https://app.vaiinilla.app/legal/privacidad/2026-10",
       "permanent": false
