@@ -262,45 +262,61 @@ export const ACCESS_LOST_CODES = new Set(['CONTEXT_NOT_ALLOWED', 'GUARDIANSHIP_N
 const RENEW_BEFORE_MS = 60_000;
 const DEFAULT_CONTEXT_SECONDS = 900;
 
+/** La sesión del hijo ya se cerró (logout o salir de su ficha): no se pide ni se entrega otro token. */
+export class DependentContextClosedError extends Error {
+  constructor() {
+    super('La sesión del hijo ya se cerró.');
+    this.name = 'DependentContextClosedError';
+  }
+}
+
 /**
  * El token del hijo: se pide al abrir su ficha y se renueva un minuto antes de que venza. Vive solo
  * en memoria y nunca reemplaza la sesión del tutor (como `DependentContextSession` de Android).
+ * Después de `clear()` la sesión queda inerte: no vuelve a pedir token, ni siquiera por un 401.
  */
 export class DependentContextSession {
   private token: string | null = null;
   private expiresAt = 0;
   private inflight: Promise<string> | null = null;
-  private generation = 0;
+  private closed = false;
 
   constructor(
     private readonly issue: () => Promise<DependentContextGrant>,
     private readonly now: () => number = Date.now,
   ) {}
 
-  /** Olvida el token del hijo (al cerrar sesión o salir de su ficha). Una emisión en curso se descarta. */
+  /**
+   * Olvida el token del hijo (al cerrar sesión o salir de su ficha) y deja la sesión inerte. Una emisión
+   * en curso se descarta: quien la esperaba recibe DependentContextClosedError en vez del token.
+   */
   clear(): void {
+    this.closed = true;
     this.token = null;
     this.expiresAt = 0;
     this.inflight = null;
-    this.generation += 1;
+  }
+
+  get isClosed(): boolean {
+    return this.closed;
   }
 
   async validToken(): Promise<string> {
+    if (this.closed) throw new DependentContextClosedError();
     if (this.token && this.expiresAt - this.now() > RENEW_BEFORE_MS) return this.token;
     return this.refresh();
   }
 
   /** Dos llamadas a la vez esperan la misma emisión. */
   refresh(): Promise<string> {
+    if (this.closed) return Promise.reject(new DependentContextClosedError());
     if (!this.inflight) {
-      const generation = this.generation;
       const pending = this.issue()
         .then((grant) => {
-          // Si se limpió mientras se emitía, el token no se guarda.
-          if (generation === this.generation) {
-            this.token = grant.access_token;
-            this.expiresAt = this.now() + (grant.expires_in ?? DEFAULT_CONTEXT_SECONDS) * 1000;
-          }
+          // Si se limpió mientras se emitía, el token no se guarda ni se entrega.
+          if (this.closed) throw new DependentContextClosedError();
+          this.token = grant.access_token;
+          this.expiresAt = this.now() + (grant.expires_in ?? DEFAULT_CONTEXT_SECONDS) * 1000;
           return grant.access_token;
         })
         .finally(() => {
@@ -313,14 +329,15 @@ export class DependentContextSession {
 
   /**
    * Hace la llamada con el token del hijo. Un 401 renueva solo el token del hijo y repite una vez;
-   * nunca se reintenta con el del tutor.
+   * nunca se reintenta con el del tutor. Si la sesión se cerró mientras tanto, el 401 llega tal cual
+   * y no se pide otro token.
    */
   async run<T>(call: (token: string) => Promise<T>): Promise<T> {
     const token = await this.validToken();
     try {
       return await call(token);
     } catch (error) {
-      if ((error as { status?: number })?.status === 401) {
+      if ((error as { status?: number })?.status === 401 && !this.closed) {
         return call(await this.refresh());
       }
       throw error;

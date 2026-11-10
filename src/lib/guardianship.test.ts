@@ -5,6 +5,7 @@ import {
   blockedLine,
   canViewDependent,
   dailyRemainingLabel,
+  DependentContextClosedError,
   DependentContextSession,
   isConsentRequired,
   movementLabel,
@@ -202,30 +203,49 @@ describe('isConsentRequired', () => {
 });
 
 describe('DependentContextSession', () => {
-  it('clear olvida el token del hijo y el siguiente uso pide otro', async () => {
-    const issue = vi
-      .fn()
-      .mockResolvedValueOnce({ access_token: 'hijo-1', expires_in: 900 })
-      .mockResolvedValueOnce({ access_token: 'hijo-2', expires_in: 900 });
+  it('clear olvida el token del hijo y deja la sesión inerte: no pide otro', async () => {
+    const issue = vi.fn().mockResolvedValue({ access_token: 'hijo-1', expires_in: 900 });
     const session = new DependentContextSession(issue);
     await expect(session.validToken()).resolves.toBe('hijo-1');
     session.clear();
-    await expect(session.validToken()).resolves.toBe('hijo-2');
-    expect(issue).toHaveBeenCalledTimes(2);
+    expect(session.isClosed).toBe(true);
+    await expect(session.validToken()).rejects.toBeInstanceOf(DependentContextClosedError);
+    await expect(session.refresh()).rejects.toBeInstanceOf(DependentContextClosedError);
+    const call = vi.fn();
+    await expect(session.run(call)).rejects.toBeInstanceOf(DependentContextClosedError);
+    expect(call).not.toHaveBeenCalled();
+    expect(issue).toHaveBeenCalledTimes(1);
   });
 
-  it('una emisión que termina después de clear no deja el token guardado', async () => {
+  it('una emisión en vuelo que se resuelve después de clear se descarta', async () => {
     let resolveIssue: (grant: { access_token: string; expires_in: number }) => void = () => undefined;
-    const issue = vi
-      .fn()
-      .mockImplementationOnce(() => new Promise((resolve) => (resolveIssue = resolve)))
-      .mockResolvedValueOnce({ access_token: 'hijo-2', expires_in: 900 });
+    const issue = vi.fn(() => new Promise<{ access_token: string; expires_in: number }>((resolve) => (resolveIssue = resolve)));
     const session = new DependentContextSession(issue);
     const pending = session.validToken();
+    const call = vi.fn((token: string) => Promise.resolve(token));
+    const running = session.run(call);
     session.clear();
     resolveIssue({ access_token: 'hijo-1', expires_in: 900 });
-    await pending;
-    await expect(session.validToken()).resolves.toBe('hijo-2');
+    await expect(pending).rejects.toBeInstanceOf(DependentContextClosedError);
+    await expect(running).rejects.toBeInstanceOf(DependentContextClosedError);
+    expect(call).not.toHaveBeenCalled();
+    await expect(session.validToken()).rejects.toBeInstanceOf(DependentContextClosedError);
+    expect(issue).toHaveBeenCalledTimes(1);
+  });
+
+  it('un 401 que llega después de clear no pide otro token y llega tal cual', async () => {
+    const issue = vi.fn().mockResolvedValue({ access_token: 'hijo-1', expires_in: 900 });
+    const session = new DependentContextSession(issue);
+    const unauthorized = Object.assign(new Error('vencido'), { status: 401 });
+    let rejectCall: (error: unknown) => void = () => undefined;
+    const call = vi.fn(() => new Promise<string>((_resolve, reject) => (rejectCall = reject)));
+    const running = session.run(call);
+    await vi.waitFor(() => expect(call).toHaveBeenCalledTimes(1));
+    session.clear();
+    rejectCall(unauthorized);
+    await expect(running).rejects.toBe(unauthorized);
+    expect(issue).toHaveBeenCalledTimes(1);
+    expect(call).toHaveBeenCalledTimes(1);
   });
 
   it('reusa el token del hijo mientras falte más de un minuto y lo renueva antes de que venza', async () => {

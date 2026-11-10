@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
@@ -317,19 +317,17 @@ export function ChildAccountPage() {
   const [consentMissing, setConsentMissing] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const session = useMemo(
-    () => (token ? new DependentContextSession(() => api.issueDependentContext(token, id)) : null),
-    [id, token],
-  );
-
   useEffect(() => {
-    if (!token || !session) {
+    if (!token) {
       // Sin sesión del tutor (por ejemplo, al cerrar sesión) no queda nada del hijo en pantalla.
       setChild(null);
       setWallet(null);
       setOrders(null);
       return;
     }
+    // Una sesión por cada vez que corre el efecto: al limpiarse queda inerte (logout, otro hijo o el
+    // doble montaje de StrictMode) y la siguiente corrida empieza con una nueva.
+    const session = new DependentContextSession(() => api.issueDependentContext(token, id));
     let active = true;
     const lost = (cause: unknown) =>
       cause instanceof VaiinillaApiError && (ACCESS_LOST_CODES.has(cause.code) || cause.status === 404);
@@ -386,7 +384,7 @@ export function ChildAccountPage() {
       active = false;
       session.clear();
     };
-  }, [id, session, token]);
+  }, [id, token]);
 
   if (ready && !user) return <Navigate to={`/cuenta?next=/cuenta/hijos/${encodeURIComponent(id)}`} replace />;
 
