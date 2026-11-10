@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
@@ -166,19 +166,12 @@ describe('WalletPage', () => {
     expect(screen.queryByRole('link', { name: /mis hijos/i })).toBeNull();
   });
 
-  it('modo papás prendido: "Mis hijos" solo a quien ya tiene hijos', async () => {
-    listDependents.mockResolvedValueOnce([{ userId: 'u-tilin' }]);
-    renderWallet(true);
-    expect(await screen.findByRole('link', { name: /mis hijos/i })).toHaveAttribute('href', '/cuenta/hijos');
-    expect(listDependents).toHaveBeenCalledWith('jwt');
-  });
-
-  it('modo papás prendido sin hijos: no sale la entrada', async () => {
-    listDependents.mockResolvedValueOnce([]);
+  it('modo papás prendido: sale "Mis hijos" sin descargar a los hijos', async () => {
+    listDependents.mockClear();
     renderWallet(true);
     expect(await screen.findByText('$125.00')).toBeInTheDocument();
-    await waitFor(() => expect(listDependents).toHaveBeenCalled());
-    expect(screen.queryByRole('link', { name: /mis hijos/i })).toBeNull();
+    expect(screen.getByRole('link', { name: /mis hijos/i })).toHaveAttribute('href', '/cuenta/hijos');
+    expect(listDependents).not.toHaveBeenCalled();
   });
 
   it('muestra saldo grande y atajos de Android', async () => {
