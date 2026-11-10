@@ -113,7 +113,9 @@ export async function gotoReady(page: Page, path: string, apiProblems: ApiProble
 export async function soloTiendaDeCi(page: Page) {
   await page.route(/\/publico\/establecimientos(\?|$)/, async (route) => {
     const response = await route.fetch();
-    const body = (await response.json()) as { data: { slug: string }[] };
+    const body = (await response.json().catch(() => null)) as { data?: { slug: string }[] | null } | null;
+    // Si develop responde con error (data: null), la respuesta pasa tal cual y gotoReady la marca bloqueada.
+    if (!response.ok() || !Array.isArray(body?.data)) return route.fulfill({ response });
     await route.fulfill({
       response,
       json: { ...body, data: body.data.filter((place) => place.slug === SHOP_SLUG) },
