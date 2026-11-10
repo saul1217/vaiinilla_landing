@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
@@ -28,7 +28,23 @@ import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '..
 import { isAwaitingAcceptance } from '../lib/stripe-status';
 import { readGuest } from '../lib/guest-session';
 import { clientSessionForPlace } from '../lib/client-session-for-place';
-import { SHOW_WALLET } from '../lib/features';
+import { isHomeDeliveryEnabled, SHOW_WALLET } from '../lib/features';
+import {
+  EMPTY_HOME_ADDRESS,
+  effectiveHomePayment,
+  homeCheckoutProblem,
+  homeDeliveryFee,
+  homeDeliveryOffer,
+  homeDeliveryOrderFields,
+  homePaymentMethod,
+  homePayments,
+  totalWithFee,
+  type HomeAddressDraft,
+  type HomePayment,
+} from '../lib/home-delivery';
+import type { GeoPoint } from '../lib/geocoding';
+import { HomeDeliveryMap } from '../components/home-delivery-map';
+import { HomeDeliverySection } from '../components/home-delivery-section';
 import { currentScannedTable, joinedScannedTable } from '../lib/scanned-table';
 import { rememberGuestOrder, trackingPath } from '../lib/guest-orders';
 import type { SpaceSession } from '../lib/space-session';
@@ -36,6 +52,7 @@ import type {
   LegalVersions,
   CartLine,
   CatalogProduct,
+  HomeDeliveryQuote,
   OperationalStatus,
   OrderDetail,
   PaymentMethod,
@@ -212,10 +229,46 @@ export function CartPage() {
     () => leftoverPeekProducts(catalogProducts, lines.map((line) => line.productId)),
     [catalogProducts, lines],
   );
+  // A domicilio (detrás de VITE_FEATURE_DOMICILIO): el reparto sale del estado operativo, que solo
+  // se lee con sesión; por eso, como la tarjeta, es solo para cuentas.
+  const homeFeature = isHomeDeliveryEnabled();
+  const [homeChosen, setHomeChosen] = useState(false);
+  const [homeDraft, setHomeDraft] = useState<HomeAddressDraft>(EMPTY_HOME_ADDRESS);
+  const [pickedAddress, setPickedAddress] = useState('');
+  const [homeQuote, setHomeQuote] = useState<HomeDeliveryQuote | null>(null);
+  const [homePayment, setHomePayment] = useState<HomePayment | null>(null);
+  const [mapOpen, setMapOpen] = useState(false);
+  const homeOffer = homeFeature && place?.reparto_activo !== false ? homeDeliveryOffer(status) : null;
+  const canDeliverHome = Boolean(homeOffer) && !guestLike && !(forHere && space);
+  const isHome = homeChosen && canDeliverHome;
+  const offeredHomePayments = useMemo(
+    () => (homeOffer ? homePayments(homeOffer, cardOffered && stripeEnabled) : []),
+    [homeOffer, cardOffered, stripeEnabled],
+  );
+  const chosenHomePayment = effectiveHomePayment(homePayment, offeredHomePayments);
+  // A domicilio la forma de pago es la de domicilio: al recibir es efectivo y lo demás tarjeta.
+  const chargedPayment: PaymentMethod = isHome
+    ? chosenHomePayment
+      ? homePaymentMethod(chosenHomePayment)
+      : 'stripe'
+    : payment;
   // Solo la tarjeta lleva la comisión: el total y la validación de saldo siguen al método.
-  const total = useMemo(() => cartTotal(lines, payment), [lines, payment]);
+  const subtotal = useMemo(() => cartTotal(lines, chargedPayment), [lines, chargedPayment]);
+  const homeFee = isHome && homeOffer ? homeDeliveryFee(homeOffer, homeQuote) : null;
+  const total = totalWithFee(subtotal, homeFee);
   // Desglose de la comisión: el total con tarjeta se ve igual, pero se dice por qué subió.
-  const fee = useMemo(() => (payment === 'stripe' ? cardFee(lines) : null), [lines, payment]);
+  const fee = useMemo(() => (chargedPayment === 'stripe' ? cardFee(lines) : null), [lines, chargedPayment]);
+  const homeProblem =
+    isHome && homeOffer
+      ? homeCheckoutProblem({
+          draft: homeDraft,
+          quote: homeQuote,
+          offer: homeOffer,
+          payments: offeredHomePayments,
+          subtotal,
+        })
+      : null;
+  const homeGuestHint = homeFeature && guestLike && place?.reparto_activo === true && !(forHere && space);
 
   useEffect(() => {
     let active = true;
@@ -346,6 +399,11 @@ export function CartPage() {
     setError(null);
     setEmailBlocked(false);
     if (!place || lines.length === 0 || !total) return;
+    const method = chargedPayment;
+    if (isHome && (homeProblem || !chosenHomePayment)) {
+      setError(homeProblem ?? 'Este negocio aún no tiene cómo cobrar a domicilio.');
+      return;
+    }
     if (guestBlocked) {
       void navigate(`/cuenta?next=/e/${slug}/carrito`);
       return;
@@ -354,11 +412,11 @@ export function CartPage() {
       setError('Escribe tu nombre para que sepan de quién es el pedido.');
       return;
     }
-    if (guestLike && payment === 'saldo') {
+    if (guestLike && method === 'saldo') {
       setError('El saldo Vaiinilla es de tu cuenta: paga en caja o con tarjeta.');
       return;
     }
-    if (payment === 'stripe' && !stripeEnabled) {
+    if (method === 'stripe' && !stripeEnabled) {
       setError(STRIPE_UNAVAILABLE_COPY);
       return;
     }
@@ -393,7 +451,7 @@ export function CartPage() {
           // Cuenta a medias (sin alta o correo sin verificar) que paga en caja:
           // no se le rebota a /cuenta; confirma como invitado y reclama después.
           const code = cause instanceof VaiinillaApiError ? cause.code : null;
-          const cashLike = payment !== 'saldo' && payment !== 'stripe';
+          const cashLike = !isHome && method !== 'saldo' && method !== 'stripe';
           const pending =
             code === 'IDENTITY_NOT_REGISTERED' || (code === 'EMAIL_NOT_VERIFIED' && retried);
           if (pending && cashLike && !fallbackGuest) {
@@ -416,16 +474,19 @@ export function CartPage() {
       if (!canAcceptOrders(operational)) {
         throw new Error('El establecimiento no está recibiendo pedidos en este momento.');
       }
+      if (isHome && !homeDeliveryOffer(operational)) {
+        throw new Error('Este negocio dejó de entregar a domicilio. Elige para llevar.');
+      }
       // Si aún no se sabía de la renta (se paga antes de que llegue), se busca aquí.
       let target = space;
       let here = forHere;
-      if (!target) {
+      if (!target && !isHome) {
         const rentals = await api.listReservations(session.access_token).catch(() => []);
         target = activeRentalSpace(slug, rentals, Date.now());
         here = Boolean(target);
         if (target) setRentalSpace(target);
       }
-      const destination = here && target ? 'en_espacio' : 'para_llevar';
+      const destination = isHome ? 'a_domicilio' : here && target ? 'en_espacio' : 'para_llevar';
       if (destination === 'para_llevar' && scanned?.tipo === 'mesa' && !takeoutConfirmed.current) {
         setConfirmTakeout(true);
         return;
@@ -455,12 +516,15 @@ export function CartPage() {
       }
       const payload = toCreateOrderInput(
         lines,
-        payment,
+        method,
         notes,
         destination,
         destination === 'en_espacio' && target ? target.espacioId : null,
-        useTab,
+        useTab && !isHome,
       );
+      if (destination === 'a_domicilio' && chosenHomePayment) {
+        Object.assign(payload, homeDeliveryOrderFields(homeDraft, chosenHomePayment));
+      }
       if (takeoutConfirmed.current && destination === 'para_llevar') payload.confirmar_para_llevar = true;
       const fingerprint = orderFingerprint(payload);
       const key = idempotencyKeyFor(fingerprint);
@@ -476,7 +540,7 @@ export function CartPage() {
       }
       rememberPickupQrToken(order.id, order.qr_token);
       // Un encargo con tarjeta llega sin `pago`: se cobra cuando el negocio lo acepte.
-      if (payment === 'stripe' && !isAwaitingAcceptance(order)) {
+      if (method === 'stripe' && !isAwaitingAcceptance(order)) {
         const stripeSession = stripeSessionFromCreatedOrder(order);
         rememberStripeCheckoutSession(order.id, stripeSession);
         // Invitados pagan en seguimiento; la marca pendiente solo aplica en Mis pedidos.
@@ -500,14 +564,14 @@ export function CartPage() {
         // Solo la tarjeta se termina en el seguimiento; lo demás abre Mis pedidos igual
         // que un registrado (el pedido se expande por su token). El fallback (cuenta a
         // medias) también va al seguimiento: su pedido aún no vive en la cuenta.
-        if (payment === 'stripe' || fallbackGuest) {
+        if (method === 'stripe' || fallbackGuest) {
           void navigate(`${trackingPath(order.seguimiento_token)}?nuevo=1`);
           return;
         }
         void navigate(`/cuenta/pedidos?nuevo=${order.seguimiento_token}`);
         return;
       }
-      void navigate(payment === 'stripe' ? `/cuenta/pedidos/${order.id}` : `/cuenta/pedidos?nuevo=${order.id}`);
+      void navigate(method === 'stripe' ? `/cuenta/pedidos/${order.id}` : `/cuenta/pedidos?nuevo=${order.id}`);
     } catch (cause) {
       if (cause instanceof VaiinillaApiError && cause.code === 'IDENTITY_NOT_REGISTERED') {
         void navigate(`/cuenta?next=/e/${slug}/carrito`);
@@ -532,6 +596,11 @@ export function CartPage() {
       if (!retried) confirming.current = false;
       setSubmitting(false);
     }
+  }
+
+  async function quoteAt(point: GeoPoint): Promise<HomeDeliveryQuote> {
+    if (!context) throw new Error('Sin sesión para cotizar el envío.');
+    return api.quoteHomeDelivery(context.access_token, point.lat, point.lng);
   }
 
   async function resendVerification() {
@@ -607,7 +676,31 @@ export function CartPage() {
             slug={slug}
             menuPeek={leftoverPeek}
             productCount={lines.reduce((sum, line) => sum + line.quantity, 0)}
-            paySubtitle={`${lines.reduce((sum, line) => sum + line.quantity, 0)} productos · ${forHere ? space?.nombre ?? 'En el lugar' : 'Para llevar'}`}
+            paySubtitle={`${lines.reduce((sum, line) => sum + line.quantity, 0)} productos · ${isHome ? 'A domicilio' : forHere ? space?.nombre ?? 'En el lugar' : 'Para llevar'}`}
+            homeDelivery={
+              canDeliverHome && homeOffer
+                ? {
+                    active: isHome,
+                    onChange: (next) => {
+                      setHomeChosen(next);
+                      setError(null);
+                    },
+                    section: (
+                      <HomeDeliverySection
+                        draft={homeDraft}
+                        pickedAddress={pickedAddress}
+                        quote={homeQuote}
+                        fee={homeFee ?? homeOffer.fee}
+                        offer={homeOffer}
+                        problem={homeProblem}
+                        onDraftChange={setHomeDraft}
+                        onOpenMap={() => setMapOpen(true)}
+                      />
+                    ),
+                  }
+                : null
+            }
+            homeGuestHint={homeGuestHint}
             payLabel={
               canCheckout
                 ? operationalVerificationPending
@@ -618,6 +711,7 @@ export function CartPage() {
             payDisabled={
               !ready ||
               operationalVerificationPending ||
+              Boolean(homeProblem) ||
               Boolean(blocker) ||
               Boolean(pendingStripeOrderId)
             }
@@ -682,7 +776,16 @@ export function CartPage() {
                   </p>
                 </div>
               ) : null}
-              {tabAllowed && space ? (
+              {isHome ? (
+                <HomePayOptions
+                  offered={offeredHomePayments}
+                  selected={chosenHomePayment}
+                  depositPercent={homeOffer?.depositPercent ?? null}
+                  transferDetails={homeOffer?.transferDetails ?? null}
+                  onSelect={setHomePayment}
+                />
+              ) : null}
+              {!isHome && tabAllowed && space ? (
                 <PayOption
                   selected={useTab}
                   icon="tab"
@@ -695,6 +798,7 @@ export function CartPage() {
                   }}
                 />
               ) : null}
+              {!isHome ? (
               <PayOption
                 selected={payment === 'efectivo' && !useTab}
                 icon="cash"
@@ -706,7 +810,8 @@ export function CartPage() {
                   setPayAtEnd(false);
                 }}
               />
-              {user ? (
+              ) : null}
+              {user && !isHome ? (
                 <PayOption
                   selected={payment === 'saldo'}
                   icon="wallet"
@@ -727,7 +832,7 @@ export function CartPage() {
               ) : null}
               {/* Oculta hasta que el dueño active la tarjeta en su panel (el flujo queda intacto). */}
               {/* Sin cuenta, por ahora solo caja o pagar al final: la tarjeta aún no termina de cobrar. */}
-              {cardOffered && !guestLike ? (
+              {cardOffered && !guestLike && !isHome ? (
               <PayOption
                 selected={payment === 'stripe'}
                 icon="card"
@@ -767,11 +872,39 @@ export function CartPage() {
                 }
                 onClick={() => void confirm()}
               >
-                {submitting ? 'Confirmando…' : `Continuar con ${useTab ? 'pagar al final' : PAY_LABEL[payment]}`}
+                {submitting
+                  ? 'Confirmando…'
+                  : isHome && chosenHomePayment
+                    ? `Continuar con ${HOME_PAY_LABEL[chosenHomePayment]}`
+                    : `Continuar con ${useTab ? 'pagar al final' : PAY_LABEL[payment]}`}
               </button>
             </div>
           )}
         </MotionSheet>
+      ) : null}
+      {mapOpen && homeOffer ? (
+        <HomeDeliveryMap
+          initial={homeDraft.lat != null && homeDraft.lng != null ? { lat: homeDraft.lat, lng: homeDraft.lng } : null}
+          fallbackCenter={
+            typeof place?.latitud === 'number' && typeof place?.longitud === 'number'
+              ? { lat: place.latitud, lng: place.longitud }
+              : null
+          }
+          radiusKm={homeOffer.radiusKm}
+          onQuote={quoteAt}
+          onClose={() => setMapOpen(false)}
+          onConfirm={(pick) => {
+            setHomeDraft((current) => ({
+              ...current,
+              address: pick.address.slice(0, 160),
+              lat: pick.point.lat,
+              lng: pick.point.lng,
+            }));
+            setPickedAddress(pick.address);
+            setHomeQuote(pick.quote);
+            setMapOpen(false);
+          }}
+        />
       ) : null}
       {confirmTakeout ? (
         <section
@@ -830,6 +963,8 @@ export function CartFilledView({
   payment,
   productCount,
   paySubtitle,
+  homeDelivery = null,
+  homeGuestHint = false,
 }: {
   lines: CartLine[];
   payment: PaymentMethod;
@@ -853,6 +988,10 @@ export function CartFilledView({
   menuPeek?: CatalogProduct[];
   productCount: number;
   paySubtitle: string;
+  /** A domicilio: solo llega si la bandera está encendida y el negocio reparte. */
+  homeDelivery?: { active: boolean; onChange: (active: boolean) => void; section: ReactNode } | null;
+  /** Sin cuenta en un negocio que reparte: se invita a entrar para pedir a domicilio. */
+  homeGuestHint?: boolean;
 }) {
   const [placeEntryOpen, setPlaceEntryOpen] = useState(false);
   return (
@@ -863,7 +1002,7 @@ export function CartFilledView({
       </div>
       <div className="alumno-cart-stats" aria-label="Resumen del pedido">
         <div><span>Productos</span><strong>{productCount}</strong></div>
-        <div><span>Entrega</span><strong>{forHere && space ? space.nombre : 'En barra'}</strong></div>
+        <div><span>Entrega</span><strong>{homeDelivery?.active ? 'A domicilio' : forHere && space ? space.nombre : 'En barra'}</strong></div>
         <div><span>Total</span><strong>{total ? formatAmount(total) : '—'}</strong></div>
       </div>
       <div className="alumno-cart-layout__lines alumno-arrive">
@@ -922,6 +1061,35 @@ export function CartFilledView({
       </div>
       <aside className="alumno-cart-layout__side">
         <div className="alumno-cart-layout__checkout">
+          {homeDelivery ? (
+            <div className="alumno-home-toggle" role="radiogroup" aria-label="Cómo lo recibes">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={!homeDelivery.active}
+                className={`alumno-chip${!homeDelivery.active ? ' is-on' : ''}`}
+                onClick={() => homeDelivery.onChange(false)}
+              >
+                Para llevar
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={homeDelivery.active}
+                className={`alumno-chip${homeDelivery.active ? ' is-on' : ''}`}
+                onClick={() => homeDelivery.onChange(true)}
+              >
+                A domicilio
+              </button>
+            </div>
+          ) : null}
+          {homeDelivery?.active ? homeDelivery.section : null}
+          {homeGuestHint ? (
+            <p className="alumno-muted alumno-home-toggle__hint">
+              ¿Lo quieres a domicilio? <Link to={`/cuenta?next=/e/${slug ?? ''}/carrito`}>Entra a tu cuenta</Link>
+            </p>
+          ) : null}
+          {homeDelivery?.active ? null : (
           <button
             type="button"
             className={`alumno-card alumno-cart-destination${!space && placeEntryEnabled ? ' is-place-entry' : ''}`}
@@ -943,7 +1111,8 @@ export function CartFilledView({
                   : 'Recoges en mostrador cuando esté listo.'}
             </p>
           </button>
-          {!space && placeEntryEnabled && placeEntryOpen ? <PlaceEntry autoOpen="code" onClosed={() => setPlaceEntryOpen(false)} /> : null}
+          )}
+          {!space && placeEntryEnabled && placeEntryOpen && !homeDelivery?.active ? <PlaceEntry autoOpen="code" onClosed={() => setPlaceEntryOpen(false)} /> : null}
           {space && onLeaveSpace ? (
             <button
               type="button"
@@ -1150,5 +1319,68 @@ function PayOption({
         <svg viewBox="0 0 24 24"><path d="m6 12.5 4 4 8-9" /></svg>
       </span>
     </button>
+  );
+}
+
+const HOME_PAY_LABEL: Record<HomePayment, string> = {
+  card: 'tarjeta',
+  deposit: 'anticipo con tarjeta',
+  on_arrival: 'pago al recibir',
+};
+
+/** Las formas de pago a domicilio, en el orden de Android: tarjeta, anticipo y al recibir. */
+function HomePayOptions({
+  offered,
+  selected,
+  depositPercent,
+  transferDetails,
+  onSelect,
+}: {
+  offered: HomePayment[];
+  selected: HomePayment | null;
+  depositPercent: number | null;
+  transferDetails: string | null;
+  onSelect: (payment: HomePayment) => void;
+}) {
+  if (offered.length === 0) {
+    return <p className="alumno-error">Este negocio aún no tiene cómo cobrar a domicilio.</p>;
+  }
+  return (
+    <>
+      {offered.includes('card') ? (
+        <PayOption
+          selected={selected === 'card'}
+          icon="card"
+          title="Tarjeta"
+          badge="Pago seguro"
+          subtitle="Pagas todo ahora con tarjeta de débito o crédito."
+          onSelect={() => onSelect('card')}
+        />
+      ) : null}
+      {offered.includes('deposit') ? (
+        <PayOption
+          selected={selected === 'deposit'}
+          icon="card"
+          title="Anticipo con tarjeta"
+          badge={depositPercent != null ? `${depositPercent}%` : 'Anticipo'}
+          subtitle={`Pagas ${depositPercent != null ? `el ${depositPercent}%` : 'una parte'} con tarjeta y el resto al recibir.`}
+          onSelect={() => onSelect('deposit')}
+        />
+      ) : null}
+      {offered.includes('on_arrival') ? (
+        <PayOption
+          selected={selected === 'on_arrival'}
+          icon="cash"
+          title="Al recibir"
+          badge="Efectivo o transferencia"
+          subtitle={
+            transferDetails
+              ? `Pagas cuando llegue. Para transferir: ${transferDetails}`
+              : 'Pagas en efectivo o por transferencia cuando llegue.'
+          }
+          onSelect={() => onSelect('on_arrival')}
+        />
+      ) : null}
+    </>
   );
 }
