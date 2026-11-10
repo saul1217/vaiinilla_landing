@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
@@ -26,8 +26,9 @@ const cartState = {
   } | null,
 };
 
-const { getEstablishment, getGuestCatalog, getMyWallet, listAccesses, openClientSession } = vi.hoisted(
+const { getEstablishment, getGuestCatalog, getMyWallet, listAccesses, listDependents, openClientSession } = vi.hoisted(
   () => ({
+    listDependents: vi.fn(),
     getEstablishment: vi.fn(),
     getGuestCatalog: vi.fn(),
     getMyWallet: vi.fn(),
@@ -42,6 +43,7 @@ vi.mock('../lib/api', () => ({
     getGuestCatalog: (...args: unknown[]) => getGuestCatalog(...args) as Promise<unknown>,
     getMyWallet: (...args: unknown[]) => getMyWallet(...args) as Promise<unknown>,
     listAccesses: (...args: unknown[]) => listAccesses(...args) as Promise<unknown>,
+    listDependents: (...args: unknown[]) => listDependents(...args) as Promise<unknown>,
   },
 }));
 
@@ -72,12 +74,12 @@ vi.mock('../context/buyer-session', () => ({
   }),
 }));
 
-function renderWallet() {
+function renderWallet(parentMode = false) {
   return render(
     <MemoryRouter initialEntries={['/cuenta/saldo']}>
       <ThemeProvider>
         <Routes>
-          <Route path="/cuenta/saldo" element={<WalletPage />} />
+          <Route path="/cuenta/saldo" element={<WalletPage parentMode={parentMode} />} />
           <Route path="/cuenta" element={<p>Cuenta splash</p>} />
         </Routes>
       </ThemeProvider>
@@ -154,6 +156,29 @@ describe('WalletPage', () => {
     });
     getMyWallet.mockClear();
     listAccesses.mockClear();
+  });
+
+  it('modo papás apagado: no busca hijos ni muestra la entrada', async () => {
+    listDependents.mockClear();
+    renderWallet(false);
+    expect(await screen.findByText('$125.00')).toBeInTheDocument();
+    expect(listDependents).not.toHaveBeenCalled();
+    expect(screen.queryByRole('link', { name: /mis hijos/i })).toBeNull();
+  });
+
+  it('modo papás prendido: "Mis hijos" solo a quien ya tiene hijos', async () => {
+    listDependents.mockResolvedValueOnce([{ userId: 'u-tilin' }]);
+    renderWallet(true);
+    expect(await screen.findByRole('link', { name: /mis hijos/i })).toHaveAttribute('href', '/cuenta/hijos');
+    expect(listDependents).toHaveBeenCalledWith('jwt');
+  });
+
+  it('modo papás prendido sin hijos: no sale la entrada', async () => {
+    listDependents.mockResolvedValueOnce([]);
+    renderWallet(true);
+    expect(await screen.findByText('$125.00')).toBeInTheDocument();
+    await waitFor(() => expect(listDependents).toHaveBeenCalled());
+    expect(screen.queryByRole('link', { name: /mis hijos/i })).toBeNull();
   });
 
   it('muestra saldo grande y atajos de Android', async () => {

@@ -19,8 +19,9 @@ import { LoadingSkeleton } from '../components/loading-skeleton';
 import { RollingNumber } from '../components/rolling-number';
 import { peekResource, resourceKeys, storeResource } from '../lib/resource-cache';
 import { initialsFrom } from '../lib/initials';
+import { SHOW_PARENT_MODE } from '../lib/features';
 
-export function WalletPage() {
+export function WalletPage({ parentMode = SHOW_PARENT_MODE }: { parentMode?: boolean } = {}) {
   const { user, ready } = useAuth();
   const { cart } = useCart();
   const { context, openClientSession } = useBuyerSession();
@@ -34,6 +35,8 @@ export function WalletPage() {
   const [placeSlug, setPlaceSlug] = useState<string | null>(() => cart?.slug ?? lastPlaceSlug());
   const [allowsBalance, setAllowsBalance] = useState(true);
   const [placeName, setPlaceName] = useState('');
+  // Modo papás: "Mis hijos" sale solo a quien ya tiene hijos en esta escuela (como en Android).
+  const [childCount, setChildCount] = useState(0);
   const userId = wallet?.wallet.usuario_id || wallet?.cliente.usuario_id;
   const reloadHref = userId ? `/u/${userId}` : '/cuenta';
 
@@ -61,6 +64,14 @@ export function WalletPage() {
           }
           return;
         }
+        if (parentMode) {
+          void api
+            .listDependents(resolved.context.access_token)
+            .then((children) => {
+              if (active) setChildCount(children.length);
+            })
+            .catch(() => undefined);
+        }
         const next = await api.getMyWallet(resolved.context.access_token);
         if (resolved.slug) storeResource(resourceKeys.wallet(user.uid, resolved.slug), next);
         if (active) {
@@ -78,7 +89,7 @@ export function WalletPage() {
     return () => {
       active = false;
     };
-  }, [cart?.slug, context, openClientSession, ready, user, walletKey]);
+  }, [cart?.slug, context, openClientSession, parentMode, ready, user, walletKey]);
 
   useEffect(() => {
     if (!placeSlug) {
@@ -114,6 +125,14 @@ export function WalletPage() {
         <h1 className="sr-only">Mi saldo</h1>
         {error ? <p className="alumno-error">{error}</p> : null}
         {loading && !wallet && !error ? <LoadingSkeleton shape="wallet" label="Cargando saldo…" /> : null}
+        {parentMode && childCount > 0 ? (
+          <Link className="alumno-card parent-mode__entry" to="/cuenta/hijos">
+            <strong>Mis hijos</strong>
+            <span className="alumno-muted">
+              {childCount === 1 ? 'Ve su saldo y lo que compra' : `Ve el saldo y lo que compran tus ${childCount} hijos`}
+            </span>
+          </Link>
+        ) : null}
         {wallet ? (
           <WalletBoardView
             saldo={wallet.wallet.saldo}
