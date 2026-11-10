@@ -3,8 +3,10 @@ import { parseFeatureFlag } from './features';
 import {
   allergensLine,
   blockedLine,
+  canViewDependent,
   dailyRemainingLabel,
   DependentContextSession,
+  isConsentRequired,
   movementLabel,
   orderSummary,
   parseDependents,
@@ -91,13 +93,36 @@ describe('parseDependents', () => {
     expect(child?.controls).toBeNull();
   });
 
-  it('sin soy_principal (backend viejo) el tutor es dueño de los controles; sin estado es aprobada', () => {
-    const { soy_principal: _ignored, estado: _state, ...old } = approved;
+  it('sin soy_principal (backend viejo) el tutor es dueño de los controles', () => {
+    const { soy_principal: _ignored, ...old } = approved;
     void _ignored;
-    void _state;
     const [child] = parseDependents([old]);
     expect(child?.isPrincipal).toBe(true);
     expect(child?.state).toBe('aprobada');
+  });
+
+  it('sin estado, con estado nulo o desconocido no se trata como aprobada ni enseña datos', () => {
+    const { estado: _state, ...withoutState } = approved;
+    void _state;
+    for (const raw of [withoutState, { ...approved, estado: null }, { ...approved, estado: 'rechazada' }]) {
+      const [child] = parseDependents([raw]);
+      expect(child?.state).toBe('desconocido');
+      expect(child?.balance).toBeNull();
+      expect(child?.controls).toBeNull();
+      expect(canViewDependent(child!)).toBe(false);
+    }
+  });
+
+  it('aprobado pero sin el aviso vigente aceptado: no guarda saldo, notas, bloqueos ni alérgenos', () => {
+    const [child] = parseDependents([
+      { ...approved, requiere_consentimiento: true, controles: { ...approved.controles, notas: 'Diabético' } },
+    ]);
+    expect(child?.state).toBe('aprobada');
+    expect(child?.needsConsent).toBe(true);
+    expect(child?.balance).toBeNull();
+    expect(child?.controls).toBeNull();
+    expect(canViewDependent(child!)).toBe(false);
+    expect(canViewDependent(parseDependents([approved])[0]!)).toBe(true);
   });
 
   it('omite filas sin id y respuestas que no son lista', () => {
@@ -166,7 +191,43 @@ describe('parsePrivacyNotice', () => {
   });
 });
 
+describe('isConsentRequired', () => {
+  it('reconoce el 422 de consentimiento y nada más', () => {
+    expect(isConsentRequired({ status: 422, code: 'CONSENT_REQUIRED' })).toBe(true);
+    expect(isConsentRequired({ status: 422, code: 'GUARDIAN_CONSENT_REQUIRED' })).toBe(true);
+    expect(isConsentRequired({ status: 422, code: 'STUDENT_NOT_IN_ROSTER' })).toBe(false);
+    expect(isConsentRequired({ status: 403, code: 'CONTEXT_NOT_ALLOWED' })).toBe(false);
+    expect(isConsentRequired(null)).toBe(false);
+  });
+});
+
 describe('DependentContextSession', () => {
+  it('clear olvida el token del hijo y el siguiente uso pide otro', async () => {
+    const issue = vi
+      .fn()
+      .mockResolvedValueOnce({ access_token: 'hijo-1', expires_in: 900 })
+      .mockResolvedValueOnce({ access_token: 'hijo-2', expires_in: 900 });
+    const session = new DependentContextSession(issue);
+    await expect(session.validToken()).resolves.toBe('hijo-1');
+    session.clear();
+    await expect(session.validToken()).resolves.toBe('hijo-2');
+    expect(issue).toHaveBeenCalledTimes(2);
+  });
+
+  it('una emisión que termina después de clear no deja el token guardado', async () => {
+    let resolveIssue: (grant: { access_token: string; expires_in: number }) => void = () => undefined;
+    const issue = vi
+      .fn()
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveIssue = resolve)))
+      .mockResolvedValueOnce({ access_token: 'hijo-2', expires_in: 900 });
+    const session = new DependentContextSession(issue);
+    const pending = session.validToken();
+    session.clear();
+    resolveIssue({ access_token: 'hijo-1', expires_in: 900 });
+    await pending;
+    await expect(session.validToken()).resolves.toBe('hijo-2');
+  });
+
   it('reusa el token del hijo mientras falte más de un minuto y lo renueva antes de que venza', async () => {
     let now = 0;
     const issue = vi

@@ -72,8 +72,9 @@ const strings = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 
 function stateFrom(value: unknown): GuardianshipState {
-  // Un backend anterior a la migración 100 no manda `estado`: sus tutelas nacían aprobadas.
-  if (value === undefined || value === null || value === 'aprobada') return 'aprobada';
+  // Solo un `estado: 'aprobada'` explícito abre al hijo; sin estado (o con uno que no conocemos)
+  // no se da por aprobada, para no enseñar datos de una tutela que el servidor no confirmó.
+  if (value === 'aprobada') return 'aprobada';
   if (value === 'pendiente') return 'pendiente';
   return 'desconocido';
 }
@@ -97,7 +98,9 @@ export function parseDependent(raw: unknown): Dependent | null {
   const userId = text(raw.usuario_id);
   if (!userId) return null;
   const state = stateFrom(raw.estado);
-  const approved = state === 'aprobada';
+  const needsConsent = raw.requiere_consentimiento === true;
+  // Sin el aviso de privacidad vigente aceptado no se guarda nada del hijo, aunque el servidor lo mande.
+  const visible = state === 'aprobada' && !needsConsent;
   const credentials = isObject(raw.credenciales) ? raw.credenciales : null;
   return {
     userId,
@@ -107,8 +110,8 @@ export function parseDependent(raw: unknown): Dependent | null {
     studentId: text(raw.matricula),
     hasOwnAccount: raw.tiene_cuenta === true,
     state,
-    balance: approved ? money(raw.saldo) : null,
-    controls: approved && isObject(raw.controles) ? controlsFrom(raw.controles) : null,
+    balance: visible ? money(raw.saldo) : null,
+    controls: visible && isObject(raw.controles) ? controlsFrom(raw.controles) : null,
     // Sin la migración 101 cada tutor seguía siendo dueño de los controles.
     isPrincipal: typeof raw.soy_principal === 'boolean' ? raw.soy_principal : true,
     guardians: Array.isArray(raw.tutores)
@@ -121,8 +124,21 @@ export function parseDependent(raw: unknown): Dependent | null {
       : [],
     hasPin: raw.tiene_pin === true,
     hasCredential: credentials?.qr === true || credentials?.nfc === true,
-    needsConsent: raw.requiere_consentimiento === true,
+    needsConsent,
   };
+}
+
+/** Solo un hijo aprobado y con el aviso vigente aceptado muestra sus datos y pide su contexto. */
+export function canViewDependent(child: Pick<Dependent, 'state' | 'needsConsent'>): boolean {
+  return child.state === 'aprobada' && !child.needsConsent;
+}
+
+/** El servidor pide el aviso de privacidad vigente antes de seguir (por ejemplo, al pedir el contexto). */
+export function isConsentRequired(error: unknown): boolean {
+  const failure = error as { status?: number; code?: string } | null;
+  if (failure?.code === 'CONSENT_REQUIRED') return true;
+  // `POST /tutelas/:id/contexto` responde 422 mientras el hijo requiera el consentimiento.
+  return failure?.status === 422 && typeof failure.code === 'string' && failure.code.includes('CONSENT');
 }
 
 export function parseDependents(raw: unknown): Dependent[] {
@@ -254,11 +270,20 @@ export class DependentContextSession {
   private token: string | null = null;
   private expiresAt = 0;
   private inflight: Promise<string> | null = null;
+  private generation = 0;
 
   constructor(
     private readonly issue: () => Promise<DependentContextGrant>,
     private readonly now: () => number = Date.now,
   ) {}
+
+  /** Olvida el token del hijo (al cerrar sesión o salir de su ficha). Una emisión en curso se descarta. */
+  clear(): void {
+    this.token = null;
+    this.expiresAt = 0;
+    this.inflight = null;
+    this.generation += 1;
+  }
 
   async validToken(): Promise<string> {
     if (this.token && this.expiresAt - this.now() > RENEW_BEFORE_MS) return this.token;
@@ -268,15 +293,20 @@ export class DependentContextSession {
   /** Dos llamadas a la vez esperan la misma emisión. */
   refresh(): Promise<string> {
     if (!this.inflight) {
-      this.inflight = this.issue()
+      const generation = this.generation;
+      const pending = this.issue()
         .then((grant) => {
-          this.token = grant.access_token;
-          this.expiresAt = this.now() + (grant.expires_in ?? DEFAULT_CONTEXT_SECONDS) * 1000;
+          // Si se limpió mientras se emitía, el token no se guarda.
+          if (generation === this.generation) {
+            this.token = grant.access_token;
+            this.expiresAt = this.now() + (grant.expires_in ?? DEFAULT_CONTEXT_SECONDS) * 1000;
+          }
           return grant.access_token;
         })
         .finally(() => {
-          this.inflight = null;
+          if (this.inflight === pending) this.inflight = null;
         });
+      this.inflight = pending;
     }
     return this.inflight;
   }
