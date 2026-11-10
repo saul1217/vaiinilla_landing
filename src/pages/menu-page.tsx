@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMenuQaFixture } from '../lib/menu-qa-fixture';
 import { GuestOrdersBanner } from '../components/guest-orders-banner';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { useAuth } from '../context/auth-context';
@@ -28,11 +28,14 @@ import { useBuyerSession } from '../context/buyer-session';
 import { isActiveOrder, orderDestinationLabel } from '../lib/order-labels';
 import { statusAsPhrase } from '../lib/status-phrase';
 import { readSpace } from '../lib/space-session';
+import { assistantPath, showsCustomerAssistant } from '../lib/customer-assistant-flag';
 import type { OrderDetail } from '../types/api';
 
-export function MenuPage() {
+export function MenuPage({ assistantEnabled }: { assistantEnabled?: boolean } = {}) {
   const qaFixture = useMenuQaFixture();
   const { slug = '' } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const user = qaFixture?.user as typeof authUser ?? authUser;
   const { context } = useBuyerSession();
@@ -148,6 +151,20 @@ export function MenuPage() {
       return haystack.includes(needle);
     });
   }, [catalog, categoryId, query]);
+
+  // El asistente manda aquí la ficha de un producto que pide elegir opciones.
+  const openProductId = (location.state as { openProductId?: number } | null)?.openProductId;
+  useEffect(() => {
+    if (openProductId == null || !catalog) return;
+    const product = catalog.productos.find((item) => item.id === openProductId);
+    if (product?.disponible) {
+      setSelected(product);
+      setOptionIds(defaultOptionIds(product));
+      setQuantity(1);
+      setError(null);
+    }
+    void navigate(location.pathname, { replace: true, state: null });
+  }, [catalog, location.pathname, navigate, openProductId]);
 
   const selectedThumb = productImageUrl(selected?.imagen_url);
 
@@ -295,6 +312,13 @@ export function MenuPage() {
               .map((category) => ({ key: String(category.id), label: category.nombre })) ?? []),
           ]}
         />
+        {showsCustomerAssistant(place, assistantEnabled) ? (
+          <Link className="vai-assistant-entry" to={assistantPath(slug)}>
+            <strong>Pregúntame qué pedir</strong>
+            <span>El asistente conoce el menú de hoy y arma tu pedido</span>
+            <b aria-hidden="true">→</b>
+          </Link>
+        ) : null}
         {activeOrder ? <Link className="alumno-active-order" to={`/cuenta/pedidos/${activeOrder.id}`}>
           <span className="alumno-active-order__copy"><small>Pedido activo</small><strong>#{activeOrder.folio}</strong><span>{(() => { const n = activeOrder.items.reduce((sum, item) => sum + item.cantidad, 0); return n === 1 ? '1 producto' : `${n} productos`; })()} · {orderDestinationLabel(activeOrder)}</span></span>
           <span className="alumno-active-order__state">{statusAsPhrase(activeOrder)}</span>
