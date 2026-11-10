@@ -55,6 +55,7 @@ export function SlidingChips({
     }
     const x = target.offsetLeft;
     const w = target.offsetWidth;
+    const firstPaint = !springs.current;
     if (!springs.current) {
       // First paint: sit on the choice, no travel from the corner.
       const sx = createSpring(x, SNAPPY);
@@ -74,10 +75,15 @@ export function SlidingChips({
       springs.current.w.set(w);
     }
     el.style.opacity = '1';
-    // Keep the choice in view when the row scrolls.
+    // Keep the choice in view when the row scrolls. Solo se mueve la fila, nunca la página:
+    // scrollIntoView también desplazaba la ventana al cargar y Chrome dejaba de medir el LCP.
     const row = track.current;
-    if (row && typeof target.scrollIntoView === 'function') {
-      target.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    if (row && row.scrollWidth > row.clientWidth + 1 && typeof row.scrollTo === 'function') {
+      const left = Math.max(0, Math.min(x - (row.clientWidth - w) / 2, row.scrollWidth - row.clientWidth));
+      if (Math.abs(row.scrollLeft - left) >= 1) {
+        const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+        row.scrollTo({ left, behavior: firstPaint || reduced ? 'auto' : 'smooth' });
+      }
     }
   }, [selected, items]);
 
