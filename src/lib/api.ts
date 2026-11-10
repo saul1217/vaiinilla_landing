@@ -15,6 +15,8 @@ import type {
   SharedTable,
   TableSession,
   ApiErrorEnvelope,
+  CardReload,
+  CardReloadCheckout,
   CatalogResponse,
   ClientContextResponse,
   CreateOrderInput,
@@ -400,6 +402,24 @@ export const api = {
 
   async getMyWallet(token: string): Promise<WalletData> {
     return (await request<WalletData>('/wallets/me', { token })).data;
+  },
+
+  /** Recarga con tarjeta: crea el PaymentIntent; el saldo llega cuando el webhook confirma el pago. */
+  async startCardReload(token: string, monto: string, idempotencyKey: string): Promise<CardReloadCheckout> {
+    return (
+      await request<CardReloadCheckout>('/wallets/me/recargas-stripe', {
+        method: 'POST',
+        token,
+        body: { monto },
+        idempotencyKey,
+      })
+    ).data;
+  },
+
+  async getCardReload(token: string, id: string): Promise<CardReload> {
+    return (
+      await request<{ recarga: CardReload }>(`/wallets/me/recargas-stripe/${encodeURIComponent(id)}`, { token })
+    ).data.recarga;
   },
 
   async resolveSpace(token: string, slug?: string): Promise<ResolvedTableSpace> {
