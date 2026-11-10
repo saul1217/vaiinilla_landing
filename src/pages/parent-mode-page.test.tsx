@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
 import { VaiinillaApiError } from '../lib/api-error';
-import { parseDependents } from '../lib/guardianship';
+import { DependentContextSession, parseDependents } from '../lib/guardianship';
 import { AppRoutes } from '../app/router';
 import { ChildAccountPage, ParentModePage } from './parent-mode-page';
 
@@ -185,7 +185,37 @@ describe('Mis hijos', () => {
     expect(await screen.findByText('Aún no tienes hijos en esta escuela')).toBeInTheDocument();
   });
 
-  it('pide el aviso pendiente sin bloquear y reemplaza la lista al aceptarlo', async () => {
+  it('el aviso bloquea: sin aceptarlo no muestra saldo ni abre la ficha; al aceptarlo, sí', async () => {
+    listDependents.mockResolvedValue(
+      parseDependents([{ ...rawChildren[0], requiere_consentimiento: true }]),
+    );
+    getGuardianPrivacyNotice.mockResolvedValue({
+      version: '2026-10-21',
+      draft: false,
+      title: 'Aviso de privacidad',
+      paragraphs: ['Tratamos sus datos para darle de comer.'],
+    });
+    acceptGuardianPrivacyNotice.mockResolvedValue(parseDependents([rawChildren[0]]));
+    const user = userEvent.setup();
+    renderAt('/cuenta/hijos');
+    expect(await screen.findByText('Falta tu permiso para los datos de Tilin')).toBeInTheDocument();
+    // Mientras tanto no se ve nada del hijo ni se puede abrir su ficha.
+    const [row] = screen.getAllByTestId('child-row');
+    expect(row!.tagName).not.toBe('A');
+    expect(within(row!).getByText('Acepta el aviso de privacidad para ver sus datos')).toBeInTheDocument();
+    expect(screen.queryByText(/\$/)).toBeNull();
+    expect(await screen.findByText('Tratamos sus datos para darle de comer.')).toBeInTheDocument();
+    const accept = screen.getByRole('button', { name: 'Aceptar' });
+    expect(accept).toBeDisabled();
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(accept);
+    await waitFor(() => expect(screen.queryByText(/Falta tu permiso/)).toBeNull());
+    expect(acceptGuardianPrivacyNotice).toHaveBeenCalledWith('tutor-jwt', '2026-10-21', expect.any(String));
+    expect(screen.getByText('$120.50')).toBeInTheDocument();
+    expect(screen.getByTestId('child-row')).toHaveAttribute('href', '/cuenta/hijos/u-tilin');
+  });
+
+  it('un aviso en borrador se puede leer pero no aceptar', async () => {
     listDependents.mockResolvedValue(
       parseDependents([{ ...rawChildren[0], requiere_consentimiento: true }]),
     );
@@ -195,20 +225,23 @@ describe('Mis hijos', () => {
       title: 'Aviso de privacidad',
       paragraphs: ['Tratamos sus datos para darle de comer.'],
     });
-    acceptGuardianPrivacyNotice.mockResolvedValue(parseDependents([rawChildren[0]]));
-    const user = userEvent.setup();
     renderAt('/cuenta/hijos');
-    expect(await screen.findByText('Falta tu permiso para los datos de Tilin')).toBeInTheDocument();
-    // La lista se sigue viendo mientras tanto.
-    expect(screen.getByText('$120.50')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Leer el aviso' }));
     expect(await screen.findByText('Tratamos sus datos para darle de comer.')).toBeInTheDocument();
-    const accept = screen.getByRole('button', { name: 'Aceptar' });
-    expect(accept).toBeDisabled();
-    await user.click(screen.getByRole('checkbox'));
-    await user.click(accept);
-    await waitFor(() => expect(screen.queryByText(/Falta tu permiso/)).toBeNull());
-    expect(acceptGuardianPrivacyNotice).toHaveBeenCalledWith('tutor-jwt', '2026-10-21', expect.any(String));
+    expect(screen.getByRole('status')).toHaveTextContent('todavía es un borrador');
+    expect(screen.queryByRole('button', { name: 'Aceptar' })).toBeNull();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(acceptGuardianPrivacyNotice).not.toHaveBeenCalled();
+  });
+
+  it('una tutela sin estado no muestra saldo ni se abre', async () => {
+    const { estado: _state, ...withoutState } = rawChildren[0]!;
+    void _state;
+    listDependents.mockResolvedValue(parseDependents([withoutState]));
+    renderAt('/cuenta/hijos');
+    const [row] = await screen.findAllByTestId('child-row');
+    expect(row!.tagName).not.toBe('A');
+    expect(within(row!).getByText('No disponible por ahora')).toBeInTheDocument();
+    expect(screen.queryByText(/\$/)).toBeNull();
   });
 
   it('sin sesión manda a entrar', async () => {
@@ -263,6 +296,53 @@ describe('Cuenta de un hijo', () => {
     renderAt('/cuenta/hijos/u-tilin');
     expect(await screen.findByRole('alert')).toHaveTextContent('Ya no puedes ver la cuenta de Tilin');
     expect(screen.queryByTestId('child-balance')).toBeNull();
+  });
+
+  it('sin el aviso vigente aceptado no pide el contexto del hijo ni muestra sus datos', async () => {
+    listDependents.mockResolvedValue(
+      parseDependents([{ ...rawChildren[0], requiere_consentimiento: true }]),
+    );
+    renderAt('/cuenta/hijos/u-tilin');
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('primero acepta el aviso de privacidad');
+    expect(within(alert).getByRole('link', { name: 'Mis hijos' })).toHaveAttribute('href', '/cuenta/hijos');
+    expect(issueDependentContext).not.toHaveBeenCalled();
+    expect(getDependentWallet).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('child-balance')).toBeNull();
+    expect(screen.queryByText(/Cacahuate/)).toBeNull();
+  });
+
+  it('si el contexto responde 422 por el consentimiento, pide el aviso y no muestra nada', async () => {
+    issueDependentContext.mockRejectedValue(
+      new VaiinillaApiError(422, { code: 'CONSENT_REQUIRED', message: 'Acepta el aviso.' }),
+    );
+    renderAt('/cuenta/hijos/u-tilin');
+    expect(await screen.findByRole('alert')).toHaveTextContent('primero acepta el aviso de privacidad');
+    expect(screen.queryByTestId('child-balance')).toBeNull();
+    expect(screen.queryByText(/Cacahuate/)).toBeNull();
+    expect(getDependentWallet).not.toHaveBeenCalled();
+  });
+
+  it('al cerrar sesión olvida el token del hijo', async () => {
+    const clear = vi.spyOn(DependentContextSession.prototype, 'clear');
+    const view = renderAt('/cuenta/hijos/u-tilin');
+    expect(await screen.findByTestId('child-balance')).toHaveTextContent('$95.50');
+    expect(clear).not.toHaveBeenCalled();
+    authState.user = null;
+    view.rerender(
+      <MemoryRouter initialEntries={['/cuenta/hijos/u-tilin']}>
+        <ThemeProvider>
+          <Routes>
+            <Route path="/cuenta/hijos/:id" element={<ChildAccountPage />} />
+            <Route path="/cuenta" element={<p>Entrar</p>} />
+          </Routes>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('Entrar')).toBeInTheDocument();
+    expect(clear).toHaveBeenCalled();
+    expect(screen.queryByTestId('child-balance')).toBeNull();
+    clear.mockRestore();
   });
 
   it('un hijo pendiente no se abre ni pide contexto', async () => {

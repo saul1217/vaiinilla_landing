@@ -13,9 +13,11 @@ import {
   ACCESS_LOST_CODES,
   allergensLine,
   blockedLine,
+  canViewDependent,
   dailyRemainingLabel,
   DependentContextSession,
   firstName,
+  isConsentRequired,
   movementLabel,
   orderSummary,
   shortDate,
@@ -44,6 +46,10 @@ function useGuardianSession() {
 
   useEffect(() => {
     if (!ready || !user) {
+      // Al cerrar sesión no queda ningún token: sin el del tutor tampoco se puede pedir el del hijo.
+      setToken(null);
+      setPlaceName('');
+      setError(null);
       setLoading(!ready);
       return;
     }
@@ -83,10 +89,12 @@ export function ParentModePage() {
   const { user, ready, token, placeName, error: sessionError, loading: sessionLoading } = useGuardianSession();
   const [children, setChildren] = useState<Dependent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [consentOpen, setConsentOpen] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setChildren(null);
+      return;
+    }
     let active = true;
     api
       .listDependents(token)
@@ -124,12 +132,7 @@ export function ParentModePage() {
           <ConsentCard
             token={token}
             names={needsConsent.map((child) => firstName(child.name))}
-            open={consentOpen}
-            onToggle={() => setConsentOpen((value) => !value)}
-            onAccepted={(list) => {
-              setChildren(list);
-              setConsentOpen(false);
-            }}
+            onAccepted={(list) => setChildren(list)}
           />
         ) : null}
         {children && children.length === 0 ? (
@@ -174,6 +177,18 @@ function ChildRow({ child }: { child: Dependent }) {
       </div>
     );
   }
+  if (!canViewDependent(child)) {
+    // Aprobado pero sin el aviso vigente aceptado: ni saldo ni ficha hasta aceptarlo.
+    return (
+      <div className="alumno-card parent-mode__child parent-mode__child--waiting" data-testid="child-row">
+        <span className="parent-mode__child-name">
+          <strong>{child.name}</strong>
+          {meta ? <span className="alumno-muted">{meta}</span> : null}
+        </span>
+        <span className="alumno-muted">Acepta el aviso de privacidad para ver sus datos</span>
+      </div>
+    );
+  }
   const remaining = dailyRemainingLabel(child.controls);
   return (
     <Link
@@ -194,20 +209,21 @@ function ChildRow({ child }: { child: Dependent }) {
   );
 }
 
+/**
+ * El aviso de privacidad bloquea: mientras falte, los hijos que lo requieren no muestran datos ni se
+ * abren. Un aviso en borrador se puede leer pero no aceptar.
+ */
 function ConsentCard({
   token,
   names,
-  open,
-  onToggle,
   onAccepted,
 }: {
   token: string;
   names: string[];
-  open: boolean;
-  onToggle: () => void;
   onAccepted: (children: Dependent[]) => void;
 }) {
   const [notice, setNotice] = useState<PrivacyNotice | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [checked, setChecked] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -215,19 +231,22 @@ function ConsentCard({
 
   const loadNotice = useCallback(async () => {
     try {
-      setNotice(await api.getGuardianPrivacyNotice(token));
-      setError(null);
+      const next = await api.getGuardianPrivacyNotice(token);
+      setNotice(next);
+      setError(next ? null : 'No pudimos leer el aviso de privacidad. Intenta de nuevo más tarde.');
     } catch (cause) {
       setError(errorMessage(cause));
+    } finally {
+      setLoaded(true);
     }
   }, [token]);
 
   useEffect(() => {
-    if (open && !notice) void loadNotice();
-  }, [loadNotice, notice, open]);
+    void loadNotice();
+  }, [loadNotice]);
 
   const accept = async () => {
-    if (!notice) return;
+    if (!notice || notice.draft) return;
     setSending(true);
     try {
       onAccepted(await api.acceptGuardianPrivacyNotice(token, notice.version, key));
@@ -247,37 +266,39 @@ function ConsentCard({
   return (
     <section className="alumno-card parent-mode__consent" aria-labelledby="parent-consent-title">
       <h2 id="parent-consent-title">Falta tu permiso para los datos de {names.join(', ')}</h2>
-      <p className="alumno-muted">No bloquea nada: puedes seguir viendo su saldo mientras lo lees.</p>
-      <button type="button" className="alumno-btn" aria-expanded={open} onClick={onToggle}>
-        {open ? 'Cerrar el aviso' : 'Leer el aviso'}
-      </button>
-      {open ? (
-        <div className="parent-mode__notice">
-          {notice ? (
-            <>
-              <h3>{notice.title}</h3>
-              {notice.draft ? <p className="alumno-muted">Borrador: este aviso aún se está revisando.</p> : null}
-              {notice.paragraphs.map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
-              ))}
-              <label className="parent-mode__check">
-                <input type="checkbox" checked={checked} onChange={(event) => setChecked(event.target.checked)} />
-                Soy su mamá, papá o tutor y acepto el aviso de privacidad, también para sus alergias.
-              </label>
-              <button
-                type="button"
-                className="alumno-btn alumno-btn--lime"
-                disabled={!checked || sending}
-                onClick={() => void accept()}
-              >
-                {sending ? 'Guardando…' : 'Aceptar'}
-              </button>
-            </>
-          ) : error ? null : (
-            <p className="alumno-muted">Cargando el aviso…</p>
-          )}
-        </div>
-      ) : null}
+      <p className="alumno-muted">Para ver su saldo y lo que compran, primero lee y acepta el aviso de privacidad.</p>
+      <div className="parent-mode__notice">
+        {notice ? (
+          <>
+            <h3>{notice.title}</h3>
+            {notice.paragraphs.map((paragraph, index) => (
+              <p key={index}>{paragraph}</p>
+            ))}
+            {notice.draft ? (
+              <p className="alumno-muted" role="status">
+                Este aviso todavía es un borrador y aún no se puede aceptar. Vuelve más tarde.
+              </p>
+            ) : (
+              <>
+                <label className="parent-mode__check">
+                  <input type="checkbox" checked={checked} onChange={(event) => setChecked(event.target.checked)} />
+                  Soy su mamá, papá o tutor y acepto el aviso de privacidad, también para sus alergias.
+                </label>
+                <button
+                  type="button"
+                  className="alumno-btn alumno-btn--lime"
+                  disabled={!checked || sending}
+                  onClick={() => void accept()}
+                >
+                  {sending ? 'Guardando…' : 'Aceptar'}
+                </button>
+              </>
+            )}
+          </>
+        ) : loaded ? null : (
+          <p className="alumno-muted">Cargando el aviso…</p>
+        )}
+      </div>
       {error ? <p className="alumno-error">{error}</p> : null}
     </section>
   );
@@ -293,6 +314,7 @@ export function ChildAccountPage() {
   const [ordersFailed, setOrdersFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accessLost, setAccessLost] = useState(false);
+  const [consentMissing, setConsentMissing] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const session = useMemo(
@@ -301,7 +323,13 @@ export function ChildAccountPage() {
   );
 
   useEffect(() => {
-    if (!token || !session) return;
+    if (!token || !session) {
+      // Sin sesión del tutor (por ejemplo, al cerrar sesión) no queda nada del hijo en pantalla.
+      setChild(null);
+      setWallet(null);
+      setOrders(null);
+      return;
+    }
     let active = true;
     const lost = (cause: unknown) =>
       cause instanceof VaiinillaApiError && (ACCESS_LOST_CODES.has(cause.code) || cause.status === 404);
@@ -316,11 +344,21 @@ export function ChildAccountPage() {
           setAccessLost(true);
           return;
         }
+        // Sin el aviso vigente aceptado no se pide el contexto del hijo.
+        if (found.needsConsent) {
+          setConsentMissing(true);
+          return;
+        }
         const [walletResult, ordersResult] = await Promise.allSettled([
           session.run((childToken) => api.getDependentWallet(childToken)),
           session.run((childToken) => api.listDependentOrders(childToken)),
         ]);
         if (!active) return;
+        if ([walletResult, ordersResult].some((result) => result.status === 'rejected' && isConsentRequired(result.reason))) {
+          setConsentMissing(true);
+          session.clear();
+          return;
+        }
         if (walletResult.status === 'fulfilled') {
           setWallet(walletResult.value);
           setError(null);
@@ -337,7 +375,8 @@ export function ChildAccountPage() {
         }
       } catch (cause) {
         if (!active) return;
-        if (lost(cause)) setAccessLost(true);
+        if (isConsentRequired(cause)) setConsentMissing(true);
+        else if (lost(cause)) setAccessLost(true);
         else setError(errorMessage(cause));
       } finally {
         if (active) setLoading(false);
@@ -345,6 +384,7 @@ export function ChildAccountPage() {
     })();
     return () => {
       active = false;
+      session.clear();
     };
   }, [id, session, token]);
 
@@ -366,11 +406,17 @@ export function ChildAccountPage() {
             Ya no puedes ver la cuenta de {firstName(name)}. Si crees que es un error, habla con la escuela.
           </p>
         ) : null}
-        {shownError && !accessLost ? <p className="alumno-error">{shownError}</p> : null}
-        {loading && !wallet && !shownError && !accessLost ? (
+        {consentMissing && !accessLost ? (
+          <p className="alumno-error" role="alert">
+            Para ver la cuenta de {firstName(name)} primero acepta el aviso de privacidad en{' '}
+            <Link to="/cuenta/hijos">Mis hijos</Link>.
+          </p>
+        ) : null}
+        {shownError && !accessLost && !consentMissing ? <p className="alumno-error">{shownError}</p> : null}
+        {loading && !wallet && !shownError && !accessLost && !consentMissing ? (
           <LoadingSkeleton shape="wallet" label={`Abriendo la cuenta de ${firstName(name)}…`} />
         ) : null}
-        {child && !accessLost && (wallet || !loading) ? (
+        {child && canViewDependent(child) && !accessLost && !consentMissing && (wallet || !loading) ? (
           <ChildAccountView child={child} wallet={wallet} orders={orders} ordersFailed={ordersFailed} />
         ) : null}
       </main>
