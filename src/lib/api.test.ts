@@ -1,7 +1,7 @@
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { api } from './api';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { api, onUnauthorizedSession } from './api';
 import { canAcceptOrders, toCreateOrderInput } from './cart';
 
 const baseUrl = api.apiUrl;
@@ -333,5 +333,79 @@ describe('buyer API client', () => {
       }),
     );
     await expect(api.deleteIdentity('fresh-token')).resolves.toBeUndefined();
+  });
+});
+
+describe('modo papás', () => {
+  const unauthorized = { data: null, meta: {}, error: { code: 'UNAUTHENTICATED', message: 'Token vencido.' } };
+
+  it('lista a los hijos con el token del tutor y pide el contexto del hijo con Idempotency-Key', async () => {
+    server.use(
+      http.get(`${baseUrl}/tutelas`, ({ request }) => {
+        expect(request.headers.get('Authorization')).toBe('Bearer tutor');
+        return HttpResponse.json({
+          data: [{ usuario_id: 'u1', nombre: 'Tilin', estado: 'aprobada', saldo: '80.00', controles: null }],
+          meta: {},
+          error: null,
+        });
+      }),
+      http.post(`${baseUrl}/tutelas/u1/contexto`, ({ request }) => {
+        expect(request.headers.get('Authorization')).toBe('Bearer tutor');
+        expect(request.headers.get('Idempotency-Key')).toBeTruthy();
+        return HttpResponse.json({ data: { access_token: 'hijo', expires_in: 900 }, meta: {}, error: null });
+      }),
+    );
+    await expect(api.listDependents('tutor')).resolves.toMatchObject([{ userId: 'u1', balance: '80.00' }]);
+    await expect(api.issueDependentContext('tutor', 'u1')).resolves.toMatchObject({ access_token: 'hijo' });
+  });
+
+  it('lee la cartera y los pedidos del hijo con su token', async () => {
+    server.use(
+      http.get(`${baseUrl}/wallets/me`, ({ request }) => {
+        expect(request.headers.get('Authorization')).toBe('Bearer hijo');
+        return HttpResponse.json({
+          data: { cliente: { usuario_id: 'u1' }, wallet: { saldo: '80.00' }, movimientos: [] },
+          meta: {},
+          error: null,
+        });
+      }),
+      http.get(`${baseUrl}/pedidos`, ({ request }) => {
+        expect(request.headers.get('Authorization')).toBe('Bearer hijo');
+        return HttpResponse.json({ data: [order], meta: {}, error: null });
+      }),
+    );
+    await expect(api.getDependentWallet('hijo')).resolves.toMatchObject({ wallet: { saldo: '80.00' } });
+    await expect(api.listDependentOrders('hijo')).resolves.toMatchObject([{ folio: 42 }]);
+  });
+
+  it('un 401 con el token del hijo no cierra la sesión del tutor; con el del tutor sí', async () => {
+    const listener = vi.fn();
+    const stop = onUnauthorizedSession(listener);
+    server.use(
+      http.get(`${baseUrl}/wallets/me`, () => HttpResponse.json(unauthorized, { status: 401 })),
+      http.get(`${baseUrl}/tutelas`, () => HttpResponse.json(unauthorized, { status: 401 })),
+    );
+    await expect(api.getDependentWallet('hijo')).rejects.toMatchObject({ status: 401 });
+    expect(listener).not.toHaveBeenCalled();
+    await expect(api.listDependents('tutor')).rejects.toMatchObject({ status: 401 });
+    expect(listener).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  it('acepta el aviso vigente y devuelve la lista actualizada', async () => {
+    server.use(
+      http.post(`${baseUrl}/tutelas/consentimiento`, async ({ request }) => {
+        expect(request.headers.get('Idempotency-Key')).toBe('llave-1');
+        await expect(request.json()).resolves.toEqual({ consentimiento_version: '2026-10-21' });
+        return HttpResponse.json({
+          data: [{ usuario_id: 'u1', nombre: 'Tilin', estado: 'aprobada', requiere_consentimiento: false }],
+          meta: {},
+          error: null,
+        });
+      }),
+    );
+    await expect(api.acceptGuardianPrivacyNotice('tutor', '2026-10-21', 'llave-1')).resolves.toMatchObject([
+      { userId: 'u1', needsConsent: false },
+    ]);
   });
 });
