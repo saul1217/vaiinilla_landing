@@ -52,6 +52,15 @@ const PERSONAL_KEYS = new Set([
   'lastname',
   'apellido',
   'apellidos',
+  // Datos del hijo en modo papás y del pedido a domicilio: salud, notas, dinero y ubicación.
+  'alergenos',
+  'alérgenos',
+  'notas',
+  'saldo',
+  'gastadohoy',
+  'lat',
+  'lng',
+  'lon',
 ]);
 
 /** Parámetros de URL que se tapan (tokens, códigos de un solo uso, secretos de Stripe y correos). */
@@ -119,10 +128,12 @@ export function redactString(value: string): string {
 /**
  * Recorre objetos y arreglos anidados (y JSON en texto) y cambia por "[Filtered]" los valores de claves
  * sensibles o personales y cualquier texto con forma de token. Modifica en el lugar y conserva lo demás.
+ * Lo que queda más hondo que MAX_DEPTH no se revisa: se tapa entero en vez de mandarse tal cual.
  */
 export function redactDeep<T>(value: T, depth = 0, seen: WeakSet<object> = new WeakSet()): T {
+  if (depth > MAX_DEPTH) return (value === null || value === undefined ? value : FILTERED) as T;
   if (typeof value === 'string') return redactString(value) as T;
-  if (!value || typeof value !== 'object' || depth > MAX_DEPTH || seen.has(value)) return value;
+  if (!value || typeof value !== 'object' || seen.has(value)) return value;
   seen.add(value);
   if (Array.isArray(value)) {
     const list = value as unknown[];
@@ -197,7 +208,16 @@ function scrubHeaders(headers: Record<string, string> | undefined): void {
   }
 }
 
-export function beforeSend(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
+/** Si la redacción falla por cualquier motivo, el evento no se manda: mejor perderlo que filtrar datos. */
+export function beforeSend(event: Sentry.ErrorEvent): Sentry.ErrorEvent | null {
+  try {
+    return redactEvent(event);
+  } catch {
+    return null;
+  }
+}
+
+function redactEvent(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
   if (event.request) {
     if (event.request.url) event.request.url = redactString(event.request.url);
     if (event.request.query_string) event.request.query_string = redactQueryString(event.request.query_string);

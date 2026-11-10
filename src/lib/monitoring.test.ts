@@ -13,7 +13,11 @@ const CHILD_JWT = [
 ].join('.');
 const VILLO = ['villo', '3q2-7wY2mJ0Qx0b1K9f8VgW5hN4cR6tZ1uA2sD3fG4h'].join('_');
 
-const send = (event: Record<string, unknown>) => beforeSend(event as unknown as ErrorEvent);
+const send = (event: Record<string, unknown>): ErrorEvent => {
+  const out = beforeSend(event as unknown as ErrorEvent);
+  if (!out) throw new Error('beforeSend descartó el evento');
+  return out;
+};
 const crumb = (b: Breadcrumb) => beforeBreadcrumb(b);
 
 describe('monitoring: JWT en mensajes y URLs', () => {
@@ -215,6 +219,75 @@ describe('monitoring: datos personales', () => {
     expect(b?.data).toEqual({
       arguments: ['cliente', { email: '[Filtered]', direccion: '[Filtered]', total: 99 }],
     });
+  });
+});
+
+describe('monitoring: datos del hijo y ubicación', () => {
+  it('tapa alérgenos, notas, saldo, gastado hoy, dirección, teléfono y coordenadas en cualquier nivel', () => {
+    const out = send({
+      extra: {
+        hijo: {
+          id: 'u-tilin',
+          alergenos: ['cacahuate'],
+          notas: 'sin azúcar',
+          saldo: 95.5,
+          gastado_hoy: 12,
+          gastadoHoy: 12,
+          limite_diario: 50,
+        },
+        entrega: { direccion: 'Calle 1 #23', telefono: '5512345678', lat: 19.43, lng: -99.13, lon: -99.13, zona: 'centro' },
+        respuesta: JSON.stringify({ saldo: 10, notas: 'llamar', lat: 1, total: 3 }),
+      },
+    });
+    expect(out.extra).toEqual({
+      hijo: {
+        id: 'u-tilin',
+        alergenos: '[Filtered]',
+        notas: '[Filtered]',
+        saldo: '[Filtered]',
+        gastado_hoy: '[Filtered]',
+        gastadoHoy: '[Filtered]',
+        limite_diario: 50,
+      },
+      entrega: {
+        direccion: '[Filtered]',
+        telefono: '[Filtered]',
+        lat: '[Filtered]',
+        lng: '[Filtered]',
+        lon: '[Filtered]',
+        zona: 'centro',
+      },
+      respuesta: JSON.stringify({ saldo: '[Filtered]', notas: '[Filtered]', lat: '[Filtered]', total: 3 }),
+    });
+    const b = crumb({ category: 'fetch', data: { body: { alérgenos: 'nuez', Saldo: 3 } } });
+    expect(b?.data).toEqual({ body: { alérgenos: '[Filtered]', Saldo: '[Filtered]' } });
+  });
+});
+
+describe('monitoring: más allá de la profundidad máxima', () => {
+  it('tapa entero lo que queda más hondo en vez de mandarlo tal cual', () => {
+    // 20 niveles de anidación: lo de abajo no se revisa, así que no debe salir.
+    let deep: Record<string, unknown> = { secreto_sin_clave: 'Calle Escondida 9', numero: 7 };
+    for (let i = 0; i < 20; i++) deep = { nivel: deep };
+    const out = send({ extra: { deep } });
+    const text = JSON.stringify(out);
+    expect(text).not.toMatch(/Calle Escondida|"numero"/);
+    expect(text).toContain('[Filtered]');
+    // Los primeros niveles se conservan.
+    expect((out.extra as { deep: { nivel: unknown } }).deep.nivel).toBeTypeOf('object');
+  });
+});
+
+describe('monitoring: si la redacción falla', () => {
+  it('beforeSend devuelve null y el evento no se manda', () => {
+    const extra = {};
+    Object.defineProperty(extra, 'roto', {
+      enumerable: true,
+      get() {
+        throw new Error('getter roto');
+      },
+    });
+    expect(beforeSend({ message: 'algo', extra } as unknown as ErrorEvent)).toBeNull();
   });
 });
 
