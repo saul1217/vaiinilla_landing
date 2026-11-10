@@ -70,6 +70,8 @@ export interface PublicEstablishment {
   permite_pago_al_final?: boolean;
   /** Saldo y recargas: el dueño puede apagarlo. Ausente (backend viejo) = sí hay saldo. */
   permite_saldo?: boolean;
+  /** La tienda tiene el asistente de pedidos para clientes (`asistente_modo = 'ambos'`). Ausente = sí. */
+  asistente_clientes?: boolean;
   id: string;
   nombre: string;
   slug: string;
