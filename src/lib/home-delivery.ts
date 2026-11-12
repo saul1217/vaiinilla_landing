@@ -135,7 +135,10 @@ export function homeCheckoutProblem(input: {
   quote: HomeDeliveryQuote | null;
   offer: HomeDeliveryOffer;
   payments: HomePayment[];
-  /** Los productos solos, sin el envío: con eso compara el back el mínimo. */
+  /**
+   * Los productos solos, sin el envío, al precio del método elegido: con tarjeta ya trae la
+   * comisión. Así compara el back el mínimo (`totales.subtotalCents` en pedidos.service.js).
+   */
   subtotal: string | null;
 }): string | null {
   if (input.payments.length === 0) return 'Este negocio aún no tiene cómo cobrar a domicilio.';

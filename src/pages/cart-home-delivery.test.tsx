@@ -239,6 +239,57 @@ describe('CartPage a domicilio', () => {
     expect(await screen.findByText(/mis pedidos/i)).toBeInTheDocument();
   });
 
+  it('el mínimo se compara con el precio del método elegido, como el back (con tarjeta lleva la comisión)', async () => {
+    // El back compara el mínimo con `totales.subtotalCents` de su política de precio: con tarjeta
+    // ese subtotal ya trae la comisión (pricing.js). Mínimo 100: con tarjeta (103) alcanza y al
+    // recibir (98, mostrador) no.
+    vi.stubEnv('VITE_FEATURE_DOMICILIO', 'true');
+    cartState.cart = {
+      slug: 'demo-a',
+      establishmentName: 'Repostería Demo',
+      lines: [{ productId: 1, quantity: 1, optionIds: [], productName: 'Pastel', unitPreview: '103.00', unitCounter: '98.00', imageUrl: null }],
+    };
+    api.createOrder.mockResolvedValue({
+      id: 'ord-casa-tarjeta',
+      folio: 10,
+      estado: 'por_cobrar',
+      metodo_pago: 'stripe',
+      destino: 'a_domicilio',
+      qr_token: 'pickup',
+      espacio: null,
+      total: '148.00',
+      items: [],
+      pago: {
+        payment_attempt_id: 'attempt-1',
+        payment_intent_id: 'pi_test_001',
+        stripe_account_id: 'acct_test_001',
+        payment_status: 'pendiente_pago',
+        client_secret: 'pi_test_001_secret_test',
+        publishable_key: 'pk_test_51Vaiinilla',
+      },
+    });
+    const user = userEvent.setup();
+    renderCart();
+    await user.click(await screen.findByRole('radio', { name: /a domicilio/i }));
+    await user.click(screen.getByRole('button', { name: /elegir en el mapa/i }));
+    await user.click(screen.getByRole('button', { name: /mapa de prueba/i }));
+    await screen.findByText('Aldama 1408, Centro, Chihuahua');
+    await user.type(screen.getByLabelText(/teléfono/i), '6141234567');
+    // Con tarjeta (la primera forma de pago) 103 de productos supera el mínimo de 100.
+    await waitFor(() => expect(screen.getByRole('button', { name: /^continuar$/i })).toBeEnabled());
+
+    await user.click(screen.getByRole('button', { name: /^continuar$/i }));
+    await user.click(await screen.findByRole('radio', { name: /al recibir/i }));
+    await user.click(screen.getByRole('button', { name: /continuar con pago al recibir/i }));
+    expect((await screen.findAllByText('El pedido mínimo a domicilio es de $100.')).length).toBeGreaterThan(0);
+    expect(api.createOrder).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('radio', { name: /^tarjeta/i }));
+    await user.click(screen.getByRole('button', { name: /continuar con tarjeta/i }));
+    await waitFor(() => expect(api.createOrder).toHaveBeenCalledTimes(1));
+    expect(api.createOrder.mock.calls[0]?.[1]).toMatchObject({ metodo_pago: 'stripe', destino: 'a_domicilio' });
+  });
+
   it('fuera de la zona no deja continuar', async () => {
     vi.stubEnv('VITE_FEATURE_DOMICILIO', 'true');
     api.quoteHomeDelivery.mockResolvedValue({ llega: false, distancia_km: '9.0', costo: '40.00', minimo: null });
