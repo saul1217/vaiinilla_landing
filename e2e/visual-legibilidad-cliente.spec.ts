@@ -144,13 +144,13 @@ for (const scheme of themes) {
   });
 }
 
-test.describe('preferencia AMOLED heredada', () => {
+test.describe('tema AMOLED', () => {
   test.use({ colorScheme: 'dark' });
 
-  test('abre Mi saldo con tema oscuro y mantiene la preferencia compatible', async ({ page }, info) => {
+  test('abre Mi saldo en negro real con las reglas oscuras', async ({ page }, info) => {
     test.skip(!env.E2E_CLIENTE_EMAIL || !env.E2E_PASSWORD, 'Falta la cuenta cliente QA en .env.e2e.local.');
     test.setTimeout(90_000);
-    const shot = (name: string) => snap(page, name, 'dark', info.project.name);
+    const shot = (name: string) => snap(page, name, 'amoled', info.project.name);
     await page.addInitScript(() => {
       localStorage.setItem('vaiinilla.buyer.theme.v1', 'amoled');
     });
@@ -159,6 +159,7 @@ test.describe('preferencia AMOLED heredada', () => {
     await signIn(page);
     await page.goto('/cuenta/saldo');
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await expect(page.locator('html')).toHaveAttribute('data-vai-theme', 'amoled');
     await page.getByRole('heading', { name: 'Mi saldo' }).waitFor({ timeout: 20_000 });
     await shot('11-cuenta-saldo');
     await expectNoSessionBanner(page);

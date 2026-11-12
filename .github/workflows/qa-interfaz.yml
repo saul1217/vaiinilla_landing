@@ -40,7 +40,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with: { node-version: 22 }
       - run: npm ci
-      # Sembrar el establecimiento de CI con /dev/test-setup de la API de develop antes de correr.
+      # Usa la tienda ci-vaiinilla de develop, que ya debe existir: /dev/test-setup no la siembra.
       - name: Pruebas de interfaz
         env:
           UPDATE_SNAPSHOTS: ${{ inputs.update_snapshots }}
@@ -49,7 +49,31 @@ jobs:
           args=()
           if [ "$UPDATE_SNAPSHOTS" = "true" ]; then args+=(--update-snapshots); fi
           npx playwright test -c playwright.ui.config.ts "${args[@]}"
-      - run: npx --yes @lhci/cli@0.15.x autorun --config=lighthouserc.json --collect.url="$E2E_BASE_URL/pedir" --collect.url="$E2E_BASE_URL/e/ci-canchas/canchas" --collect.url="$E2E_BASE_URL/e/ci-tienda"
+      # Las referencias nuevas viven en este contenedor: se suben para versionarlas en el repo.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        # Antes de Lighthouse y aunque falle un paso posterior: las referencias no dependen de él.
+        if: ${{ !cancelled() && inputs.update_snapshots }}
+        with:
+          name: capturas-referencia
+          path: e2e-ui/__screenshots__
+          retention-days: 7
+          if-no-files-found: error
+      # El contenedor de Playwright no trae Google Chrome: Lighthouse usa el Chromium de Playwright.
+      # Corre como root y con /dev/shm chico, por eso --no-sandbox y --disable-dev-shm-usage.
+      # Misma tienda de CI que las pruebas y lighthouserc.json (ci-vaiinilla), no los slugs viejos ci-tienda y ci-canchas.
+      - name: Lighthouse
+        shell: bash
+        env:
+          # Dentro del contenedor `git rev-parse HEAD` falla: lhci toma el commit de aquí.
+          LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.event.deployment.sha || github.sha }}
+        run: |
+          CHROME_PATH="$(node -p "require('@playwright/test').chromium.executablePath()")"
+          export CHROME_PATH
+          test -x "$CHROME_PATH" || { echo "No existe el Chromium de Playwright en $CHROME_PATH"; exit 1; }
+          npx --yes @lhci/cli@0.15.x autorun --config=lighthouserc.json \
+            --collect.chromePath="$CHROME_PATH" \
+            --collect.settings.chromeFlags="--headless=new --no-sandbox --disable-dev-shm-usage" \
+            --collect.url="$E2E_BASE_URL/pedir" --collect.url="$E2E_BASE_URL/e/ci-vaiinilla/canchas" --collect.url="$E2E_BASE_URL/e/ci-vaiinilla"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         # Solo si falla, 3 días. Solo el reporte HTML: nunca storageState ni archivos de sesión.
         if: failure()
