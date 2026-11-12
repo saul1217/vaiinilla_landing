@@ -14,10 +14,24 @@ import {
 const INDEX_HTML = readFileSync('index.html', 'utf8');
 
 describe('seo', () => {
-  it('el canonical es el dominio de producción (www) sin barra final', () => {
-    expect(canonicalUrl('/')).toBe('https://www.vaiinilla.app/');
-    expect(canonicalUrl('/pedir/')).toBe('https://www.vaiinilla.app/pedir');
-    expect(canonicalUrl('/e/cafe-norte')).toBe('https://www.vaiinilla.app/e/cafe-norte');
+  it('ninguna URL absoluta de SEO usa www', () => {
+    expect(INDEX_HTML).not.toContain('www.vaiinilla.app');
+    expect(robotsTxt(true)).not.toContain('www.');
+    expect(sitemapXml('2026-11-03')).not.toContain('www.vaiinilla.app');
+  });
+
+  it('vercel.json redirige www al dominio sin www conservando la ruta', () => {
+    const { redirects } = JSON.parse(readFileSync('vercel.json', 'utf8')) as {
+      redirects: { source: string; has?: { type: string; value: string }[]; destination: string; permanent: boolean }[];
+    };
+    const rule = redirects.find((r) => r.has?.some((h) => h.type === 'host' && h.value === 'www.vaiinilla.app'));
+    expect(rule).toMatchObject({ source: '/(.*)', destination: 'https://vaiinilla.app/$1', permanent: true });
+  });
+
+  it('el canonical es el dominio sin www y sin barra final', () => {
+    expect(canonicalUrl('/')).toBe('https://vaiinilla.app/');
+    expect(canonicalUrl('/pedir/')).toBe('https://vaiinilla.app/pedir');
+    expect(canonicalUrl('/e/cafe-norte')).toBe('https://vaiinilla.app/e/cafe-norte');
   });
 
   it.each(['/cuenta', '/cuenta/pedidos/7', '/acceso/verificar', '/seguimiento/abc', '/u/12', '/e/cafe/m/tok', '/cafe/m/tok/quien', '/__qa/carrito'])(
@@ -34,7 +48,7 @@ describe('seo', () => {
     expect(metaForPath('/soporte').title).toBe('Soporte - Vaiinilla');
     expect(metaForPath('/e/cafe-norte')).toMatchObject({
       title: metaForPath('/').title,
-      canonical: 'https://www.vaiinilla.app/e/cafe-norte',
+      canonical: 'https://vaiinilla.app/e/cafe-norte',
       noindex: false,
     });
   });
@@ -49,22 +63,22 @@ describe('seo', () => {
   it('robots.txt de producción apunta al sitemap y el de preview bloquea todo', () => {
     expect(robotsTxt(true)).toContain('Allow: /\n');
     expect(robotsTxt(true)).toContain('Disallow: /cuenta$\nDisallow: /cuenta/\n');
-    expect(robotsTxt(true)).toContain('Sitemap: https://www.vaiinilla.app/sitemap.xml');
+    expect(robotsTxt(true)).toContain('Sitemap: https://vaiinilla.app/sitemap.xml');
     expect(robotsTxt(false)).toBe('User-agent: *\nDisallow: /\n');
   });
 
   it('el sitemap lista solo las rutas públicas con URL absoluta', () => {
     const xml = sitemapXml('2026-11-03');
     expect(xml.match(/<loc>/g)).toHaveLength(3);
-    expect(xml).toContain('<loc>https://www.vaiinilla.app/soporte</loc>');
+    expect(xml).toContain('<loc>https://vaiinilla.app/soporte</loc>');
     expect(xml).toContain('<lastmod>2026-11-03</lastmod>');
   });
 
   it('aplica el head de la ruta al index.html real', () => {
     const html = applyMetaToHtml(INDEX_HTML, metaForPath('/soporte'));
     expect(html).toContain('<title>Soporte - Vaiinilla</title>');
-    expect(html).toContain('<link rel="canonical" href="https://www.vaiinilla.app/soporte" />');
-    expect(html).toContain('<meta property="og:url" content="https://www.vaiinilla.app/soporte" />');
+    expect(html).toContain('<link rel="canonical" href="https://vaiinilla.app/soporte" />');
+    expect(html).toContain('<meta property="og:url" content="https://vaiinilla.app/soporte" />');
     expect(html).toContain('<meta name="twitter:title" content="Soporte - Vaiinilla" />');
     expect(html.match(/<title>/g)).toHaveLength(1);
   });
