@@ -20,7 +20,8 @@ export type EstablishmentKind =
   | 'food_truck'
   | 'drive_thru'
   | 'comedor'
-  | 'evento';
+  | 'evento'
+  | 'boliche';
 export type SpaceKind = 'mesa' | 'barra' | 'cancha' | 'drive_thru' | 'asiento';
 export type OrderDestination = 'para_llevar' | 'en_espacio' | 'a_domicilio';
 export type OperationalRole = 'cliente' | 'cajero' | 'cocina' | 'admin' | 'mesero';

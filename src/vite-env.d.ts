@@ -16,6 +16,8 @@ interface ImportMetaEnv {
   readonly VITE_STRIPE_PUBLISHABLE_KEY?: string;
   readonly VITE_SENTRY_DSN?: string;
   readonly VITE_FEATURE_DOMICILIO?: string;
+  /** `true` prende las reservas de boliche del cliente (pistas y jugadores). Apagada por defecto. */
+  readonly VITE_FEATURE_RESERVAS_BOLICHE?: string;
 }
 
 interface ImportMeta {

@@ -447,7 +447,7 @@ export const api = {
 
   async createReservation(
     token: string,
-    input: { courtId: number; start: number | null; durationMinutes: number },
+    input: { courtId: number; start: number | null; durationMinutes: number; players?: number | null },
     idempotencyKey: string,
   ): Promise<Reservation> {
     const response = await request<unknown>('/reservas', {
@@ -458,6 +458,8 @@ export const api = {
         espacio_id: input.courtId,
         ...(input.start === null ? {} : { inicio: new Date(input.start).toISOString() }),
         duracion_min: input.durationMinutes,
+        // Boliche: cuántos juegan (obligatorio ahí; 422 PLAYERS_REQUIRED sin él).
+        ...(input.players ? { jugadores: input.players } : {}),
       },
     });
     return parseReservation(response.data);
