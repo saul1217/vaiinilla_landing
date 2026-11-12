@@ -90,9 +90,9 @@ function CartProbe() {
   return <output data-testid="cart">{JSON.stringify(cart?.lines.map((l) => [l.productId, l.quantity, l.notes ?? null]) ?? [])}</output>;
 }
 
-function Where() {
+function Where({ label = 'Menú' }: { label?: string }) {
   const location = useLocation();
-  return <p>{`Menú ${JSON.stringify(location.state)}`}</p>;
+  return <p>{`${label} ${JSON.stringify(location.state)}`}</p>;
 }
 
 function renderPage(deps: AssistantPageDeps) {
@@ -109,6 +109,7 @@ function renderPage(deps: AssistantPageDeps) {
           <Route path="/e/:slug/asistente" element={<><AssistantPage deps={full} /><CartProbe /></>} />
           <Route path="/e/:slug/carrito" element={<p>Carrito</p>} />
           <Route path="/e/:slug" element={<Where />} />
+          <Route path="/e/:slug/canchas" element={<Where label="Canchas" />} />
         </Routes>
       </CartProvider>
     </MemoryRouter>,
@@ -255,6 +256,7 @@ describe('AssistantPage', () => {
     expect(screen.getByText('$250 la hora · Hasta 4 personas')).toBeInTheDocument();
     expect(screen.queryByText('Llamar al mesero')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Rentar Pádel 1' }));
+    expect(await screen.findByText('Canchas {"courtId":7}')).toBeInTheDocument();
   });
 
   it('un pedido viejo sin agregar avisa que hay una versión más nueva', async () => {

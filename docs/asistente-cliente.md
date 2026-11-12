@@ -27,7 +27,7 @@ ausente cuenta como sí, igual que Android).
   tocar lo que el cliente agregó a mano; nombra lo que no entró. Se manda desde el carrito con el
   pago de siempre (el asistente no crea pedidos ni cobra; no toca Stripe).
 - «Llamar al mesero» con el motivo sugerido, solo con mesa escaneada (`POST /espacios/:id/llamadas`).
-- Pistas o canchas con su disponibilidad; «Rentar» lleva a `/e/<negocio>/canchas`.
+- Pistas o canchas con su disponibilidad; «Rentar» abre `/e/<negocio>/canchas` con esa pista ya elegida.
 - Sin cuenta: pide el nombre del invitado antes de la primera respuesta (alta de invitado normal).
   Donde se pide con matrícula, pide entrar a la cuenta.
 - Errores: `ASSISTANT_DISABLED` cierra la plática; `ASSISTANT_UNAVAILABLE`, `CONTEXT_MISMATCH` y

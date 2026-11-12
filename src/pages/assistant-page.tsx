@@ -390,7 +390,7 @@ export function AssistantPage({ deps = {} }: { deps?: AssistantPageDeps }) {
               </div>
             ) : null}
             {(turn.courts ?? []).map((court) => (
-              <CourtRow key={court.courtId} court={court} onRent={() => navigate(`/e/${slug}/canchas`)} />
+              <CourtRow key={court.courtId} court={court} onRent={() => void navigate(`/e/${slug}/canchas`, { state: { courtId: court.courtId } })} />
             ))}
             {turn.order ? (
               <OrderCard
