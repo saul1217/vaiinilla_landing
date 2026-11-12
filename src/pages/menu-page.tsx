@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMenuQaFixture } from '../lib/menu-qa-fixture';
 import { GuestOrdersBanner } from '../components/guest-orders-banner';
 import { Link, useParams } from 'react-router-dom';
+import { isBowlingVenue, rentalVocabulary } from '../boliche/bowling';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { useAuth } from '../context/auth-context';
@@ -328,7 +329,7 @@ export function MenuPage() {
               );
             })}
         </div>
-        {rentsCourts ? <Link className="alumno-courts-entry alumno-courts-entry--compact" to={`/e/${slug}/canchas`}><strong>Apartar una cancha</strong><span>Elige día y hora · paga al apartar</span><b aria-hidden="true">→</b></Link> : null}
+        {rentsCourts ? <Link className="alumno-courts-entry alumno-courts-entry--compact" to={`/e/${slug}/canchas`}><strong>Apartar una {rentalVocabulary(isBowlingVenue(place?.tipo)).court}</strong><span>Elige día y hora · paga al apartar</span><b aria-hidden="true">→</b></Link> : null}
         {catalog && searching && products.length === 0 ? (
           <div className="alumno-empty alumno-arrive" role="status">
             <img src="/vaini/cutout-frente.png" alt="" />
