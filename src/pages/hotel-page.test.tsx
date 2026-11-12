@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CartProvider } from '../context/cart-context';
 import { VaiinillaApiError } from '../lib/api-error';
 import { writeCart } from '../lib/cart-storage';
@@ -122,6 +122,11 @@ function renderHotel(
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
+  vi.stubEnv('VITE_FEATURE_HOTEL', 'true');
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe('código de estancia', () => {
@@ -401,6 +406,13 @@ describe('carrito de una habitación', () => {
 
   it('en una mesa el carrito es el de siempre', () => {
     rememberSpace({ ...ROOM, esHabitacion: undefined, nombre: 'Mesa 4' });
+    renderCart();
+    expect(screen.getByText('Carrito de siempre')).toBeInTheDocument();
+  });
+
+  it('con VITE_FEATURE_HOTEL apagada, aun en una habitación el carrito es el de siempre', () => {
+    vi.stubEnv('VITE_FEATURE_HOTEL', 'false');
+    rememberSpace(ROOM);
     renderCart();
     expect(screen.getByText('Carrito de siempre')).toBeInTheDocument();
   });

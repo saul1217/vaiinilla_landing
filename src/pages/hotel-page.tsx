@@ -40,7 +40,7 @@ import {
 } from '../lib/hotel';
 import { createHotelClient, type HotelClient } from '../lib/hotel-client';
 import { HOTEL_CARD_TEST_ONLY_COPY, isHotelCardTestModeAllowed, isLiveStripeOrder } from '../lib/hotel-stripe-gate';
-import { hotelPath, type HotelView } from '../lib/hotel-routes';
+import { hotelPath, isHotelGuestEnabled, type HotelView } from '../lib/hotel-routes';
 import { createIdempotencyKey, forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
 import { linePreview } from '../lib/money';
 import { readSpace, type SpaceSession } from '../lib/space-session';
@@ -54,7 +54,7 @@ const VIEWS: readonly HotelView[] = ['codigo', 'solicitudes', 'cuenta', 'pedido'
 /** `/e/:slug/carrito`: en una habitación el pedido se confirma en la pantalla del hotel (H03). */
 export function CartRoute({ children }: { children: ReactNode }) {
   const { slug = '' } = useParams();
-  if (readSpace(slug)?.esHabitacion) return <Navigate to={hotelPath(slug, 'pedido')} replace />;
+  if (isHotelGuestEnabled() && readSpace(slug)?.esHabitacion) return <Navigate to={hotelPath(slug, 'pedido')} replace />;
   return <>{children}</>;
 }
 

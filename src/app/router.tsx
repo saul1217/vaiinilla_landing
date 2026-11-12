@@ -8,6 +8,7 @@ import { DiscoveryPage } from '../pages/discovery-page';
 import { EmailVerificationPage, PasswordResetPage } from '../pages/email-action-page';
 import { HomePage } from '../pages/home-page';
 import { CartRoute, HotelPage } from '../pages/hotel-page';
+import { isHotelGuestEnabled } from '../lib/hotel-routes';
 import { MenuPage } from '../pages/menu-page';
 import { NotFoundPage } from '../pages/not-found-page';
 import { OrderDetailPage } from '../pages/order-detail-page';
@@ -48,8 +49,13 @@ export function AppRoutes() {
         <Route path="/pedir" element={<DiscoveryPage />} />
         <Route path="/e/:slug" element={<MenuPage />} />
         <Route path="/e/:slug/carrito" element={<CartRoute><CartPage /></CartRoute>} />
-        <Route path="/e/:slug/hotel" element={<HotelPage />} />
-        <Route path="/e/:slug/hotel/:view" element={<HotelPage />} />
+        {/* Huésped de hotel: solo con VITE_FEATURE_HOTEL=true; apagado, cae en la página 404. */}
+        {isHotelGuestEnabled() && (
+          <>
+            <Route path="/e/:slug/hotel" element={<HotelPage />} />
+            <Route path="/e/:slug/hotel/:view" element={<HotelPage />} />
+          </>
+        )}
         <Route path="/e/:slug/canchas" element={<ReservationsPage />} />
         <Route path="/e/:slug/m/:token" element={<TableJoinPage />} />
         <Route path="/:slug/m/:token" element={<TableJoinPage />} />

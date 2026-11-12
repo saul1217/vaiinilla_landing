@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { VaiinillaApiError } from '../lib/api-error';
 import { TableJoinPage } from './table-join-page';
 
@@ -49,6 +49,10 @@ function renderJoin() {
 describe('TableJoinPage', () => {
   beforeEach(() => {
     resolveSpace.mockReset();
+    vi.stubEnv('VITE_FEATURE_HOTEL', 'true');
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it('el QR de una habitación de hotel no pregunta quién eres: abre la estancia', async () => {

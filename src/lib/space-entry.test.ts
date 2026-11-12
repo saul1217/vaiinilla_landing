@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from './api';
 import { VaiinillaApiError } from './api-error';
 import { guestSession } from './guest-session';
@@ -52,6 +52,28 @@ describe('lo que se lee en un QR, una etiqueta NFC o el teclado', () => {
 });
 
 describe('entrar con el QR de una habitación de hotel', () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_FEATURE_HOTEL', 'true');
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('con VITE_FEATURE_HOTEL apagada la habitación va al menú como cualquier espacio', async () => {
+    vi.stubEnv('VITE_FEATURE_HOTEL', '');
+    vi.mocked(guestSession).mockResolvedValue({} as never);
+    vi.spyOn(api, 'resolveSpace').mockResolvedValue({
+      establecimiento_slug: 'hotel-sol',
+      espacio_id: 12,
+      espacio_nombre: 'Habitación 101',
+      espacio_tipo: 'mesa',
+      establecimiento_nombre: 'Hotel Sol',
+      es_habitacion: true,
+    });
+    await expect(enterSpace('esp_puerta101')).resolves.toMatchObject({ destination: '/e/hotel-sol', esHabitacion: false });
+    expect(readSpace('hotel-sol')?.esHabitacion).toBeUndefined();
+  });
+
   it('lleva al huésped a su estancia y guarda la habitación', async () => {
     vi.mocked(guestSession).mockResolvedValue({} as never);
     vi.spyOn(api, 'resolveSpace').mockResolvedValue({
