@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  cardReloadFingerprint,
   cardReloadStatus,
   cashReloadArrived,
   isCardReloadTestMode,
@@ -125,5 +126,21 @@ describe('wallet-reload', () => {
     expect(walletRechargeNote({ frozen: true, allowsBalance: true })).toMatch(/congelado/);
     expect(walletRechargeNote({ frozen: false, allowsBalance: false })).toMatch(/ya no recibe/);
     expect(walletRechargeNote({ frozen: false, allowsBalance: true })).toBeNull();
+  });
+});
+
+describe('cardReloadFingerprint', () => {
+  const base = {
+    cliente: { usuario_id: 'u1', nombre: 'Ana', identificador_cliente: null },
+    wallet: { id: 'w1', usuario_id: 'u1', establecimiento_id: 'e1', saldo: '0.00', actualizado_en: null },
+    movimientos: [],
+  };
+
+  it('ata la llave al lugar, a la persona y al monto', () => {
+    expect(cardReloadFingerprint(base, '200.00')).toBe('wallet-reload|e1|u1|200.00');
+    expect(cardReloadFingerprint(base, '300.00')).not.toBe(cardReloadFingerprint(base, '200.00'));
+    expect(
+      cardReloadFingerprint({ ...base, wallet: { ...base.wallet, establecimiento_id: 'e2' } }, '200.00'),
+    ).not.toBe(cardReloadFingerprint(base, '200.00'));
   });
 });

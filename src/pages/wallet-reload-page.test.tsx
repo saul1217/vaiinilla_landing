@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEffect, type ReactNode } from 'react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigationType } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
 import { AppRoutes } from '../app/router';
@@ -19,6 +19,9 @@ const mocks = vi.hoisted(() => ({
   confirmPayment: vi.fn(),
   loadStripe: vi.fn(),
   testMode: { value: true },
+  // Como en BuyerSessionProvider (useCallback/useMemo): la sesión es estable entre renders. Si cambiara en
+  // cada render, el efecto de carga de la página correría en bucle.
+  buyerSession: { context: null, opening: false, openClientSession: () => Promise.resolve(null), clearSession: () => undefined },
 }));
 
 vi.mock('../lib/api', () => ({
@@ -55,7 +58,7 @@ vi.mock('../context/cart-context', () => ({
 
 vi.mock('../context/buyer-session', () => ({
   useBuyerSessionToken: () => null,
-  useBuyerSession: () => ({ context: null, opening: false, openClientSession: vi.fn(), clearSession: vi.fn() }),
+  useBuyerSession: () => mocks.buyerSession,
 }));
 
 vi.mock('qrcode', () => ({ default: { toDataURL: vi.fn().mockResolvedValue('data:image/png;base64,qr') } }));
@@ -98,10 +101,22 @@ const checkout = {
   },
 };
 
+/** La URL que ve la página y cómo se llegó a ella (PUSH agrega una entrada al historial, REPLACE no). */
+const urlSeen = { search: '', navigation: '' };
+
+function UrlProbe() {
+  const location = useLocation();
+  const navigation = useNavigationType();
+  urlSeen.search = location.search;
+  urlSeen.navigation = navigation;
+  return null;
+}
+
 function renderPage(path = '/cuenta/saldo/recargar', props: { pollMs?: number; cardPollMs?: number } = {}) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <ThemeProvider>
+        <UrlProbe />
         <Routes>
           <Route path="/cuenta/saldo/recargar" element={<WalletReloadPage {...props} />} />
           <Route path="/cuenta" element={<p>Cuenta splash</p>} />
@@ -121,6 +136,9 @@ describe('WalletReloadPage', () => {
     mocks.getCardReload.mockReset().mockResolvedValue({ ...checkout.recarga, estado: 'acreditada' });
     mocks.confirmPayment.mockReset().mockResolvedValue({});
     mocks.loadStripe.mockReset().mockResolvedValue({});
+    sessionStorage.clear();
+    urlSeen.search = '';
+    urlSeen.navigation = '';
   });
 
   it('sin sesión manda a entrar', async () => {
@@ -192,6 +210,105 @@ describe('WalletReloadPage', () => {
     expect(await screen.findByText('Listo, entraron $200 a tu saldo')).toBeInTheDocument();
     expect(mocks.getCardReload).toHaveBeenCalledWith('jwt', 'r1');
     expect(mocks.startCardReload).not.toHaveBeenCalled();
+  });
+
+  it('al volver de 3D Secure quita el client secret de la URL sin agregar historial', async () => {
+    // El backend todavía no responde: la URL se limpia al montar, no hasta que termina el sondeo.
+    mocks.getCardReload.mockReturnValue(new Promise(() => undefined));
+    renderPage(
+      '/cuenta/saldo/recargar?recarga=r1&payment_intent=pi_1&payment_intent_client_secret=pi_1_secret_x&redirect_status=succeeded',
+      { cardPollMs: 1 },
+    );
+    await waitFor(() => expect(urlSeen.search).toBe('?recarga=r1'));
+    expect(urlSeen.navigation).toBe('REPLACE');
+    expect(await screen.findByText('Confirmando tu pago con el banco…')).toBeInTheDocument();
+    expect(mocks.getCardReload).toHaveBeenCalledWith('jwt', 'r1');
+    expect(mocks.startCardReload).not.toHaveBeenCalled();
+  });
+
+  it('sin parámetros de Stripe no toca la URL al montar', async () => {
+    renderPage('/cuenta/saldo/recargar');
+    expect(await screen.findByTestId('wallet-reload-balance')).toBeInTheDocument();
+    expect(urlSeen.search).toBe('');
+    expect(urlSeen.navigation).toBe('POP');
+  });
+
+  it('recargar la página antes de pagar reutiliza la llave del mismo monto', async () => {
+    const user = userEvent.setup();
+    const first = renderPage();
+    await user.click(await screen.findByRole('tab', { name: 'Con tarjeta' }));
+    await user.click(screen.getByRole('button', { name: '$200' }));
+    await user.click(screen.getByRole('button', { name: 'Recargar $200' }));
+    await screen.findByText('Revisa tu recarga');
+    const firstKey = mocks.startCardReload.mock.calls[0]?.[2] as string;
+    expect(firstKey).toEqual(expect.any(String));
+    first.unmount();
+
+    // La página se recarga: el useRef se pierde, sessionStorage no.
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: 'Con tarjeta' }));
+    await user.click(screen.getByRole('button', { name: '$200' }));
+    await user.click(screen.getByRole('button', { name: 'Recargar $200' }));
+    await screen.findByText('Revisa tu recarga');
+    expect(mocks.startCardReload).toHaveBeenNthCalledWith(2, 'jwt', '200.00', firstKey);
+
+    // Otro monto es otra recarga: otra llave.
+    await user.click(screen.getByRole('button', { name: 'Cambiar monto' }));
+    await user.click(screen.getByRole('button', { name: '$300' }));
+    await user.click(screen.getByRole('button', { name: 'Recargar $300' }));
+    await screen.findByText('Revisa tu recarga');
+    const otherKey = mocks.startCardReload.mock.calls[2]?.[2] as string;
+    expect(otherKey).not.toBe(firstKey);
+  });
+
+  it('antes de confirmar deja la recarga en la URL y al recargar la retoma sin otro cobro', async () => {
+    const user = userEvent.setup();
+    // El pago queda a la mitad (la persona recarga la página mientras Stripe confirma).
+    mocks.confirmPayment.mockReturnValue(new Promise(() => undefined));
+    const first = renderPage();
+    await user.click(await screen.findByRole('tab', { name: 'Con tarjeta' }));
+    await user.click(screen.getByRole('button', { name: '$200' }));
+    await user.click(screen.getByRole('button', { name: 'Recargar $200' }));
+    await user.click(await screen.findByRole('button', { name: 'Seguir al pago' }));
+    await user.click(await screen.findByRole('button', { name: 'Pagar ahora' }));
+    await waitFor(() => expect(mocks.confirmPayment).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(urlSeen.search).toBe('?recarga=r1'));
+    expect(urlSeen.navigation).toBe('REPLACE');
+    const searchAtConfirm = urlSeen.search;
+    first.unmount();
+
+    renderPage(`/cuenta/saldo/recargar${searchAtConfirm}`, { cardPollMs: 1 });
+    expect(await screen.findByText('Listo, entraron $200 a tu saldo')).toBeInTheDocument();
+    expect(mocks.startCardReload).toHaveBeenCalledTimes(1);
+    expect(mocks.getCardReload).toHaveBeenCalledWith('jwt', 'r1');
+    await waitFor(() => expect(urlSeen.search).toBe(''));
+  });
+
+  it('acreditada la recarga, el mismo monto vuelve a ser un cobro nuevo', async () => {
+    const user = userEvent.setup();
+    renderPage('/cuenta/saldo/recargar', { cardPollMs: 1 });
+    await user.click(await screen.findByRole('tab', { name: 'Con tarjeta' }));
+    await user.click(screen.getByRole('button', { name: '$200' }));
+    await user.click(screen.getByRole('button', { name: 'Recargar $200' }));
+    await user.click(await screen.findByRole('button', { name: 'Seguir al pago' }));
+    await user.click(await screen.findByRole('button', { name: 'Pagar ahora' }));
+    expect(await screen.findByText('Listo, entraron $200 a tu saldo')).toBeInTheDocument();
+    expect(sessionStorage.getItem('vaiinilla.buyer.idempotency.v1') ?? '').not.toContain('|200.00');
+  });
+
+  it('si la tarjeta no pasa, la recarga sale de la URL y se puede reintentar', async () => {
+    const user = userEvent.setup();
+    // Stripe contesta antes del siguiente render: clearResume ya debe ver la recarga marcada.
+    mocks.confirmPayment.mockResolvedValue({ error: { message: 'card_declined' } });
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: 'Con tarjeta' }));
+    await user.click(screen.getByRole('button', { name: '$200' }));
+    await user.click(screen.getByRole('button', { name: 'Recargar $200' }));
+    await user.click(await screen.findByRole('button', { name: 'Seguir al pago' }));
+    await user.click(await screen.findByRole('button', { name: 'Pagar ahora' }));
+    expect(await screen.findByText('La tarjeta no pasó. Prueba con otra o vuelve a intentar.')).toBeInTheDocument();
+    await waitFor(() => expect(urlSeen.search).toBe(''));
+    expect(screen.getByRole('button', { name: 'Pagar ahora' })).toBeEnabled();
   });
 
   it('fuera de modo de prueba solo ofrece Caja', async () => {
