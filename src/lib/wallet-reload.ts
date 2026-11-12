@@ -201,3 +201,14 @@ export function walletRechargeNote(options: { frozen: boolean; allowsBalance: bo
   if (!options.allowsBalance) return 'Este lugar ya no recibe recargas de saldo.';
   return null;
 }
+
+/**
+ * La llave de idempotencia de una recarga con tarjeta vive en sessionStorage atada al lugar, a la persona
+ * y al monto: si la página se recarga y se pide el mismo monto, el servidor devuelve la misma recarga
+ * (y el mismo PaymentIntent) en vez de crear otra.
+ */
+export function cardReloadFingerprint(wallet: WalletData, amount: string): string {
+  const place = wallet.wallet.establecimiento_id ?? '';
+  const userId = wallet.wallet.usuario_id || wallet.cliente.usuario_id || '';
+  return `wallet-reload|${place}|${userId}|${amount}`;
+}

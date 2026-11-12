@@ -14,7 +14,7 @@ import { api } from '../lib/api';
 import { errorMessage } from '../lib/api-error';
 import { resolveClientSession } from '../lib/client-session';
 import { walletQrUrl } from '../lib/env';
-import { createIdempotencyKey } from '../lib/idempotency';
+import { forgetIdempotencyKey, idempotencyKeyFor } from '../lib/idempotency';
 import { lastPlaceSlug } from '../lib/last-place';
 import { formatAmount } from '../lib/money';
 import { stripePublishableKey } from '../lib/stripe-public';
@@ -22,6 +22,7 @@ import {
   CASH_RELOAD_POLL_MS,
   QUICK_RELOAD_AMOUNTS,
   cashReloadArrived,
+  cardReloadFingerprint,
   centsLabel,
   isCardReloadTestMode,
   parseReloadAmount,
@@ -47,6 +48,9 @@ type CardPhase =
   | { kind: 'in_review'; reloadId: string }
   | { kind: 'credited'; amount: string }
   | { kind: 'failed'; message: string };
+
+/** Lo que Stripe agrega a la URL al volver del 3D Secure; el client secret no debe quedarse a la vista. */
+const STRIPE_RETURN_PARAMS = ['payment_intent', 'payment_intent_client_secret', 'redirect_status'] as const;
 
 export const CARD_RELOAD_NOTE =
   'Pago seguro con Stripe (modo de prueba) · cuándo llega el saldo depende del banco. Es para usar en este lugar.';
@@ -74,6 +78,18 @@ export function WalletReloadPage({
   const cardTestMode = useMemo(() => isCardReloadTestMode({ apiUrl: api.apiUrl }), []);
   const offersCard = cardTestMode && acceptsCard;
   const [method, setMethod] = useState<Method>(resumeId ? 'card' : 'cash');
+
+  // Al volver del 3D Secure, Stripe deja el client secret en la URL: se quita al montar (sin agregar una
+  // entrada al historial) y queda solo ?recarga=<id> para retomar la recarga. Es useEffect y no
+  // useLayoutEffect porque el router se suscribe al historial en un efecto de layout que corre después.
+  useEffect(() => {
+    if (!STRIPE_RETURN_PARAMS.some((name) => params.has(name))) return;
+    const next = new URLSearchParams();
+    if (resumeId) next.set('recarga', resumeId);
+    setParams(next, { replace: true });
+    // Solo al montar: después la URL la manejan markResume y clearResume.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!ready) return;
@@ -129,15 +145,30 @@ export function WalletReloadPage({
     return next;
   }, [token]);
 
+  // El pago cambia la URL (markResume) después del clic, y tanto `params` como la forma de función de
+  // setParams se quedan con la de ese render: se lee la más reciente de un ref.
+  const latestParams = useRef(params);
+  latestParams.current = params;
   const clearResume = useCallback(() => {
-    if (!params.has('recarga')) return;
-    const next = new URLSearchParams(params);
+    const current = latestParams.current;
+    if (!current.has('recarga')) return;
+    const next = new URLSearchParams(current);
     next.delete('recarga');
-    next.delete('payment_intent');
-    next.delete('payment_intent_client_secret');
-    next.delete('redirect_status');
+    for (const name of STRIPE_RETURN_PARAMS) next.delete(name);
     setParams(next, { replace: true });
-  }, [params, setParams]);
+  }, [setParams]);
+
+  // Antes de confirmar el pago, la recarga queda en la URL: si la página se recarga a la mitad, se retoma
+  // esa misma recarga (se pregunta al backend) en vez de abrir otro cobro.
+  const markResume = useCallback(
+    (reloadId: string) => {
+      const next = new URLSearchParams({ recarga: reloadId });
+      // Si Stripe contesta antes del siguiente render, clearResume ya debe ver la recarga marcada.
+      latestParams.current = next;
+      setParams(next, { replace: true });
+    },
+    [setParams],
+  );
 
   if (ready && !user) return <Navigate to="/cuenta?next=/cuenta/saldo/recargar" replace />;
 
@@ -198,6 +229,8 @@ export function WalletReloadPage({
                     wallet={wallet}
                     resumeId={resumeId}
                     pollMs={cardPollMs}
+                    onBeforeConfirm={markResume}
+                    onConfirmFailed={clearResume}
                     onSettled={() => {
                       clearResume();
                       void refreshWallet().catch(() => undefined);
@@ -302,21 +335,22 @@ export function CardReloadPanel({
   resumeId,
   pollMs,
   onSettled,
+  onBeforeConfirm,
+  onConfirmFailed,
 }: {
   token: string;
   wallet: WalletData;
   resumeId?: string | null;
   pollMs?: number;
   onSettled?: () => void;
+  onBeforeConfirm?: (reloadId: string) => void;
+  onConfirmFailed?: () => void;
 }) {
   const range = reloadRangeOf(wallet);
   const [amountText, setAmountText] = useState('');
   const [phase, setPhase] = useState<CardPhase>(() =>
     resumeId ? { kind: 'confirming', reloadId: resumeId } : { kind: 'editing' },
   );
-  // Una respuesta perdida se reintenta con la misma llave y el mismo monto: el servidor devuelve la
-  // recarga que ya creó en vez de cobrar otra.
-  const startKey = useRef<{ key: string; amount: string } | null>(null);
   const amount = parseReloadAmount(amountText);
   const problem = reloadAmountProblem(amountText, range);
   const canPay = amount !== null && problem === null && (phase.kind === 'editing' || phase.kind === 'failed');
@@ -330,6 +364,12 @@ export function CardReloadPanel({
       isActive: () => active,
     }).then((outcome) => {
       if (!active) return;
+      // Con la recarga cerrada (acreditada o rechazada) su llave ya no sirve: el siguiente cobro del
+      // mismo monto debe ser una recarga nueva. En revisión se conserva para no cobrar dos veces.
+      if (outcome.kind !== 'in_review') {
+        const settledAmount = parseReloadAmount(outcome.reload.monto);
+        if (settledAmount) forgetIdempotencyKey(cardReloadFingerprint(wallet, settledAmount));
+      }
       if (outcome.kind === 'credited') setPhase({ kind: 'credited', amount: outcome.reload.monto });
       else if (outcome.kind === 'failed') setPhase({ kind: 'failed', message: 'El banco no aprobó el cobro. No se cargó nada.' });
       else setPhase({ kind: 'in_review', reloadId: confirmingId });
@@ -349,11 +389,12 @@ export function CardReloadPanel({
 
   async function start() {
     if (!canPay || !amount) return;
-    if (startKey.current?.amount !== amount) startKey.current = { key: createIdempotencyKey(), amount };
+    // Una respuesta perdida o una página recargada se reintentan con la misma llave y el mismo monto: el
+    // servidor devuelve la recarga que ya creó en vez de abrir otro PaymentIntent.
+    const key = idempotencyKeyFor(cardReloadFingerprint(wallet, amount));
     setPhase({ kind: 'starting' });
     try {
-      const checkout = await api.startCardReload(token, amount, startKey.current.key);
-      startKey.current = null;
+      const checkout = await api.startCardReload(token, amount, key);
       setPhase(reloadExtraCharge(checkout.recarga) ? { kind: 'review', checkout } : { kind: 'paying', checkout });
     } catch (cause) {
       setPhase({ kind: 'failed', message: errorMessage(cause) });
@@ -398,6 +439,8 @@ export function CardReloadPanel({
     return (
       <CardReloadStripe
         checkout={phase.checkout}
+        onBeforeConfirm={onBeforeConfirm}
+        onConfirmFailed={onConfirmFailed}
         onPaid={() => setPhase({ kind: 'confirming', reloadId: phase.checkout.recarga.id })}
         onCancel={() => setPhase({ kind: 'editing' })}
       />
@@ -487,10 +530,14 @@ function CardReloadStripe({
   checkout,
   onPaid,
   onCancel,
+  onBeforeConfirm,
+  onConfirmFailed,
 }: {
   checkout: CardReloadCheckout;
   onPaid: () => void;
   onCancel: () => void;
+  onBeforeConfirm?: (reloadId: string) => void;
+  onConfirmFailed?: () => void;
 }) {
   const resolved = useMemo(() => {
     try {
@@ -525,14 +572,32 @@ function CardReloadStripe({
           stripe={stripePromise}
           options={{ clientSecret: checkout.pago.client_secret, appearance: { theme: 'stripe' } }}
         >
-          <CardReloadForm reloadId={checkout.recarga.id} onPaid={onPaid} onCancel={onCancel} />
+          <CardReloadForm
+            reloadId={checkout.recarga.id}
+            onPaid={onPaid}
+            onCancel={onCancel}
+            onBeforeConfirm={onBeforeConfirm}
+            onConfirmFailed={onConfirmFailed}
+          />
         </Elements>
       )}
     </section>
   );
 }
 
-function CardReloadForm({ reloadId, onPaid, onCancel }: { reloadId: string; onPaid: () => void; onCancel: () => void }) {
+export function CardReloadForm({
+  reloadId,
+  onPaid,
+  onCancel,
+  onBeforeConfirm,
+  onConfirmFailed,
+}: {
+  reloadId: string;
+  onPaid: () => void;
+  onCancel: () => void;
+  onBeforeConfirm?: (reloadId: string) => void;
+  onConfirmFailed?: () => void;
+}) {
   const stripe = useStripe();
   const elements = useElements();
   const [ready, setReady] = useState(false);
@@ -543,6 +608,7 @@ function CardReloadForm({ reloadId, onPaid, onCancel }: { reloadId: string; onPa
     if (!stripe || !elements || !ready) return;
     setSubmitting(true);
     setError(null);
+    onBeforeConfirm?.(reloadId);
     try {
       const result = await stripe.confirmPayment({
         elements,
@@ -553,12 +619,15 @@ function CardReloadForm({ reloadId, onPaid, onCancel }: { reloadId: string; onPa
         redirect: 'if_required',
       });
       if (result.error) {
+        // El cobro no salió: la recarga ya no está en curso y se puede reintentar aquí mismo.
+        onConfirmFailed?.();
         // El error crudo de Stripe no se muestra.
         setError('La tarjeta no pasó. Prueba con otra o vuelve a intentar.');
         return;
       }
       onPaid();
     } catch {
+      onConfirmFailed?.();
       setError('La tarjeta no pasó. Prueba con otra o vuelve a intentar.');
     } finally {
       setSubmitting(false);
