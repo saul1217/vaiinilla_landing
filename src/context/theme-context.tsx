@@ -9,9 +9,12 @@ import {
   type ReactNode,
 } from 'react';
 import {
+  isDarkTheme,
+  nextThemePreference,
   readThemePreference,
   resolveTheme,
   themeColorFor,
+  vaiThemeFor,
   writeThemePreference,
   type ResolvedTheme,
   type ThemePreference,
@@ -21,6 +24,8 @@ interface ThemeContextValue {
   preference: ThemePreference;
   resolved: ResolvedTheme;
   setPreference: (preference: ThemePreference) => void;
+  /** Pasa al siguiente modo como `VaiinillaThemeMode.next()` en Android. */
+  cycleTheme: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -52,9 +57,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     writeThemePreference(next);
   }, []);
 
+  const cycleTheme = useCallback(
+    () => setPreference(nextThemePreference(preference)),
+    [preference, setPreference],
+  );
+
   const value = useMemo(
-    () => ({ preference, resolved, setPreference }),
-    [preference, resolved, setPreference],
+    () => ({ preference, resolved, setPreference, cycleTheme }),
+    [preference, resolved, setPreference, cycleTheme],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
@@ -67,6 +77,7 @@ export function useTheme(): ThemeContextValue {
       preference: 'system',
       resolved: 'light',
       setPreference: () => undefined,
+      cycleTheme: () => undefined,
     };
   }
   return context;
@@ -75,9 +86,13 @@ export function useTheme(): ThemeContextValue {
 export function applyAlumnoTheme(resolved: ResolvedTheme): () => void {
   const root = document.documentElement;
   const previousTheme = root.dataset.theme;
+  const previousVaiTheme = root.dataset.vaiTheme;
   const previousScheme = root.style.colorScheme;
-  root.dataset.theme = resolved;
-  root.style.colorScheme = resolved === 'light' ? 'light' : 'dark';
+  // AMOLED conserva data-theme="dark" para no perder las reglas oscuras que ya existen;
+  // data-vai-theme marca el modo exacto para los tokens de Android.
+  root.dataset.theme = isDarkTheme(resolved) ? 'dark' : 'light';
+  root.dataset.vaiTheme = vaiThemeFor(resolved);
+  root.style.colorScheme = isDarkTheme(resolved) ? 'dark' : 'light';
   document.body.dataset.shell = 'alumno';
   const meta = document.querySelector('meta[name="theme-color"]');
   const previousColor = meta?.getAttribute('content') ?? null;
@@ -85,6 +100,8 @@ export function applyAlumnoTheme(resolved: ResolvedTheme): () => void {
   return () => {
     if (previousTheme) root.dataset.theme = previousTheme;
     else delete root.dataset.theme;
+    if (previousVaiTheme) root.dataset.vaiTheme = previousVaiTheme;
+    else delete root.dataset.vaiTheme;
     root.style.colorScheme = previousScheme;
     delete document.body.dataset.shell;
     if (previousColor) meta?.setAttribute('content', previousColor);

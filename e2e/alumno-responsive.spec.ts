@@ -121,8 +121,9 @@ test.describe('alumno responsive', () => {
     expect(discovery.alumnoMax).toBe('none');
     expect(discovery.alumnoWidth).toBe(390);
     expect(discovery.hasHorizontalOverflow).toBe(false);
-    expect(discovery.navInsetLeft).toBe(14);
-    expect(discovery.navInsetRight).toBe(14);
+    // Margen lateral de la barra inferior de Android (VaiinillaBottomNav, --vai-nav-margin-x).
+    expect(discovery.navInsetLeft).toBe(19);
+    expect(discovery.navInsetRight).toBe(19);
     expect(discovery.navPos).toBe('fixed');
     expect(discovery.brandDisplay).toBe('none');
     expect(discovery.hasDevice).toBe(false);
