@@ -38,6 +38,7 @@ import {
   amountFor,
   availableDurations,
   busyUntil,
+  courtDurations,
   canRentNow,
   clock,
   dayChipLabel,
@@ -58,10 +59,13 @@ import {
 import { offersCardPayment } from '../lib/stripe-public';
 import type { PublicEstablishment } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
+import { isBowlingVenue, maxPlayers, playersLabel, rentalVocabulary, type RentalVocabulary } from '../boliche/bowling';
+import { PlayersStepper } from '../boliche/players-stepper';
 
 /** Precio del turno más corto: "$600 / 1 h 30" (pádel va por turnos), o "$330 / hora". */
-function turnPriceLabel(day: CourtDay, pricePerHour: string): string {
-  const turn = day.durations.length > 0 ? Math.min(...day.durations) : 60;
+function turnPriceLabel(day: CourtDay, court: CourtSchedule, pricePerHour: string): string {
+  const durations = courtDurations(day, court);
+  const turn = durations.length > 0 ? Math.min(...durations) : 60;
   if (turn === 60) return `${formatAmount(pricePerHour)} / hora`;
   return `${formatAmount(amountFor(pricePerHour, turn) ?? pricePerHour)} / ${durationLabel(turn)}`;
 }
@@ -123,7 +127,11 @@ export function ReservationsPage() {
   return (
     <AppShell tab="menu">
       <main id="main-content" className="alumno-main">
-        <ReservationsHeader slug={slug} venueName={place?.nombre ?? null} />
+        <ReservationsHeader
+          slug={slug}
+          venueName={place?.nombre ?? null}
+          words={rentalVocabulary(isBowlingVenue(place?.tipo))}
+        />
         {error ? <p className="alumno-error">{error}</p> : null}
         {client ? (
           <ReservationsScreen
@@ -141,10 +149,22 @@ export function ReservationsPage() {
   );
 }
 
-function ReservationsHeader({ slug, venueName }: { slug: string; venueName: string | null }) {
+function ReservationsHeader({
+  slug,
+  venueName,
+  words,
+}: {
+  slug: string;
+  venueName: string | null;
+  words: RentalVocabulary;
+}) {
   return (
     <>
-      <AlumnoPageHeader kicker="Canchas" title="Renta tu cancha" back={{ to: `/e/${slug}`, label: 'Volver' }} />
+      <AlumnoPageHeader
+        kicker={words.courtsTitle}
+        title={`Renta tu ${words.court}`}
+        back={{ to: `/e/${slug}`, label: 'Volver' }}
+      />
       <p className="alumno-place-name">{[venueName, 'se paga al apartar'].filter(Boolean).join(' · ')}</p>
     </>
   );
@@ -177,7 +197,7 @@ export function ReservationsScreen({
     rememberSpace({
       slug,
       espacioId: payment.reservation.courtId,
-      nombre: payment.reservation.courtName ?? `Cancha ${payment.reservation.courtId}`,
+      nombre: payment.reservation.courtName ?? `${words.courtTitle} ${payment.reservation.courtId}`,
       tipo: 'cancha',
     });
     if (method === 'stripe') {
@@ -197,6 +217,9 @@ export function ReservationsScreen({
 
   const vm = useReservations(client, onPaid, initialCourtId);
   const { state } = vm;
+  // Boliche (con la bandera prendida): pistas, jugadores y duraciones por pista.
+  const bowling = state.day?.bowling === true;
+  const words = rentalVocabulary(bowling);
 
   useEffect(() => {
     const drafting = Boolean(
@@ -239,13 +262,13 @@ export function ReservationsScreen({
 
       {!day ? (
         state.loading ? (
-          <LoadingSkeleton shape="rows" label="Cargando canchas…" />
+          <LoadingSkeleton shape="rows" label={`Cargando ${words.courts}…`} />
         ) : (
-          <p className="alumno-muted alumno-res__empty">Este lugar todavía no renta canchas.</p>
+          <p className="alumno-muted alumno-res__empty">Este lugar todavía no renta {words.courts}.</p>
         )
       ) : !day.courts.some((c) => c.rentable) ? (
         <p className="alumno-muted alumno-res__empty">
-          Por ahora las canchas de este lugar no se rentan desde la app. Pregunta en caja.
+          Por ahora las {words.courts} de este lugar no se rentan desde la app. Pregunta en caja.
         </p>
       ) : (
         <div className="alumno-res__flow alumno-arrive" ref={bodyRef}>
@@ -258,8 +281,13 @@ export function ReservationsScreen({
               <LoadingSkeleton shape="rows" label="Cargando horarios…" />
             </>
           ) : (
-            <CourtStrip day={day} selectedId={state.selectedCourtId} onSelect={vm.selectCourt} />
+            <CourtStrip day={day} words={words} selectedId={state.selectedCourtId} onSelect={vm.selectCourt} />
           )}
+          {bowling && day.closed && !switching ? (
+            <p className="alumno-muted" role="status">
+              Este día no se rentan pistas. Elige otro día.
+            </p>
+          ) : null}
           {court && hasProfile(court) ? <CourtProfileCard key={`p-${court.id}`} court={court} /> : null}
           {court?.rentable ? (
             <>
@@ -285,7 +313,7 @@ export function ReservationsScreen({
                   <DurationRow
                     key="durations"
                     available={availableDurations(day, court, start)}
-                    all={day.durations}
+                    all={courtDurations(day, court)}
                     selected={state.selectedDuration}
                     onSelect={vm.selectDuration}
                   />
@@ -297,6 +325,8 @@ export function ReservationsScreen({
                     court={court}
                     start={start}
                     guest={guest}
+                    words={words}
+                    onSelectPlayers={vm.selectPlayers}
                     onReserve={() => void vm.reserve()}
                   />
                 </>
@@ -316,6 +346,7 @@ export function ReservationsScreen({
               key={reservation.id}
               reservation={reservation}
               zone={zone}
+              words={words}
               today={day?.today ?? ''}
               onPay={() => vm.resumePayment(reservation)}
               onCancel={() => setConfirmCancel(reservation)}
@@ -328,6 +359,7 @@ export function ReservationsScreen({
         <PaySheet
           reservation={state.pending}
           zone={zone}
+          words={words}
           working={state.working}
           error={state.error}
           cardOffered={cardOffered}
@@ -342,7 +374,7 @@ export function ReservationsScreen({
           message={
             confirmCancel.state === 'pendiente_pago'
               ? 'Se libera el horario y no se te cobra nada.'
-              : 'Se libera la cancha, pero lo que pagaste no se devuelve.'
+              : `Se libera la ${words.court}, pero lo que pagaste no se devuelve.`
           }
           confirmLabel="Sí, cancelar"
           dismissLabel="No, mantenerla"
@@ -396,17 +428,19 @@ function DateStrip({
 
 function CourtStrip({
   day,
+  words,
   selectedId,
   onSelect,
 }: {
   day: CourtDay;
+  words: RentalVocabulary;
   selectedId: number | null;
   onSelect: (id: number) => void;
 }) {
   const isToday = day.date === day.today;
   const closed = isClosedNow(day);
   return (
-    <div className="alumno-res__courts" role="radiogroup" aria-label="Cancha">
+    <div className="alumno-res__courts" role="radiogroup" aria-label={words.courtTitle}>
       {day.courts
         .filter((court) => court.rentable)
         .map((court) => {
@@ -423,7 +457,7 @@ function CourtStrip({
               onClick={() => onSelect(court.id)}
             >
               <strong>{court.name}</strong>
-              {court.customerPricePerHour ? <span>{turnPriceLabel(day, court.customerPricePerHour.cashOrBalance)}</span> : null}
+              {court.customerPricePerHour ? <span>{turnPriceLabel(day, court, court.customerPricePerHour.cashOrBalance)}</span> : null}
               <span className="alumno-res__status">
                 <i className={looksFree ? 'is-free' : 'is-busy'} aria-hidden="true" />
                 {closed
@@ -677,6 +711,8 @@ function Summary({
   court,
   start,
   guest,
+  words,
+  onSelectPlayers,
   onReserve,
 }: {
   slug: string;
@@ -685,6 +721,8 @@ function Summary({
   court: CourtSchedule;
   start: number;
   guest: boolean;
+  words: RentalVocabulary;
+  onSelectPlayers: (players: number) => void;
   onReserve: () => void;
 }) {
   const minutes = state.selectedDuration;
@@ -720,6 +758,14 @@ function Summary({
           <small>con efectivo</small>
         </p>
       ) : null}
+      {day.bowling ? (
+        <PlayersStepper
+          players={state.players}
+          max={maxPlayers(court)}
+          disabled={state.working}
+          onChange={onSelectPlayers}
+        />
+      ) : null}
       <p className="alumno-res__summary-note">
         Se aparta {day.holdMinutes} minutos mientras pagas. Si cancelas, lo pagado no se devuelve.
       </p>
@@ -744,7 +790,7 @@ function Summary({
         onClick={onReserve}
       >
         <span key={state.working ? 'work' : 'idle'} className="alumno-res__btn-label">
-          {state.working ? 'Apartando…' : 'Apartar cancha'}
+          {state.working ? 'Apartando…' : `Apartar ${words.court}`}
         </span>
       </button>
     </section>
@@ -772,6 +818,7 @@ const PAY_OPTIONS: Array<{
 function PaySheet({
   reservation,
   zone,
+  words,
   working,
   error,
   cardOffered,
@@ -780,6 +827,7 @@ function PaySheet({
 }: {
   reservation: Reservation;
   zone: string;
+  words: RentalVocabulary;
   working: boolean;
   error: string | null;
   cardOffered: boolean;
@@ -801,7 +849,7 @@ function PaySheet({
             <span aria-hidden="true" />
           </div>
           <div className="alumno-paysheet__head">
-            <h2 id="res-pay-title">Paga tu cancha</h2>
+            <h2 id="res-pay-title">Paga tu {words.court}</h2>
             <button type="button" className="alumno-paysheet__close" onClick={close} aria-label="Cerrar">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M6 6l12 12M18 6 6 18" />
@@ -809,8 +857,9 @@ function PaySheet({
             </button>
           </div>
           <p className="alumno-res__pay-what">
-            {reservation.courtName ?? 'Cancha'} · {formatHour(reservation.start, zone)} –{' '}
+            {reservation.courtName ?? words.courtTitle} · {formatHour(reservation.start, zone)} –{' '}
             {formatHour(reservation.end, zone)}
+            {reservation.players ? ` · ${playersLabel(reservation.players)}` : null}
           </p>
           {remaining !== null ? (
             <p
@@ -892,12 +941,14 @@ function ConfirmSheet({
 function MyReservation({
   reservation,
   zone,
+  words,
   today,
   onPay,
   onCancel,
 }: {
   reservation: Reservation;
   zone: string;
+  words: RentalVocabulary;
   today: string;
   onPay: () => void;
   onCancel: () => void;
@@ -909,11 +960,12 @@ function MyReservation({
   return (
     <article className="alumno-res__mine-card">
       <header>
-        <strong>{reservation.courtName ?? 'Cancha'}</strong>
+        <strong>{reservation.courtName ?? words.courtTitle}</strong>
         <span className={`alumno-res__badge is-${reservation.state}`}>{RESERVATION_STATE_LABEL[reservation.state]}</span>
       </header>
       <p>
         {dayLongLabel(date, today)} · {formatHour(reservation.start, zone)} – {formatHour(reservation.end, zone)}
+        {reservation.players ? ` · ${playersLabel(reservation.players)}` : null}
       </p>
       {reservation.state === 'expirada' ? (
         <p className="alumno-res__expired" role="status">
