@@ -2,9 +2,12 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-// /vaini/ y /brand/ se sirven con caché de un año (vercel.json). Si una imagen cambia,
-// cambia también su nombre (por ejemplo -512.webp a -512b.webp o -640.webp).
-const CACHED_DIRS = ['vaini', 'brand'] as const;
+// En /vaini/ y /brand/ solo los WebP con el ancho en el nombre (scene-oxxo-256.webp) llevan
+// caché de un año (vercel.json). Si una de esas imágenes cambia, se sube con otro nombre
+// (por ejemplo -257.webp o -640.webp). Lo demás (og.png, logos de correo) se revalida.
+const VERSIONED = /^\/(vaini|brand)\/[^/]+-\d+\.webp$/;
+const LONG_CACHE = 'public, max-age=31536000, immutable';
+const REVALIDATE = 'public, max-age=0, must-revalidate';
 const MAX_IMAGE_KB = 80;
 
 function sourceFiles(dir: string): string[] {
@@ -48,12 +51,29 @@ describe('imágenes estáticas', () => {
     }
   });
 
-  it('vercel.json da caché largo a /vaini/, /brand/ y /assets/, y revalida el HTML', () => {
-    const longCache = 'public, max-age=31536000, immutable';
-    for (const dir of CACHED_DIRS) expect(cacheControlFor(`/${dir}/cutout-frente-512.webp`)).toEqual([longCache]);
-    expect(cacheControlFor('/assets/index-abc123.js')).toEqual([longCache]);
-    for (const path of ['/', '/index.html', '/spa.html', '/pedir', '/e/cafe-norte', '/sw.js', '/vainilla']) {
-      expect(cacheControlFor(path), path).toEqual(['public, max-age=0, must-revalidate']);
+  it('vercel.json da caché largo a los WebP versionados y a /assets/, y revalida lo demás', () => {
+    const images = referencedImages();
+    for (const image of images.filter((path) => VERSIONED.test(path))) expect(cacheControlFor(image), image).toEqual([LONG_CACHE]);
+    expect(cacheControlFor('/assets/index-abc123.js')).toEqual([LONG_CACHE]);
+    const unversioned = [
+      ...images.filter((path) => !VERSIONED.test(path)),
+      '/brand/og.png',
+      '/brand/vaiinilla-logo-light.png',
+      '/brand/vaiinilla-mark.webp',
+      '/vaini/mascot-question.webp',
+      '/vaini/scene-laptop.png',
+    ];
+    for (const path of [...unversioned, '/', '/index.html', '/spa.html', '/pedir', '/e/cafe-norte', '/sw.js', '/vainilla-2.webp']) {
+      expect(cacheControlFor(path), path).toEqual([REVALIDATE]);
+    }
+  });
+
+  it('cada archivo de public/vaini y public/brand cae en una sola regla de caché', () => {
+    for (const dir of ['vaini', 'brand']) {
+      for (const name of readdirSync(join('public', dir))) {
+        const path = `/${dir}/${name}`;
+        expect(cacheControlFor(path), path).toEqual([VERSIONED.test(path) ? LONG_CACHE : REVALIDATE]);
+      }
     }
   });
 });

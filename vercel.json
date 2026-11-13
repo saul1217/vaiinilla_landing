@@ -56,7 +56,7 @@
       ]
     },
     {
-      "source": "/(vaini|brand)/(.*)",
+      "source": "/(vaini|brand)/([^/]+-\\d+\\.webp)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -65,7 +65,7 @@
       ]
     },
     {
-      "source": "/((?!assets/|vaini/|brand/).*)",
+      "source": "/((?!assets/|vaini/[^/]+-\\d+\\.webp$|brand/[^/]+-\\d+\\.webp$).*)",
       "headers": [
         {
           "key": "Cache-Control",
