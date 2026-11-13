@@ -126,7 +126,7 @@ export function GuestOrdersPage() {
         <main id="main-content" className="alumno-main">
           <AlumnoPageHeader title="Pedidos" />
           <div className="alumno-empty">
-            <img src="/vaini/cutout-frente.png" alt="" />
+            <img src="/vaini/cutout-frente-512.webp" alt="" />
             <p>Aún no has hecho pedidos.</p>
             <Link className="alumno-btn alumno-btn--lime" to="/pedir">
               Elegir lugar
@@ -190,7 +190,7 @@ export function GuestOrdersPage() {
           <LoadingSkeleton shape="orders" label="Cargando pedidos…" />
         ) : live.orders.length === 0 && savedHere && !gone ? null : live.orders.length === 0 ? (
           <div className="alumno-empty">
-            <img src="/vaini/cutout-frente.png" alt="" />
+            <img src="/vaini/cutout-frente-512.webp" alt="" />
             <p>Aún no has hecho pedidos.</p>
             <Link className="alumno-btn alumno-btn--lime" to={`/e/${slug}`}>
               Ver menú

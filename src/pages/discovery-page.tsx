@@ -310,7 +310,7 @@ export function DiscoveryPage() {
             {!loading && items.length === 0 && !error ? (
               query ? (
                 <div className="alumno-empty">
-                  <img src="/vaini/cutout-frente.png" alt="" />
+                  <img src="/vaini/cutout-frente-512.webp" alt="" />
                   <p>No encontramos ese restaurante. Si ya estás ahí, escribe los 4 números de tu mesa.</p>
                 </div>
               ) : null
@@ -333,7 +333,7 @@ export function DiscoveryPage() {
                         onClick={() => togglePlace(place)}
                       >
                         <span className="alumno-place-thumb" aria-hidden="true">
-                          <PlaceImage src={place.imagen_url} alt="" />
+                          <PlaceImage src={place.imagen_url} alt="" loading="lazy" />
                         </span>
                         <span className="alumno-radio__body">
                           <span className="alumno-place-kicker">
@@ -444,14 +444,16 @@ function SearchIcon() {
   );
 }
 
-function PlaceImage({ src, alt }: { src?: string | null; alt: string }) {
-  const [imageSrc, setImageSrc] = useState(src || '/vaini/cutout-frente.png');
+const VAINI_PLACEHOLDER = '/vaini/cutout-frente-512.webp';
+
+function PlaceImage({ src, alt, loading }: { src?: string | null; alt: string; loading?: 'lazy' }) {
+  const [imageSrc, setImageSrc] = useState(src || VAINI_PLACEHOLDER);
 
   useEffect(() => {
-    setImageSrc(src || '/vaini/cutout-frente.png');
+    setImageSrc(src || VAINI_PLACEHOLDER);
   }, [src]);
 
-  return <img src={imageSrc} alt={alt} onError={() => setImageSrc('/vaini/cutout-frente.png')} />;
+  return <img src={imageSrc} alt={alt} loading={loading} decoding="async" onError={() => setImageSrc(VAINI_PLACEHOLDER)} />;
 }
 
 type SocialKind = 'instagram' | 'facebook' | 'tiktok' | 'whatsapp' | 'website';
