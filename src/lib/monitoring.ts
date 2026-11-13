@@ -15,9 +15,10 @@ const PHONE_MARK = '[telefono]';
 const MAX_DEPTH = 12;
 
 /**
- * Claves cuyo valor siempre se oculta. Se comparan en minúsculas y sin `_` ni `-`, así que
+ * Claves cuyo valor siempre se oculta. Se comparan en minúsculas, sin acentos y sin `_` ni `-`, así que
  * `access_token`, `accessToken` y `Access-Token` cuentan igual. Además, cualquier clave que lleve
- * `token` en el nombre (qr_token, child_token, token_hijo, deviceToken...) también se oculta: ver isSensitiveKey.
+ * `token` o `secret` en el nombre (qr_token, child_token, token_hijo, payment_intent_client_secret...)
+ * también se oculta: ver isSensitiveKey.
  */
 const SENSITIVE_KEYS = new Set([
   'password',
@@ -59,6 +60,18 @@ const PERSONAL_KEYS = new Set([
   'lat',
   'lng',
   'referencia',
+  // Salud y notas libres del pedido (pueden traer alergias, nombres o indicaciones personales).
+  'alergenos',
+  'notas',
+  'notascocina',
+  // Hotel: quién se hospeda y cuánto paga.
+  'huesped',
+  'tarifanoche',
+  'totalcobrado',
+  // Modo papás: límites y saldo disponible del hijo.
+  'disponiblehoy',
+  'limitediario',
+  'umbralsaldobajo',
 ]);
 
 /** Parámetros de URL que se tapan (tokens, códigos de un solo uso, secretos de Stripe y correos). */
@@ -81,15 +94,20 @@ const VILLO_IN_TEXT = /villo_[A-Za-z0-9_-]{43}/g;
 const BEARER_IN_TEXT = /(\bBearer\s+)[^\s"',;]+/gi;
 /** `"token": "..."`, `"password": "..."` y similares dentro de un texto que no es JSON completo. */
 const SENSITIVE_IN_JSON_TEXT =
-  /("(?:[A-Za-z_-]*token[A-Za-z_-]*|password|secret|client_secret|cookie|authorization|oobCode|email|correo|telefono|phone)"\s*:\s*")(?:[^"\\]|\\.)*"/gi;
+  /("(?:[A-Za-z_-]*token[A-Za-z_-]*|[A-Za-z_-]*secret[A-Za-z_-]*|password|cookie|authorization|oobCode|email|correo|telefono|phone)"\s*:\s*")(?:[^"\\]|\\.)*"/gi;
 
+/** Minúsculas, sin acentos (NFD sin diacríticos) y sin `_` ni `-`: `Alérgenos` y `alergenos` cuentan igual. */
 function normalizeKey(key: string): string {
-  return key.toLowerCase().replace(/[_-]/g, '');
+  return key
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[_-]/g, '');
 }
 
 function isSensitiveKey(key: string): boolean {
   const k = normalizeKey(key);
-  return k.includes('token') || SENSITIVE_KEYS.has(k) || PERSONAL_KEYS.has(k);
+  return k.includes('token') || k.includes('secret') || SENSITIVE_KEYS.has(k) || PERSONAL_KEYS.has(k);
 }
 
 /** Quita tokens de parámetros y de la ruta, `?q=`, correos y teléfonos de una URL o texto. */

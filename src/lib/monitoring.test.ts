@@ -261,6 +261,73 @@ describe('monitoring: saldo, consumo, ubicación, referencia y nombre del client
   });
 });
 
+describe('monitoring: alérgenos, notas, hotel, modo papás y llaves con secret', () => {
+  it('(a) tapa alergenos, notas y notas_cocina, también con acentos y mayúsculas', () => {
+    const b = crumb({
+      category: 'fetch',
+      data: {
+        pedido: { id: 3, alergenos: ['cacahuate'], notas: 'Sin gluten, es para Luis', notas_cocina: 'Alergia al huevo', total: 90 },
+        perfil: { 'Alérgenos': 'nuez', notasCocina: 'sin lácteos', 'NOTAS': 'x' },
+      },
+    });
+    expect(b?.data).toEqual({
+      pedido: { id: 3, alergenos: '[Filtered]', notas: '[Filtered]', notas_cocina: '[Filtered]', total: 90 },
+      perfil: { 'Alérgenos': '[Filtered]', notasCocina: '[Filtered]', NOTAS: '[Filtered]' },
+    });
+  });
+
+  it('(b) tapa cualquier llave con "secret" en extra, contexts y un cuerpo parseado', () => {
+    const out = send({
+      extra: { stripe: { payment_intent_client_secret: 'pi_1_secret_2', payment_intent: 'pi_1' } },
+      contexts: { pago: { setupIntentClientSecret: 'seti_1_secret_3', webhookSecret: 'w', estado: 'ok' } },
+      breadcrumbs: [
+        {
+          category: 'fetch',
+          data: { body: JSON.stringify({ client_secret: 'pi_9_secret_8', clientSecretRecarga: 'r', monto: 100 }) },
+        },
+      ],
+    });
+    expect(out.extra).toEqual({ stripe: { payment_intent_client_secret: '[Filtered]', payment_intent: 'pi_1' } });
+    expect(out.contexts).toEqual({
+      pago: { setupIntentClientSecret: '[Filtered]', webhookSecret: '[Filtered]', estado: 'ok' },
+    });
+    expect(out.breadcrumbs?.[0]?.data).toEqual({
+      body: JSON.stringify({ client_secret: '[Filtered]', clientSecretRecarga: '[Filtered]', monto: 100 }),
+    });
+    expect(redactString('fallo {"payment_intent_client_secret":"pi_5_secret_6", "x":1')).toBe(
+      'fallo {"payment_intent_client_secret":"[Filtered]", "x":1',
+    );
+    expect(JSON.stringify(out)).not.toMatch(/_secret_/);
+  });
+
+  it('(c) tapa huesped, tarifa_noche y total_cobrado del hotel, también con acento', () => {
+    const out = send({
+      extra: {
+        reserva: { id: 'r1', huesped: 'Ana López', tarifa_noche: 1450, total_cobrado: 4350, noches: 3 },
+        otra: { 'Huésped': { nombre: 'Luis' }, tarifaNoche: '900.00', TotalCobrado: 900 },
+      },
+    });
+    expect(out.extra).toEqual({
+      reserva: { id: 'r1', huesped: '[Filtered]', tarifa_noche: '[Filtered]', total_cobrado: '[Filtered]', noches: 3 },
+      otra: { 'Huésped': '[Filtered]', tarifaNoche: '[Filtered]', TotalCobrado: '[Filtered]' },
+    });
+  });
+
+  it('(d) tapa disponible_hoy, limite_diario y umbral_saldo_bajo del modo papás, también con acento', () => {
+    const b = crumb({
+      category: 'fetch',
+      data: {
+        hijo: { id: 'hijo-1', disponible_hoy: 35, limite_diario: 80, umbral_saldo_bajo: 50, activo: true },
+        controles: { disponibleHoy: '10', 'límite_diario': 60, UmbralSaldoBajo: 20 },
+      },
+    });
+    expect(b?.data).toEqual({
+      hijo: { id: 'hijo-1', disponible_hoy: '[Filtered]', limite_diario: '[Filtered]', umbral_saldo_bajo: '[Filtered]', activo: true },
+      controles: { disponibleHoy: '[Filtered]', 'límite_diario': '[Filtered]', UmbralSaldoBajo: '[Filtered]' },
+    });
+  });
+});
+
 describe('monitoring: sin datos sensibles no cambia nada', () => {
   it('conserva breadcrumbs y eventos limpios tal cual', () => {
     const data = {
