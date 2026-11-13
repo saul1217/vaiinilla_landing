@@ -15,6 +15,8 @@ import { SupportPage } from '../pages/support-page';
 import { TableJoinPage } from '../pages/table-join-page';
 import { TableWhoPage } from '../pages/table-who-page';
 import { WalletPage, WalletQrPage } from '../pages/wallet-page';
+import { WalletReloadPage } from '../pages/wallet-reload-page';
+import { SHOW_WALLET_RELOAD } from '../lib/features';
 import { useRouteMeta } from '../lib/use-route-meta';
 import {
   AlumnoQaCartPage,
@@ -37,7 +39,7 @@ export function AppRouter() {
   );
 }
 
-export function AppRoutes() {
+export function AppRoutes({ walletReload = SHOW_WALLET_RELOAD }: { walletReload?: boolean } = {}) {
   useRouteMeta();
   return (
     <>
@@ -62,6 +64,7 @@ export function AppRoutes() {
         <Route path="/cuenta/pedidos/:id" element={<OrderDetailPage />} />
         <Route path="/cuenta/saldo" element={<WalletPage />} />
         <Route path="/u/:id" element={<WalletQrPage />} />
+        {walletReload ? <Route path="/cuenta/saldo/recargar" element={<WalletReloadPage />} /> : null}
         {import.meta.env.DEV ? (
           <>
             <Route path="/__qa/menu-mesa/*" element={<MenuMesaQaPage />} />

@@ -1,6 +1,7 @@
 // Renta de canchas del cliente: contrato de /reservas y cuentas de horarios sin red ni DOM.
 // Espejo de Reservations.kt (Android). Contrato: vaiinilla_back docs/reservas-cancha.md.
 import type { OrderDetail, OrderReservation } from '../types/api';
+import { isBowlingVenue } from '../boliche/bowling';
 import { centsToMoney, moneyToCents } from './money';
 
 const MINUTE = 60_000;
@@ -34,6 +35,10 @@ export interface CourtSchedule {
   rentable: boolean;
   busy: BusyInterval[];
   profile: CourtProfile;
+  /** Boliche: cuántos caben en la pista (1-99); null = sin tope propio (30). */
+  capacity?: number | null;
+  /** Boliche: las duraciones de esta pista, ya sin las menores a su mínimo. Vacía = las del día. */
+  durations?: number[];
 }
 
 /** Horario reservable de un día y lo ocupado de cada cancha. Los instantes van en ms. */
@@ -49,6 +54,10 @@ export interface CourtDay {
   holdMinutes: number;
   now: number;
   courts: CourtSchedule[];
+  /** Negocio boliche con la bandera VITE_FEATURE_RESERVAS_BOLICHE prendida: pistas y jugadores. */
+  bowling?: boolean;
+  /** Día sin servicio (`cerrado`); el servidor además marca cada cancha ocupada todo el día. */
+  closed?: boolean;
 }
 
 export interface Reservation {
@@ -65,6 +74,8 @@ export interface Reservation {
   orderId: string | null;
   channel: string;
   version: number;
+  /** Boliche: cuántos juegan; null sin dato. */
+  players?: number | null;
 }
 
 export type ReservationPaymentMethod = 'saldo' | 'stripe' | 'efectivo';
@@ -116,8 +127,14 @@ function price(value: unknown): CustomerPrice | null {
   return card && cash ? { card, cashOrBalance: cash } : null;
 }
 
-export function parseCourtDay(raw: unknown): CourtDay {
+function positiveInt(value: unknown): number | null {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : null;
+}
+
+/** `bowlingEnabled` es la bandera de boliche; se pasa en las pruebas. */
+export function parseCourtDay(raw: unknown, bowlingEnabled?: boolean): CourtDay {
   const d = obj(raw);
+  const bowling = isBowlingVenue(str(d.tipo_establecimiento), bowlingEnabled);
   const courts = Array.isArray(d.canchas) ? d.canchas : [];
   const durations = Array.isArray(d.duraciones_min)
     ? d.duraciones_min.filter((n): n is number => typeof n === 'number')
@@ -138,9 +155,12 @@ export function parseCourtDay(raw: unknown): CourtDay {
       const space = obj(c.espacio);
       const profile = obj(c.ficha);
       const id = typeof space.id === 'number' ? space.id : Number(space.id);
+      const courtDurations = Array.isArray(c.duraciones_min)
+        ? c.duraciones_min.filter((n): n is number => typeof n === 'number').sort((a, b) => a - b)
+        : [];
       return {
         id,
-        name: str(space.nombre) ?? `Cancha ${id}`,
+        name: str(space.nombre) ?? `${bowling ? 'Pista' : 'Cancha'} ${id}`,
         pricePerHour: str(c.precio_hora),
         customerPricePerHour: price(c.precio_hora_cliente),
         rentable: c.rentable === true,
@@ -159,8 +179,10 @@ export function parseCourtDay(raw: unknown): CourtDay {
             ? profile.caracteristicas.filter((f): f is string => typeof f === 'string' && f.trim() !== '')
             : [],
         },
+        ...(bowling ? { capacity: positiveInt(c.capacidad), durations: courtDurations } : {}),
       };
     }),
+    ...(bowling ? { bowling: true, closed: d.cerrado === true } : {}),
   };
 }
 
@@ -182,6 +204,7 @@ export function parseReservation(raw: unknown): Reservation {
     orderId: str(r.pedido_id),
     channel: str(r.canal) ?? 'cliente',
     version: typeof r.version === 'number' ? r.version : 1,
+    players: positiveInt(r.jugadores),
   };
 }
 
@@ -233,8 +256,13 @@ export function busyUntil(court: CourtSchedule, at: number): number | null {
   }
 }
 
+/** Las duraciones que se ofrecen en la cancha: en un boliche, las de su pista si las trae. */
+export function courtDurations(day: CourtDay, court: CourtSchedule): number[] {
+  return day.bowling && court.durations && court.durations.length > 0 ? court.durations : day.durations;
+}
+
 export function availableDurations(day: CourtDay, court: CourtSchedule, start: number): number[] {
-  return day.durations.filter((minutes) => isFree(day, court, start, minutes));
+  return courtDurations(day, court).filter((minutes) => isFree(day, court, start, minutes));
 }
 
 /** Un inicio se ofrece si cabe al menos la duración más corta. */
