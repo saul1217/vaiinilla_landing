@@ -11,3 +11,11 @@ export const SHOW_WALLET_RELOAD = parseFeatureFlag(import.meta.env.VITE_FEATURE_
 
 /** Reversible feature switches for buyer-facing product areas. Con la cartera apagada, «Mi saldo» no sale. */
 export const SHOW_WALLET = SHOW_WALLET_RELOAD;
+
+/**
+ * Pedido a domicilio con mapa (paridad con Android). Apagado por defecto: se enciende por ambiente
+ * con VITE_FEATURE_DOMICILIO=true. Aun encendido, solo aparece en negocios con reparto activo.
+ */
+export function isHomeDeliveryEnabled(value: string | undefined = import.meta.env.VITE_FEATURE_DOMICILIO): boolean {
+  return value?.trim() === 'true';
+}

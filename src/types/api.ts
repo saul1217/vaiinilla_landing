@@ -23,7 +23,7 @@ export type EstablishmentKind =
   | 'evento'
   | 'boliche';
 export type SpaceKind = 'mesa' | 'barra' | 'cancha' | 'drive_thru' | 'asiento';
-export type OrderDestination = 'para_llevar' | 'en_espacio';
+export type OrderDestination = 'para_llevar' | 'en_espacio' | 'a_domicilio';
 export type OperationalRole = 'cliente' | 'cajero' | 'cocina' | 'admin' | 'mesero';
 
 export type StripePaymentStatus =
@@ -91,6 +91,8 @@ export interface PublicEstablishment {
   tiktok_url?: string | null;
   whatsapp_url?: string | null;
   sitio_web_url?: string | null;
+  /** El negocio entrega a domicilio. Ausente (backend viejo) = no. */
+  reparto_activo?: boolean;
   /** Videos del local (hasta 5). Ausente (backend viejo) = no hay videos. */
   videos_local?: StoreVideo[];
 }
@@ -129,6 +131,8 @@ export interface CatalogProduct {
   disponible: boolean;
   imagen_url: string | null;
   grupos_opcion: CatalogOptionGroup[];
+  /** Encargos: días que tarda en prepararse (0 a 14). Ausente (back viejo) = 0. */
+  dias_preparacion?: number;
 }
 
 export interface CatalogResponse {
@@ -147,6 +151,44 @@ export interface OperationalStatus {
   permite_pago_al_final?: boolean;
   /** Lo que el dueño dice que es el negocio; "Ya llegué" solo sale en `drive_thru`. */
   tipo?: EstablishmentKind;
+  /** A domicilio (docs/reposteria-domicilio.md del back). Solo viaja si el negocio reparte. */
+  reparto?: HomeDeliveryStatus;
+  /** Se puede pagar todo al recibir, en efectivo o por transferencia. */
+  permite_contra_entrega?: boolean;
+  /** 10 a 90: con tarjeta se cobra solo ese porcentaje y el resto en la puerta. */
+  anticipo_porcentaje?: number | null;
+  /** Banco, CLABE y titular para pagar por transferencia al recibir. */
+  datos_transferencia?: string | null;
+  /** Encargos: viaja (true o false) solo si el negocio es repostería, reparte o toma encargos. */
+  encargos_requieren_aceptar?: boolean;
+  /** Hasta cuántos días adelante se puede pedir. */
+  dias_adelanto_pedido?: number;
+  /** "18:00": pasada esa hora, hoy ya no cuenta como día de margen. */
+  hora_corte_pedido?: string | null;
+}
+
+export interface HomeDeliveryStatus {
+  activo: boolean;
+  radio_km: string | null;
+  costo: string;
+  minimo: string | null;
+}
+
+/** Respuesta de POST /pedidos/reparto/cotizar. */
+export interface HomeDeliveryQuote {
+  llega: boolean;
+  distancia_km: string | null;
+  costo: string | null;
+  minimo: string | null;
+}
+
+/** Dirección de un pedido a domicilio, como la valida POST /pedidos. */
+export interface DeliveryInput {
+  direccion: string;
+  referencia?: string;
+  telefono: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface LegalVersions {
@@ -333,6 +375,14 @@ export interface CreateOrderInput {
   pago_diferido?: boolean;
   /** El cliente confirmó explícitamente pedir para llevar con una silla activa. */
   confirmar_para_llevar?: boolean;
+  /** Solo con destino `a_domicilio`. */
+  entrega?: DeliveryInput;
+  /** A domicilio con `efectivo`: se paga todo en la puerta. */
+  al_recibir?: boolean;
+  /** A domicilio con `stripe`: la tarjeta cobra el anticipo y el resto se paga en la puerta. */
+  con_anticipo?: boolean;
+  /** Encargo: el día de entrega, fecha de calendario `AAAA-MM-DD`. */
+  fecha_entrega?: string;
 }
 
 export interface StripePaymentSession {
