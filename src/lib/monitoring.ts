@@ -62,6 +62,7 @@ const PERSONAL_KEYS = new Set([
   'referencia',
   // Salud y notas libres del pedido (pueden traer alergias, nombres o indicaciones personales).
   'alergenos',
+  'nota', // pedido.lineas[].nota del asistente (#167)
   'notas',
   'notascocina',
   // Hotel: quién se hospeda y cuánto paga.
@@ -101,7 +102,7 @@ const VILLO_IN_TEXT = /villo_[A-Za-z0-9_-]{43}/g;
 const BEARER_IN_TEXT = /(\bBearer\s+)[^\s"',;]+/gi;
 /** `"token": "..."`, `"password": "..."` y similares dentro de un texto que no es JSON completo. */
 const SENSITIVE_IN_JSON_TEXT =
-  /("(?:[A-Za-z_-]*token[A-Za-z_-]*|[A-Za-z_-]*secret[A-Za-z_-]*|password|cookie|authorization|oobCode|email|correo|telefono|phone)"\s*:\s*")(?:[^"\\]|\\.)*"/gi;
+  /("(?:[A-Za-z_-]*token[A-Za-z_-]*|[A-Za-z_-]*secret[A-Za-z_-]*|password|cookie|authorization|oobCode|email|correo|telefono|phone|mensaje|texto|content|prompt|nota)"\s*:\s*")(?:[^"\\]|\\.)*"/gi;
 
 /** Minúsculas, sin acentos (NFD sin diacríticos) y sin `_` ni `-`: `Alérgenos` y `alergenos` cuentan igual. */
 function normalizeKey(key: string): string {
