@@ -1,0 +1,216 @@
+/* Huésped de hotel (ui/hotel/guest en Android). Solo usa los tokens de android-tokens.css, así
+   que sigue el modo (claro, oscuro, AMOLED). Los botones son .vai-button y los paneles .vai-card
+   (vai-components.css); aquí queda solo lo propio del hotel. Todo lo que se toca mide al menos
+   --vai-touch-min (44 px). */
+
+.hotel-main { padding-bottom: var(--vai-space-8); }
+
+.hotel-tap { min-height: var(--vai-touch-min); min-width: var(--vai-touch-min); }
+
+.hotel-primary { margin-top: var(--vai-space-5); }
+
+.hotel-section-title {
+  margin: var(--vai-space-5) var(--vai-space-1) var(--vai-space-3);
+  color: var(--vai-text);
+  font: var(--vai-weight-black) var(--vai-headline-size) / var(--vai-headline-line) var(--vai-font);
+}
+
+.hotel-hero {
+  margin: 0 calc(-1 * var(--vai-space-5));
+  padding: var(--vai-space-7) var(--vai-space-5) var(--vai-space-6);
+  border-radius: 0 0 var(--vai-radius-lg) var(--vai-radius-lg);
+  background: var(--vai-paper-2);
+  color: var(--vai-text);
+}
+.hotel-hero__venue {
+  display: inline-flex;
+  max-width: 100%;
+  margin: 0 0 var(--vai-space-4);
+  padding: 10px var(--vai-space-4);
+  border-radius: var(--vai-radius-pill);
+  background: var(--vai-nav-pill);
+  color: var(--vai-white);
+  font: var(--vai-weight-extrabold) var(--vai-label-size) / var(--vai-label-line) var(--vai-font);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hotel-hero__hello { margin: 0; color: var(--vai-muted); font-weight: var(--vai-weight-extrabold); }
+.hotel-hero h1 {
+  margin: var(--vai-space-1) 0 0;
+  font: var(--vai-weight-black) var(--vai-display-size) / var(--vai-display-line) var(--vai-font);
+  letter-spacing: var(--vai-display-tracking);
+  overflow-wrap: anywhere;
+}
+.hotel-hero__details {
+  margin: var(--vai-space-2) 0 0;
+  color: var(--vai-muted);
+  font: var(--vai-weight-extrabold) var(--vai-body-size) / var(--vai-body-line) var(--vai-font);
+}
+
+.hotel-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--vai-space-3);
+}
+@media (min-width: 720px) {
+  .hotel-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.hotel-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2px;
+  min-height: 132px;
+  padding: var(--vai-space-4);
+  border: 1px solid var(--vai-line);
+  border-radius: var(--vai-radius-lg);
+  background: var(--vai-paper-2);
+  color: var(--vai-text);
+  font-family: var(--vai-font);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.hotel-tile strong { font: var(--vai-weight-black) var(--vai-title-size) / var(--vai-title-line) var(--vai-font); }
+.hotel-tile span { color: var(--vai-muted); font: var(--vai-weight-semibold) var(--vai-label-size) / var(--vai-label-line) var(--vai-font); }
+.hotel-tile.is-selected { border: 1.5px solid var(--vai-accent); background: color-mix(in srgb, var(--vai-accent) 14%, var(--vai-paper-2)); }
+.hotel-tile:focus-visible, .hotel-radio:focus-within { outline: 3px solid var(--vai-accent); outline-offset: 3px; }
+.hotel-tile__badge {
+  position: absolute;
+  top: var(--vai-space-3);
+  right: var(--vai-space-3);
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 var(--vai-space-2);
+  border-radius: var(--vai-radius-pill);
+  background: var(--vai-accent);
+  color: var(--vai-on-accent);
+  font-style: normal;
+  font-weight: var(--vai-weight-black);
+}
+
+.hotel-code__boxes { position: relative; margin: var(--vai-space-4) 0 var(--vai-space-3); }
+.hotel-code__row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--vai-space-2); }
+.hotel-code__row span {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 0.8;
+  min-height: 48px;
+  border: 1px solid var(--vai-line);
+  border-radius: var(--vai-radius-sm);
+  background: var(--vai-paper-2);
+  color: var(--vai-text);
+  font: var(--vai-weight-black) var(--vai-headline-size) / 1 var(--vai-font);
+  font-variant-numeric: tabular-nums;
+}
+.hotel-code__row span.is-active { border: 1.5px solid var(--vai-accent); }
+.hotel-code__row.has-error span { border: 1.5px solid var(--vai-coral); }
+/* El campo real va encima, invisible y del tamaño de las casillas: tocar una casilla abre el teclado.
+   Los 16 px evitan que Safari de iOS haga zoom al enfocar. */
+.hotel-code__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  border: 0;
+  font-size: 16px;
+  cursor: text;
+}
+
+/* Paneles: .vai-card no trae margen; el hotel los separa como antes */
+.hotel-panel { margin: var(--vai-space-3) 0; }
+.hotel-panel h2, .hotel-pay legend {
+  margin: 0 0 10px;
+  font: var(--vai-weight-black) var(--vai-body-lg-size) / var(--vai-body-lg-line) var(--vai-font);
+}
+.hotel-pay { display: grid; gap: 10px; min-width: 0; }
+.hotel-pay legend { float: left; width: 100%; padding: 0; }
+
+.hotel-lines, .hotel-open-list { display: grid; gap: var(--vai-space-3); margin: 0; padding: 0; list-style: none; }
+.hotel-lines li, .hotel-open-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--vai-space-3);
+  min-height: var(--vai-touch-min);
+}
+.hotel-lines li + li, .hotel-open-list li + li { padding-top: var(--vai-space-3); border-top: 1px solid var(--vai-line); }
+.hotel-lines span, .hotel-open-list span { display: grid; gap: 2px; min-width: 0; }
+.hotel-lines strong, .hotel-open-list strong { font-weight: var(--vai-weight-black); overflow-wrap: anywhere; }
+.hotel-lines small, .hotel-open-list small { color: var(--vai-muted); font-weight: var(--vai-weight-semibold); }
+.hotel-lines b { flex: none; font-weight: var(--vai-weight-black); font-variant-numeric: tabular-nums; }
+.hotel-lines b.is-muted { color: var(--vai-muted); }
+
+/* Botón chico dentro de una fila (Cancelar): .vai-button con la altura mínima táctil */
+.hotel-inline-btn { flex: none; min-height: var(--vai-touch-min); padding: var(--vai-space-2) var(--vai-space-4); }
+
+.hotel-radio {
+  display: flex;
+  align-items: center;
+  gap: var(--vai-space-3);
+  margin: 0;
+  padding: var(--vai-space-3) var(--vai-space-4);
+  border: 1px solid var(--vai-line);
+  border-radius: var(--vai-radius-button);
+  background: var(--vai-paper);
+  color: var(--vai-text);
+  cursor: pointer;
+}
+.hotel-radio > span, p.hotel-radio { display: grid; gap: 2px; }
+.hotel-radio small { color: var(--vai-muted); font-weight: var(--vai-weight-semibold); }
+.hotel-radio.is-selected { border: 1.5px solid var(--vai-accent); background: color-mix(in srgb, var(--vai-accent) 14%, var(--vai-paper)); }
+.hotel-radio input { width: 22px; height: 22px; margin: 0; accent-color: var(--vai-accent); flex: none; }
+
+.hotel-note { display: grid; gap: 6px; margin: var(--vai-space-3) 0; font-weight: var(--vai-weight-extrabold); }
+.hotel-note textarea {
+  min-height: 72px;
+  padding: var(--vai-space-3) var(--vai-space-4);
+  border: 1px solid var(--vai-line);
+  border-radius: var(--vai-radius-md);
+  background: var(--vai-paper-2);
+  color: var(--vai-text);
+  font-family: var(--vai-font);
+  font-size: 16px; /* evita el zoom de Safari de iOS al enfocar */
+  resize: vertical;
+}
+
+.hotel-account__label {
+  margin: var(--vai-space-2) 0 0;
+  color: var(--vai-muted);
+  font: var(--vai-weight-black) var(--vai-label-size) / var(--vai-label-line) var(--vai-font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.hotel-account__total {
+  margin: 0 0 var(--vai-space-2);
+  font: var(--vai-weight-black) var(--vai-display-size) / var(--vai-display-line) var(--vai-font);
+  letter-spacing: var(--vai-display-tracking);
+  font-variant-numeric: tabular-nums;
+}
+
+.hotel-notice {
+  margin: var(--vai-space-3) 0 0;
+  padding: var(--vai-space-3) var(--vai-space-4);
+  border-radius: var(--vai-radius-sm);
+  background: color-mix(in srgb, var(--vai-accent) 22%, transparent);
+  color: var(--vai-text);
+  font-weight: var(--vai-weight-extrabold);
+}
+
+.hotel-paynote {
+  display: grid;
+  place-items: center;
+  min-height: var(--vai-accent-button-height);
+  margin: var(--vai-space-4) 0 0;
+  padding: var(--vai-space-2) var(--vai-space-4);
+  border: 1px solid var(--vai-line);
+  border-radius: var(--vai-radius-pill);
+  color: var(--vai-text);
+  font-weight: var(--vai-weight-black);
+  text-align: center;
+}

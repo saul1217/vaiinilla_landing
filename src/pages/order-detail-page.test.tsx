@@ -2,11 +2,11 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigationType } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
 import { VaiinillaApiError } from '../lib/api-error';
-import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
+import { isStripeConfirming, readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
 import { clearStripeCheckoutSession, rememberStripeCheckoutSession } from '../lib/stripe-session';
 import { CASH_COUNTER_COPY, STRIPE_COPY, STRIPE_TOTAL_LABEL } from '../lib/stripe-status';
 import type { OrderDetail, SharedTable, SharedTableOrder } from '../types/api';
@@ -457,6 +457,77 @@ describe('OrderDetailPage', () => {
     expect(await screen.findByText(STRIPE_COPY.confirmed)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /ver pedido/i })).not.toBeInTheDocument();
     expect(screen.queryByText(CASH_COUNTER_COPY)).not.toBeInTheDocument();
+  });
+
+  it('al volver del 3DS quita payment_intent_client_secret de la URL con replace y sigue esperando el cobro', async () => {
+    getOrder.mockResolvedValue(
+      stripeOrder({
+        pago: {
+          payment_attempt_id: 'attempt-1',
+          payment_intent_id: 'pi_test_001',
+          stripe_account_id: 'acct_test_001',
+          payment_status: 'processing',
+        },
+      }),
+    );
+    const seen: Array<{ search: string; type: string }> = [];
+    function LocationProbe() {
+      const location = useLocation();
+      const type = useNavigationType();
+      seen.push({ search: location.search, type });
+      return null;
+    }
+    render(
+      <MemoryRouter
+        initialEntries={[
+          '/cuenta/pedidos/ord-1?origen=correo&payment_intent=pi_test_001&payment_intent_client_secret=pi_test_001_secret_test&redirect_status=succeeded',
+        ]}
+      >
+        <ThemeProvider>
+          <Routes>
+            <Route
+              path="/cuenta/pedidos/:id"
+              element={
+                <>
+                  <OrderDetailPage />
+                  <LocationProbe />
+                </>
+              }
+            />
+          </Routes>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(seen.at(-1)?.search).toBe('?origen=correo'));
+    // Replace: la URL con el client secret no queda como entrada del historial.
+    expect(seen.at(-1)?.type).toBe('REPLACE');
+    expect(seen.every((entry) => entry.type !== 'PUSH')).toBe(true);
+    expect(seen.at(-1)?.search).not.toContain('payment_intent');
+    expect(seen.at(-1)?.search).not.toContain('redirect_status');
+    // Si recarga ya sin los parámetros, la página sigue preguntando por el cobro.
+    expect(isStripeConfirming('ord-1')).toBe(true);
+    expect(await screen.findByText(STRIPE_COPY.processing)).toBeInTheDocument();
+  });
+
+  it('sin parámetros de Stripe en la URL no toca el historial', async () => {
+    getOrder.mockResolvedValue(stripeOrder({ estado: 'entregado', metodo_pago: 'efectivo' }));
+    const seen: string[] = [];
+    function TypeProbe() {
+      seen.push(useNavigationType());
+      return null;
+    }
+    render(
+      <MemoryRouter initialEntries={['/cuenta/pedidos/ord-1?origen=correo']}>
+        <ThemeProvider>
+          <Routes>
+            <Route path="/cuenta/pedidos/:id" element={<><OrderDetailPage /><TypeProbe /></>} />
+          </Routes>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+    await screen.findByRole('link', { name: 'Volver a mis pedidos' });
+    expect(seen.every((type) => type === 'POP')).toBe(true);
+    expect(isStripeConfirming('ord-1')).toBe(false);
   });
 
   it('reintenta el mismo pedido sin crear otro', async () => {

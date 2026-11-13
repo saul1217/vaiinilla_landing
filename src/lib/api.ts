@@ -15,9 +15,12 @@ import type {
   SharedTable,
   TableSession,
   ApiErrorEnvelope,
+  CardReload,
+  CardReloadCheckout,
   CatalogResponse,
   ClientContextResponse,
   CreateOrderInput,
+  HomeDeliveryQuote,
   IdentityRegistration,
   IdentityRegistrationInput,
   LegalVersions,
@@ -326,6 +329,18 @@ export const api = {
     ).data;
   },
 
+  /** ¿El reparto del negocio llega a ese punto y cuánto cuesta? (POST /pedidos/reparto/cotizar). */
+  async quoteHomeDelivery(token: string, lat: number, lng: number): Promise<HomeDeliveryQuote> {
+    return (
+      await request<HomeDeliveryQuote>('/pedidos/reparto/cotizar', {
+        method: 'POST',
+        token,
+        idempotent: true,
+        body: { lat, lng },
+      })
+    ).data;
+  },
+
   /** Sesión activa de la mesa por su QR: participantes y quién soy (rol cliente). */
   async tableSession(token: string, qrToken: string): Promise<TableSession> {
     return (
@@ -414,6 +429,24 @@ export const api = {
     return (await request<WalletData>('/wallets/me', { token })).data;
   },
 
+  /** Recarga con tarjeta: crea el PaymentIntent; el saldo llega cuando el webhook confirma el pago. */
+  async startCardReload(token: string, monto: string, idempotencyKey: string): Promise<CardReloadCheckout> {
+    return (
+      await request<CardReloadCheckout>('/wallets/me/recargas-stripe', {
+        method: 'POST',
+        token,
+        body: { monto },
+        idempotencyKey,
+      })
+    ).data;
+  },
+
+  async getCardReload(token: string, id: string): Promise<CardReload> {
+    return (
+      await request<{ recarga: CardReload }>(`/wallets/me/recargas-stripe/${encodeURIComponent(id)}`, { token })
+    ).data.recarga;
+  },
+
   // Modo papás (padres e hijos). Las rutas ya existen en el backend de develop.
 
   /** Hijos del tutor en este negocio (`GET /tutelas`), con el contexto de cliente del tutor. */
@@ -500,7 +533,7 @@ export const api = {
 
   async createReservation(
     token: string,
-    input: { courtId: number; start: number | null; durationMinutes: number },
+    input: { courtId: number; start: number | null; durationMinutes: number; players?: number | null },
     idempotencyKey: string,
   ): Promise<Reservation> {
     const response = await request<unknown>('/reservas', {
@@ -511,6 +544,8 @@ export const api = {
         espacio_id: input.courtId,
         ...(input.start === null ? {} : { inicio: new Date(input.start).toISOString() }),
         duracion_min: input.durationMinutes,
+        // Boliche: cuántos juegan (obligatorio ahí; 422 PLAYERS_REQUIRED sin él).
+        ...(input.players ? { jugadores: input.players } : {}),
       },
     });
     return parseReservation(response.data);

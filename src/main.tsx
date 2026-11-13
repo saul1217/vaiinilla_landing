@@ -13,6 +13,8 @@ import './styles/app.css';
 import './styles/alumno.css';
 import './styles/android-tokens.css';
 import './styles/vai-components.css';
+import './styles/hotel.css';
+import './styles/assistant.css';
 
 initMonitoring();
 

@@ -13,6 +13,8 @@ export interface SpaceSession {
   pagaAlFinal?: boolean;
   /** Código del QR escaneado: con él el cliente se une a la mesa compartida. */
   qrToken?: string;
+  /** Habitación de hotel: se entra con el código de estancia y el pedido se carga a la cuenta. */
+  esHabitacion?: boolean;
 }
 
 interface StoredSpace extends SpaceSession {
