@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
+import { VaiinillaApiError } from '../lib/api-error';
 import { clearStripeCheckoutSession } from '../lib/stripe-session';
 import { resetPwaUpdateGuardsForTests } from '../lib/pwa-update';
 import type { HomeDeliveryQuote } from '../types/api';
@@ -301,5 +302,115 @@ describe('CartPage a domicilio', () => {
     expect(await screen.findByText(/fuera de la zona de entrega \(hasta 5 km\)/i)).toBeInTheDocument();
     await user.type(screen.getByLabelText(/teléfono/i), '6141234567');
     expect(screen.getByRole('button', { name: /^continuar$/i })).toBeDisabled();
+  });
+
+  describe('encargos: día de entrega', () => {
+    // 13 nov 2026, 10:00 en Chihuahua. Solo se falsea Date: userEvent sigue con timers reales.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-11-13T16:00:00Z'));
+      api.getGuestCatalog.mockResolvedValue({
+        categorias: [],
+        productos: [{ id: 1, categoria_id: 1, nombre: 'Pastel', dias_preparacion: 2, grupos_opcion: [] }],
+      });
+      api.getOperationalStatus.mockResolvedValue({
+        ...reparteStatus,
+        encargos_requieren_aceptar: false,
+        dias_adelanto_pedido: 3,
+        hora_corte_pedido: '18:00',
+      });
+      api.createOrder.mockResolvedValue({
+        id: 'ord-encargo',
+        folio: 11,
+        estado: 'por_cobrar',
+        metodo_pago: 'efectivo',
+        destino: 'para_llevar',
+        qr_token: 'pickup',
+        espacio: null,
+        total: '120.00',
+        items: [],
+      });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('con la bandera apagada no pregunta el día ni manda fecha_entrega', async () => {
+      const user = userEvent.setup();
+      renderCart();
+      // Antes de cargar el negocio el botón sale habilitado un instante: se espera al estado operativo.
+      await waitFor(() => expect(api.getOperationalStatus).toHaveBeenCalled());
+      await waitFor(() => expect(screen.getByRole('button', { name: /^continuar$/i })).toBeEnabled());
+      expect(screen.queryByText(/¿para qué día lo quieres\?/i)).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /^continuar$/i }));
+      await user.click(screen.getByRole('button', { name: /continuar con pago en caja/i }));
+      await waitFor(() => expect(api.createOrder).toHaveBeenCalledTimes(1));
+      expect(api.createOrder.mock.calls[0]?.[1]).not.toHaveProperty('fecha_entrega');
+    });
+
+    it('para llevar ofrece solo los días con la preparación, exige uno y manda fecha_entrega AAAA-MM-DD', async () => {
+      vi.stubEnv('VITE_FEATURE_DOMICILIO', 'true');
+      const user = userEvent.setup();
+      renderCart();
+      const group = await screen.findByRole('radiogroup', { name: /¿para qué día lo quieres\?/i });
+      // 2 días de preparación desde el 13 y hasta 3 días de adelanto: 15 y 16.
+      const days = Array.from(group.querySelectorAll('[role="radio"]')).map((el) => el.getAttribute('data-date'));
+      expect(days).toEqual(['2026-11-15', '2026-11-16']);
+      expect(screen.getByText('Elige para qué día lo quieres.')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^continuar$/i })).toBeDisabled();
+
+      await user.click(screen.getByRole('radio', { name: 'dom 15 nov' }));
+      await waitFor(() => expect(screen.getByRole('button', { name: /^continuar$/i })).toBeEnabled());
+      await user.click(screen.getByRole('button', { name: /^continuar$/i }));
+      expect(await screen.findByText('Entrega: dom 15 nov')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /continuar con pago en caja/i }));
+
+      await waitFor(() => expect(api.createOrder).toHaveBeenCalledTimes(1));
+      expect(api.createOrder.mock.calls[0]?.[1]).toMatchObject({ destino: 'para_llevar', fecha_entrega: '2026-11-15' });
+    });
+
+    it('a domicilio manda la dirección y el día juntos', async () => {
+      vi.stubEnv('VITE_FEATURE_DOMICILIO', 'true');
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await screen.findByRole('radio', { name: /a domicilio/i }));
+      await user.click(screen.getByRole('button', { name: /elegir en el mapa/i }));
+      await user.click(screen.getByRole('button', { name: /mapa de prueba/i }));
+      await screen.findByText('Aldama 1408, Centro, Chihuahua');
+      await user.type(screen.getByLabelText(/teléfono/i), '6141234567');
+      await user.click(screen.getByRole('radio', { name: 'lun 16 nov' }));
+      await waitFor(() => expect(screen.getByRole('button', { name: /^continuar$/i })).toBeEnabled());
+      await user.click(screen.getByRole('button', { name: /^continuar$/i }));
+      await user.click(await screen.findByRole('radio', { name: /al recibir/i }));
+      await user.click(screen.getByRole('button', { name: /continuar con pago al recibir/i }));
+      await waitFor(() => expect(api.createOrder).toHaveBeenCalledTimes(1));
+      expect(api.createOrder.mock.calls[0]?.[1]).toMatchObject({
+        destino: 'a_domicilio',
+        al_recibir: true,
+        fecha_entrega: '2026-11-16',
+        entrega: { direccion: 'Aldama 1408, Centro, Chihuahua', telefono: '6141234567' },
+      });
+    });
+
+    it('si el back responde NEEDS_PREP_TIME muestra su mensaje y el primer día que acepta', async () => {
+      vi.stubEnv('VITE_FEATURE_DOMICILIO', 'true');
+      api.createOrder.mockRejectedValue(
+        new VaiinillaApiError(422, {
+          code: 'NEEDS_PREP_TIME',
+          message: 'Este pedido necesita 3 días de preparación.',
+          details: [{ desde: '2026-11-16' }],
+        }),
+      );
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await screen.findByRole('radio', { name: 'dom 15 nov' }));
+      await waitFor(() => expect(screen.getByRole('button', { name: /^continuar$/i })).toBeEnabled());
+      await user.click(screen.getByRole('button', { name: /^continuar$/i }));
+      await user.click(await screen.findByRole('button', { name: /continuar con pago en caja/i }));
+      expect(
+        (await screen.findAllByText('Este pedido necesita 3 días de preparación. El primer día disponible es el lun 16 nov.')).length,
+      ).toBeGreaterThan(0);
+    });
   });
 });

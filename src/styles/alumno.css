@@ -8482,3 +8482,5 @@ html[data-theme='dark'] body[data-shell='alumno'] .alumno-card--ticket .alumno-c
 .alumno-home-map__hint { position: absolute; left: 16px; right: 16px; top: 12px; z-index: 500; margin: 0; padding: 8px 12px; border-radius: 12px; background: var(--bg); box-shadow: 0 4px 12px rgba(0,0,0,.15); font-size: .9rem; text-align: center; }
 .alumno-home-map__foot { display: grid; gap: 10px; padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
 .alumno-home-map__address { margin: 0; min-height: 1.3em; font-weight: 700; }
+.alumno-delivery-date { display: grid; gap: 10px; margin-bottom: 14px; }
+.alumno-delivery-date__days { display: flex; flex-wrap: wrap; gap: 8px; }

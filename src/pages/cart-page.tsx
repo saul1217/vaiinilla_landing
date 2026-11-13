@@ -45,6 +45,17 @@ import {
 import type { GeoPoint } from '../lib/geocoding';
 import { HomeDeliveryMap } from '../components/home-delivery-map';
 import { HomeDeliverySection } from '../components/home-delivery-section';
+import { DeliveryDatePicker } from '../components/delivery-date-picker';
+import {
+  asksForDeliveryDate,
+  businessNow,
+  cartPreparationDays,
+  deliveryDates,
+  deliveryDayLabel,
+  isIsoDate,
+  preorderOffer,
+  prepTimeFrom,
+} from '../lib/preorder';
 import { currentScannedTable, joinedScannedTable } from '../lib/scanned-table';
 import { rememberGuestOrder, trackingPath } from '../lib/guest-orders';
 import type { SpaceSession } from '../lib/space-session';
@@ -268,6 +279,22 @@ export function CartPage() {
           subtotal,
         })
       : null;
+  // Encargos (misma bandera): si el carrito tarda días o el negocio deja pedir para otro día, se
+  // elige el día de entrega. En una mesa se come ahora, así que ahí no se pregunta.
+  const preorder = homeFeature ? preorderOffer(status) : null;
+  const preparationDays = useMemo(() => cartPreparationDays(lines, catalogProducts), [lines, catalogProducts]);
+  const asksDate = !guestLike && !(forHere && space) && asksForDeliveryDate(preorder, preparationDays);
+  const businessToday = businessNow(new Date()).date;
+  const availableDates = asksDate && preorder ? deliveryDates(preorder, preparationDays, new Date()) : [];
+  const [deliveryDate, setDeliveryDate] = useState<string | null>(null);
+  const chosenDate = deliveryDate && availableDates.includes(deliveryDate) ? deliveryDate : null;
+  const dateProblem = asksDate
+    ? availableDates.length === 0
+      ? 'Por ahora no hay días disponibles para este encargo.'
+      : chosenDate
+        ? null
+        : 'Elige para qué día lo quieres.'
+    : null;
   const homeGuestHint = homeFeature && guestLike && place?.reparto_activo === true && !(forHere && space);
 
   useEffect(() => {
@@ -404,6 +431,10 @@ export function CartPage() {
       setError(homeProblem ?? 'Este negocio aún no tiene cómo cobrar a domicilio.');
       return;
     }
+    if (dateProblem) {
+      setError(dateProblem);
+      return;
+    }
     if (guestBlocked) {
       void navigate(`/cuenta?next=/e/${slug}/carrito`);
       return;
@@ -525,6 +556,8 @@ export function CartPage() {
       if (destination === 'a_domicilio' && chosenHomePayment) {
         Object.assign(payload, homeDeliveryOrderFields(homeDraft, chosenHomePayment));
       }
+      // El día del encargo viaja como fecha de calendario AAAA-MM-DD (el back no acepta día en una mesa).
+      if (asksDate && destination !== 'en_espacio' && isIsoDate(chosenDate)) payload.fecha_entrega = chosenDate;
       if (takeoutConfirmed.current && destination === 'para_llevar') payload.confirmar_para_llevar = true;
       const fingerprint = orderFingerprint(payload);
       const key = idempotencyKeyFor(fingerprint);
@@ -590,6 +623,13 @@ export function CartPage() {
         return;
       }
       setEmailBlocked(cause instanceof VaiinillaApiError && cause.code === 'EMAIL_NOT_VERIFIED');
+      if (cause instanceof VaiinillaApiError && cause.code === 'NEEDS_PREP_TIME') {
+        // El mensaje del back ("Este pedido necesita N días de preparación.") y, si trae `desde`, el primer día.
+        const from = prepTimeFrom(cause.details);
+        const label = from ? deliveryDayLabel(from, businessNow(new Date()).date) : null;
+        setError(label ? `${cause.message} El primer día disponible es ${/^(Hoy|Mañana)$/.test(label) ? label.toLowerCase() : `el ${label}`}.` : cause.message);
+        return;
+      }
       setError(errorMessage(cause));
     } finally {
       endCheckoutGuard();
@@ -701,6 +741,20 @@ export function CartPage() {
                 : null
             }
             homeGuestHint={homeGuestHint}
+            deliveryDate={
+              asksDate ? (
+                <DeliveryDatePicker
+                  dates={availableDates}
+                  selected={chosenDate}
+                  today={businessToday}
+                  problem={dateProblem}
+                  onSelect={(date) => {
+                    setDeliveryDate(date);
+                    setError(null);
+                  }}
+                />
+              ) : null
+            }
             payLabel={
               canCheckout
                 ? operationalVerificationPending
@@ -712,6 +766,7 @@ export function CartPage() {
               !ready ||
               operationalVerificationPending ||
               Boolean(homeProblem) ||
+              Boolean(dateProblem) ||
               Boolean(blocker) ||
               Boolean(pendingStripeOrderId)
             }
@@ -735,6 +790,9 @@ export function CartPage() {
                 </button>
               </div>
               <p className="alumno-paysheet__total">Total {total ? formatAmount(total) : '—'}</p>
+              {chosenDate ? (
+                <p className="alumno-muted alumno-paysheet__fee">Entrega: {deliveryDayLabel(chosenDate, businessToday)}</p>
+              ) : null}
               {fee ? (
                 <p className="alumno-muted alumno-paysheet__fee">
                   Incluye comisión por tarjeta {formatAmount(fee)}.
@@ -965,6 +1023,7 @@ export function CartFilledView({
   paySubtitle,
   homeDelivery = null,
   homeGuestHint = false,
+  deliveryDate = null,
 }: {
   lines: CartLine[];
   payment: PaymentMethod;
@@ -992,6 +1051,8 @@ export function CartFilledView({
   homeDelivery?: { active: boolean; onChange: (active: boolean) => void; section: ReactNode } | null;
   /** Sin cuenta en un negocio que reparte: se invita a entrar para pedir a domicilio. */
   homeGuestHint?: boolean;
+  /** Encargos: el selector del día de entrega, si el carrito lo pide. */
+  deliveryDate?: ReactNode;
 }) {
   const [placeEntryOpen, setPlaceEntryOpen] = useState(false);
   return (
@@ -1123,6 +1184,7 @@ export function CartFilledView({
               Salir de {space.nombre}
             </button>
           ) : null}
+          {deliveryDate}
           {place?.identificador_cliente_obligatorio ? (
             <label className="alumno-field">
               {place.identificador_cliente_etiqueta}
