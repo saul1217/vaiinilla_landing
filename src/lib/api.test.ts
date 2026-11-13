@@ -2,6 +2,7 @@ import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { api } from './api';
+import { tableDeviceToken } from './table-device-token';
 import { canAcceptOrders, toCreateOrderInput } from './cart';
 
 const baseUrl = api.apiUrl;
@@ -40,6 +41,31 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 describe('buyer API client', () => {
+  it('guarda el token al unirse y envía y rota el token al continuar', async () => {
+    localStorage.clear();
+    const bodies: unknown[] = [];
+    let call = 0;
+    server.use(http.post(`${baseUrl}/mesas/unirse`, async ({ request }) => {
+      bodies.push(await request.json());
+      call += 1;
+      return HttpResponse.json({ data: {
+        sesion_id: 'ses-1', dispositivo_token: `secret-${call}`,
+        mi_participante: { id: 'p1', alias: 'Ana' },
+      }, meta: {}, error: null });
+    }));
+    await api.joinTable('jwt', 'qr', { alias: 'Ana' });
+    expect(tableDeviceToken('p1')).toBe('secret-1');
+    await api.joinTable('jwt', 'qr', { participanteId: 'p1' });
+    expect(bodies[1]).toEqual({ token: 'qr', participante_id: 'p1', dispositivo_token: 'secret-1' });
+    expect(tableDeviceToken('p1')).toBe('secret-2');
+  });
+
+  it('rechaza un reclamo por folio en el endpoint nuevo', async () => {
+    server.use(http.post(`${baseUrl}/mesas/actual/reclamos/88/rechazar`, () =>
+      HttpResponse.json({ data: { grupos: [] }, meta: {}, error: null })));
+    await expect(api.rejectTableClaim('jwt', 88)).resolves.toMatchObject({ grupos: [] });
+  });
+
   it('lista establecimientos y catálogo públicos', async () => {
     server.use(
       http.get(`${baseUrl}/publico/establecimientos`, ({ request }) => {

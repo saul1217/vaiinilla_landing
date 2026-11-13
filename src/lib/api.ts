@@ -382,6 +382,13 @@ export const api = {
     ).data;
   },
 
+  /** El dueño del pedido rechaza quién lo reclamó como pagador. */
+  async rejectTableClaim(token: string, folio: number): Promise<SharedTable> {
+    return (
+      await request<SharedTable>(`/mesas/actual/reclamos/${folio}/rechazar`, { token, method: 'POST' })
+    ).data;
+  },
+
   async leaveTable(token: string): Promise<void> {
     await request<null>('/mesas/actual/salida', { token, method: 'POST' });
     clearTableDeviceTokens();

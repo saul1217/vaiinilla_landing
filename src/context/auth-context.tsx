@@ -12,6 +12,7 @@ import type { User } from 'firebase/auth';
 import { firebaseConfigured, firebaseSignOut, observeAuth } from '../lib/firebase';
 import { hasBrowserSession, touchBrowserSession } from '../lib/browser-session';
 import { clearResourceCache } from '../lib/resource-cache';
+import { clearTableDeviceTokens } from '../lib/table-device-token';
 
 interface AuthContextValue {
   user: User | null;
@@ -47,8 +48,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await firebaseSignOut();
     clearResourceCache();
+    clearTableDeviceTokens();
+    await firebaseSignOut();
     setUser(null);
   }, []);
 
