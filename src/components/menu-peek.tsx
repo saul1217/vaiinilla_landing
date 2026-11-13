@@ -30,10 +30,10 @@ export function MenuPeek({
                 return (
                   <Link className="alumno-cart-peek__row" key={product.id} to={menuHref}>
                     {thumb ? (
-                      <img src={thumb} alt="" />
+                      <img src={thumb} alt="" loading="lazy" decoding="async" />
                     ) : (
                       <span className="alumno-cart-peek__vaini" aria-hidden="true">
-                        <img src="/vaini/cutout-frente.png" alt="" />
+                        <img src="/vaini/cutout-frente-512.webp" alt="" loading="lazy" decoding="async" />
                       </span>
                     )}
                     <span>
@@ -55,7 +55,7 @@ export function MenuPeek({
         ) : (
           <>
             <div className="alumno-cart-peek__art" aria-hidden="true">
-              <img src="/vaini/scene-laptop.png" alt="" />
+              <img src="/vaini/scene-laptop-720.webp" alt="" loading="lazy" decoding="async" />
             </div>
             <p className="alumno-cart-peek__idle">
               Abre el menú y arma tu pedido. Las sugerencias y tus anteriores aparecen aquí.

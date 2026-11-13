@@ -31,7 +31,7 @@ export function PedidoChargeOverlay({ phase, onDismiss }: PedidoChargeOverlayPro
           {processing ? (
             <>
               <span className="alumno-charge__spinner" />
-              <img src="/vaini/cutout-frente.png" alt="" />
+              <img src="/vaini/cutout-frente-512.webp" alt="" />
             </>
           ) : (
             <>

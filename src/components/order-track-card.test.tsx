@@ -362,7 +362,7 @@ describe('OrderTrackCard: foto del producto', () => {
     expect(photo).toHaveAttribute('src', 'https://cdn/rota.jpg');
     fireEvent.error(photo);
     expect(document.querySelector('img.alumno-track-card__thumb')).toBeNull();
-    expect(document.querySelector('.alumno-track-card__thumb--vaini img')).toHaveAttribute('src', '/vaini/cutout-frente.png');
+    expect(document.querySelector('.alumno-track-card__thumb--vaini img')).toHaveAttribute('src', '/vaini/cutout-frente-512.webp');
   });
 });
 

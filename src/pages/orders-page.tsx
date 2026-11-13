@@ -264,7 +264,7 @@ export function OrdersPage() {
         ) : null}
         {orders.length === 0 && !error && !loading ? (
           <div className="alumno-empty">
-            <img src="/vaini/cutout-frente.png" alt="" />
+            <img src="/vaini/cutout-frente-512.webp" alt="" />
             <p>Aún no has hecho pedidos.</p>
           </div>
         ) : (
@@ -358,7 +358,7 @@ export function OrdersPage() {
                   </>
                 ) : (
                   <div className="alumno-orders-desk__hint">
-                    <img src="/vaini/cutout-frente.png" alt="" />
+                    <img src="/vaini/cutout-frente-512.webp" alt="" />
                     <p>Elige un pedido para ver el seguimiento.</p>
                   </div>
                 )}

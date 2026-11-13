@@ -15,7 +15,7 @@ export function AlumnoLockup({
   const className = onDark ? 'alumno-lockup alumno-lockup--on-dark' : 'alumno-lockup';
   const content = (
     <>
-      <img src="/brand/vaiinilla-mark.png" alt="" width="36" height="36" />
+      <img src="/brand/vaiinilla-mark-128.webp" alt="" width="36" height="36" />
       <span translate="no">Vaiinilla</span>
     </>
   );
@@ -37,18 +37,22 @@ export function AlumnoLogo({
   onDark = false,
   className,
   alt = 'Vaiinilla',
+  loading,
 }: {
   onDark?: boolean;
   className?: string;
   alt?: string;
+  loading?: 'lazy' | 'eager';
 }) {
   return (
     <img
       className={className ?? 'alumno-logo'}
-      src={onDark ? '/brand/vaiinilla-logo-dark.png' : '/brand/vaiinilla-logo-light.png'}
+      src={onDark ? '/brand/vaiinilla-logo-dark-440.webp' : '/brand/vaiinilla-logo-light-440.webp'}
       alt={alt}
       width="280"
       height="220"
+      loading={loading}
+      decoding="async"
     />
   );
 }

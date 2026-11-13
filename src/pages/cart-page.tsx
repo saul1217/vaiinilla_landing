@@ -1074,10 +1074,10 @@ export function CartFilledView({
           return (
             <div className="alumno-line" key={`${line.productId}-${line.optionIds.join(',')}-${line.notes || ''}`}>
               {thumb ? (
-                <img className="alumno-line__thumb" src={thumb} alt="" />
+                <img className="alumno-line__thumb" src={thumb} alt="" loading="lazy" decoding="async" />
               ) : (
                 <div className="alumno-line__thumb alumno-line__thumb--vaini" aria-hidden="true">
-                  <img src="/vaini/cutout-frente.png" alt="" />
+                  <img src="/vaini/cutout-frente-512.webp" alt="" loading="lazy" decoding="async" />
                 </div>
               )}
               <div className="alumno-line__copy">

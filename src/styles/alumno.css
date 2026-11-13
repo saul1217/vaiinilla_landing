@@ -1088,8 +1088,8 @@ html[data-theme='dark'] .alumno-antojo img {
   object-fit: cover;
 }
 
-.alumno-place-thumb img[src$='cutout-frente.png'],
-.alumno-place-hero img[src$='cutout-frente.png'] {
+.alumno-place-thumb img[src$='cutout-frente-512.webp'],
+.alumno-place-hero img[src$='cutout-frente-512.webp'] {
   object-fit: contain;
   padding: 16px;
 }
