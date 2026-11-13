@@ -1,7 +1,7 @@
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { api } from './api';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { api, onUnauthorizedSession } from './api';
 import { canAcceptOrders, toCreateOrderInput } from './cart';
 
 const baseUrl = api.apiUrl;
@@ -333,5 +333,126 @@ describe('buyer API client', () => {
       }),
     );
     await expect(api.deleteIdentity('fresh-token')).resolves.toBeUndefined();
+  });
+  it('recarga con tarjeta: POST con monto e Idempotency-Key y GET del estado', async () => {
+    server.use(
+      http.post(`${baseUrl}/wallets/me/recargas-stripe`, async ({ request }) => {
+        expect(request.headers.get('Authorization')).toBe('Bearer jwt-client');
+        expect(request.headers.get('Idempotency-Key')).toBe('key-1');
+        expect(await request.json()).toEqual({ monto: '200.00' });
+        return HttpResponse.json(
+          {
+            data: {
+              recarga: { id: 'r1', usuario_id: 'u1', monto: '200.00', total_cobrado_cents: 21050, estado: 'pendiente_pago', creado_en: 'x' },
+              pago: { payment_intent_id: 'pi_1', stripe_account_id: 'acct_1', payment_status: 'pendiente_pago', currency: 'mxn', amount_cents: 21050, application_fee_cents: 600, client_secret: 'pi_1_secret', publishable_key: 'pk_test_1' },
+            },
+            meta: {},
+            error: null,
+          },
+          { status: 201 },
+        );
+      }),
+      http.get(`${baseUrl}/wallets/me/recargas-stripe/r1`, () =>
+        HttpResponse.json({
+          data: { recarga: { id: 'r1', usuario_id: 'u1', monto: '200.00', total_cobrado_cents: 21050, estado: 'acreditada', creado_en: 'x' } },
+          meta: {},
+          error: null,
+        }),
+      ),
+    );
+    await expect(api.startCardReload('jwt-client', '200.00', 'key-1')).resolves.toMatchObject({
+      recarga: { id: 'r1', total_cobrado_cents: 21050 },
+      pago: { client_secret: 'pi_1_secret' },
+    });
+    await expect(api.getCardReload('jwt-client', 'r1')).resolves.toMatchObject({ estado: 'acreditada' });
+  });
+
+  it('recarga fuera de rango devuelve el mensaje del backend', async () => {
+    server.use(
+      http.post(`${baseUrl}/wallets/me/recargas-stripe`, () =>
+        HttpResponse.json(
+          { data: null, error: { code: 'WALLET_RECHARGE_OUT_OF_RANGE', message: 'La recarga debe ser de $50.00 a $2000.00.' } },
+          { status: 422 },
+        ),
+      ),
+    );
+    await expect(api.startCardReload('jwt-client', '10.00', 'key-2')).rejects.toMatchObject({
+      status: 422,
+      code: 'WALLET_RECHARGE_OUT_OF_RANGE',
+    });
+  });
+});
+
+describe('modo papás', () => {
+  const unauthorized = { data: null, meta: {}, error: { code: 'UNAUTHENTICATED', message: 'Token vencido.' } };
+
+  it('lista a los hijos con el token del tutor y pide el contexto del hijo con Idempotency-Key', async () => {
+    server.use(
+      http.get(`${baseUrl}/tutelas`, ({ request }) => {
+        expect(request.headers.get('Authorization')).toBe('Bearer tutor');
+        return HttpResponse.json({
+          data: [{ usuario_id: 'u1', nombre: 'Tilin', estado: 'aprobada', saldo: '80.00', controles: null }],
+          meta: {},
+          error: null,
+        });
+      }),
+      http.post(`${baseUrl}/tutelas/u1/contexto`, ({ request }) => {
+        expect(request.headers.get('Authorization')).toBe('Bearer tutor');
+        expect(request.headers.get('Idempotency-Key')).toBeTruthy();
+        return HttpResponse.json({ data: { access_token: 'hijo', expires_in: 900 }, meta: {}, error: null });
+      }),
+    );
+    await expect(api.listDependents('tutor')).resolves.toMatchObject([{ userId: 'u1', balance: '80.00' }]);
+    await expect(api.issueDependentContext('tutor', 'u1')).resolves.toMatchObject({ access_token: 'hijo' });
+  });
+
+  it('lee la cartera y los pedidos del hijo con su token', async () => {
+    server.use(
+      http.get(`${baseUrl}/wallets/me`, ({ request }) => {
+        expect(request.headers.get('Authorization')).toBe('Bearer hijo');
+        return HttpResponse.json({
+          data: { cliente: { usuario_id: 'u1' }, wallet: { saldo: '80.00' }, movimientos: [] },
+          meta: {},
+          error: null,
+        });
+      }),
+      http.get(`${baseUrl}/pedidos`, ({ request }) => {
+        expect(request.headers.get('Authorization')).toBe('Bearer hijo');
+        return HttpResponse.json({ data: [order], meta: {}, error: null });
+      }),
+    );
+    await expect(api.getDependentWallet('hijo')).resolves.toMatchObject({ wallet: { saldo: '80.00' } });
+    await expect(api.listDependentOrders('hijo')).resolves.toMatchObject([{ folio: 42 }]);
+  });
+
+  it('un 401 con el token del hijo no cierra la sesión del tutor; con el del tutor sí', async () => {
+    const listener = vi.fn();
+    const stop = onUnauthorizedSession(listener);
+    server.use(
+      http.get(`${baseUrl}/wallets/me`, () => HttpResponse.json(unauthorized, { status: 401 })),
+      http.get(`${baseUrl}/tutelas`, () => HttpResponse.json(unauthorized, { status: 401 })),
+    );
+    await expect(api.getDependentWallet('hijo')).rejects.toMatchObject({ status: 401 });
+    expect(listener).not.toHaveBeenCalled();
+    await expect(api.listDependents('tutor')).rejects.toMatchObject({ status: 401 });
+    expect(listener).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  it('acepta el aviso vigente y devuelve la lista actualizada', async () => {
+    server.use(
+      http.post(`${baseUrl}/tutelas/consentimiento`, async ({ request }) => {
+        expect(request.headers.get('Idempotency-Key')).toBe('llave-1');
+        await expect(request.json()).resolves.toEqual({ consentimiento_version: '2026-10-21' });
+        return HttpResponse.json({
+          data: [{ usuario_id: 'u1', nombre: 'Tilin', estado: 'aprobada', requiere_consentimiento: false }],
+          meta: {},
+          error: null,
+        });
+      }),
+    );
+    await expect(api.acceptGuardianPrivacyNotice('tutor', '2026-10-21', 'llave-1')).resolves.toMatchObject([
+      { userId: 'u1', needsConsent: false },
+    ]);
   });
 });
