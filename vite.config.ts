@@ -60,7 +60,8 @@ export default defineConfig(({ mode, isSsrBuild }) => ({
       },
       workbox: {
         // App shell only. API, Stripe and Firebase always go to the network.
-        globPatterns: ['**/*.{js,css,html,woff2}', 'icons/*.png', 'brand/*.png'],
+        // Solo los WebP de marca que usa la interfaz; los PNG grandes (logos de correo y og) no se precargan.
+        globPatterns: ['**/*.{js,css,html,woff2}', 'icons/*.png', 'brand/*.webp'],
         // index.html trae la home prerenderizada; las demás rutas arrancan del shell vacío.
         navigateFallback: '/spa.html',
         globIgnores: ['google*.html', 'brand/og.png'],
