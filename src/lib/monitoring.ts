@@ -72,6 +72,11 @@ const PERSONAL_KEYS = new Set([
   'disponiblehoy',
   'limitediario',
   'umbralsaldobajo',
+  // Asistente de pedidos (#167): manda mensajes[].texto y recibe mensaje; puede traer nombres, alergias o datos libres.
+  'mensaje',
+  'texto',
+  'content',
+  'prompt',
 ]);
 
 /** Parámetros de URL que se tapan (tokens, códigos de un solo uso, secretos de Stripe y correos). */

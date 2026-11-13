@@ -329,6 +329,61 @@ describe('monitoring: alérgenos, notas, hotel, modo papás y llaves con secret'
   });
 });
 
+describe('monitoring: mensajes del asistente de pedidos (mensaje, texto, content y prompt)', () => {
+  it('tapa mensaje, texto, content y prompt en extra y contexts del evento', () => {
+    const out = send({
+      extra: {
+        asistente: {
+          peticion: { mensajes: [{ rol: 'cliente', texto: 'Soy Ana, alérgica a la nuez' }, { rol: 'asistente', Texto: 'Ok' }] },
+          respuesta: { mensaje: 'Ana, te recomiendo el bowl', quedan_mensajes: 38 },
+        },
+      },
+      contexts: { llm: { prompt: 'Cliente: Luis, mesa 4', content: 'respuesta libre', modelo: 'x' }, otra: { Mensaje: 'hola' } },
+    });
+    expect(out.extra).toEqual({
+      asistente: {
+        peticion: { mensajes: [{ rol: 'cliente', texto: '[Filtered]' }, { rol: 'asistente', Texto: '[Filtered]' }] },
+        respuesta: { mensaje: '[Filtered]', quedan_mensajes: 38 },
+      },
+    });
+    expect(out.contexts).toEqual({
+      llm: { prompt: '[Filtered]', content: '[Filtered]', modelo: 'x' },
+      otra: { Mensaje: '[Filtered]' },
+    });
+    expect(JSON.stringify(out)).not.toMatch(/Ana|Luis|nuez|bowl/);
+  });
+
+  it('tapa mensaje, texto, content y prompt en el data de breadcrumbs fetch y xhr', () => {
+    const fetchCrumb = crumb({
+      category: 'fetch',
+      data: {
+        method: 'POST',
+        url: 'https://api.vaiinilla.app/v1/asistente-cliente',
+        status_code: 200,
+        request_body: { mensajes: [{ rol: 'cliente', texto: 'Quiero algo sin gluten para Luis' }] },
+        response_body: JSON.stringify({ data: { mensaje: 'Luis, te sugiero...', quedan_mensajes: 39 } }),
+      },
+    });
+    expect(fetchCrumb?.data).toEqual({
+      method: 'POST',
+      url: 'https://api.vaiinilla.app/v1/asistente-cliente',
+      status_code: 200,
+      request_body: { mensajes: [{ rol: 'cliente', texto: '[Filtered]' }] },
+      response_body: JSON.stringify({ data: { mensaje: '[Filtered]', quedan_mensajes: 39 } }),
+    });
+
+    const xhrCrumb = crumb({
+      category: 'xhr',
+      data: { method: 'POST', status_code: 500, body: { prompt: 'Cliente Ana', content: 'texto libre', reintento: 1 } },
+    });
+    expect(xhrCrumb?.data).toEqual({
+      method: 'POST',
+      status_code: 500,
+      body: { prompt: '[Filtered]', content: '[Filtered]', reintento: 1 },
+    });
+  });
+});
+
 describe('monitoring: stack traces y request.env', () => {
   it('limpia filename, abs_path, vars y código de los frames de excepciones y threads, y request.env', () => {
     const frame = (url: string) => ({
