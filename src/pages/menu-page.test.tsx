@@ -90,12 +90,15 @@ vi.mock("../context/cart-context", () => ({
   }),
 }));
 
-function renderMenu() {
+function renderMenu(
+  props: { assistantEnabled?: boolean } = {},
+  entry: string | { pathname: string; state: unknown } = "/e/demo-a",
+) {
   return render(
-    <MemoryRouter initialEntries={["/e/demo-a"]}>
+    <MemoryRouter initialEntries={[entry]}>
       <ThemeProvider>
         <Routes>
-          <Route path="/e/:slug" element={<MenuPage />} />
+          <Route path="/e/:slug" element={<MenuPage {...props} />} />
           <Route path="/e/:slug/carrito" element={<p>Carrito</p>} />
           <Route path="/cuenta" element={<p>Cuenta login</p>} />
         </Routes>
@@ -328,5 +331,39 @@ describe("MenuPage", () => {
       else delete (document as { hidden?: boolean }).hidden;
       vi.useRealTimers();
     }
+  });
+
+  describe("asistente del cliente (bandera)", () => {
+    it("con la bandera apagada no enseña la entrada", async () => {
+      renderMenu({ assistantEnabled: false });
+      await screen.findByRole("button", { name: /chocolate frío/i });
+      expect(screen.queryByRole("link", { name: /pregúntame qué pedir/i })).not.toBeInTheDocument();
+    });
+
+    it("con la bandera prendida enseña la entrada al asistente del negocio", async () => {
+      renderMenu({ assistantEnabled: true });
+      const link = await screen.findByRole("link", { name: /pregúntame qué pedir/i });
+      expect(link).toHaveAttribute("href", "/e/demo-a/asistente");
+    });
+
+    it("si la tienda apagó el asistente para clientes no enseña la entrada", async () => {
+      vi.mocked(api).getEstablishment.mockResolvedValueOnce({
+        id: "1",
+        nombre: "Cafetería Demo A",
+        slug: "demo-a",
+        identificador_cliente_etiqueta: "Matrícula",
+        identificador_cliente_obligatorio: false,
+        asistente_clientes: false,
+      });
+      renderMenu({ assistantEnabled: true });
+      await screen.findByRole("button", { name: /chocolate frío/i });
+      await act(async () => { await Promise.resolve(); });
+      expect(screen.queryByRole("link", { name: /pregúntame qué pedir/i })).not.toBeInTheDocument();
+    });
+
+    it("abre la ficha del producto que manda el asistente", async () => {
+      renderMenu({}, { pathname: "/e/demo-a", state: { openProductId: 10 } });
+      expect(await screen.findByRole("button", { name: /agregar/i })).toBeInTheDocument();
+    });
   });
 });

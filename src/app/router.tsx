@@ -1,5 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { FloatingCallWaiter } from '../components/floating-call-waiter';
+import { AssistantPage } from '../pages/assistant-page';
+import { CUSTOMER_ASSISTANT_ENABLED } from '../lib/customer-assistant-flag';
 import { TrackingPage } from '../pages/tracking-page';
 import { AccountPage } from '../pages/account-page';
 import { CartPage } from '../pages/cart-page';
@@ -50,6 +52,8 @@ export function AppRoutes({ walletReload = SHOW_WALLET_RELOAD }: { walletReload?
         <Route path="/e/:slug" element={<MenuPage />} />
         <Route path="/e/:slug/carrito" element={<CartPage />} />
         <Route path="/e/:slug/canchas" element={<ReservationsPage />} />
+        {/* Asistente de pedidos del cliente: solo con VITE_FEATURE_ASISTENTE_CLIENTE=true. */}
+        {CUSTOMER_ASSISTANT_ENABLED ? <Route path="/e/:slug/asistente" element={<AssistantPage />} /> : null}
         <Route path="/e/:slug/m/:token" element={<TableJoinPage />} />
         <Route path="/:slug/m/:token" element={<TableJoinPage />} />
         <Route path="/e/:slug/m/:token/quien" element={<TableWhoPage />} />
