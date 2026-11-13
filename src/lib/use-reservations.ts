@@ -1,6 +1,7 @@
 // Estado de la pantalla de canchas: horario del día, selección, apartar y pagar. Espejo de
 // ReservationsViewModel (Android). El cliente HTTP se inyecta para poder probarlo sin red.
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { clampPlayers, playersForRequest, playersReady, rentalVocabulary } from '../boliche/bowling';
 import { VaiinillaApiError, errorMessage } from './api-error';
 import { createIdempotencyKey } from './idempotency';
 import {
@@ -19,7 +20,7 @@ export interface ReservationsClient {
   day: (date?: string) => Promise<CourtDay>;
   list: () => Promise<Reservation[]>;
   create: (
-    input: { courtId: number; start: number | null; durationMinutes: number },
+    input: { courtId: number; start: number | null; durationMinutes: number; players?: number | null },
     idempotencyKey: string,
   ) => Promise<Reservation>;
   pay: (id: string, method: ReservationPaymentMethod, idempotencyKey: string) => Promise<ReservationPayment>;
@@ -36,6 +37,8 @@ export interface ReservationsState {
   selectedStart: number | null;
   rentNow: boolean;
   selectedDuration: number | null;
+  /** Boliche: cuántos juegan (0 = sin anotar). */
+  players: number;
   mine: Reservation[];
   /** Reserva apartada esperando que el cliente elija cómo pagar. */
   pending: Reservation | null;
@@ -56,6 +59,7 @@ const INITIAL: ReservationsState = {
   selectedStart: null,
   rentNow: false,
   selectedDuration: null,
+  players: 0,
   mine: [],
   pending: null,
   working: false,
@@ -75,10 +79,12 @@ export function selectedCourt(state: ReservationsState): CourtSchedule | null {
 }
 
 export function canReserve(state: ReservationsState): boolean {
+  const court = selectedCourt(state);
   return (
-    selectedCourt(state) !== null &&
+    court !== null &&
     state.selectedDuration !== null &&
     (state.rentNow || state.selectedStart !== null) &&
+    playersReady(state.day?.bowling === true, state.players, court) &&
     !state.working
   );
 }
@@ -86,8 +92,12 @@ export function canReserve(state: ReservationsState): boolean {
 export function useReservations(
   client: ReservationsClient,
   onPaid: (payment: ReservationPayment, method: ReservationPaymentMethod) => void,
+  /** Pista ya elegida al abrir (la tarjeta «Rentar» del asistente); si no existe ese día, se ignora. */
+  initialCourtId: number | null = null,
 ) {
-  const [state, setState] = useState<ReservationsState>(INITIAL);
+  const [state, setState] = useState<ReservationsState>(() =>
+    initialCourtId === null ? INITIAL : { ...INITIAL, selectedCourtId: initialCourtId },
+  );
   const stateRef = useRef(state);
   stateRef.current = state;
   const clientRef = useRef(client);
@@ -132,9 +142,12 @@ export function useReservations(
         selectedCourtId: courtId,
         mine: mineResult.status === 'fulfilled' ? mineResult.value : current.mine,
         selectedStart: stillFree ? current.selectedStart : null,
+        players: day?.bowling ? clampPlayers(current.players, court) : current.players,
         error:
           current.error ??
-          (dayResult.status === 'rejected' ? `No pudimos cargar las canchas. ${errorMessage(dayResult.reason)}` : null),
+          (dayResult.status === 'rejected'
+            ? `No pudimos cargar las ${rentalVocabulary(current.day?.bowling === true).courts}. ${errorMessage(dayResult.reason)}`
+            : null),
       };
     });
   }, []);
@@ -168,7 +181,17 @@ export function useReservations(
   );
 
   const selectCourt = useCallback(
-    (courtId: number) => patch({ selectedCourtId: courtId, selectedStart: null, rentNow: false, selectedDuration: null }),
+    (courtId: number) => {
+      const next = stateRef.current.day?.courts.find((c) => c.id === courtId);
+      patch({
+        selectedCourtId: courtId,
+        selectedStart: null,
+        rentNow: false,
+        selectedDuration: null,
+        // Otra pista puede tener otra capacidad.
+        players: clampPlayers(stateRef.current.players, next),
+      });
+    },
     [patch],
   );
 
@@ -202,6 +225,10 @@ export function useReservations(
   );
 
   const selectDuration = useCallback((minutes: number) => patch({ selectedDuration: minutes }), [patch]);
+  const selectPlayers = useCallback(
+    (players: number) => patch({ players: clampPlayers(players, selectedCourt(stateRef.current)) }),
+    [patch],
+  );
   const dismissMessages = useCallback(() => patch({ error: null, denied: false, notice: null }), [patch]);
 
   /** Aparta la cancha y abre la elección del pago. */
@@ -211,11 +238,13 @@ export function useReservations(
     if (!canReserve(current) || !court || current.selectedDuration === null) return;
     patch({ working: true, error: null, denied: false, notice: null });
     try {
+      const players = playersForRequest(current.day?.bowling === true, current.players);
       const reservation = await clientRef.current.create(
         {
           courtId: court.id,
           start: current.rentNow ? null : current.selectedStart,
           durationMinutes: current.selectedDuration,
+          ...(players === null ? {} : { players }),
         },
         createIdempotencyKey(),
       );
@@ -225,6 +254,8 @@ export function useReservations(
         pending: reservation,
         selectedStart: null,
         rentNow: false,
+        // Los jugadores ya van en la reserva; la siguiente no hereda el número.
+        players: 0,
         mine: [reservation, ...now.mine.filter((r) => r.id !== reservation.id)],
       }));
     } catch (cause) {
@@ -234,7 +265,7 @@ export function useReservations(
       // Un 5xx sin mensaje útil del servidor también se explica: el botón nunca vuelve sin avisar.
       const serverFailure =
         cause instanceof VaiinillaApiError && cause.status >= 500
-          ? 'No pudimos apartar la cancha por un problema del servicio. Inténtalo de nuevo en un momento.'
+          ? `No pudimos apartar la ${rentalVocabulary(current.day?.bowling === true).court} por un problema del servicio. Inténtalo de nuevo en un momento.`
           : null;
       patch({ working: false, denied, error: `${serverFailure ?? errorMessage(cause)}${code}` });
     }
@@ -261,7 +292,8 @@ export function useReservations(
           ...now,
           working: false,
           pending: null,
-          notice: PAID_NOTICE[method],
+          notice:
+            now.day?.bowling === true ? PAID_NOTICE[method].replace('cancha', 'pista') : PAID_NOTICE[method],
           mine: now.mine.map((r) => (r.id === payment.reservation.id ? payment.reservation : r)),
         }));
         onPaidRef.current(payment, method);
@@ -314,6 +346,7 @@ export function useReservations(
     selectRentNow,
     selectStart,
     selectDuration,
+    selectPlayers,
     dismissMessages,
     reserve,
     resumePayment,

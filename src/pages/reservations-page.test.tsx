@@ -118,6 +118,28 @@ describe('ReservationsScreen', () => {
     expect(screen.queryByText('Cargando horarios…', { selector: 'p' })).not.toBeInTheDocument();
   });
 
+  it('abre con la pista que eligió el asistente; si no existe, con la primera rentable', async () => {
+    const client = makeClient();
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/e/padel/canchas']}>
+        <Routes>
+          <Route path="/e/:slug/canchas" element={<ReservationsScreen client={client} slug="padel" initialCourtId={8} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole('radio', { name: /cancha 2/i, checked: true })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /cancha 1/i })).toHaveAttribute('aria-checked', 'false');
+    unmount();
+    render(
+      <MemoryRouter initialEntries={['/e/padel/canchas']}>
+        <Routes>
+          <Route path="/e/:slug/canchas" element={<ReservationsScreen client={makeClient()} slug="padel" initialCourtId={99} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole('radio', { name: /cancha 1/i, checked: true })).toBeInTheDocument();
+  });
+
   it('muestra las canchas con su precio al cliente y cuándo se liberan', async () => {
     renderScreen(makeClient());
     expect(await screen.findByRole('radio', { name: /cancha 1/i })).toBeInTheDocument();
