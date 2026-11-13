@@ -52,6 +52,13 @@ const PERSONAL_KEYS = new Set([
   'lastname',
   'apellido',
   'apellidos',
+  'nombrecliente',
+  // Dinero del cliente, ubicación y referencia de entrega (cartera y pedido a domicilio).
+  'saldo',
+  'gastadohoy',
+  'lat',
+  'lng',
+  'referencia',
 ]);
 
 /** Parámetros de URL que se tapan (tokens, códigos de un solo uso, secretos de Stripe y correos). */

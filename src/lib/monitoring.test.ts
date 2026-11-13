@@ -218,6 +218,49 @@ describe('monitoring: datos personales', () => {
   });
 });
 
+describe('monitoring: saldo, consumo, ubicación, referencia y nombre del cliente', () => {
+  it('tapa saldo, gastado_hoy, lat, lng, referencia y nombre_cliente en cualquier forma de la llave', () => {
+    const b = crumb({
+      category: 'fetch',
+      message: 'GET /v1/wallets/me 200',
+      data: {
+        respuesta: { saldo: 350.5, gastado_hoy: 42, moneda: 'MXN' },
+        entrega: { lat: 19.4326, lng: -99.1332, referencia: 'Portón azul junto a la tienda', zona: 'centro' },
+        pedido: { id: 7, nombre_cliente: 'Ana López', total: 120 },
+        camel: { gastadoHoy: 10, nombreCliente: 'Luis', Saldo: '80.00', LAT: '19.1', 'LNG': '-99.2' },
+      },
+    });
+    expect(b?.data).toEqual({
+      respuesta: { saldo: '[Filtered]', gastado_hoy: '[Filtered]', moneda: 'MXN' },
+      entrega: { lat: '[Filtered]', lng: '[Filtered]', referencia: '[Filtered]', zona: 'centro' },
+      pedido: { id: 7, nombre_cliente: '[Filtered]', total: 120 },
+      camel: {
+        gastadoHoy: '[Filtered]',
+        nombreCliente: '[Filtered]',
+        Saldo: '[Filtered]',
+        LAT: '[Filtered]',
+        LNG: '[Filtered]',
+      },
+    });
+  });
+
+  it('tapa esas llaves en extra, contexts, JSON en texto y query_string del evento', () => {
+    const out = send({
+      extra: { cartera: { hijo: { saldo: 50, gastado_hoy: 15 } } },
+      contexts: { domicilio: { lat: 20.6597, lng: -103.3496 } },
+      breadcrumbs: [{ category: 'xhr', data: { body: JSON.stringify({ referencia: 'Casa blanca', nombre_cliente: 'Ana' }) } }],
+      request: { url: 'https://vaiinilla.app/a', query_string: { lat: '19.4', lng: '-99.1', mesa: '4' } },
+    });
+    expect(out.extra).toEqual({ cartera: { hijo: { saldo: '[Filtered]', gastado_hoy: '[Filtered]' } } });
+    expect(out.contexts).toEqual({ domicilio: { lat: '[Filtered]', lng: '[Filtered]' } });
+    expect(out.breadcrumbs?.[0]?.data).toEqual({
+      body: JSON.stringify({ referencia: '[Filtered]', nombre_cliente: '[Filtered]' }),
+    });
+    expect(out.request?.query_string).toEqual({ lat: '[Filtered]', lng: '[Filtered]', mesa: '4' });
+    expect(JSON.stringify(out)).not.toMatch(/20\.6597|Casa blanca|"Ana"/);
+  });
+});
+
 describe('monitoring: sin datos sensibles no cambia nada', () => {
   it('conserva breadcrumbs y eventos limpios tal cual', () => {
     const data = {
