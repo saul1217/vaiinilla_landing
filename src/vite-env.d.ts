@@ -19,6 +19,7 @@ interface ImportMetaEnv {
   readonly VITE_FEATURE_ASISTENTE_CLIENTE?: string;
   /** `true` prende las reservas de boliche del cliente (pistas y jugadores). Apagada por defecto. */
   readonly VITE_FEATURE_RESERVAS_BOLICHE?: string;
+  readonly VITE_FEATURE_CARTERA?: string;
 }
 
 interface ImportMeta {
