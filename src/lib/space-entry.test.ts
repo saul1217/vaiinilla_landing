@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from './api';
 import { VaiinillaApiError } from './api-error';
 import { guestSession } from './guest-session';
 import { enterSpace, parseEntry } from './space-entry';
+import { readSpace } from './space-session';
 
 vi.mock('./api', () => ({ api: { resolveSpace: vi.fn() } }));
 vi.mock('./guest-session', () => ({ guestSession: vi.fn(), forgetGuestEntry: vi.fn() }));
@@ -47,5 +48,59 @@ describe('lo que se lee en un QR, una etiqueta NFC o el teclado', () => {
     expect(parseEntry('hola')).toBeNull();
     expect(parseEntry('123')).toBeNull();
     expect(parseEntry('https://vaiinilla.app/pedir')).toBeNull();
+  });
+});
+
+describe('entrar con el QR de una habitación de hotel', () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_FEATURE_HOTEL', 'true');
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('con VITE_FEATURE_HOTEL apagada la habitación va al menú como cualquier espacio', async () => {
+    vi.stubEnv('VITE_FEATURE_HOTEL', '');
+    vi.mocked(guestSession).mockResolvedValue({} as never);
+    vi.spyOn(api, 'resolveSpace').mockResolvedValue({
+      establecimiento_slug: 'hotel-sol',
+      espacio_id: 12,
+      espacio_nombre: 'Habitación 101',
+      espacio_tipo: 'mesa',
+      establecimiento_nombre: 'Hotel Sol',
+      es_habitacion: true,
+    });
+    await expect(enterSpace('esp_puerta101')).resolves.toMatchObject({ destination: '/e/hotel-sol', esHabitacion: false });
+    expect(readSpace('hotel-sol')?.esHabitacion).toBeUndefined();
+  });
+
+  it('lleva al huésped a su estancia y guarda la habitación', async () => {
+    vi.mocked(guestSession).mockResolvedValue({} as never);
+    vi.spyOn(api, 'resolveSpace').mockResolvedValue({
+      establecimiento_slug: 'hotel-sol',
+      espacio_id: 12,
+      espacio_nombre: 'Habitación 101',
+      espacio_tipo: 'mesa',
+      establecimiento_nombre: 'Hotel Sol',
+      es_habitacion: true,
+    });
+    await expect(enterSpace('esp_puerta101')).resolves.toMatchObject({
+      destination: '/e/hotel-sol/hotel',
+      esHabitacion: true,
+    });
+    expect(readSpace('hotel-sol')).toMatchObject({ espacioId: 12, esHabitacion: true, qrToken: 'esp_puerta101' });
+  });
+
+  it('una mesa del restaurante del hotel sigue yendo al menú', async () => {
+    vi.mocked(guestSession).mockResolvedValue({} as never);
+    vi.spyOn(api, 'resolveSpace').mockResolvedValue({
+      establecimiento_slug: 'hotel-sol',
+      espacio_id: 3,
+      espacio_nombre: 'Mesa 3',
+      espacio_tipo: 'mesa',
+      establecimiento_nombre: 'Hotel Sol',
+    });
+    await expect(enterSpace('esp_mesa3')).resolves.toMatchObject({ destination: '/e/hotel-sol', esHabitacion: false });
+    expect(readSpace('hotel-sol')?.esHabitacion).toBeUndefined();
   });
 });

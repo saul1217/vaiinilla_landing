@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { AppShell } from '../components/app-shell';
 import { PedidoChargeOverlay } from '../components/pedido-charge-overlay';
 import { StripePaymentPanel } from '../components/stripe-payment-panel';
@@ -59,6 +59,23 @@ export function OrderDetailPage() {
   const [stripePolling, setStripePolling] = useState(
     () => hasStripeRedirectParams() || isStripeConfirming(id),
   );
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Al volver del 3D Secure, Stripe deja payment_intent_client_secret (y payment_intent y
+  // redirect_status) en la URL: se quitan al montar con replace, sin entrada nueva en el historial,
+  // como en la recarga de la cartera. El pedido queda marcado como «confirmando» para que, si la
+  // página se recarga ya sin esos parámetros, se siga preguntando al backend por el cobro.
+  // Es useEffect y no useLayoutEffect porque el router se suscribe al historial en un efecto de
+  // layout que corre después.
+  useEffect(() => {
+    if (!STRIPE_RETURN_PARAMS.some((name) => searchParams.has(name))) return;
+    if (id) markStripeConfirming(id);
+    const next = new URLSearchParams(searchParams);
+    for (const name of STRIPE_RETURN_PARAMS) next.delete(name);
+    setSearchParams(next, { replace: true });
+    // Solo al montar: la vuelta del 3DS llega una vez.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [localCanceled, setLocalCanceled] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [retrySessionReady, setRetrySessionReady] = useState(false);
@@ -529,6 +546,9 @@ function stripePayLabel(order: OrderDetail): string {
   if (!isAcceptedOrderToPay(order) || order.pago?.payment_status === 'fallido') return 'Reintentar pago';
   return order.anticipo ? `Pagar anticipo de ${formatAmount(order.anticipo)}` : 'Pagar pedido';
 }
+
+/** Lo que Stripe agrega a return_url al volver del 3D Secure; nunca debe quedarse en la URL. */
+const STRIPE_RETURN_PARAMS = ['payment_intent', 'payment_intent_client_secret', 'redirect_status'] as const;
 
 function hasStripeRedirectParams(): boolean {
   if (typeof window === 'undefined') return false;

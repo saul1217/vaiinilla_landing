@@ -2,7 +2,7 @@
 // Espejo de ReservationsScreen (Android). La renta se paga primero; sin pagar no se puede pedir
 // comida en la cancha. Pagar crea un pedido de renta normal y se sigue en su pantalla de pedido.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
 import { MotionSheet } from '../components/motion-sheet';
@@ -72,6 +72,9 @@ function turnPriceLabel(day: CourtDay, court: CourtSchedule, pricePerHour: strin
 
 export function ReservationsPage() {
   const { slug = '' } = useParams();
+  // El asistente del cliente abre las canchas con la pista de su tarjeta ya elegida.
+  const courtState = (useLocation().state as { courtId?: unknown } | null)?.courtId;
+  const initialCourtId = typeof courtState === 'number' && Number.isInteger(courtState) ? courtState : null;
   const { user, ready } = useAuth();
   const { context, openClientSession } = useBuyerSession();
   const [place, setPlace] = useState<PublicEstablishment | null>(null);
@@ -136,6 +139,7 @@ export function ReservationsPage() {
             slug={slug}
             cardOffered={offersCardPayment(place)}
             guest={!user}
+            initialCourtId={initialCourtId}
           />
         ) : error ? null : (
           <LoadingSkeleton shape="rows" label="Cargando tus reservaciones…" />
@@ -172,9 +176,12 @@ export function ReservationsScreen({
   slug,
   cardOffered = false,
   guest = false,
+  initialCourtId = null,
 }: {
   client: ReservationsClient;
   slug: string;
+  /** Pista ya elegida al abrir (desde el asistente). */
+  initialCourtId?: number | null;
   /** Tarjeta: solo si el dueño la activó en su panel. */
   cardOffered?: boolean;
   /** Sin cuenta: el pedido se sigue por su enlace de seguimiento, no en /cuenta. */
@@ -208,7 +215,7 @@ export function ReservationsScreen({
     void navigate(`/cuenta/pedidos/${order.id}`);
   }
 
-  const vm = useReservations(client, onPaid);
+  const vm = useReservations(client, onPaid, initialCourtId);
   const { state } = vm;
   // Boliche (con la bandera prendida): pistas, jugadores y duraciones por pista.
   const bowling = state.day?.bowling === true;

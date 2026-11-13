@@ -266,7 +266,7 @@ describe('CartPage a domicilio', () => {
         stripe_account_id: 'acct_test_001',
         payment_status: 'pendiente_pago',
         client_secret: 'pi_test_001_secret_test',
-        publishable_key: 'pk_test_51Vaiinilla', // gitleaks:allow
+        publishable_key: 'pk_test_51Vaiinilla', // gitleaks:allow (pk_test_ ficticia de prueba)
       },
     });
     const user = userEvent.setup();
