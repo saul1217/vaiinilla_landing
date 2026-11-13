@@ -92,8 +92,12 @@ export function canReserve(state: ReservationsState): boolean {
 export function useReservations(
   client: ReservationsClient,
   onPaid: (payment: ReservationPayment, method: ReservationPaymentMethod) => void,
+  /** Pista ya elegida al abrir (la tarjeta «Rentar» del asistente); si no existe ese día, se ignora. */
+  initialCourtId: number | null = null,
 ) {
-  const [state, setState] = useState<ReservationsState>(INITIAL);
+  const [state, setState] = useState<ReservationsState>(() =>
+    initialCourtId === null ? INITIAL : { ...INITIAL, selectedCourtId: initialCourtId },
+  );
   const stateRef = useRef(state);
   stateRef.current = state;
   const clientRef = useRef(client);
