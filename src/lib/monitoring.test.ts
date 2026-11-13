@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Breadcrumb, ErrorEvent } from '@sentry/react';
 import { beforeBreadcrumb, beforeSend, redactString, scrubUrl } from './monitoring';
+import monitoringSource from './monitoring.ts?raw';
 
 // Tokens de ejemplo (no reales), armados en partes para que el escáner de secretos no los tome por unos.
 const b64url = (text: string) => btoa(text).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
@@ -325,6 +326,75 @@ describe('monitoring: alérgenos, notas, hotel, modo papás y llaves con secret'
       hijo: { id: 'hijo-1', disponible_hoy: '[Filtered]', limite_diario: '[Filtered]', umbral_saldo_bajo: '[Filtered]', activo: true },
       controles: { disponibleHoy: '[Filtered]', 'límite_diario': '[Filtered]', UmbralSaldoBajo: '[Filtered]' },
     });
+  });
+});
+
+describe('monitoring: stack traces y request.env', () => {
+  it('limpia filename, abs_path, vars y código de los frames de excepciones y threads, y request.env', () => {
+    const frame = (url: string) => ({
+      filename: url,
+      abs_path: url,
+      function: 'cargarMesa',
+      lineno: 12,
+      colno: 4,
+      in_app: true,
+      vars: { token: 'abc', mesa: 4, correo: 'ana@correo.mx' },
+      context_line: `fetch('/v1/x', { headers: { Authorization: 'Bearer ${JWT}' } })`,
+      pre_context: [`const t = '${VILLO}';`],
+      post_context: ['return null;'],
+    });
+    const out = send({
+      exception: {
+        values: [
+          {
+            type: 'TypeError',
+            value: 'x is undefined',
+            stacktrace: {
+              frames: [
+                frame('https://vaiinilla.app/e/cafe/m/AbC123xyz?token=t1'),
+                frame('https://vaiinilla.app/assets/index-a1b2c3.js'),
+              ],
+            },
+          },
+        ],
+      },
+      threads: { values: [{ id: 1, stacktrace: { frames: [frame(`https://vaiinilla.app/seguimiento/tok_9?id_token=${JWT}`)] } }] },
+      request: { url: 'https://vaiinilla.app/', env: { REMOTE_ADDR: '10.0.0.1', referer: '/u/123?email=a@b.mx' } },
+    });
+    const frames = out.exception?.values?.[0]?.stacktrace?.frames;
+    expect(frames?.[0]).toMatchObject({
+      filename: 'https://vaiinilla.app/e/cafe/m/[Filtered]?token=[Filtered]',
+      abs_path: 'https://vaiinilla.app/e/cafe/m/[Filtered]?token=[Filtered]',
+      function: 'cargarMesa',
+      lineno: 12,
+      vars: { token: '[Filtered]', mesa: 4, correo: '[Filtered]' },
+      context_line: "fetch('/v1/x', { headers: { Authorization: 'Bearer [Filtered]' } })",
+      pre_context: ["const t = '[Filtered]';"],
+      post_context: ['return null;'],
+    });
+    // Los archivos del build no cambian, para que Sentry siga encontrando los source maps.
+    expect(frames?.[1]?.filename).toBe('https://vaiinilla.app/assets/index-a1b2c3.js');
+    expect(frames?.[1]?.abs_path).toBe('https://vaiinilla.app/assets/index-a1b2c3.js');
+    expect(out.threads?.values?.[0]?.stacktrace?.frames?.[0]?.filename).toBe(
+      'https://vaiinilla.app/seguimiento/[Filtered]?id_token=[Filtered]',
+    );
+    expect(out.request?.env).toEqual({ REMOTE_ADDR: '10.0.0.1', referer: '/u/[Filtered]?email=[Filtered]' });
+    expect(JSON.stringify(out)).not.toMatch(/AbC123xyz|t1|tok_9|eyJ|villo_3q2|ana@/);
+  });
+});
+
+describe('monitoring: teléfonos y compatibilidad con Safari', () => {
+  it('tapa teléfonos al inicio, en medio y seguidos, y respeta números que no son teléfono', () => {
+    expect(redactString('5512345678')).toBe('[telefono]');
+    expect(redactString('tel:5512345678 o (+52 55-1234-5678)')).toBe('tel:[telefono] o ([telefono])');
+    expect(redactString('5512345678 5598765432')).toBe('[telefono] [telefono]');
+    expect(redactString('pedido 12345, ts 1731234567890, v1.2.5512345678, id a5512345678')).toBe(
+      'pedido 12345, ts 1731234567890, v1.2.5512345678, id a5512345678',
+    );
+  });
+
+  it('no usa lookbehind en las expresiones regulares (Safari < 16.4 da SyntaxError al cargar el módulo)', () => {
+    expect(monitoringSource).not.toMatch(/\(\?<[=!]/);
   });
 });
 

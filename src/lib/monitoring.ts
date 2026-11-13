@@ -83,7 +83,9 @@ const SEARCH_PARAM = /([?&#;]q=)[^&#"'\r\n]*/gi;
 const PATH_TOKENS = /(\/(?:m|seguimiento|u)\/)[^/?#\s"']+/gi;
 const EMAIL = /[^\s@"'<>/?&=]+@[^\s@"'<>]+\.[^\s@"'<>]+/g;
 /** Teléfonos de 10 dígitos (México), con lada internacional opcional (+52) y espacios o guiones. */
-const PHONE = /(?<![\w.+])(?:\+\d{1,3}[ -]?)?(?:\d[ -]?){9}\d(?![\w.])/g;
+// Sin lookbehind: Safari anterior a 16.4 no lo soporta y lanzaría SyntaxError al cargar el módulo.
+// El carácter previo se captura en $1 y se devuelve en el replace.
+const PHONE = /(^|[^\w.+])(?:\+\d{1,3}[ -]?)?(?:\d[ -]?){9}\d(?![\w.])/g;
 /** JWT dentro de un texto: el encabezado en base64url de `{"` siempre empieza con eyJ. */
 const JWT_IN_TEXT = /eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*/g;
 /** Valor completo con forma de JWT aunque no empiece con eyJ (segmentos largos para no tocar dominios ni versiones). */
@@ -117,7 +119,7 @@ export function scrubUrl(value: string): string {
     .replace(SEARCH_PARAM, `$1${FILTERED}`)
     .replace(PATH_TOKENS, `$1${FILTERED}`)
     .replace(EMAIL, EMAIL_MARK)
-    .replace(PHONE, PHONE_MARK);
+    .replace(PHONE, `$1${PHONE_MARK}`);
 }
 
 /** Redacta un texto suelto: JWT, `villo_`, Bearer, claves sensibles en JSON incrustado, URLs, correos y teléfonos. */
@@ -222,6 +224,21 @@ function scrubHeaders(headers: Record<string, string> | undefined): void {
   }
 }
 
+type Stacktrace = NonNullable<NonNullable<Sentry.ErrorEvent['exception']>['values']>[number]['stacktrace'];
+
+/** Limpia los frames: la URL del archivo puede ser la de la página (`/m/<token>`, `?token=`), y vars o el código pueden traer datos. */
+function redactStacktrace(stacktrace: Stacktrace): void {
+  stacktrace?.frames?.forEach((frame) => {
+    if (frame.filename) frame.filename = redactString(frame.filename);
+    if (frame.abs_path) frame.abs_path = redactString(frame.abs_path);
+    if (frame.module) frame.module = redactString(frame.module);
+    if (frame.context_line) frame.context_line = redactString(frame.context_line);
+    if (frame.pre_context) frame.pre_context = frame.pre_context.map(redactString);
+    if (frame.post_context) frame.post_context = frame.post_context.map(redactString);
+    redactDeep(frame.vars);
+  });
+}
+
 export function beforeSend(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
   if (event.request) {
     if (event.request.url) event.request.url = redactString(event.request.url);
@@ -230,6 +247,7 @@ export function beforeSend(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
     // El cuerpo de la petición puede traer contraseñas o datos personales que no son tokens: no se envía.
     delete event.request.data;
     scrubHeaders(event.request.headers);
+    redactDeep(event.request.env);
   }
   // Usuario: correo, IP, nombre e id no salen.
   delete event.user;
@@ -239,7 +257,9 @@ export function beforeSend(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
   if (event.logentry?.params) redactDeep(event.logentry.params);
   event.exception?.values?.forEach((ex) => {
     if (ex.value) ex.value = redactString(ex.value);
+    redactStacktrace(ex.stacktrace);
   });
+  event.threads?.values?.forEach((thread) => redactStacktrace(thread.stacktrace));
   redactDeep(event.extra);
   redactDeep(event.contexts);
   redactDeep(event.tags);
