@@ -4,6 +4,7 @@ import { api } from './api';
 import { VaiinillaApiError } from './api-error';
 import { rememberPlace } from './last-place';
 import { forgetGuestEntry, guestSession } from './guest-session';
+import { hotelPath, isHotelGuestEnabled } from './hotel-routes';
 import { rememberSpace } from './space-session';
 
 export type EntryTarget = { kind: 'space'; token: string } | { kind: 'store'; slug: string };
@@ -42,9 +43,11 @@ export function parseEntry(text: string): EntryTarget | null {
 export async function enterSpace(
   token: string,
   slugHint?: string,
-): Promise<{ destination: string; tipo: string | null; nombre: string }> {
+): Promise<{ destination: string; tipo: string | null; nombre: string; esHabitacion: boolean }> {
   const resolved = await api.resolveSpace(token, slugHint);
   rememberPlace(resolved.establecimiento_slug);
+  // Con la bandera del hotel apagada, una habitación entra como cualquier otro espacio.
+  const esHabitacion = isHotelGuestEnabled() && resolved.es_habitacion === true;
   rememberSpace({
     slug: resolved.establecimiento_slug,
     espacioId: resolved.espacio_id,
@@ -52,6 +55,7 @@ export async function enterSpace(
     tipo: resolved.espacio_tipo ?? undefined,
     // El backend acepta el token o el código para unirse a la mesa compartida.
     qrToken: token,
+    ...(esHabitacion ? { esHabitacion: true } : {}),
   });
   // El escaneo es la única ocasión en que se manda el espacio_token: crea o renueva la
   // sesión de invitado con él. Después solo se usa la entrada que devuelve el servidor.
@@ -63,9 +67,13 @@ export async function enterSpace(
     });
   }
   return {
-    destination: `/e/${resolved.establecimiento_slug}`,
+    // Una habitación abre la bienvenida del huésped (o su código de estancia), no el menú.
+    destination: esHabitacion
+      ? hotelPath(resolved.establecimiento_slug)
+      : `/e/${resolved.establecimiento_slug}`,
     tipo: resolved.espacio_tipo,
     nombre: resolved.espacio_nombre,
+    esHabitacion,
   };
 }
 

@@ -18,9 +18,14 @@ export function TableJoinPage() {
     if (!ready) return;
     let active = true;
     void enterSpace(token, slug)
-      .then(({ destination, tipo, nombre }) => {
+      .then(({ destination, tipo, nombre, esHabitacion }) => {
         if (!active) return;
         setKind(tipo);
+        // Habitación de hotel: no se comparte como mesa; el huésped entra con su código de estancia.
+        if (esHabitacion) {
+          void navigate(destination, { replace: true });
+          return;
+        }
         // Espacio compartible (mesa): antes del menú se elige quién se es.
         if (isSharableSpace(tipo)) {
           const base = slug ? `/e/${slug}/m/${encodeURIComponent(token)}/quien` : `/m/${encodeURIComponent(token)}/quien`;

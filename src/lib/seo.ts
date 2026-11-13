@@ -34,6 +34,8 @@ export const PUBLIC_PAGES: Readonly<Record<string, PageMeta>> = {
 /** Rutas de cuenta, tokens de seguimiento y mesas: nunca se indexan. */
 const PRIVATE_SECTIONS = ['/cuenta', '/acceso', '/seguimiento', '/u', '/__qa'];
 const TABLE_TOKEN = /\/m\/[^/]+/;
+/** Huésped de hotel: código de estancia, cuenta, solicitudes y pedido al cuarto (checkout). */
+const HOTEL_GUEST = /^\/e\/[^/]+\/hotel(?:\/|$)/;
 
 export function normalizePath(pathname: string): string {
   const trimmed = pathname.replace(/\/+$/, '');
@@ -44,7 +46,8 @@ export function isPrivatePath(pathname: string): boolean {
   const path = normalizePath(pathname);
   return (
     PRIVATE_SECTIONS.some((section) => path === section || path.startsWith(`${section}/`)) ||
-    TABLE_TOKEN.test(path)
+    TABLE_TOKEN.test(path) ||
+    HOTEL_GUEST.test(path)
   );
 }
 
@@ -80,6 +83,8 @@ export function robotsTxt(indexable: boolean): string {
     // `$` y `/` en vez del prefijo suelto: `Disallow: /cuenta` también bloquearía /cuentas-x.
     ...PRIVATE_SECTIONS.flatMap((section) => [`Disallow: ${section}$`, `Disallow: ${section}/`]),
     'Disallow: /*/m/',
+    'Disallow: /e/*/hotel$',
+    'Disallow: /e/*/hotel/',
     '',
     `Sitemap: ${SITE_URL}/sitemap.xml`,
     '',
