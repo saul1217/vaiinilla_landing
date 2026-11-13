@@ -19,3 +19,9 @@ export const SHOW_WALLET = SHOW_WALLET_RELOAD;
 export function isHomeDeliveryEnabled(value: string | undefined = import.meta.env.VITE_FEATURE_DOMICILIO): boolean {
   return value?.trim() === 'true';
 }
+
+/**
+ * Modo papás: el tutor ve el saldo, los movimientos y lo que pidió cada hijo (como en Android).
+ * Apagado por defecto; se prende por ambiente con `VITE_FEATURE_MODO_PAPAS=true`.
+ */
+export const SHOW_PARENT_MODE = parseFeatureFlag(import.meta.env.VITE_FEATURE_MODO_PAPAS);

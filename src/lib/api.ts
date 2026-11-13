@@ -44,6 +44,13 @@ import {
   type ReservationPaymentMethod,
 } from './reservations';
 import { cachedResource, resourceKeys } from './resource-cache';
+import {
+  parseDependents,
+  parsePrivacyNotice,
+  type Dependent,
+  type DependentContextGrant,
+  type PrivacyNotice,
+} from './guardianship';
 
 const PUBLIC_DATA_MAX_AGE_MS = 60_000;
 
@@ -54,6 +61,11 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
   idempotent?: boolean;
   idempotencyKey?: string;
+  /**
+   * Si un 401 cierra la sesión del comprador (por defecto sí). Las llamadas con el token de un
+   * hijo (modo papás) lo apagan: un token del hijo vencido se renueva, no saca al tutor.
+   */
+  notifyOnUnauthorized?: boolean;
 }
 
 import { notifyUnauthorized, onUnauthorizedSession, type UnauthorizedListener } from './unauthorized';
@@ -61,7 +73,7 @@ export { notifyUnauthorized, onUnauthorizedSession, type UnauthorizedListener };
 
 /** Cliente HTTP único del backend: encabezados, Idempotency-Key, sobre `{ data, error }` y errores. */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<ApiEnvelope<T>> {
-  const { token, body, idempotent, idempotencyKey, ...requestOptions } = options;
+  const { token, body, idempotent, idempotencyKey, notifyOnUnauthorized = true, ...requestOptions } = options;
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');
   if (body !== undefined) headers.set('Content-Type', 'application/json');
@@ -98,7 +110,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       message: 'El servidor no devolvió una respuesta válida.',
     };
     const retryAfter = Number(response.headers.get('Retry-After')) || undefined;
-    if (response.status === 401) {
+    if (response.status === 401 && notifyOnUnauthorized) {
       notifyUnauthorized();
     }
     throw new VaiinillaApiError(response.status, error, retryAfter);
@@ -433,6 +445,60 @@ export const api = {
     return (
       await request<{ recarga: CardReload }>(`/wallets/me/recargas-stripe/${encodeURIComponent(id)}`, { token })
     ).data.recarga;
+  },
+
+  // Modo papás (padres e hijos). Las rutas ya existen en el backend de develop.
+
+  /** Hijos del tutor en este negocio (`GET /tutelas`), con el contexto de cliente del tutor. */
+  async listDependents(token: string): Promise<Dependent[]> {
+    return parseDependents((await request<unknown>('/tutelas', { token, cache: 'no-store' })).data);
+  },
+
+  /** Contexto del hijo para leer su cartera y sus pedidos. Cada emisión lleva su propia llave. */
+  async issueDependentContext(token: string, dependentId: string): Promise<DependentContextGrant> {
+    return (
+      await request<DependentContextGrant>(`/tutelas/${encodeURIComponent(dependentId)}/contexto`, {
+        method: 'POST',
+        token,
+        idempotent: true,
+      })
+    ).data;
+  },
+
+  /** Cartera del hijo (saldo y movimientos) con su token. */
+  async getDependentWallet(childToken: string): Promise<WalletData> {
+    return (
+      await request<WalletData>('/wallets/me', { token: childToken, cache: 'no-store', notifyOnUnauthorized: false })
+    ).data;
+  },
+
+  /** Pedidos del hijo con su token (lo que compró en Caja, en su app o lo que se le apartó). */
+  async listDependentOrders(childToken: string): Promise<OrderDetail[]> {
+    return (
+      await request<OrderDetail[]>(`/pedidos${params({ limit: 30 })}`, {
+        token: childToken,
+        cache: 'no-store',
+        notifyOnUnauthorized: false,
+      })
+    ).data;
+  },
+
+  async getGuardianPrivacyNotice(token: string): Promise<PrivacyNotice | null> {
+    return parsePrivacyNotice((await request<unknown>('/tutelas/consentimiento', { token })).data);
+  },
+
+  /** Acepta el aviso vigente para todos los hijos que no lo tienen; responde la lista actualizada. */
+  async acceptGuardianPrivacyNotice(token: string, version: string, idempotencyKey: string): Promise<Dependent[]> {
+    return parseDependents(
+      (
+        await request<unknown>('/tutelas/consentimiento', {
+          method: 'POST',
+          token,
+          idempotencyKey,
+          body: { consentimiento_version: version },
+        })
+      ).data,
+    );
   },
 
   async resolveSpace(token: string, slug?: string): Promise<ResolvedTableSpace> {

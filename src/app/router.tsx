@@ -19,8 +19,9 @@ import { SupportPage } from '../pages/support-page';
 import { TableJoinPage } from '../pages/table-join-page';
 import { TableWhoPage } from '../pages/table-who-page';
 import { WalletPage, WalletQrPage } from '../pages/wallet-page';
+import { ChildAccountPage, ParentModePage } from '../pages/parent-mode-page';
 import { WalletReloadPage } from '../pages/wallet-reload-page';
-import { SHOW_WALLET_RELOAD } from '../lib/features';
+import { SHOW_PARENT_MODE, SHOW_WALLET_RELOAD } from '../lib/features';
 import { useRouteMeta } from '../lib/use-route-meta';
 import {
   AlumnoQaCartPage,
@@ -43,7 +44,10 @@ export function AppRouter() {
   );
 }
 
-export function AppRoutes({ walletReload = SHOW_WALLET_RELOAD }: { walletReload?: boolean } = {}) {
+export function AppRoutes({
+  walletReload = SHOW_WALLET_RELOAD,
+  parentMode = SHOW_PARENT_MODE,
+}: { walletReload?: boolean; parentMode?: boolean } = {}) {
   useRouteMeta();
   return (
     <>
@@ -78,6 +82,12 @@ export function AppRoutes({ walletReload = SHOW_WALLET_RELOAD }: { walletReload?
         <Route path="/cuenta/saldo" element={<WalletPage />} />
         <Route path="/u/:id" element={<WalletQrPage />} />
         {walletReload ? <Route path="/cuenta/saldo/recargar" element={<WalletReloadPage />} /> : null}
+        {parentMode ? (
+          <>
+            <Route path="/cuenta/hijos" element={<ParentModePage />} />
+            <Route path="/cuenta/hijos/:id" element={<ChildAccountPage />} />
+          </>
+        ) : null}
         {import.meta.env.DEV ? (
           <>
             <Route path="/__qa/menu-mesa/*" element={<MenuMesaQaPage />} />

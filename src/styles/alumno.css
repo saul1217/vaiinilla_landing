@@ -8484,3 +8484,37 @@ html[data-theme='dark'] body[data-shell='alumno'] .alumno-card--ticket .alumno-c
 .alumno-home-map__address { margin: 0; min-height: 1.3em; font-weight: 700; }
 .alumno-delivery-date { display: grid; gap: 10px; margin-bottom: 14px; }
 .alumno-delivery-date__days { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Modo papás (/cuenta/hijos): Mis hijos y la cuenta de un hijo. */
+.parent-mode__children { list-style: none; margin: 0; padding: 0; }
+.parent-mode__child,
+.parent-mode__entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+.parent-mode__entry { flex-direction: column; align-items: flex-start; gap: 2px; }
+.parent-mode__child:focus-visible,
+.parent-mode__entry:focus-visible { outline: 3px solid var(--lime); outline-offset: 3px; }
+.parent-mode__child-name,
+.parent-mode__child-money { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.parent-mode__child-money { align-items: flex-end; text-align: right; }
+.parent-mode__child--waiting { opacity: 0.8; }
+.parent-mode__hero { margin: 12px 0; }
+.parent-mode__today,
+.parent-mode__controls dl {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+}
+.parent-mode__today { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.parent-mode__today dt,
+.parent-mode__controls dt { font-size: 0.8rem; color: var(--muted); }
+.parent-mode__today dd,
+.parent-mode__controls dd { margin: 2px 0 0; font-weight: 700; }
+.parent-mode__controls dl { margin-top: 0; }
+.parent-mode__notice { margin-top: 12px; display: grid; gap: 10px; }
+.parent-mode__check { display: flex; gap: 8px; align-items: flex-start; }

@@ -19,10 +19,13 @@ import { LoadingSkeleton } from '../components/loading-skeleton';
 import { RollingNumber } from '../components/rolling-number';
 import { peekResource, resourceKeys, storeResource } from '../lib/resource-cache';
 import { initialsFrom } from '../lib/initials';
-import { SHOW_WALLET_RELOAD } from '../lib/features';
+import { SHOW_PARENT_MODE, SHOW_WALLET_RELOAD } from '../lib/features';
 import { movementLabel, walletRechargeNote } from '../lib/wallet-reload';
 
-export function WalletPage({ walletReload = SHOW_WALLET_RELOAD }: { walletReload?: boolean } = {}) {
+export function WalletPage({
+  walletReload = SHOW_WALLET_RELOAD,
+  parentMode = SHOW_PARENT_MODE,
+}: { walletReload?: boolean; parentMode?: boolean } = {}) {
   const { user, ready } = useAuth();
   const { cart } = useCart();
   const { context, openClientSession } = useBuyerSession();
@@ -117,6 +120,13 @@ export function WalletPage({ walletReload = SHOW_WALLET_RELOAD }: { walletReload
         <h1 className="sr-only">Mi saldo</h1>
         {error ? <p className="alumno-error">{error}</p> : null}
         {loading && !wallet && !error ? <LoadingSkeleton shape="wallet" label="Cargando saldo…" /> : null}
+        {/* Modo papás: la entrada no descarga a los hijos; su perfil se pide al abrir "Mis hijos". */}
+        {parentMode ? (
+          <Link className="alumno-card parent-mode__entry" to="/cuenta/hijos">
+            <strong>Mis hijos</strong>
+            <span className="alumno-muted">Ve el saldo y lo que compran tus hijos</span>
+          </Link>
+        ) : null}
         {wallet ? (
           <WalletBoardView
             saldo={wallet.wallet.saldo}
