@@ -348,6 +348,8 @@ export interface WalletSnapshot {
   establecimiento_id: string | null;
   saldo: string;
   actualizado_en: string | null;
+  /** Con «Pagar con saldo» apagado el saldo se conserva pero no se gasta ni se recarga. */
+  saldo_congelado?: boolean;
 }
 
 export interface WalletMovement {
@@ -368,6 +370,32 @@ export interface WalletData {
   };
   wallet: WalletSnapshot;
   movimientos: WalletMovement[];
+  /** Rango de la recarga con tarjeta del negocio ("50.00"); solo viene en la cartera propia. */
+  recarga_tarjeta?: { minima: string | null; maxima: string | null };
+}
+
+/** POST/GET /wallets/me/recargas-stripe: `monto` entra al saldo; `total_cobrado_cents` es lo que se cobra. */
+export interface CardReload {
+  id: string;
+  usuario_id: string;
+  monto: string;
+  total_cobrado_cents: number;
+  estado: string;
+  creado_en: string;
+}
+
+export interface CardReloadCheckout {
+  recarga: CardReload;
+  pago: {
+    payment_intent_id: string;
+    stripe_account_id: string;
+    payment_status: string;
+    currency: string;
+    amount_cents: number;
+    application_fee_cents: number;
+    client_secret: string;
+    publishable_key?: string | null;
+  };
 }
 
 export interface CartLine {

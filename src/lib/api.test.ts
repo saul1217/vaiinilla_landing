@@ -334,4 +334,51 @@ describe('buyer API client', () => {
     );
     await expect(api.deleteIdentity('fresh-token')).resolves.toBeUndefined();
   });
+  it('recarga con tarjeta: POST con monto e Idempotency-Key y GET del estado', async () => {
+    server.use(
+      http.post(`${baseUrl}/wallets/me/recargas-stripe`, async ({ request }) => {
+        expect(request.headers.get('Authorization')).toBe('Bearer jwt-client');
+        expect(request.headers.get('Idempotency-Key')).toBe('key-1');
+        expect(await request.json()).toEqual({ monto: '200.00' });
+        return HttpResponse.json(
+          {
+            data: {
+              recarga: { id: 'r1', usuario_id: 'u1', monto: '200.00', total_cobrado_cents: 21050, estado: 'pendiente_pago', creado_en: 'x' },
+              pago: { payment_intent_id: 'pi_1', stripe_account_id: 'acct_1', payment_status: 'pendiente_pago', currency: 'mxn', amount_cents: 21050, application_fee_cents: 600, client_secret: 'pi_1_secret', publishable_key: 'pk_test_1' },
+            },
+            meta: {},
+            error: null,
+          },
+          { status: 201 },
+        );
+      }),
+      http.get(`${baseUrl}/wallets/me/recargas-stripe/r1`, () =>
+        HttpResponse.json({
+          data: { recarga: { id: 'r1', usuario_id: 'u1', monto: '200.00', total_cobrado_cents: 21050, estado: 'acreditada', creado_en: 'x' } },
+          meta: {},
+          error: null,
+        }),
+      ),
+    );
+    await expect(api.startCardReload('jwt-client', '200.00', 'key-1')).resolves.toMatchObject({
+      recarga: { id: 'r1', total_cobrado_cents: 21050 },
+      pago: { client_secret: 'pi_1_secret' },
+    });
+    await expect(api.getCardReload('jwt-client', 'r1')).resolves.toMatchObject({ estado: 'acreditada' });
+  });
+
+  it('recarga fuera de rango devuelve el mensaje del backend', async () => {
+    server.use(
+      http.post(`${baseUrl}/wallets/me/recargas-stripe`, () =>
+        HttpResponse.json(
+          { data: null, error: { code: 'WALLET_RECHARGE_OUT_OF_RANGE', message: 'La recarga debe ser de $50.00 a $2000.00.' } },
+          { status: 422 },
+        ),
+      ),
+    );
+    await expect(api.startCardReload('jwt-client', '10.00', 'key-2')).rejects.toMatchObject({
+      status: 422,
+      code: 'WALLET_RECHARGE_OUT_OF_RANGE',
+    });
+  });
 });
