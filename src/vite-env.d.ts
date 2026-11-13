@@ -15,6 +15,7 @@ interface ImportMetaEnv {
   readonly VITE_ALLOW_UNPUBLISHED_LEGAL_TESTING?: string;
   readonly VITE_STRIPE_PUBLISHABLE_KEY?: string;
   readonly VITE_SENTRY_DSN?: string;
+  readonly VITE_FEATURE_HOTEL?: string;
   /** Asistente de pedidos del cliente: solo con 'true' (apagado por defecto). */
   readonly VITE_FEATURE_ASISTENTE_CLIENTE?: string;
   readonly VITE_FEATURE_DOMICILIO?: string;

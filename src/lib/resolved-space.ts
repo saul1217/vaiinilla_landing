@@ -4,6 +4,8 @@ export interface ResolvedTableSpace {
   espacio_tipo: string | null;
   establecimiento_slug: string;
   establecimiento_nombre: string | null;
+  /** Solo en un hotel y solo si el espacio es una habitación (`espacio.es_habitacion`). */
+  es_habitacion?: true;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -45,5 +47,7 @@ export function normalizeResolvedSpace(
     espacio_tipo: asString(espacio.tipo) ?? asString(root.espacio_tipo) ?? asString(root.tipo),
     establecimiento_slug: slug,
     establecimiento_nombre: asString(establecimiento.nombre) ?? asString(root.establecimiento_nombre),
+    // El backend solo manda el campo en un hotel: en cualquier otro negocio el espacio queda igual.
+    ...(espacio.es_habitacion === true ? { es_habitacion: true as const } : {}),
   };
 }
