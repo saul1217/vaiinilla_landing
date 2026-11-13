@@ -51,3 +51,5 @@ d225a833b1fffe00c16ee1cd0794a455e8b7166c:src/lib/env.ts:generic-api-key:25
 9f21695494dece9a21e1631726df678b3388b4c2:src/pages/cart-home-delivery.test.tsx:generic-api-key:268
 # La misma pk_test_ ficticia, ya en develop por el squash del #169 (línea 269)
 75a165b2c4ea3bff354ba358c19fc172c14d8412:src/pages/cart-home-delivery.test.tsx:generic-api-key:269
+# La misma pk_test_ ficticia, en el merge de develop dentro de bot/55-pedido-domicilio-mapa (gitleaks revisa todas las ramas)
+3d8f03ec50ff0af5d4979ffdcaa8fd0eb0c45fab:src/pages/cart-home-delivery.test.tsx:generic-api-key:269
