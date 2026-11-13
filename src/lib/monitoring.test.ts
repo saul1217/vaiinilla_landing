@@ -91,7 +91,8 @@ describe('monitoring: token del hijo en modo papás', () => {
       request: { url: `https://vaiinilla.app/cuenta/saldo?child_token=abc&hijo=1` },
     });
     expect(out.message).toBe('401 renovando el contexto del hijo {"access_token":"[Filtered]"');
-    expect(out.extra).toEqual({ modoPapas: { hijo: { id: 'hijo-1', token: '[Filtered]', nombre: 'Luis' } } });
+    // nombre también se tapa desde que es llave personal (nombre del invitado del asistente).
+    expect(out.extra).toEqual({ modoPapas: { hijo: { id: 'hijo-1', token: '[Filtered]', nombre: '[Filtered]' } } });
     expect(out.contexts).toEqual({ tutela: { sesion: '[Filtered]' } });
     expect(out.tags).toEqual({ child_token: '[Filtered]', pantalla: 'modo-papas' });
     expect(out.request?.url).toBe('https://vaiinilla.app/cuenta/saldo?child_token=[Filtered]&hijo=1');
@@ -462,6 +463,86 @@ describe('monitoring: llaves del chat dentro de JSON incompleto en texto', () =>
   it('el breadcrumb de console con JSON cortado del asistente sale sin el texto del cliente', () => {
     const b = crumb({ category: 'console', message: 'respuesta parcial {"data":{"mensaje":"Ana, te sugiero el bowl","quedan' });
     expect(b?.message).toBe('respuesta parcial {"data":{"mensaje":"[Filtered]","quedan');
+  });
+});
+
+describe('monitoring: llaves del asistente en español e inglés (detalle, opciones, nombre, text, note, notes, message)', () => {
+  const NEW_KEYS = ['detalle', 'opciones', 'nombre', 'text', 'note', 'notes', 'message'] as const;
+
+  it.each(NEW_KEYS)('tapa "%s" en extra, contexts y el data de un breadcrumb, en cualquier forma de la llave', (key) => {
+    const upper = key.toUpperCase();
+    const capital = key.charAt(0).toUpperCase() + key.slice(1);
+    const out = send({
+      extra: { asistente: { [key]: 'Soy Ana, alérgica a la nuez', [`_${upper}-`]: 'mesa 4 de Luis', otro: 'ok' } },
+      contexts: { chat: { lista: [{ [capital]: ['Ana', 'Luis'] }] } },
+    });
+    expect(out.extra).toEqual({ asistente: { [key]: '[Filtered]', [`_${upper}-`]: '[Filtered]', otro: 'ok' } });
+    expect(out.contexts).toEqual({ chat: { lista: [{ [capital]: '[Filtered]' }] } });
+    const b = crumb({ category: 'fetch', data: { response_body: JSON.stringify({ data: { [key]: 'Ana' } }), status_code: 200 } });
+    expect(b?.data).toEqual({ response_body: JSON.stringify({ data: { [key]: '[Filtered]' } }), status_code: 200 });
+    expect(JSON.stringify(out)).not.toMatch(/Ana|Luis|nuez/);
+  });
+
+  it.each(NEW_KEYS)('tapa "%s" dentro de un JSON cortado en texto', (key) => {
+    expect(redactString(`fallo {"${key}":"Ana \\"sin nuez\\"","id":1`)).toBe(`fallo {"${key}":"[Filtered]","id":1`);
+  });
+
+  it('tapa las formas reales del asistente: llamar_mesero.detalle, opciones, nombre del invitado, turnos y carrito', () => {
+    const out = send({
+      extra: {
+        respuesta: {
+          mensaje: 'Listo',
+          llamar_mesero: { motivo: 'otro', detalle: 'Ana necesita silla para bebé' },
+          opciones: [{ id: 1, etiqueta: 'Sin nuez' }],
+        },
+        invitado: { nombre: 'Luis Pérez' },
+        turnos: [{ fromCustomer: true, text: 'soy Luis, mesa 4' }],
+        respuestaParseada: { message: 'Luis, te sugiero el bowl' },
+        linea: { productId: 7, quantity: 1, note: 'alergia al huevo' },
+        carrito: { updates: [{ productId: 7, optionIds: [], notes: 'para Ana', quantity: 2 }] },
+      },
+    });
+    expect(out.extra).toEqual({
+      respuesta: { mensaje: '[Filtered]', llamar_mesero: { motivo: 'otro', detalle: '[Filtered]' }, opciones: '[Filtered]' },
+      invitado: { nombre: '[Filtered]' },
+      turnos: [{ fromCustomer: true, text: '[Filtered]' }],
+      respuestaParseada: { message: '[Filtered]' },
+      linea: { productId: 7, quantity: 1, note: '[Filtered]' },
+      carrito: { updates: [{ productId: 7, optionIds: [], notes: '[Filtered]', quantity: 2 }] },
+    });
+    expect(JSON.stringify(out)).not.toMatch(/Ana|Luis|huevo|bebé|nuez|bowl/);
+  });
+
+  it('no tapa llaves parecidas que no están en la lista (la coincidencia es exacta, no por substring)', () => {
+    const similar = {
+      detalles: 'a',
+      detalle_id: 'b',
+      opcion: 'c',
+      opciones_ids: 'd',
+      nombres: 'e',
+      nombre_producto: 'f',
+      sobrenombre: 'g',
+      texts: 'h',
+      context: 'i',
+      textColor: 'j',
+      notebook: 'k',
+      noted: 'l',
+      footnote: 'm',
+      messages: 'n',
+      messageId: 'o',
+      errorMessage: 'p',
+    };
+    const out = send({ extra: { ...similar } });
+    expect(out.extra).toEqual(similar);
+    expect(crumb({ category: 'ui', data: { ...similar } })?.data).toEqual(similar);
+    const text = '{"detalles":"a", "nombre_producto":"f", "texts":"h", "noted":"l", "messages":"n", "errorMessage":"p"';
+    expect(redactString(text)).toBe(text);
+  });
+
+  it('message y text de nivel superior del evento siguen saliendo (solo se limpian como texto)', () => {
+    const out = send({ message: 'Error de red', breadcrumbs: [{ category: 'console', message: 'GET /v1/menu 500' }] });
+    expect(out.message).toBe('Error de red');
+    expect(out.breadcrumbs?.[0]?.message).toBe('GET /v1/menu 500');
   });
 });
 

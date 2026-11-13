@@ -78,6 +78,16 @@ const PERSONAL_KEYS = new Set([
   'texto',
   'content',
   'prompt',
+  // Asistente (#167), segunda vuelta: llamar_mesero.detalle, las opciones que ofrece, el nombre del invitado
+  // y las llaves en inglés de AssistantTurn.text, AssistantOrderLine.note, AssistantReply.message y
+  // las notes del carrito (assistant-cart.ts). Coincidencia exacta con la llave normalizada.
+  'detalle',
+  'opciones',
+  'nombre',
+  'text',
+  'note',
+  'notes',
+  'message',
 ]);
 
 /** Parámetros de URL que se tapan (tokens, códigos de un solo uso, secretos de Stripe y correos). */
@@ -102,7 +112,7 @@ const VILLO_IN_TEXT = /villo_[A-Za-z0-9_-]{43}/g;
 const BEARER_IN_TEXT = /(\bBearer\s+)[^\s"',;]+/gi;
 /** `"token": "..."`, `"password": "..."` y similares dentro de un texto que no es JSON completo. */
 const SENSITIVE_IN_JSON_TEXT =
-  /("(?:[A-Za-z_-]*token[A-Za-z_-]*|[A-Za-z_-]*secret[A-Za-z_-]*|password|cookie|authorization|oobCode|email|correo|telefono|phone|mensaje|texto|content|prompt|nota)"\s*:\s*")(?:[^"\\]|\\.)*"/gi;
+  /("(?:[A-Za-z_-]*token[A-Za-z_-]*|[A-Za-z_-]*secret[A-Za-z_-]*|password|cookie|authorization|oobCode|email|correo|telefono|phone|mensaje|texto|content|prompt|nota|detalle|opciones|nombre|text|note|notes|message)"\s*:\s*")(?:[^"\\]|\\.)*"/gi;
 
 /** Minúsculas, sin acentos (NFD sin diacríticos) y sin `_` ni `-`: `Alérgenos` y `alergenos` cuentan igual. */
 function normalizeKey(key: string): string {
