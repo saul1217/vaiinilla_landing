@@ -384,6 +384,87 @@ describe('monitoring: mensajes del asistente de pedidos (mensaje, texto, content
   });
 });
 
+describe('monitoring: nota de las líneas del pedido del asistente', () => {
+  it('tapa nota en extra y contexts con la forma pedido.lineas[].nota', () => {
+    const out = send({
+      extra: {
+        asistente: {
+          pedido: {
+            lineas: [
+              { producto_id: 'p1', cantidad: 2, nota: 'Sin nuez, Ana es alérgica' },
+              { producto_id: 'p2', cantidad: 1, Nota: 'para Luis, mesa 4' },
+              { producto_id: 'p3', cantidad: 1, nota: null },
+            ],
+          },
+        },
+      },
+      contexts: { carrito: { linea: { nota: 'Llamar al 5512345678', producto_id: 'p4' } } },
+    });
+    expect(out.extra).toEqual({
+      asistente: {
+        pedido: {
+          lineas: [
+            { producto_id: 'p1', cantidad: 2, nota: '[Filtered]' },
+            { producto_id: 'p2', cantidad: 1, Nota: '[Filtered]' },
+            { producto_id: 'p3', cantidad: 1, nota: null },
+          ],
+        },
+      },
+    });
+    expect(out.contexts).toEqual({ carrito: { linea: { nota: '[Filtered]', producto_id: 'p4' } } });
+    expect(JSON.stringify(out)).not.toMatch(/Ana|Luis|nuez|5512345678/);
+  });
+
+  it('tapa nota en el data de breadcrumbs fetch y xhr', () => {
+    const fetchCrumb = crumb({
+      category: 'fetch',
+      data: {
+        method: 'POST',
+        url: 'https://api.vaiinilla.app/v1/asistente-cliente',
+        status_code: 200,
+        response_body: JSON.stringify({ data: { pedido: { lineas: [{ producto_id: 'p1', cantidad: 1, nota: 'Sin gluten' }] } } }),
+      },
+    });
+    expect(fetchCrumb?.data).toEqual({
+      method: 'POST',
+      url: 'https://api.vaiinilla.app/v1/asistente-cliente',
+      status_code: 200,
+      response_body: JSON.stringify({ data: { pedido: { lineas: [{ producto_id: 'p1', cantidad: 1, nota: '[Filtered]' }] } } }),
+    });
+
+    const xhrCrumb = crumb({
+      category: 'xhr',
+      data: { method: 'POST', status_code: 422, body: { lineas: [{ nota: 'alergia al huevo', cantidad: 3 }] } },
+    });
+    expect(xhrCrumb?.data).toEqual({
+      method: 'POST',
+      status_code: 422,
+      body: { lineas: [{ nota: '[Filtered]', cantidad: 3 }] },
+    });
+  });
+});
+
+describe('monitoring: llaves del chat dentro de JSON incompleto en texto', () => {
+  it('tapa mensaje, texto, content, prompt y nota en un JSON cortado o mezclado con texto', () => {
+    expect(
+      redactString(
+        'fallo al parsear {"mensaje":"Hola Ana", "texto":"soy Luis", "content":"libre", "Prompt":"mesa 4", "nota":"sin nuez", "cantidad":2',
+      ),
+    ).toBe(
+      'fallo al parsear {"mensaje":"[Filtered]", "texto":"[Filtered]", "content":"[Filtered]", "Prompt":"[Filtered]", "nota":"[Filtered]", "cantidad":2',
+    );
+    // Comillas escapadas dentro del valor tampoco dejan pasar el resto.
+    expect(redactString('cuerpo: {"nota":"dijo \\"sin nuez\\" para Ana","id":1')).toBe('cuerpo: {"nota":"[Filtered]","id":1');
+    // Llaves parecidas que no son del chat no se tocan.
+    expect(redactString('{"notario":"x", "contenido_id":"c1"')).toBe('{"notario":"x", "contenido_id":"c1"');
+  });
+
+  it('el breadcrumb de console con JSON cortado del asistente sale sin el texto del cliente', () => {
+    const b = crumb({ category: 'console', message: 'respuesta parcial {"data":{"mensaje":"Ana, te sugiero el bowl","quedan' });
+    expect(b?.message).toBe('respuesta parcial {"data":{"mensaje":"[Filtered]","quedan');
+  });
+});
+
 describe('monitoring: stack traces y request.env', () => {
   it('limpia filename, abs_path, vars y código de los frames de excepciones y threads, y request.env', () => {
     const frame = (url: string) => ({
