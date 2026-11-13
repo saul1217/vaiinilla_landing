@@ -39,6 +39,8 @@ interface AuthCopy {
   panelTitle: string;
 }
 
+// Nueve escenas distintas, una cada 40° del anillo (.is-1 a .is-9 en alumno.css). AUTH_SCENES usa
+// los mismos archivos para que el navegador no descargue dos veces las escenas que se repiten.
 const SPLASH_BUBBLES = [
   { src: '/vaini/scene-laptop-256.webp', className: 'is-1' },
   { src: '/vaini/scene-taller-256.webp', className: 'is-2' },
@@ -52,10 +54,10 @@ const SPLASH_BUBBLES = [
 ] as const;
 
 const AUTH_SCENES = [
-  { src: '/vaini/scene-oxxo-512.webp', className: 'is-oxxo' },
-  { src: '/vaini/scene-tacos-512.webp', className: 'is-tacos' },
-  { src: '/vaini/scene-camion-512.webp', className: 'is-camion' },
-  { src: '/vaini/scene-moto-512.webp', className: 'is-moto' },
+  { src: '/vaini/scene-oxxo-256.webp', className: 'is-oxxo' },
+  { src: '/vaini/scene-tacos-256.webp', className: 'is-tacos' },
+  { src: '/vaini/scene-camion-256.webp', className: 'is-camion' },
+  { src: '/vaini/scene-moto-256.webp', className: 'is-moto' },
 ] as const;
 
 const AUTH_COPY = {
@@ -795,7 +797,7 @@ function AuthSplit({
         ))}
       </div>
       <section className="alumno-auth__brand">
-        <AlumnoLogo onDark className="alumno-auth__logo" />
+        <AlumnoLogo onDark className="alumno-auth__logo" loading="lazy" />
         <p className="alumno-kicker">{copy.kicker}</p>
         <h2 className="alumno-auth__headline">{copy.headline}</h2>
         <p className="alumno-auth__brand-lead">{copy.lead}</p>
