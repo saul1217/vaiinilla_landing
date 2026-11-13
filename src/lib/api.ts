@@ -20,6 +20,7 @@ import type {
   CatalogResponse,
   ClientContextResponse,
   CreateOrderInput,
+  HomeDeliveryQuote,
   IdentityRegistration,
   IdentityRegistrationInput,
   LegalVersions,
@@ -312,6 +313,18 @@ export const api = {
         token,
         idempotencyKey,
         body: input,
+      })
+    ).data;
+  },
+
+  /** ¿El reparto del negocio llega a ese punto y cuánto cuesta? (POST /pedidos/reparto/cotizar). */
+  async quoteHomeDelivery(token: string, lat: number, lng: number): Promise<HomeDeliveryQuote> {
+    return (
+      await request<HomeDeliveryQuote>('/pedidos/reparto/cotizar', {
+        method: 'POST',
+        token,
+        idempotent: true,
+        body: { lat, lng },
       })
     ).data;
   },
