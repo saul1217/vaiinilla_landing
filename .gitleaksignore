@@ -49,11 +49,11 @@ d225a833b1fffe00c16ee1cd0794a455e8b7166c:src/lib/env.ts:generic-api-key:25
 20c377667ff3f83043ae00555f49a78a65479505:src/pages/order-detail-page.test.tsx:generic-api-key:358
 # Stripe publishable key de prueba ficticia (fixture pk_test_) en la rama bot/55-pedido-domicilio-mapa (PR #169); gitleaks escanea todas las ramas (fetch-depth: 0) y tumbaba los demás PR
 9f21695494dece9a21e1631726df678b3388b4c2:src/pages/cart-home-delivery.test.tsx:generic-api-key:268
-# Stripe publishable key de prueba ficticia (fixture pk_test_) de cart-home-delivery.test.tsx en el squash de #169 (domicilio) en develop (75a165b, línea 269)
+# Stripe publishable key de prueba ficticia (fixture pk_test_) en el squash de #169 (domicilio) en develop
 75a165b2c4ea3bff354ba358c19fc172c14d8412:src/pages/cart-home-delivery.test.tsx:generic-api-key:269
 # La misma pk_test ficticia en los merges de develop con #169 (gitleaks la reporta en el primer commit que ve)
 84ab61204748e288be9d722542fd2e3f84d3c485:src/pages/cart-home-delivery.test.tsx:generic-api-key:269
-# La misma pk_test ficticia en el merge de develop en bot/55 (3d8f03e); gitleaks 8.18.4 de CI la reporta ahí
+# La misma pk_test_ ficticia, en el merge de develop dentro de bot/55-pedido-domicilio-mapa (gitleaks revisa todas las ramas)
 3d8f03ec50ff0af5d4979ffdcaa8fd0eb0c45fab:src/pages/cart-home-delivery.test.tsx:generic-api-key:269
-# La misma pk_test ficticia en el merge de develop en bot/60 (8b3a858); gitleaks 8.18.4 la reporta al escanear solo esta rama
+# La misma pk_test_ ficticia, en el merge de develop dentro de bot/60-redaccion-sentry-landing
 8b3a858adc73135faf14653446c395216d10af10:src/pages/cart-home-delivery.test.tsx:generic-api-key:269
