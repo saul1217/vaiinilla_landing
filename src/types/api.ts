@@ -129,6 +129,8 @@ export interface CatalogProduct {
   disponible: boolean;
   imagen_url: string | null;
   grupos_opcion: CatalogOptionGroup[];
+  /** Encargos: días que tarda en prepararse (0 a 14). Ausente (back viejo) = 0. */
+  dias_preparacion?: number;
 }
 
 export interface CatalogResponse {
@@ -155,6 +157,12 @@ export interface OperationalStatus {
   anticipo_porcentaje?: number | null;
   /** Banco, CLABE y titular para pagar por transferencia al recibir. */
   datos_transferencia?: string | null;
+  /** Encargos: viaja (true o false) solo si el negocio es repostería, reparte o toma encargos. */
+  encargos_requieren_aceptar?: boolean;
+  /** Hasta cuántos días adelante se puede pedir. */
+  dias_adelanto_pedido?: number;
+  /** "18:00": pasada esa hora, hoy ya no cuenta como día de margen. */
+  hora_corte_pedido?: string | null;
 }
 
 export interface HomeDeliveryStatus {
@@ -371,6 +379,8 @@ export interface CreateOrderInput {
   al_recibir?: boolean;
   /** A domicilio con `stripe`: la tarjeta cobra el anticipo y el resto se paga en la puerta. */
   con_anticipo?: boolean;
+  /** Encargo: el día de entrega, fecha de calendario `AAAA-MM-DD`. */
+  fecha_entrega?: string;
 }
 
 export interface StripePaymentSession {
