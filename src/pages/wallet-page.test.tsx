@@ -72,12 +72,12 @@ vi.mock('../context/buyer-session', () => ({
   }),
 }));
 
-function renderWallet() {
+function renderWallet(walletReload?: boolean) {
   return render(
     <MemoryRouter initialEntries={['/cuenta/saldo']}>
       <ThemeProvider>
         <Routes>
-          <Route path="/cuenta/saldo" element={<WalletPage />} />
+          <Route path="/cuenta/saldo" element={<WalletPage walletReload={walletReload} />} />
           <Route path="/cuenta" element={<p>Cuenta splash</p>} />
         </Routes>
       </ThemeProvider>
@@ -198,6 +198,37 @@ describe('WalletPage', () => {
     expect(await screen.findByText(/cuenta splash/i)).toBeInTheDocument();
     expect(getMyWallet).not.toHaveBeenCalled();
     expect(listAccesses).not.toHaveBeenCalled();
+  });
+
+  it('con la cartera prendida, Recargar abre la recarga y los movimientos usan los nombres de Android', async () => {
+    getMyWallet.mockResolvedValue({
+      cliente: { usuario_id: 'u1', nombre: 'Ana Pérez', identificador_cliente: null },
+      wallet: { id: 'w1', usuario_id: 'u1', establecimiento_id: 'e1', saldo: '125.00', actualizado_en: null },
+      movimientos: [
+        { id: 'm2', tipo: 'recarga_stripe', descripcion: 'Recarga', monto: '100.00', saldo_posterior: '125.00', pedido_id: null, creado_en: '2026-09-15T00:00:00Z' },
+      ],
+    });
+    renderWallet(true);
+    expect(await screen.findByText('$125.00')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^recargar$/i })).toHaveAttribute('href', '/cuenta/saldo/recargar');
+    expect(screen.getByText('Recarga con tarjeta')).toBeInTheDocument();
+  });
+
+  it('con la cartera prendida y el saldo congelado, no ofrece recargar y dice por qué', async () => {
+    getMyWallet.mockResolvedValue({
+      cliente: { usuario_id: 'u1', nombre: 'Ana Pérez', identificador_cliente: null },
+      wallet: { id: 'w1', usuario_id: 'u1', establecimiento_id: 'e1', saldo: '125.00', actualizado_en: null, saldo_congelado: true },
+      movimientos: [],
+    });
+    renderWallet(true);
+    expect(await screen.findByText(/tu saldo está congelado/i)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^recargar$/i })).not.toBeInTheDocument();
+  });
+
+  it('con la cartera apagada, Recargar sigue yendo al QR de Caja', async () => {
+    renderWallet(false);
+    expect(await screen.findByText('$125.00')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^recargar$/i })).toHaveAttribute('href', '/u/u1');
   });
 
   it('error de saldo no fabrica un board de QA', async () => {

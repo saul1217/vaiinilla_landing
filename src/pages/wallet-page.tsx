@@ -19,8 +19,10 @@ import { LoadingSkeleton } from '../components/loading-skeleton';
 import { RollingNumber } from '../components/rolling-number';
 import { peekResource, resourceKeys, storeResource } from '../lib/resource-cache';
 import { initialsFrom } from '../lib/initials';
+import { SHOW_WALLET_RELOAD } from '../lib/features';
+import { movementLabel, walletRechargeNote } from '../lib/wallet-reload';
 
-export function WalletPage() {
+export function WalletPage({ walletReload = SHOW_WALLET_RELOAD }: { walletReload?: boolean } = {}) {
   const { user, ready } = useAuth();
   const { cart } = useCart();
   const { context, openClientSession } = useBuyerSession();
@@ -35,7 +37,8 @@ export function WalletPage() {
   const [allowsBalance, setAllowsBalance] = useState(true);
   const [placeName, setPlaceName] = useState('');
   const userId = wallet?.wallet.usuario_id || wallet?.cliente.usuario_id;
-  const reloadHref = userId ? `/u/${userId}` : '/cuenta';
+  // Con la cartera prendida, «Recargar» abre la recarga (Caja o tarjeta de prueba); si no, el QR de Caja.
+  const reloadHref = walletReload ? '/cuenta/saldo/recargar' : userId ? `/u/${userId}` : '/cuenta';
 
   useEffect(() => {
     if (!ready) return;
@@ -121,7 +124,13 @@ export function WalletPage() {
             placeName={placeName}
             accountInitials={initialsFrom(user?.displayName, user?.email)}
             reloadHref={reloadHref}
-            allowsBalance={allowsBalance}
+            allowsBalance={allowsBalance && !(walletReload && wallet.wallet.saldo_congelado === true)}
+            rechargeNote={
+              walletReload
+                ? walletRechargeNote({ frozen: wallet.wallet.saldo_congelado === true, allowsBalance })
+                : null
+            }
+            androidLabels={walletReload}
             movimientos={wallet.movimientos}
             menuPeek={menuPeek}
           />
@@ -138,6 +147,8 @@ export function WalletBoardView({
   accountInitials = 'V',
   reloadHref,
   allowsBalance = true,
+  rechargeNote = null,
+  androidLabels = false,
   movimientos,
   menuPeek = [],
 }: {
@@ -148,6 +159,10 @@ export function WalletBoardView({
   reloadHref: string;
   /** Si el lugar apagó el saldo, no se ofrece recargar ni mostrar el QR. */
   allowsBalance?: boolean;
+  /** Por qué no se puede recargar (saldo congelado o recargas apagadas); solo con la cartera prendida. */
+  rechargeNote?: string | null;
+  /** Nombres de movimientos como Android («Recarga en Caja», «Recarga con tarjeta»). */
+  androidLabels?: boolean;
   movimientos: WalletData['movimientos'];
   menuPeek?: CatalogProduct[];
 }) {
@@ -168,6 +183,11 @@ export function WalletBoardView({
           <p className="alumno-wallet-balance">
             <RollingNumber value={formatAmount(saldo, 'always')} />
           </p>
+          {rechargeNote ? (
+            <p className="alumno-muted" role="note">
+              {rechargeNote}
+            </p>
+          ) : null}
         </section>
         <div className="alumno-wallet-shortcuts">
           <div className="alumno-actions-3" data-count={allowsBalance ? 3 : 2}>
@@ -216,7 +236,7 @@ export function WalletBoardView({
               {visibleMovimientos.map((item) => (
                 <li key={item.id}>
                   <span>
-                    <strong>{item.descripcion}</strong>
+                    <strong>{androidLabels ? movementLabel(item.tipo, item.descripcion) : item.descripcion}</strong>
                     <span className="alumno-muted">{item.tipo}</span>
                   </span>
                   <strong>{formatAmount(item.monto, 'always')}</strong>

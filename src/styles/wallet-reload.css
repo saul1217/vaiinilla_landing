@@ -1,0 +1,58 @@
+/* Recargar saldo (cartera del cliente, detrás de VITE_FEATURE_CARTERA). */
+.wallet-reload .alumno-card {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.wallet-reload__balance {
+  text-align: center;
+}
+
+.wallet-reload__methods,
+.wallet-reload__quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.wallet-reload__quick {
+  margin-bottom: 0;
+}
+
+.wallet-reload__amount {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.wallet-reload__amount input {
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-size: 1.1rem;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.wallet-reload__breakdown {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.wallet-reload__breakdown div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wallet-reload__breakdown dd {
+  margin: 0;
+}
+
+.wallet-reload__holder {
+  font-weight: 800;
+}
