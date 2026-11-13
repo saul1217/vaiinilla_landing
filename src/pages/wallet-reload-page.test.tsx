@@ -293,7 +293,8 @@ describe('WalletReloadPage', () => {
     await user.click(await screen.findByRole('button', { name: 'Seguir al pago' }));
     await user.click(await screen.findByRole('button', { name: 'Pagar ahora' }));
     expect(await screen.findByText('Listo, entraron $200 a tu saldo')).toBeInTheDocument();
-    expect(sessionStorage.getItem('vaiinilla.buyer.idempotency.v1') ?? '').not.toContain('|200.00');
+    // La llave del cobro acreditado se olvida: el mapa (v2, llaves con hash) queda vacío.
+    expect(JSON.parse(sessionStorage.getItem('vaiinilla.buyer.idempotency.v2') ?? '{}')).toEqual({});
   });
 
   it('si la tarjeta no pasa, la recarga sale de la URL y se puede reintentar', async () => {
