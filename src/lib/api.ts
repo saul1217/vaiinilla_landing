@@ -45,11 +45,25 @@ import {
 } from './reservations';
 import { cachedResource, resourceKeys } from './resource-cache';
 import {
+  encodeWeekOrders,
+  parseChildMenuCalendar,
+  parseDependent,
   parseDependents,
+  parseLinkCode,
+  parseMyControls,
   parsePrivacyNotice,
+  parseStudentRequest,
+  parseStudentRequests,
+  type ChildMenuCalendar,
   type Dependent,
   type DependentContextGrant,
+  type LinkCode,
+  type MyGuardianControls,
   type PrivacyNotice,
+  type RefundMethod,
+  type ScheduledDayOrder,
+  type StudentRequest,
+  type StudentRequestKind,
 } from './guardianship';
 
 const PUBLIC_DATA_MAX_AGE_MS = 60_000;
@@ -449,6 +463,29 @@ export const api = {
 
   // Modo papás (padres e hijos). Las rutas ya existen en el backend de develop.
 
+  /** Recarga con tarjeta a la cartera del hijo, con su token (un 401 no cierra la sesión del tutor). */
+  async startDependentCardReload(childToken: string, monto: string, idempotencyKey: string): Promise<CardReloadCheckout> {
+    return (
+      await request<CardReloadCheckout>('/wallets/me/recargas-stripe', {
+        method: 'POST',
+        token: childToken,
+        body: { monto },
+        idempotencyKey,
+        notifyOnUnauthorized: false,
+      })
+    ).data;
+  },
+
+  async getDependentCardReload(childToken: string, id: string): Promise<CardReload> {
+    return (
+      await request<{ recarga: CardReload }>(`/wallets/me/recargas-stripe/${encodeURIComponent(id)}`, {
+        token: childToken,
+        cache: 'no-store',
+        notifyOnUnauthorized: false,
+      })
+    ).data.recarga;
+  },
+
   /** Hijos del tutor en este negocio (`GET /tutelas`), con el contexto de cliente del tutor. */
   async listDependents(token: string): Promise<Dependent[]> {
     return parseDependents((await request<unknown>('/tutelas', { token, cache: 'no-store' })).data);
@@ -499,6 +536,227 @@ export const api = {
         })
       ).data,
     );
+  },
+
+  /** Con el código de la escuela, el tutor puede agregar hijos (`tutor_habilitado` de estado-operativo). */
+  async unlockParent(token: string, schoolCode: string, idempotencyKey: string): Promise<void> {
+    await request<unknown>('/tutelas/habilitar', {
+      method: 'POST',
+      token,
+      idempotencyKey,
+      body: { codigo_union: schoolCode },
+    });
+  },
+
+  async addDependent(
+    token: string,
+    input: { name: string; studentId: string; group: string | null; consentVersion: string },
+    idempotencyKey: string,
+  ): Promise<Dependent | null> {
+    const body: Record<string, unknown> = { nombre: input.name.trim(), matricula: input.studentId.trim() };
+    const group = input.group?.trim();
+    if (group) body.grupo = group;
+    body.consentimiento_version = input.consentVersion;
+    return parseDependent(
+      (await request<unknown>('/tutelas/dependientes', { method: 'POST', token, idempotencyKey, body })).data,
+    );
+  },
+
+  async linkDependent(token: string, code: string, consentVersion: string, idempotencyKey: string): Promise<Dependent | null> {
+    return parseDependent(
+      (
+        await request<unknown>('/tutelas/vincular', {
+          method: 'POST',
+          token,
+          idempotencyKey,
+          body: { codigo: code, consentimiento_version: consentVersion },
+        })
+      ).data,
+    );
+  },
+
+  /** El principal cambia todo; los demás tutores solo pueden mandar `umbral_saldo_bajo`. */
+  async updateDependent(
+    token: string,
+    dependentId: string,
+    body: Record<string, unknown>,
+    idempotencyKey: string,
+  ): Promise<Dependent | null> {
+    return parseDependent(
+      (
+        await request<unknown>(`/tutelas/${encodeURIComponent(dependentId)}`, {
+          method: 'PATCH',
+          token,
+          idempotencyKey,
+          body,
+        })
+      ).data,
+    );
+  },
+
+  async unlinkDependent(token: string, dependentId: string, idempotencyKey: string): Promise<void> {
+    await request<unknown>(`/tutelas/${encodeURIComponent(dependentId)}`, { method: 'DELETE', token, idempotencyKey });
+  },
+
+  async createGuardianInviteCode(token: string, dependentId: string, idempotencyKey: string): Promise<LinkCode> {
+    return parseLinkCode(
+      (
+        await request<unknown>(`/tutelas/${encodeURIComponent(dependentId)}/codigo-tutor`, {
+          method: 'POST',
+          token,
+          idempotencyKey,
+        })
+      ).data,
+    );
+  },
+
+  async createOwnAccountCode(token: string, dependentId: string, idempotencyKey: string): Promise<LinkCode> {
+    return parseLinkCode(
+      (
+        await request<unknown>(`/tutelas/${encodeURIComponent(dependentId)}/codigo-cuenta`, {
+          method: 'POST',
+          token,
+          idempotencyKey,
+        })
+      ).data,
+    );
+  },
+
+  async removeGuardian(token: string, dependentId: string, guardianshipId: string, idempotencyKey: string): Promise<Dependent | null> {
+    return parseDependent(
+      (
+        await request<unknown>(
+          `/tutelas/${encodeURIComponent(dependentId)}/tutores/${encodeURIComponent(guardianshipId)}`,
+          { method: 'DELETE', token, idempotencyKey },
+        )
+      ).data,
+    );
+  },
+
+  async makePrincipalGuardian(
+    token: string,
+    dependentId: string,
+    guardianshipId: string,
+    idempotencyKey: string,
+  ): Promise<Dependent | null> {
+    return parseDependent(
+      (
+        await request<unknown>(
+          `/tutelas/${encodeURIComponent(dependentId)}/tutores/${encodeURIComponent(guardianshipId)}/principal`,
+          { method: 'POST', token, idempotencyKey },
+        )
+      ).data,
+    );
+  },
+
+  /** `pin` nulo quita el PIN. */
+  async setDependentPin(token: string, dependentId: string, pin: string | null, idempotencyKey: string): Promise<void> {
+    const path = `/tutelas/${encodeURIComponent(dependentId)}/pin`;
+    await request<unknown>(
+      path,
+      pin !== null ? { method: 'PUT', token, idempotencyKey, body: { pin } } : { method: 'DELETE', token, idempotencyKey },
+    );
+  },
+
+  /** Deja sin servir su QR y su tarjeta; responde cuántas credenciales se bloquearon. */
+  async blockDependentCredentials(token: string, dependentId: string, idempotencyKey: string): Promise<number> {
+    const data = (
+      await request<{ bloqueadas?: number }>(`/tutelas/${encodeURIComponent(dependentId)}/credenciales/bloquear`, {
+        method: 'POST',
+        token,
+        idempotencyKey,
+      })
+    ).data;
+    return typeof data?.bloqueadas === 'number' ? data.bloqueadas : 0;
+  },
+
+  async listStudentRequests(token: string, dependentId: string): Promise<StudentRequest[]> {
+    return parseStudentRequests(
+      (await request<unknown>(`/tutelas/${encodeURIComponent(dependentId)}/solicitudes`, { token, cache: 'no-store' })).data,
+    );
+  },
+
+  async createStudentRequest(
+    token: string,
+    dependentId: string,
+    input: { kind: StudentRequestKind; refundMethod: RefundMethod | null; note: string | null },
+    idempotencyKey: string,
+  ): Promise<StudentRequest | null> {
+    const body: Record<string, unknown> = { tipo: input.kind };
+    if (input.kind === 'devolucion' && input.refundMethod) body.como_devolver = input.refundMethod;
+    const note = input.note?.trim();
+    if (note) body.nota = note;
+    return parseStudentRequest(
+      (
+        await request<unknown>(`/tutelas/${encodeURIComponent(dependentId)}/solicitudes`, {
+          method: 'POST',
+          token,
+          idempotencyKey,
+          body,
+        })
+      ).data,
+    );
+  },
+
+  /** El alumno saca un código para que su tutor lo agregue. */
+  async createStudentLinkCode(token: string, idempotencyKey: string): Promise<LinkCode> {
+    return parseLinkCode((await request<unknown>('/tutelas/codigos-vinculo', { method: 'POST', token, idempotencyKey })).data);
+  },
+
+  /** El alumno se queda con la cuenta que le abrió su tutor; responde su nombre. */
+  async claimStudentAccount(token: string, code: string, idempotencyKey: string): Promise<string> {
+    const data = (
+      await request<{ nombre?: string }>('/tutelas/reclamar-cuenta', {
+        method: 'POST',
+        token,
+        idempotencyKey,
+        body: { codigo: code },
+      })
+    ).data;
+    return typeof data?.nombre === 'string' ? data.nombre : '';
+  },
+
+  /** Lo que sus tutores le pusieron al alumno; nulo si nadie lo cuida en este negocio. */
+  async getMyGuardianControls(token: string): Promise<MyGuardianControls | null> {
+    return parseMyControls((await request<unknown>('/tutelas/mis-controles', { token, cache: 'no-store' })).data);
+  },
+
+  /** Los controles del hijo vistos por él (qué no se le vende), con su token. */
+  async getDependentControls(childToken: string): Promise<MyGuardianControls | null> {
+    return parseMyControls(
+      (await request<unknown>('/tutelas/mis-controles', { token: childToken, cache: 'no-store', notifyOnUnauthorized: false })).data,
+    );
+  },
+
+  /** Menú por día de la escuela, con el token del hijo. */
+  async getDependentMenuCalendar(childToken: string): Promise<ChildMenuCalendar> {
+    return parseChildMenuCalendar(
+      (await request<unknown>('/menu-dias', { token: childToken, cache: 'no-store', notifyOnUnauthorized: false })).data,
+    );
+  },
+
+  /** Aparta la comida de varios días; responde cuántos pedidos se crearon. */
+  async reserveDependentWeek(childToken: string, days: ScheduledDayOrder[], idempotencyKey: string): Promise<number> {
+    const data = (
+      await request<{ pedidos?: unknown[] }>('/pedidos/semana', {
+        method: 'POST',
+        token: childToken,
+        idempotencyKey,
+        notifyOnUnauthorized: false,
+        body: encodeWeekOrders(days),
+      })
+    ).data;
+    return Array.isArray(data?.pedidos) ? data.pedidos.length : 0;
+  },
+
+  async cancelDependentOrder(childToken: string, order: Pick<OrderDetail, 'id' | 'version'>, idempotencyKey: string): Promise<void> {
+    await request<unknown>(`/pedidos/${encodeURIComponent(order.id)}/cancelaciones`, {
+      method: 'POST',
+      token: childToken,
+      idempotencyKey,
+      notifyOnUnauthorized: false,
+      body: { version_esperada: order.version, motivo: 'Cancelado por su tutor' },
+    });
   },
 
   async resolveSpace(token: string, slug?: string): Promise<ResolvedTableSpace> {

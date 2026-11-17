@@ -165,6 +165,10 @@ export interface OperationalStatus {
   dias_adelanto_pedido?: number;
   /** "18:00": pasada esa hora, hoy ya no cuenta como día de margen. */
   hora_corte_pedido?: string | null;
+  /** El negocio es una escuela: el alumno ve con quién conectar su cuenta. */
+  modo_escuela?: boolean;
+  /** Escuela: si el tutor ya validó el código de la escuela para agregar hijos. Ausente = sí. */
+  tutor_habilitado?: boolean;
 }
 
 export interface HomeDeliveryStatus {
@@ -339,6 +343,9 @@ export interface OrderDetail {
   aceptar_antes_de?: string | null;
   /** Encargo con tarjeta ya aceptado: hasta cuándo puede pagar el cliente. */
   pagar_antes_de?: string | null;
+  /** Comida apartada de la escuela: el día y la franja en que se entrega. */
+  fecha_entrega?: string | null;
+  franja_entrega?: string | null;
 }
 
 export interface OrderPayment {
