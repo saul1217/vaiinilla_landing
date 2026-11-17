@@ -882,3 +882,36 @@ describe('OrderDetailPage', () => {
     expect(screen.queryByRole('button', { name: /imprimir (ticket|cuenta)/i })).not.toBeInTheDocument();
   });
 });
+
+describe('¿Qué pasó? a domicilio', () => {
+  it('un pedido a domicilio en camino abre los casos con el WhatsApp del negocio', async () => {
+    getEstablishment.mockResolvedValue({ id: 'e1', nombre: 'Pastelería Vaini', slug: 'demo', whatsapp_url: 'https://wa.me/5215512345678' });
+    getOrder.mockResolvedValue(mesaOrder({ destino: 'a_domicilio', espacio: null, estado: 'preparando', folio: 31 }));
+    const user = userEvent.setup();
+    renderOrder();
+    await user.click(await screen.findByRole('button', { name: 'Algo cambió o necesito ayuda' }));
+    expect(await screen.findByRole('heading', { name: '¿Qué pasó?' })).toBeInTheDocument();
+    expect(screen.getByText('Pedido #31 · Pastelería Vaini')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /No voy a estar en casa/ })).toHaveAttribute(
+      'href',
+      `https://wa.me/5215512345678?text=${encodeURIComponent('Pedido #31: No voy a estar en casa.')}`,
+    );
+  });
+
+  it('sin WhatsApp del negocio explica qué hacer y no ofrece enlaces', async () => {
+    getEstablishment.mockResolvedValue({ id: 'e1', nombre: 'Pastelería Vaini', slug: 'demo', whatsapp_url: null });
+    getOrder.mockResolvedValue(mesaOrder({ destino: 'a_domicilio', espacio: null, estado: 'cobrado' }));
+    const user = userEvent.setup();
+    renderOrder();
+    await user.click(await screen.findByRole('button', { name: 'Algo cambió o necesito ayuda' }));
+    expect(await screen.findByText(/no dejó su WhatsApp en Vaiinilla/)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /No voy a estar en casa/ })).toBeNull();
+  });
+
+  it('un pedido entregado o para llevar no lo ofrece', async () => {
+    getOrder.mockResolvedValue(mesaOrder({ destino: 'a_domicilio', espacio: null, estado: 'entregado' }));
+    renderOrder();
+    expect(await screen.findByRole('heading', { name: /#7/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Algo cambió o necesito ayuda' })).toBeNull();
+  });
+});
