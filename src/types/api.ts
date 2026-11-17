@@ -165,6 +165,8 @@ export interface OperationalStatus {
   dias_adelanto_pedido?: number;
   /** "18:00": pasada esa hora, hoy ya no cuenta como día de margen. */
   hora_corte_pedido?: string | null;
+  /** El negocio es una escuela: el alumno ve con quién conectar su cuenta. */
+  modo_escuela?: boolean;
   /** Escuela: si el tutor ya validó el código de la escuela para agregar hijos. Ausente = sí. */
   tutor_habilitado?: boolean;
 }

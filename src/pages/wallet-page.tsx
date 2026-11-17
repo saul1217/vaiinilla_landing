@@ -20,6 +20,7 @@ import { RollingNumber } from '../components/rolling-number';
 import { peekResource, resourceKeys, storeResource } from '../lib/resource-cache';
 import { initialsFrom } from '../lib/initials';
 import { SHOW_PARENT_MODE, SHOW_WALLET_RELOAD } from '../lib/features';
+import { StudentGuardianCard } from '../components/student-guardian-card';
 import { movementLabel, walletRechargeNote } from '../lib/wallet-reload';
 
 export function WalletPage({
@@ -39,6 +40,7 @@ export function WalletPage({
   const [placeSlug, setPlaceSlug] = useState<string | null>(() => cart?.slug ?? lastPlaceSlug());
   const [allowsBalance, setAllowsBalance] = useState(true);
   const [placeName, setPlaceName] = useState('');
+  const [clientToken, setClientToken] = useState<string | null>(null);
   const userId = wallet?.wallet.usuario_id || wallet?.cliente.usuario_id;
   // Con la cartera prendida, «Recargar» abre la recarga (Caja o tarjeta de prueba); si no, el QR de Caja.
   const reloadHref = walletReload ? '/cuenta/saldo/recargar' : userId ? `/u/${userId}` : '/cuenta';
@@ -71,6 +73,7 @@ export function WalletPage({
         if (resolved.slug) storeResource(resourceKeys.wallet(user.uid, resolved.slug), next);
         if (active) {
           setPlaceSlug(resolved.slug);
+          setClientToken(resolved.context.access_token);
           setWallet(next);
           setError(null);
         }
@@ -127,6 +130,7 @@ export function WalletPage({
             <span className="alumno-muted">Ve el saldo y lo que compran tus hijos</span>
           </Link>
         ) : null}
+        {parentMode && clientToken ? <StudentGuardianCard token={clientToken} /> : null}
         {wallet ? (
           <WalletBoardView
             saldo={wallet.wallet.saldo}

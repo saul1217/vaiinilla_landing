@@ -8563,3 +8563,11 @@ html[data-theme='dark'] body[data-shell='alumno'] .alumno-card--ticket .alumno-c
 .parent-sheet__products .alumno-btn,
 .parent-mode__row .alumno-btn { width: auto; flex: 0 0 auto; min-height: 44px; padding: 8px 18px; }
 
+
+.student-guardian { display: grid; gap: 10px; margin: 12px 0; }
+.student-guardian h2 { margin: 0; font-size: 1.05rem; }
+.student-guardian p { margin: 0; }
+.student-guardian__today { margin: 0; display: grid; gap: 4px; }
+.student-guardian__today dt { font-weight: 800; }
+.student-guardian__today dd { margin: 0; color: var(--muted); font-weight: 600; }
+.student-guardian__actions { display: grid; gap: 8px; }
