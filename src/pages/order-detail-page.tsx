@@ -4,6 +4,9 @@ import { AppShell } from '../components/app-shell';
 import { PedidoChargeOverlay } from '../components/pedido-charge-overlay';
 import { StripePaymentPanel } from '../components/stripe-payment-panel';
 import { OrderTrackCard } from '../components/order-track-card';
+import { OrderHelpSheet } from '../components/order-help-sheet';
+import { isHomeDeliveryEnabled } from '../lib/features';
+import { canAskForHelp } from '../lib/order-help';
 import { statusAsPhrase } from '../lib/status-phrase';
 import { orderProgressFilled } from '../lib/order-labels';
 import { useAuth } from '../context/auth-context';
@@ -88,6 +91,8 @@ export function OrderDetailPage() {
   const [panelProcessing, setPanelProcessing] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
   const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
+  const [venue, setVenue] = useState<{ name: string; whatsappUrl: string | null } | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
   const awaitingChargeRef = useRef(false);
   const orderRef = useRef<OrderDetail | null>(null);
   orderRef.current = order;
@@ -111,6 +116,15 @@ export function OrderDetailPage() {
           return;
         }
         setAccessToken(resolved.context.access_token);
+        // El negocio del pedido es el de esta sesión, no el último lugar visitado.
+        const place = resolved.place;
+        if (place) {
+          const whatsappUrl = place.whatsapp_url ?? null;
+          // El sondeo vuelve a pasar por aquí: sin cambios no se vuelve a pintar la página.
+          setVenue((current) =>
+            current?.name === place.nombre && current.whatsappUrl === whatsappUrl ? current : { name: place.nombre, whatsappUrl },
+          );
+        }
         const next = await api.getOrder(resolved.context.access_token, id);
         if (!active) return;
         setOrder(next);
@@ -385,6 +399,11 @@ export function OrderDetailPage() {
                 order.id === id && tableSnapshot?.orderId === order.id ? tableSnapshot.table : null
               }
             />
+            {isHomeDeliveryEnabled() && canAskForHelp(order) && venue ? (
+              <button className="alumno-btn alumno-btn--ghost order-help__open" type="button" onClick={() => setHelpOpen(true)}>
+                Algo cambió o necesito ayuda
+              </button>
+            ) : null}
             {order.reserva ? (
               <div className="alumno-res-order-action">
                 <Link
@@ -402,6 +421,14 @@ export function OrderDetailPage() {
               </div>
             ) : null}
           </div>
+        ) : null}
+        {helpOpen && order ? (
+          <OrderHelpSheet
+            folio={order.folio}
+            venueName={venue?.name ?? null}
+            whatsappUrl={venue?.whatsappUrl ?? null}
+            onClosed={() => setHelpOpen(false)}
+          />
         ) : null}
       </main>
     </AppShell>

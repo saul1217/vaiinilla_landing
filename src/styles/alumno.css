@@ -8571,3 +8571,14 @@ html[data-theme='dark'] body[data-shell='alumno'] .alumno-card--ticket .alumno-c
 .student-guardian__today dt { font-weight: 800; }
 .student-guardian__today dd { margin: 0; color: var(--muted); font-weight: 600; }
 .student-guardian__actions { display: grid; gap: 8px; }
+
+/* «¿Qué pasó?» de un pedido a domicilio */
+.order-help .alumno-motion-panel { position: absolute; left: 0; right: 0; bottom: 0; }
+.order-help .alumno-kicker { margin: 10px 0 0; }
+.order-help__open { width: 100%; }
+.order-help__cases { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
+.order-help__case { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 10px 14px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); color: var(--text); text-decoration: none; transition: transform 160ms cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+.order-help__case > span:first-child { display: grid; gap: 2px; }
+a.order-help__case:active { transform: scale(0.98); }
+a.order-help__case:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .order-help__case { transition: none; } }
