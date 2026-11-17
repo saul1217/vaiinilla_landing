@@ -327,3 +327,314 @@ export class DependentContextSession {
     }
   }
 }
+
+// ---- Lo que el tutor cambia (Expo `createGuardianshipRepository`, Doop E05 a E14) ----
+
+/** Código para vincular a un hijo o invitar a otro tutor (6 caracteres). */
+export const LINK_CODE_LENGTH = 6;
+/** Código para que el hijo active su propia cuenta (8 caracteres). */
+export const CLAIM_CODE_LENGTH = 8;
+export const CONTROLS_NOTES_LIMIT = 200;
+
+/** Los alérgenos que la escuela conoce, en el orden en que se muestran. */
+export const SCHOOL_ALLERGENS = Object.keys(ALLERGEN_LABELS).sort((a, b) =>
+  ALLERGEN_LABELS[a]!.localeCompare(ALLERGEN_LABELS[b]!, 'es'),
+);
+
+export function allergenLabel(code: string): string {
+  return ALLERGEN_LABELS[code] ?? code;
+}
+
+export function normalizeCodeInput(raw: string, maxLength: number): string {
+  return raw
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, maxLength);
+}
+
+export function addChildFormProblem(params: {
+  withCode: boolean;
+  name: string;
+  studentId: string;
+  code: string;
+  consentAccepted: boolean;
+  noticeReady: boolean;
+}): string | null {
+  if (!params.noticeReady) return 'Espera el aviso de privacidad para continuar.';
+  if (!params.consentAccepted) return 'Marca que eres su madre, padre o tutor.';
+  if (params.withCode) {
+    return normalizeCodeInput(params.code, LINK_CODE_LENGTH).length === LINK_CODE_LENGTH
+      ? null
+      : `Escribe el código de ${LINK_CODE_LENGTH} letras o números.`;
+  }
+  if (!params.name.trim()) return 'Escribe el nombre completo de tu hijo.';
+  if (!params.studentId.trim()) return 'Escribe la matrícula de su credencial.';
+  return null;
+}
+
+/** Vacío es válido (quita el límite o el aviso). */
+export function controlAmountProblem(text: string): string | null {
+  const clean = text.trim().replace(/^\$/, '').replace(/,/g, '');
+  if (!clean) return null;
+  if (!/^\d{1,6}(\.\d{1,2})?$/.test(clean)) return 'Escribe una cantidad válida, por ejemplo 120.';
+  return Number(clean) > 0 ? null : 'Tiene que ser mayor a cero.';
+}
+
+export function parseControlMoneyOrNull(text: string): string | null {
+  const clean = text.trim().replace(/^\$/, '').replace(/,/g, '');
+  if (!clean) return null;
+  const value = Number(clean);
+  return Number.isFinite(value) && value > 0 ? value.toFixed(2) : null;
+}
+
+export function emptyControls(): DependentControls {
+  return {
+    dailyLimit: null,
+    lowBalanceAlert: null,
+    notes: '',
+    blockedProductIds: [],
+    blockedCategoryIds: [],
+    allergens: [],
+    spentToday: null,
+    availableToday: null,
+  };
+}
+
+/** Cuerpo de `PATCH /tutelas/:id`: los nulos viajan (quitan el límite) y las listas se reemplazan completas. */
+export function encodeControls(controls: DependentControls): Record<string, unknown> {
+  return {
+    limite_diario: controls.dailyLimit,
+    umbral_saldo_bajo: controls.lowBalanceAlert,
+    notas: controls.notes.trim() || null,
+    productos_bloqueados: [...controls.blockedProductIds].sort((a, b) => a - b),
+    categorias_bloqueadas: [...controls.blockedCategoryIds].sort((a, b) => a - b),
+    alergenos: [...controls.allergens].sort(),
+  };
+}
+
+export interface LinkCode {
+  code: string;
+  expiresAt: string | null;
+}
+
+export function parseLinkCode(raw: unknown): LinkCode {
+  const code = isObject(raw) ? text(raw.codigo) : null;
+  if (!code) throw new Error('El servidor no mandó el código.');
+  return { code, expiresAt: isObject(raw) ? text(raw.vence_en) : null };
+}
+
+export type StudentRequestKind = 'devolucion' | 'baja_datos';
+export type RefundMethod = 'efectivo' | 'transferencia';
+export type StudentRequestStatus = 'pendiente' | 'resuelta' | 'rechazada';
+
+export const REFUND_METHOD_LABEL: Record<RefundMethod, string> = {
+  efectivo: 'En efectivo',
+  transferencia: 'Por transferencia',
+};
+
+export interface StudentRequest {
+  id: string;
+  kind: StudentRequestKind;
+  status: StudentRequestStatus;
+  refundMethod: RefundMethod | null;
+  note: string | null;
+  balanceAtRequest: string;
+  refunded: string | null;
+  rejectionReason: string | null;
+  createdAt: string | null;
+}
+
+const REQUEST_KINDS: readonly StudentRequestKind[] = ['devolucion', 'baja_datos'];
+const REQUEST_STATUSES: readonly StudentRequestStatus[] = ['pendiente', 'resuelta', 'rechazada'];
+const REFUND_METHODS: readonly RefundMethod[] = ['efectivo', 'transferencia'];
+
+/** Un tipo o estado que esta versión no conoce se omite, como en Expo. */
+export function parseStudentRequest(raw: unknown): StudentRequest | null {
+  if (!isObject(raw)) return null;
+  const id = text(raw.id);
+  const kind = REQUEST_KINDS.find((item) => item === raw.tipo);
+  const status = REQUEST_STATUSES.find((item) => item === raw.estado);
+  if (!id || !kind || !status) return null;
+  return {
+    id,
+    kind,
+    status,
+    refundMethod: REFUND_METHODS.find((item) => item === raw.como_devolver) ?? null,
+    note: text(raw.nota),
+    balanceAtRequest: money(raw.saldo_al_pedir) ?? '0.00',
+    refunded: money(raw.monto_devuelto),
+    rejectionReason: text(raw.motivo_rechazo),
+    createdAt: text(raw.creado_en),
+  };
+}
+
+export function parseStudentRequests(raw: unknown): StudentRequest[] {
+  return Array.isArray(raw) ? raw.map(parseStudentRequest).filter((item): item is StudentRequest => item !== null) : [];
+}
+
+export function studentRequestLine(request: StudentRequest): string {
+  const what = request.kind === 'devolucion' ? 'Devolución de saldo' : 'Baja de cuenta y datos';
+  const status =
+    request.status === 'pendiente'
+      ? 'En revisión'
+      : request.status === 'resuelta'
+        ? request.refunded
+          ? `Resuelta · se devolvieron ${formatAmount(request.refunded)}`
+          : 'Resuelta'
+        : `Rechazada${request.rejectionReason ? ` · ${request.rejectionReason}` : ''}`;
+  return `${what} · ${status}`;
+}
+
+/** Lo que ve el alumno de sí mismo (`GET /tutelas/mis-controles`). */
+export interface MyGuardianControls {
+  tutorNames: string[];
+  dailyLimit: string | null;
+  availableToday: string | null;
+  blockedProductIds: number[];
+  blockedCategoryIds: number[];
+  allergens: string[];
+}
+
+export function parseMyControls(raw: unknown): MyGuardianControls | null {
+  if (!isObject(raw) || !isObject(raw.controles)) return null;
+  const controls = raw.controles;
+  return {
+    tutorNames: Array.isArray(raw.tutores)
+      ? raw.tutores.flatMap((item) => {
+          const name = isObject(item) ? text(item.nombre) : null;
+          return name ? [name] : [];
+        })
+      : [],
+    dailyLimit: money(controls.limite_diario),
+    availableToday: money(controls.disponible_hoy),
+    blockedProductIds: ints(controls.productos_bloqueados),
+    blockedCategoryIds: ints(controls.categorias_bloqueadas),
+    allergens: strings(controls.alergenos),
+  };
+}
+
+// ---- Comida apartada de la semana (Expo `WeekPlannerRules`) ----
+
+export interface MenuSchedule {
+  today: string;
+  daysAhead: number;
+  orderCutoff: string | null;
+  cancelCutoff: string | null;
+  slots: string[];
+}
+
+export interface ChildMenuCalendar {
+  schedule: MenuSchedule;
+  days: { date: string; productIds: number[] }[];
+  closedDays: { date: string; reason: string }[];
+}
+
+export function parseChildMenuCalendar(raw: unknown): ChildMenuCalendar {
+  const data = isObject(raw) ? raw : {};
+  const schedule = isObject(data.programacion) ? data.programacion : {};
+  const day = (value: unknown) => (text(value) ?? '').slice(0, 10);
+  return {
+    schedule: {
+      today: day(schedule.hoy),
+      daysAhead: typeof schedule.dias_adelanto_pedido === 'number' ? schedule.dias_adelanto_pedido : 0,
+      orderCutoff: text(schedule.hora_corte_pedido)?.slice(0, 5) ?? null,
+      cancelCutoff: text(schedule.hora_corte_cancelacion)?.slice(0, 5) ?? null,
+      slots: strings(schedule.franjas),
+    },
+    days: (Array.isArray(data.dias) ? data.dias : []).filter(isObject).map((item) => ({
+      date: day(item.fecha),
+      productIds: ints(item.producto_ids),
+    })),
+    closedDays: (Array.isArray(data.sin_servicio) ? data.sin_servicio : []).filter(isObject).map((item) => ({
+      date: day(item.fecha),
+      reason: text(item.motivo) ?? '',
+    })),
+  };
+}
+
+export interface ScheduledDayOrder {
+  date: string;
+  slot: string | null;
+  items: { productId: number; quantity: number; optionIds: number[] }[];
+}
+
+/** Cuerpo de `POST /pedidos/semana`. */
+export function encodeWeekOrders(days: ScheduledDayOrder[]): Record<string, unknown> {
+  return {
+    pedidos: days.map((item) => ({
+      fecha_entrega: item.date,
+      ...(item.slot !== null ? { franja_entrega: item.slot } : {}),
+      items: item.items.map((line) => ({
+        producto_id: line.productId,
+        cantidad: line.quantity,
+        opcion_ids: line.optionIds,
+      })),
+    })),
+  };
+}
+
+/** "2026-11-16" más `days` días, sin pasar por la zona horaria del navegador. */
+export function addDays(date: string, days: number): string {
+  const [year, month, dayOfMonth] = date.split('-').map(Number);
+  const value = new Date(Date.UTC(year!, (month ?? 1) - 1, dayOfMonth ?? 1));
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
+/** "18:05" en la zona del negocio (la escuela está en México). */
+export function businessClock(now: Date = new Date(), timeZone = 'America/Mexico_City'): string {
+  return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone }).format(now);
+}
+
+/** Días que se pueden apartar: desde hoy (si no pasó la hora de corte) hasta los días de adelanto. */
+export function plannerDates(calendar: ChildMenuCalendar, nowHhMm: string = businessClock()): string[] {
+  const today = calendar.schedule.today;
+  if (!today) return [];
+  const maxOffset = Math.max(1, calendar.schedule.daysAhead || 5);
+  const dates: string[] = [];
+  for (let offset = 0; offset <= maxOffset; offset += 1) {
+    const date = addDays(today, offset);
+    if (offset === 0 && calendar.schedule.orderCutoff && nowHhMm >= calendar.schedule.orderCutoff) continue;
+    dates.push(date);
+  }
+  return dates;
+}
+
+export function closedReason(calendar: ChildMenuCalendar, date: string): string | null {
+  return calendar.closedDays.find((item) => item.date === date)?.reason ?? null;
+}
+
+/** Sin menú publicado ese día se ofrece todo lo disponible, como en Expo. */
+export function plannerProductIds(calendar: ChildMenuCalendar, date: string): Set<number> | null {
+  const day = calendar.days.find((item) => item.date === date);
+  return day ? new Set(day.productIds) : null;
+}
+
+export function dayShortLabel(date: string, today: string): string {
+  if (date === today) return 'Hoy';
+  if (date === addDays(today, 1)) return 'Mañana';
+  const [year, month, dayOfMonth] = date.split('-').map(Number);
+  return new Intl.DateTimeFormat('es-MX', { weekday: 'short', day: 'numeric', timeZone: 'UTC' }).format(
+    new Date(Date.UTC(year!, (month ?? 1) - 1, dayOfMonth ?? 1)),
+  );
+}
+
+export function scheduledOrderPolicyText(cancelCutoff: string | null): string {
+  if (cancelCutoff) return `Puedes cancelar cada día apartado antes de las ${cancelCutoff} h.`;
+  return 'Los apartados se descuentan de su saldo al confirmar y regresan si cancelas a tiempo.';
+}
+
+/** Un apartado se cancela si es de hoy en adelante, no se entregó y no pasó la hora de corte de hoy. */
+export function canCancelScheduled(
+  order: Pick<OrderDetail, 'estado'> & { fecha_entrega?: string | null },
+  today: string,
+  cancelCutoff: string | null,
+  nowHhMm: string = businessClock(),
+): boolean {
+  const delivery = order.fecha_entrega?.slice(0, 10);
+  if (!delivery) return false;
+  if (order.estado === 'cancelado' || order.estado === 'entregado') return false;
+  if (delivery < today) return false;
+  if (delivery === today && cancelCutoff && nowHhMm >= cancelCutoff) return false;
+  return true;
+}
