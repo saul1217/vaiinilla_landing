@@ -14,7 +14,9 @@ import {
   normalizeCodeInput,
   parseChildMenuCalendar,
   parseControlMoneyOrNull,
+  parseMyControls,
   parseStudentRequests,
+  plannerBlockReason,
   plannerDates,
   dailyRemainingLabel,
   DependentContextSession,
@@ -355,5 +357,18 @@ describe('reglas de modo papás para cambiar y apartar', () => {
     expect(
       encodeWeekOrders([{ date: '2026-12-01', slot: null, items: [{ productId: 3, quantity: 2, optionIds: [7] }] }]),
     ).toEqual({ pedidos: [{ fecha_entrega: '2026-12-01', items: [{ producto_id: 3, cantidad: 2, opcion_ids: [7] }] }] });
+  });
+});
+
+describe('qué no se le aparta', () => {
+  it('lee de mis-controles lo que tiene alérgeno o no está revisado', () => {
+    const controls = parseMyControls({
+      tutores: [{ nombre: 'Laura' }],
+      controles: { productos_con_alergeno: [4], productos_sin_revisar: [7], alergenos: ['huevo'] },
+    });
+    expect(plannerBlockReason(4, controls)).toBe('Tiene un alérgeno');
+    expect(plannerBlockReason(7, controls)).toBe('Sin alérgenos revisados');
+    expect(plannerBlockReason(9, controls)).toBeNull();
+    expect(plannerBlockReason(4, null)).toBeNull();
   });
 });

@@ -721,6 +721,13 @@ export const api = {
     return parseMyControls((await request<unknown>('/tutelas/mis-controles', { token, cache: 'no-store' })).data);
   },
 
+  /** Los controles del hijo vistos por él (qué no se le vende), con su token. */
+  async getDependentControls(childToken: string): Promise<MyGuardianControls | null> {
+    return parseMyControls(
+      (await request<unknown>('/tutelas/mis-controles', { token: childToken, cache: 'no-store', notifyOnUnauthorized: false })).data,
+    );
+  },
+
   /** Menú por día de la escuela, con el token del hijo. */
   async getDependentMenuCalendar(childToken: string): Promise<ChildMenuCalendar> {
     return parseChildMenuCalendar(

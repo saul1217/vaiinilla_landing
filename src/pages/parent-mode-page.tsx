@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AddChildSheet } from '../components/add-child-sheet';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
@@ -38,6 +38,7 @@ import {
 import { createIdempotencyKey } from '../lib/idempotency';
 import { lastPlaceSlug } from '../lib/last-place';
 import { formatAmount } from '../lib/money';
+import { STRIPE_RETURN_PARAMS } from './wallet-reload-page';
 import { ORDER_STATUS_LABEL } from '../lib/order-labels';
 import type { OrderDetail, WalletData } from '../types/api';
 
@@ -344,7 +345,16 @@ function ConsentCard({
 export function ChildAccountPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, ready, token, placeSlug, error: sessionError } = useGuardianSession();
+
+  // Al volver del 3D Secure de una recarga, el client secret de Stripe no se queda en la URL.
+  useEffect(() => {
+    if (!STRIPE_RETURN_PARAMS.some((name) => searchParams.has(name))) return;
+    const next = new URLSearchParams(searchParams);
+    for (const name of STRIPE_RETURN_PARAMS) next.delete(name);
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
   const [child, setChild] = useState<Dependent | null>(null);
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [orders, setOrders] = useState<OrderDetail[] | null>(null);
@@ -586,6 +596,7 @@ export function ChildAccountPage() {
             child={child}
             placeSlug={placeSlug}
             loadCalendar={() => session.run((next) => api.getDependentMenuCalendar(next))}
+            loadControls={() => session.run((next) => api.getDependentControls(next))}
             reserve={(days, key) => session.run((next) => api.reserveDependentWeek(next, days, key))}
             onReserved={(count) => {
               setNotice(count === 1 ? 'Listo, apartamos 1 día.' : `Listo, apartamos ${count} días.`);

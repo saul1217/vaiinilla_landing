@@ -493,6 +493,10 @@ export interface MyGuardianControls {
   blockedProductIds: number[];
   blockedCategoryIds: number[];
   allergens: string[];
+  /** Lo que el servidor no le vende por sus alergias. */
+  allergenProductIds: number[];
+  /** Lo que no tiene alérgenos revisados y por eso tampoco se le vende. */
+  unreviewedProductIds: number[];
 }
 
 export function parseMyControls(raw: unknown): MyGuardianControls | null {
@@ -510,7 +514,16 @@ export function parseMyControls(raw: unknown): MyGuardianControls | null {
     blockedProductIds: ints(controls.productos_bloqueados),
     blockedCategoryIds: ints(controls.categorias_bloqueadas),
     allergens: strings(controls.alergenos),
+    allergenProductIds: ints(controls.productos_con_alergeno),
+    unreviewedProductIds: ints(controls.productos_sin_revisar),
   };
+}
+
+/** Por qué no se le puede apartar un platillo (Expo `allergenBlocked`); nulo si sí. */
+export function plannerBlockReason(productId: number, controls: MyGuardianControls | null): string | null {
+  if (controls?.allergenProductIds.includes(productId)) return 'Tiene un alérgeno';
+  if (controls?.unreviewedProductIds.includes(productId)) return 'Sin alérgenos revisados';
+  return null;
 }
 
 // ---- Comida apartada de la semana (Expo `WeekPlannerRules`) ----

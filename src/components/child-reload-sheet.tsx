@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
+import { api } from '../lib/api';
 import { walletQrUrl } from '../lib/env';
+import { SHOW_WALLET_RELOAD } from '../lib/features';
+import { isCardReloadTestMode } from '../lib/wallet-reload';
 import { firstName, type Dependent } from '../lib/guardianship';
 import { formatAmount } from '../lib/money';
 import { CardReloadPanel, type CardReloadClient } from '../pages/wallet-reload-page';
@@ -15,6 +18,7 @@ export function ChildReloadSheet({
   client,
   onSettled,
   onClosed,
+  cardAllowed = SHOW_WALLET_RELOAD && isCardReloadTestMode({ apiUrl: api.apiUrl }),
 }: {
   child: Dependent;
   childToken: string;
@@ -22,9 +26,11 @@ export function ChildReloadSheet({
   client: CardReloadClient;
   onSettled: () => void;
   onClosed: () => void;
+  /** Igual que en la cartera propia: la tarjeta solo con la cartera prendida y Stripe en modo de prueba. */
+  cardAllowed?: boolean;
 }) {
   const first = firstName(child.name);
-  const [tab, setTab] = useState<'card' | 'qr'>('card');
+  const [tab, setTab] = useState<'card' | 'qr'>(cardAllowed ? 'card' : 'qr');
   const [qr, setQr] = useState<string | null>(null);
   const childPath = `/cuenta/hijos/${encodeURIComponent(child.userId)}`;
 
@@ -44,6 +50,7 @@ export function ChildReloadSheet({
     <ParentSheet id="child-reload-title" title={`Recargar a ${first}`} onClosed={onClosed}>
       {() => (
         <div className="parent-sheet__body">
+          {cardAllowed ? (
           <div className="alumno-chips parent-sheet__modes" role="tablist" aria-label="Cómo recargas">
             <button type="button" role="tab" aria-selected={tab === 'card'} className={`alumno-chip${tab === 'card' ? ' is-on' : ''}`} onClick={() => setTab('card')}>
               Con tarjeta
@@ -52,7 +59,8 @@ export function ChildReloadSheet({
               En caja (QR)
             </button>
           </div>
-          {tab === 'card' ? (
+          ) : null}
+          {tab === 'card' && cardAllowed ? (
             <CardReloadPanel
               token={childToken}
               wallet={wallet}
