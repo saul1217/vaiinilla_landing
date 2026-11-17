@@ -5,11 +5,13 @@ import {
   closedReason,
   dayShortLabel,
   firstName,
+  plannerBlockReason,
   plannerDates,
   plannerProductIds,
   scheduledOrderPolicyText,
   type ChildMenuCalendar,
   type Dependent,
+  type MyGuardianControls,
   type ScheduledDayOrder,
 } from '../lib/guardianship';
 import { createIdempotencyKey } from '../lib/idempotency';
@@ -21,15 +23,6 @@ type Plan = Record<string, Record<number, number>>;
 type Choices = Record<string, Record<number, number[]>>;
 
 const cents = (value: string | null | undefined) => Math.round(Number(value ?? 0) * 100);
-
-/** Lo que no se le puede vender: bloqueado por su tutor o con uno de sus alérgenos. */
-function blockedForChild(product: CatalogProduct, child: Dependent): boolean {
-  const controls = child.controls;
-  if (!controls) return false;
-  if (controls.blockedProductIds.includes(product.id) || controls.blockedCategoryIds.includes(product.categoria_id)) return true;
-  const productAllergens = (product.alergenos ?? '').toLowerCase();
-  return controls.allergens.some((code) => productAllergens.includes(code));
-}
 
 function defaultOptions(product: CatalogProduct): number[] {
   return product.grupos_opcion.flatMap((group) => group.opciones.slice(0, group.min_selecciones).map((option) => option.id));
@@ -52,6 +45,7 @@ export function WeekPlannerSheet({
   child,
   placeSlug,
   loadCalendar,
+  loadControls,
   reserve,
   onReserved,
   onClosed,
@@ -59,6 +53,8 @@ export function WeekPlannerSheet({
   child: Dependent;
   placeSlug: string | null;
   loadCalendar: () => Promise<ChildMenuCalendar>;
+  /** Lo que el servidor no le vende por alergias o por no tener alérgenos revisados. */
+  loadControls: () => Promise<MyGuardianControls | null>;
   reserve: (days: ScheduledDayOrder[], idempotencyKey: string) => Promise<number>;
   onReserved: (count: number) => void;
   onClosed: () => void;
@@ -66,6 +62,7 @@ export function WeekPlannerSheet({
   const first = firstName(child.name);
   const [calendar, setCalendar] = useState<ChildMenuCalendar | null>(null);
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
+  const [controls, setControls] = useState<MyGuardianControls | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
@@ -79,11 +76,16 @@ export function WeekPlannerSheet({
 
   useEffect(() => {
     let active = true;
-    Promise.all([loadCalendar(), placeSlug ? api.getGuestCatalog(placeSlug) : Promise.reject(new Error('Sin escuela'))])
-      .then(([nextCalendar, nextCatalog]) => {
+    Promise.all([
+      loadCalendar(),
+      placeSlug ? api.getGuestCatalog(placeSlug) : Promise.reject(new Error('Sin escuela')),
+      loadControls().catch(() => null),
+    ])
+      .then(([nextCalendar, nextCatalog, nextControls]) => {
         if (!active) return;
         setCalendar(nextCalendar);
         setCatalog(nextCatalog);
+        setControls(nextControls);
         setSelected(plannerDates(nextCalendar)[0] ?? null);
         setSlot(nextCalendar.schedule.slots[0] ?? null);
       })
@@ -240,15 +242,19 @@ export function WeekPlannerSheet({
               ) : (
                 <ul className="parent-sheet__products">
                   {products.map((product) => {
-                    const blocked = blockedForChild(product, child);
+                    const blocked = plannerBlockReason(product.id, controls);
                     const quantity = (selected && plan[selected]?.[product.id]) || 0;
                     return (
                       <li key={product.id} className={blocked ? 'is-blocked' : undefined}>
                         <span>
                           <strong>{product.nombre}</strong>
-                          <span className="alumno-muted">{blocked ? 'No disponible para él' : formatAmount(product.precio_digital)}</span>
+                          <span className="alumno-muted">
+                            {blocked ? `${formatAmount(product.precio_digital)} · ${blocked}` : formatAmount(product.precio_digital)}
+                          </span>
                         </span>
-                        {blocked ? null : quantity > 0 && selected ? (
+                        {blocked ? (
+                          <span className="alumno-muted">No disponible</span>
+                        ) : quantity > 0 && selected ? (
                           <span className="alumno-qty">
                             <button type="button" aria-label={`Quitar uno de ${product.nombre}`} onClick={() => change(selected, product, -1)}>
                               −

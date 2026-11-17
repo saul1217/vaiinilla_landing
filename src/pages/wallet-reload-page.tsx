@@ -56,7 +56,7 @@ type CardPhase =
   | { kind: 'failed'; message: string };
 
 /** Lo que Stripe agrega a la URL al volver del 3D Secure; el client secret no debe quedarse a la vista. */
-const STRIPE_RETURN_PARAMS = ['payment_intent', 'payment_intent_client_secret', 'redirect_status'] as const;
+export const STRIPE_RETURN_PARAMS = ['payment_intent', 'payment_intent_client_secret', 'redirect_status'] as const;
 
 export const CARD_RELOAD_NOTE =
   'Pago seguro con Stripe (modo de prueba) · cuándo llega el saldo depende del banco. Es para usar en este lugar.';
