@@ -884,6 +884,23 @@ describe('OrderDetailPage', () => {
 });
 
 describe('¿Qué pasó? a domicilio', () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_FEATURE_DOMICILIO', 'true');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('con la bandera de domicilio apagada no lo ofrece', async () => {
+    vi.stubEnv('VITE_FEATURE_DOMICILIO', 'false');
+    getEstablishment.mockResolvedValue({ id: 'e1', nombre: 'Pastelería Vaini', slug: 'demo', whatsapp_url: 'https://wa.me/52155' });
+    getOrder.mockResolvedValue(mesaOrder({ destino: 'a_domicilio', espacio: null, estado: 'preparando' }));
+    renderOrder();
+    expect(await screen.findByRole('heading', { name: /#7/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Algo cambió o necesito ayuda' })).toBeNull();
+  });
+
   it('un pedido a domicilio en camino abre los casos con el WhatsApp del negocio', async () => {
     getEstablishment.mockResolvedValue({ id: 'e1', nombre: 'Pastelería Vaini', slug: 'demo', whatsapp_url: 'https://wa.me/5215512345678' });
     getOrder.mockResolvedValue(mesaOrder({ destino: 'a_domicilio', espacio: null, estado: 'preparando', folio: 31 }));

@@ -5,6 +5,7 @@ import { PedidoChargeOverlay } from '../components/pedido-charge-overlay';
 import { StripePaymentPanel } from '../components/stripe-payment-panel';
 import { OrderTrackCard } from '../components/order-track-card';
 import { OrderHelpSheet } from '../components/order-help-sheet';
+import { isHomeDeliveryEnabled } from '../lib/features';
 import { canAskForHelp } from '../lib/order-help';
 import { statusAsPhrase } from '../lib/status-phrase';
 import { orderProgressFilled } from '../lib/order-labels';
@@ -115,6 +116,15 @@ export function OrderDetailPage() {
           return;
         }
         setAccessToken(resolved.context.access_token);
+        // El negocio del pedido es el de esta sesión, no el último lugar visitado.
+        const place = resolved.place;
+        if (place) {
+          const whatsappUrl = place.whatsapp_url ?? null;
+          // El sondeo vuelve a pasar por aquí: sin cambios no se vuelve a pintar la página.
+          setVenue((current) =>
+            current?.name === place.nombre && current.whatsappUrl === whatsappUrl ? current : { name: place.nombre, whatsappUrl },
+          );
+        }
         const next = await api.getOrder(resolved.context.access_token, id);
         if (!active) return;
         setOrder(next);
@@ -198,12 +208,6 @@ export function OrderDetailPage() {
       .getGuestCatalog(slug)
       .then((catalog) => {
         if (active) setCatalogProducts(catalog.productos);
-      })
-      .catch(() => undefined);
-    void Promise.resolve()
-      .then(() => api.getEstablishment(slug))
-      .then((place) => {
-        if (active && place) setVenue({ name: place.nombre, whatsappUrl: place.whatsapp_url ?? null });
       })
       .catch(() => undefined);
     return () => {
@@ -395,7 +399,7 @@ export function OrderDetailPage() {
                 order.id === id && tableSnapshot?.orderId === order.id ? tableSnapshot.table : null
               }
             />
-            {canAskForHelp(order) ? (
+            {isHomeDeliveryEnabled() && canAskForHelp(order) && venue ? (
               <button className="alumno-btn alumno-btn--ghost order-help__open" type="button" onClick={() => setHelpOpen(true)}>
                 Algo cambió o necesito ayuda
               </button>
