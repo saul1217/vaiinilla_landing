@@ -8518,3 +8518,67 @@ html[data-theme='dark'] body[data-shell='alumno'] .alumno-card--ticket .alumno-c
 .parent-mode__controls dl { margin-top: 0; }
 .parent-mode__notice { margin-top: 12px; display: grid; gap: 10px; }
 .parent-mode__check { display: flex; gap: 8px; align-items: flex-start; }
+
+/* Modo papás: hojas y acciones de la ficha del hijo */
+.parent-sheet .alumno-motion-panel { position: absolute; left: 0; right: 0; bottom: 0; }
+.parent-sheet__panel { max-height: min(88dvh, 820px); overflow-y: auto; overscroll-behavior: contain; }
+.parent-sheet__body { display: grid; gap: 12px; margin-top: 8px; }
+.parent-sheet__body .alumno-field { margin-bottom: 0; }
+.parent-sheet__pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.parent-sheet__wrap,
+.parent-sheet__modes { flex-wrap: wrap; overflow: visible; }
+.parent-sheet__days { overflow-x: auto; scrollbar-width: none; }
+.parent-sheet__consent { display: grid; gap: 8px; justify-items: start; }
+.parent-sheet__code { display: grid; gap: 6px; justify-items: center; padding: 18px 12px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); }
+.parent-sheet__code strong { font-size: 2rem; letter-spacing: 0.18em; font-variant-numeric: tabular-nums; }
+.parent-sheet__qr { display: grid; gap: 10px; justify-items: center; text-align: center; }
+.parent-sheet__products { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.parent-sheet__products li { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 8px 12px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
+.parent-sheet__products li > span:first-child { display: grid; gap: 2px; min-width: 0; }
+.parent-sheet__products li.is-blocked { opacity: 0.6; }
+.parent-sheet__options { display: grid; gap: 10px; padding: 12px; border-radius: 20px; border: 1px solid var(--line); background: var(--surface); }
+.parent-sheet__options fieldset { margin: 0; }
+.parent-sheet__confirm { display: grid; gap: 10px; margin: 12px 0; padding: 14px; border-radius: 20px; border: 1px solid var(--danger); background: var(--surface); }
+.parent-sheet__confirm p { margin: 0; }
+.parent-sheet__danger-link { color: var(--danger); justify-self: start; }
+.parent-mode__actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+.parent-mode__add { width: 100%; margin-top: 14px; }
+.parent-mode__notice-banner { margin: 12px 0; }
+.parent-mode__security { display: grid; gap: 14px; margin-top: 12px; }
+.parent-mode__security h3 { margin: 0 0 4px; font-size: 0.9rem; }
+.parent-mode__rows { display: grid; gap: 8px; }
+.parent-mode__guardians { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.parent-mode__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 56px; padding: 10px 12px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; text-align: left; }
+.parent-mode__row > span:first-child { display: grid; gap: 2px; min-width: 0; }
+.parent-mode__row-actions { display: flex; gap: 12px; flex-shrink: 0; }
+.parent-mode__row--action { cursor: pointer; transition: transform 160ms cubic-bezier(0.2, 0.9, 0.3, 1.2), background-color 160ms ease; }
+.parent-mode__row--action:active:not(:disabled) { transform: scale(0.98); }
+.parent-mode__row--action:disabled { cursor: default; opacity: 0.65; }
+.parent-mode__row--action:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .parent-mode__row--action { transition: none; }
+}
+
+.parent-sheet .alumno-field { display: grid; align-items: stretch; gap: 6px; min-height: 0; }
+.parent-sheet__products .alumno-btn,
+.parent-mode__row .alumno-btn { width: auto; flex: 0 0 auto; min-height: 44px; padding: 8px 18px; }
+
+
+.student-guardian { display: grid; gap: 10px; margin: 12px 0; }
+.student-guardian h2 { margin: 0; font-size: 1.05rem; }
+.student-guardian p { margin: 0; }
+.student-guardian__today { margin: 0; display: grid; gap: 4px; }
+.student-guardian__today dt { font-weight: 800; }
+.student-guardian__today dd { margin: 0; color: var(--muted); font-weight: 600; }
+.student-guardian__actions { display: grid; gap: 8px; }
+
+/* «¿Qué pasó?» de un pedido a domicilio */
+.order-help .alumno-motion-panel { position: absolute; left: 0; right: 0; bottom: 0; }
+.order-help .alumno-kicker { margin: 10px 0 0; }
+.order-help__open { width: 100%; }
+.order-help__cases { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
+.order-help__case { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 10px 14px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); color: var(--text); text-decoration: none; transition: transform 160ms cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+.order-help__case > span:first-child { display: grid; gap: 2px; }
+a.order-help__case:active { transform: scale(0.98); }
+a.order-help__case:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .order-help__case { transition: none; } }

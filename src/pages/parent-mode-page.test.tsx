@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '../context/theme-context';
 import { VaiinillaApiError } from '../lib/api-error';
-import { DependentContextSession, parseDependents } from '../lib/guardianship';
+import { DependentContextSession, parseChildMenuCalendar, parseDependent, parseDependents } from '../lib/guardianship';
 import { AppRoutes } from '../app/router';
 import { ChildAccountPage, ParentModePage } from './parent-mode-page';
 
@@ -21,7 +21,21 @@ const {
   getGuardianPrivacyNotice,
   acceptGuardianPrivacyNotice,
   openClientSession,
+  updateDependent,
+  listStudentRequests,
+  getOperationalStatus,
+  getDependentMenuCalendar,
+  reserveDependentWeek,
+  cancelDependentOrder,
+  createGuardianInviteCode,
 } = vi.hoisted(() => ({
+  updateDependent: vi.fn(),
+  listStudentRequests: vi.fn(),
+  getOperationalStatus: vi.fn(),
+  getDependentMenuCalendar: vi.fn(),
+  reserveDependentWeek: vi.fn(),
+  cancelDependentOrder: vi.fn(),
+  createGuardianInviteCode: vi.fn(),
   getEstablishment: vi.fn(),
   listDependents: vi.fn(),
   issueDependentContext: vi.fn(),
@@ -41,6 +55,13 @@ vi.mock('../lib/api', () => ({
     listDependentOrders: (...args: unknown[]) => listDependentOrders(...args) as Promise<unknown>,
     getGuardianPrivacyNotice: (...args: unknown[]) => getGuardianPrivacyNotice(...args) as Promise<unknown>,
     acceptGuardianPrivacyNotice: (...args: unknown[]) => acceptGuardianPrivacyNotice(...args) as Promise<unknown>,
+    updateDependent: (...args: unknown[]) => updateDependent(...args) as Promise<unknown>,
+    listStudentRequests: (...args: unknown[]) => listStudentRequests(...args) as Promise<unknown>,
+    getOperationalStatus: (...args: unknown[]) => getOperationalStatus(...args) as Promise<unknown>,
+    getDependentMenuCalendar: (...args: unknown[]) => getDependentMenuCalendar(...args) as Promise<unknown>,
+    reserveDependentWeek: (...args: unknown[]) => reserveDependentWeek(...args) as Promise<unknown>,
+    cancelDependentOrder: (...args: unknown[]) => cancelDependentOrder(...args) as Promise<unknown>,
+    createGuardianInviteCode: (...args: unknown[]) => createGuardianInviteCode(...args) as Promise<unknown>,
     listAccesses: vi.fn().mockResolvedValue([]),
     getGuestCatalog: vi.fn().mockResolvedValue({ categorias: [], productos: [] }),
     currentTable: vi.fn().mockResolvedValue(null),
@@ -162,6 +183,11 @@ beforeEach(() => {
   issueDependentContext.mockResolvedValue({ access_token: 'hijo-jwt', expires_in: 900 });
   getDependentWallet.mockResolvedValue(wallet);
   listDependentOrders.mockResolvedValue(orders);
+  listStudentRequests.mockResolvedValue([]);
+  getOperationalStatus.mockResolvedValue({ tutor_habilitado: true });
+  getDependentMenuCalendar.mockResolvedValue(
+    parseChildMenuCalendar({ programacion: { hoy: '2026-11-17', hora_corte_cancelacion: '08:00' }, dias: [], sin_servicio: [] }),
+  );
 });
 
 describe('Mis hijos', () => {
@@ -179,10 +205,34 @@ describe('Mis hijos', () => {
     expect(rows[1]!.tagName).not.toBe('A');
   });
 
-  it('sin hijos explica que se agregan desde la app', async () => {
+  it('sin hijos ofrece agregarlo desde aquí', async () => {
     listDependents.mockResolvedValue([]);
     renderAt('/cuenta/hijos');
     expect(await screen.findByText('Aún no tienes hijos en esta escuela')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Agregar a mi hijo' })).toBeInTheDocument();
+  });
+
+  it('sin el código de la escuela validado, agregar empieza por ese código', async () => {
+    getOperationalStatus.mockResolvedValue({ tutor_habilitado: false });
+    getGuardianPrivacyNotice.mockResolvedValue({ version: 'v1', draft: false, title: 'Aviso', paragraphs: [] });
+    const user = userEvent.setup();
+    renderAt('/cuenta/hijos');
+    await screen.findAllByTestId('child-row');
+    await waitFor(() => expect(getOperationalStatus).toHaveBeenCalledWith('tutor-jwt'));
+    await user.click(screen.getByRole('button', { name: 'Agregar a mi hijo' }));
+    expect(await screen.findByRole('heading', { name: 'Código de la escuela' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Validar código' })).toBeDisabled();
+  });
+
+  it('con el aviso en borrador no deja agregar hijos', async () => {
+    getGuardianPrivacyNotice.mockResolvedValue({ version: 'v1', draft: true, title: 'Aviso', paragraphs: [] });
+    const user = userEvent.setup();
+    renderAt('/cuenta/hijos');
+    await screen.findAllByTestId('child-row');
+    await user.click(screen.getByRole('button', { name: 'Agregar a mi hijo' }));
+    expect(await screen.findByText(/todavía es un borrador; aún no se pueden agregar hijos/)).toBeInTheDocument();
+    const sheet = screen.getByRole('dialog');
+    expect(within(sheet).getByRole('button', { name: 'Agregar a mi hijo' })).toBeDisabled();
   });
 
   it('el aviso bloquea: sin aceptarlo no muestra saldo ni abre la ficha; al aceptarlo, sí', async () => {
@@ -273,6 +323,80 @@ describe('Cuenta de un hijo', () => {
     const ordered = screen.getByRole('heading', { name: 'Lo que pidió' }).parentElement!;
     expect(within(ordered).getByText('1× Torta, 2× Agua')).toBeInTheDocument();
     expect(within(ordered).getByText(/#12 · Entregado/)).toBeInTheDocument();
+  });
+
+  it('quien no es el principal solo cambia su aviso de saldo bajo', async () => {
+    const notPrincipal = {
+      ...rawChildren[0],
+      soy_principal: false,
+      tutores: [
+        { tutela_id: 't1', nombre: 'Laura', principal: true, eres_tu: false },
+        { tutela_id: 't2', nombre: 'Pedro', principal: false, eres_tu: true },
+      ],
+    };
+    listDependents.mockResolvedValue(parseDependents([notPrincipal]));
+    updateDependent.mockResolvedValue(parseDependent(notPrincipal));
+    const user = userEvent.setup();
+    renderAt('/cuenta/hijos/u-tilin');
+    await screen.findByTestId('child-balance');
+    await user.click(screen.getByRole('button', { name: /^Controles$/ }));
+    expect(await screen.findByText('El límite, las alergias y lo bloqueado los pone su tutor principal.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Límite diario')).toBeNull();
+    await user.type(screen.getByLabelText('Aviso de saldo bajo'), '50');
+    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+    await waitFor(() =>
+      expect(updateDependent).toHaveBeenCalledWith('tutor-jwt', 'u-tilin', { umbral_saldo_bajo: '50.00' }, expect.any(String)),
+    );
+  });
+
+  it('el principal guarda todos los controles sin perder los productos bloqueados', async () => {
+    updateDependent.mockResolvedValue(parseDependent(rawChildren[0]));
+    const user = userEvent.setup();
+    renderAt('/cuenta/hijos/u-tilin');
+    await screen.findByTestId('child-balance');
+    await user.click(screen.getByRole('button', { name: /^Controles$/ }));
+    const limit = await screen.findByLabelText('Límite diario');
+    await user.clear(limit);
+    await user.type(limit, '80');
+    await user.click(screen.getByRole('button', { name: 'Huevo' }));
+    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+    await waitFor(() => expect(updateDependent).toHaveBeenCalled());
+    const body = updateDependent.mock.calls[0]![2] as Record<string, unknown>;
+    expect(body).toMatchObject({ limite_diario: '80.00', productos_bloqueados: [5], alergenos: ['cacahuate', 'huevo'] });
+  });
+
+  it('muestra lo apartado y lo cancela con el token del hijo', async () => {
+    const scheduled = {
+      id: 'p20',
+      folio: 20,
+      estado: 'cobrado',
+      total: '20.00',
+      version: 3,
+      creado_en: '2026-11-17T08:00:00Z',
+      fecha_entrega: '2099-01-02',
+      items: [{ id: 1, producto_id: 9, nombre_producto: 'Galleta', cantidad: 1 }],
+    };
+    listDependentOrders.mockResolvedValue([...orders, scheduled]);
+    cancelDependentOrder.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderAt('/cuenta/hijos/u-tilin');
+    const section = (await screen.findByRole('heading', { name: 'Su comida apartada' })).parentElement!;
+    expect(await within(section).findByText('1× Galleta')).toBeInTheDocument();
+    await user.click(within(section).getByRole('button', { name: 'Cancelar' }));
+    await user.click(screen.getByRole('button', { name: 'Sí, cancelar' }));
+    await waitFor(() =>
+      expect(cancelDependentOrder).toHaveBeenCalledWith('hijo-jwt', expect.objectContaining({ id: 'p20', version: 3 }), expect.any(String)),
+    );
+  });
+
+  it('el principal invita a otro tutor con un código', async () => {
+    createGuardianInviteCode.mockResolvedValue({ code: 'ABC234', expiresAt: null });
+    const user = userEvent.setup();
+    renderAt('/cuenta/hijos/u-tilin');
+    await screen.findByTestId('child-balance');
+    await user.click(screen.getByRole('button', { name: /Invitar a otro tutor/ }));
+    expect(await screen.findByText('ABC234')).toBeInTheDocument();
+    expect(createGuardianInviteCode).toHaveBeenCalledWith('tutor-jwt', 'u-tilin', expect.any(String));
   });
 
   it('si el token del hijo vence, pide otro contexto y repite', async () => {
