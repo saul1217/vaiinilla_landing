@@ -425,6 +425,46 @@ describe('modo papás', () => {
     await expect(api.listDependentOrders('hijo')).resolves.toMatchObject([{ folio: 42 }]);
   });
 
+  it('trae todas las páginas de pedidos y deja primero el más nuevo', async () => {
+    const viejo = { ...order, id: 'a', folio: 1, creado_en: '2026-08-01T12:00:00Z' };
+    const nuevo = { ...order, id: 'b', folio: 2, creado_en: '2026-08-12T12:00:00Z' };
+    const pedidas: Array<string | null> = [];
+    server.use(
+      http.get(`${baseUrl}/pedidos`, ({ request }) => {
+        const url = new URL(request.url);
+        pedidas.push(url.searchParams.get('cursor'));
+        expect(url.searchParams.get('limit')).toBe('100');
+        return url.searchParams.get('cursor') === 'pagina-2'
+          ? HttpResponse.json({ data: [nuevo], meta: { cursor: null }, error: null })
+          : HttpResponse.json({ data: [viejo], meta: { cursor: 'pagina-2' }, error: null });
+      }),
+    );
+    await expect(api.listOrders('jwt')).resolves.toMatchObject({ orders: [{ folio: 2 }, { folio: 1 }] });
+    expect(pedidas).toEqual([null, 'pagina-2']);
+    pedidas.length = 0;
+    await expect(api.listDependentOrders('hijo')).resolves.toMatchObject([{ folio: 2 }, { folio: 1 }]);
+    expect(pedidas).toEqual([null, 'pagina-2']);
+  });
+
+  it('un pedido que cambió entre páginas sale una vez, con su versión más reciente', async () => {
+    const antes = { ...order, id: 'a', estado: 'por_cobrar' as const, actualizado_en: '2026-08-11T12:00:00Z' };
+    const despues = { ...antes, estado: 'preparando' as const, actualizado_en: '2026-08-11T12:05:00Z' };
+    const pedidas: Array<string | null> = [];
+    server.use(
+      http.get(`${baseUrl}/pedidos`, ({ request }) => {
+        const url = new URL(request.url);
+        pedidas.push(url.searchParams.get('cursor'));
+        return url.searchParams.get('cursor') === 'pagina-2'
+          ? HttpResponse.json({ data: [despues], meta: { cursor: null }, error: null })
+          : HttpResponse.json({ data: [antes], meta: { cursor: 'pagina-2' }, error: null });
+      }),
+    );
+    const { orders } = await api.listOrders('jwt');
+    expect(orders).toHaveLength(1);
+    expect(orders[0]).toMatchObject({ id: 'a', estado: 'preparando' });
+    expect(pedidas).toEqual([null, 'pagina-2']);
+  });
+
   it('un 401 con el token del hijo no cierra la sesión del tutor; con el del tutor sí', async () => {
     const listener = vi.fn();
     const stop = onUnauthorizedSession(listener);

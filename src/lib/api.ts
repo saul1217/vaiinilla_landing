@@ -142,6 +142,36 @@ function params(values: Record<string, string | number | undefined>): string {
   return query ? `?${query}` : '';
 }
 
+/** Tope de páginas de `GET /pedidos`: 20 × 100 pedidos sobra para una cuenta y evita un ciclo sin fin. */
+const ORDER_PAGE_SIZE = 100;
+const ORDER_PAGE_LIMIT = 20;
+
+/**
+ * Todos los pedidos de quien firma el token, del más nuevo al más viejo. El servidor los ordena del más viejo
+ * al más nuevo y pagina con cursor: quedarse con la primera página deja fuera los pedidos de hoy en una cuenta
+ * con más de una página.
+ */
+async function listAllOrders(token: string, options: Pick<RequestOptions, 'cache' | 'notifyOnUnauthorized'> = {}): Promise<OrderDetail[]> {
+  const orders: OrderDetail[] = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < ORDER_PAGE_LIMIT; page += 1) {
+    const response = await request<OrderDetail[]>(`/pedidos${params({ cursor, limit: ORDER_PAGE_SIZE })}`, {
+      token,
+      ...options,
+    });
+    orders.push(...response.data);
+    cursor = response.meta.cursor ?? undefined;
+    if (!cursor || response.data.length === 0) break;
+  }
+  // El cursor va por `actualizado_en`: un pedido que cambia entre una página y otra vuelve a salir más adelante.
+  const latest = new Map<string, OrderDetail>();
+  for (const order of orders) {
+    const seen = latest.get(order.id);
+    if (!seen || order.actualizado_en >= seen.actualizado_en) latest.set(order.id, order);
+  }
+  return [...latest.values()].sort((a, b) => b.creado_en.localeCompare(a.creado_en) || b.id.localeCompare(a.id));
+}
+
 /** Palabra que el backend exige para borrar la cuenta (DELETE /identidad/cuenta). */
 export const ACCOUNT_DELETION_CONFIRMATION = 'ELIMINAR';
 
@@ -413,14 +443,8 @@ export const api = {
     clearTableDeviceTokens();
   },
 
-  async listOrders(
-    token: string,
-    cursor?: string,
-  ): Promise<{ orders: OrderDetail[]; cursor: string | null }> {
-    const response = await request<OrderDetail[]>(`/pedidos${params({ cursor, limit: 30 })}`, {
-      token,
-    });
-    return { orders: response.data, cursor: response.meta.cursor ?? null };
+  async listOrders(token: string): Promise<{ orders: OrderDetail[] }> {
+    return { orders: await listAllOrders(token) };
   },
 
   async getOrder(token: string, id: string): Promise<OrderDetail> {
@@ -511,13 +535,7 @@ export const api = {
 
   /** Pedidos del hijo con su token (lo que compró en Caja, en su app o lo que se le apartó). */
   async listDependentOrders(childToken: string): Promise<OrderDetail[]> {
-    return (
-      await request<OrderDetail[]>(`/pedidos${params({ limit: 30 })}`, {
-        token: childToken,
-        cache: 'no-store',
-        notifyOnUnauthorized: false,
-      })
-    ).data;
+    return listAllOrders(childToken, { cache: 'no-store', notifyOnUnauthorized: false });
   },
 
   async getGuardianPrivacyNotice(token: string): Promise<PrivacyNotice | null> {

@@ -114,7 +114,7 @@ describe("MenuPage", () => {
     authState.user = null;
     sessionState.context = null;
     openClientSession.mockReset();
-    vi.mocked(api).listOrders.mockReset().mockResolvedValue({ orders: [], cursor: null });
+    vi.mocked(api).listOrders.mockReset().mockResolvedValue({ orders: [] });
     cartState.cart = { slug: "demo-a", establishmentName: "Demo A", lines: [] };
     addLine.mockReset();
   });
@@ -291,7 +291,7 @@ describe("MenuPage", () => {
     vi.mocked(api).listOrders.mockResolvedValue({ orders: [
       ...(["entregado", "cancelado", "expirado", "no_recogido"] as const).map((estado, i) => ({ id: `dead-${i}`, folio: 10 + i, estado, items: [] })),
       { id: "active", folio: 99, estado: "preparando", items: [] },
-    ] as never, cursor: null });
+    ] as never });
     renderMenu();
     expect(await screen.findByText("#99")).toBeInTheDocument();
     expect(screen.getByText("Pedido activo")).toBeInTheDocument();
@@ -302,12 +302,12 @@ describe("MenuPage", () => {
   it("limpia la tarjeta al cambiar uid y no consulta con la pestaña oculta", async () => {
     authState.user = { uid: "u1", displayName: "María", email: "maria@example.test" };
     sessionState.context = { access_token: "token-u1", contexto: { usuario_id: "u1", establecimiento_id: "1" } };
-    vi.mocked(api).listOrders.mockResolvedValue({ orders: [{ id: "active", folio: 77, estado: "preparando", items: [] }] as never, cursor: null });
+    vi.mocked(api).listOrders.mockResolvedValue({ orders: [{ id: "active", folio: 77, estado: "preparando", items: [] }] as never });
     const view = renderMenu();
     expect(await screen.findByText("#77")).toBeInTheDocument();
     authState.user = { uid: "u2", displayName: "Luis", email: "luis@example.test" };
     sessionState.context = { access_token: "token-u2", contexto: { usuario_id: "u2", establecimiento_id: "1" } };
-    vi.mocked(api).listOrders.mockResolvedValue({ orders: [], cursor: null });
+    vi.mocked(api).listOrders.mockResolvedValue({ orders: [] });
     view.rerender(<MemoryRouter initialEntries={["/e/demo-a"]}><ThemeProvider><Routes><Route path="/e/:slug" element={<MenuPage />} /></Routes></ThemeProvider></MemoryRouter>);
     expect(screen.queryByText("#77")).not.toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /chocolate frío/i })).toBeInTheDocument();
