@@ -169,6 +169,11 @@ export interface OperationalStatus {
   modo_escuela?: boolean;
   /** Escuela: si el tutor ya validó el código de la escuela para agregar hijos. Ausente = sí. */
   tutor_habilitado?: boolean;
+  /**
+   * Cafeterías (back #265): cada cobro con tarjeta debe ser MAYOR que esto ("30.00"); si no, el
+   * servidor responde 422 CARD_MIN_AMOUNT. null o ausente = sin mínimo propio.
+   */
+  tarjeta_minimo?: string | null;
 }
 
 export interface HomeDeliveryStatus {
