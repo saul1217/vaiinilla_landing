@@ -1114,4 +1114,183 @@ describe('CartPage', () => {
     await user.click(screen.getByRole('radio', { name: /tarjeta/i }));
     expect((await screen.findAllByText(/Total \$111(\.00)?$/)).length).toBeGreaterThan(0);
   });
+
+  describe('mínimo por cobro con tarjeta (cafeterías)', () => {
+    const conSesion = () => {
+      buyerSessionState.context = { access_token: 'jwt', contexto: { establecimiento_id: '1' } };
+    };
+    const estado = (tarjeta_minimo: string | null | undefined) => ({
+      recibiendo_pedidos: true,
+      sesion_caja_abierta: true,
+      caja_en_linea: true,
+      cocina_en_linea: true,
+      tipo: 'cafeteria',
+      ...(tarjeta_minimo === undefined ? {} : { tarjeta_minimo }),
+    });
+    const carrito = (cardUnit: string, counterUnit = cardUnit) => {
+      cartState.cart = {
+        slug: 'demo-a',
+        establishmentName: 'Cafetería Demo A',
+        lines: [{ productId: 1, quantity: 1, optionIds: [], productName: 'Café', unitPreview: cardUnit, unitCounter: counterUnit, imageUrl: null }],
+      };
+    };
+    const abrirPago = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
+      return screen.findByRole('radio', { name: /tarjeta/i });
+    };
+
+    it('con el cobro con tarjeta igual al mínimo ($30.00) la tarjeta queda deshabilitada y explica desde cuánto', async () => {
+      conSesion();
+      getOperationalStatus.mockResolvedValue(estado('30.00'));
+      carrito('30.00', '27.27');
+      const user = userEvent.setup();
+      renderCart();
+      const card = await abrirPago(user);
+      expect(card).toBeDisabled();
+      expect(card).toHaveTextContent('Tarjeta desde $30.01: el cobro debe ser mayor a $30.00 MXN.');
+      expect(screen.getByRole('radio', { name: /pago en caja/i })).toBeEnabled();
+    });
+
+    it('con $30.01 la tarjeta se ofrece y el pedido se crea con tarjeta', async () => {
+      conSesion();
+      getOperationalStatus.mockResolvedValue(estado('30.00'));
+      carrito('30.01', '27.28');
+      createOrder.mockResolvedValue({
+        id: 'ord-min', folio: 8, estado: 'por_cobrar', metodo_pago: 'stripe', destino: 'para_llevar',
+        qr_token: 'pickup-min', espacio: null, total: '30.01', items: [],
+        pago: {
+          payment_attempt_id: 'attempt-min',
+          payment_intent_id: 'pi_test_min',
+          stripe_account_id: 'acct_test_min',
+          payment_status: 'pendiente_pago',
+          client_secret: 'pi_test_min_secret_test', // gitleaks:allow
+          publishable_key: 'pk_test_51Vaiinilla', // gitleaks:allow
+        },
+      });
+      const user = userEvent.setup();
+      renderCart();
+      const card = await abrirPago(user);
+      expect(card).toBeEnabled();
+      expect(card).toHaveTextContent('Tarjeta de débito o crédito. Pago seguro.');
+      await user.click(card);
+      await user.click(screen.getByRole('button', { name: /^continuar con tarjeta/i }));
+      expect(await screen.findByText(/pedido creado/i)).toBeInTheDocument();
+      expect((createOrder.mock.calls[0]?.[1] as Record<string, unknown>).metodo_pago).toBe('stripe');
+    });
+
+    it('con tarjeta_minimo null (no es cafetería) no hay mínimo aunque el cobro sea chico', async () => {
+      conSesion();
+      getOperationalStatus.mockResolvedValue(estado(null));
+      carrito('12.00');
+      const user = userEvent.setup();
+      renderCart();
+      const card = await abrirPago(user);
+      expect(card).toBeEnabled();
+      expect(screen.queryByText(/tarjeta desde/i)).not.toBeInTheDocument();
+    });
+
+    it('sin estado operativo todavía no afirma ningún mínimo', async () => {
+      carrito('20.00');
+      const user = userEvent.setup();
+      renderCart();
+      const card = await abrirPago(user);
+      expect(card).toBeEnabled();
+      expect(screen.queryByText(/tarjeta desde/i)).not.toBeInTheDocument();
+    });
+
+    it('si el estado recién leído al confirmar trae el mínimo, no crea el pedido y conserva el carrito', async () => {
+      // Al abrir no había sesión (sin estado); al confirmar el estado ya dice $30.00.
+      getOperationalStatus.mockResolvedValue(estado('30.00'));
+      carrito('25.00');
+      cartState.reset.mockClear();
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await abrirPago(user));
+      await user.click(screen.getByRole('button', { name: /^continuar con tarjeta/i }));
+      expect(
+        await screen.findAllByText(
+          'El cobro con tarjeta debe ser mayor a $30.00 MXN (tarjeta desde $30.01). Elige pago en caja o agrega productos.',
+        ),
+      ).not.toHaveLength(0);
+      expect(createOrder).not.toHaveBeenCalled();
+      expect(cartState.reset).not.toHaveBeenCalled();
+      expect(screen.getByRole('radio', { name: /tarjeta/i })).toBeDisabled();
+      expect(screen.getByRole('radio', { name: /pago en caja/i })).toBeEnabled();
+    });
+
+    it('un 422 CARD_MIN_AMOUNT del servidor se explica sin borrar el carrito ni el método', async () => {
+      conSesion();
+      getOperationalStatus.mockResolvedValue(estado(null));
+      carrito('40.00');
+      cartState.reset.mockClear();
+      createOrder.mockRejectedValue(
+        new VaiinillaApiError(422, {
+          code: 'CARD_MIN_AMOUNT',
+          message: 'Para pagar con tarjeta el cobro debe ser mayor a $50.00 MXN. Puedes pagar en efectivo en caja.',
+          details: [{ minimo: '50.00', monto: '40.00', efectivo_disponible: true }],
+        }),
+      );
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await abrirPago(user));
+      await user.click(screen.getByRole('button', { name: /^continuar con tarjeta/i }));
+      expect(
+        (
+          await screen.findAllByText(
+            'El cobro con tarjeta debe ser mayor a $50.00 MXN (tarjeta desde $50.01). Elige pago en caja o agrega productos.',
+          )
+        ).length,
+      ).toBeGreaterThan(0);
+      expect(cartState.reset).not.toHaveBeenCalled();
+      expect(screen.getByRole('radio', { name: /tarjeta/i })).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getByRole('radio', { name: /pago en caja/i })).toBeEnabled();
+    });
+
+    it('un 422 CARD_MIN_AMOUNT sin efectivo disponible pide agregar productos', async () => {
+      conSesion();
+      getOperationalStatus.mockResolvedValue(estado(null));
+      carrito('40.00');
+      createOrder.mockRejectedValue(
+        new VaiinillaApiError(422, {
+          code: 'CARD_MIN_AMOUNT',
+          message: 'Para pagar con tarjeta el cobro debe ser mayor a $50.00 MXN. Agrega más productos para pagar con tarjeta.',
+          details: [{ minimo: '50.00', monto: '40.00', efectivo_disponible: false }],
+        }),
+      );
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await abrirPago(user));
+      await user.click(screen.getByRole('button', { name: /^continuar con tarjeta/i }));
+      expect(
+        (
+          await screen.findAllByText(
+            'El cobro con tarjeta debe ser mayor a $50.00 MXN (tarjeta desde $50.01). Agrega productos para continuar.',
+          )
+        ).length,
+      ).toBeGreaterThan(0);
+    });
+
+    it('pagar al final sigue igual: no pide mínimo porque no cobra con tarjeta al enviar', async () => {
+      conSesion();
+      getOperationalStatus.mockResolvedValue({ ...estado('30.00'), permite_pago_al_final: true });
+      localStorage.setItem(
+        'vaiinilla.buyer.space.v1',
+        JSON.stringify({ slug: 'demo-a', espacioId: 12, nombre: 'Cancha 2', tipo: 'cancha', pagaAlFinal: true }),
+      );
+      carrito('10.00');
+      createOrder.mockResolvedValue({
+        id: 'ord-tab', folio: 10, estado: 'recibido', metodo_pago: 'efectivo', destino: 'en_espacio',
+        qr_token: 'pickup-tab', espacio: null, total: '10.00', items: [],
+      });
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
+      await user.click(await screen.findByRole('radio', { name: /pagar al final/i }));
+      expect(screen.getByRole('radio', { name: /tarjeta/i })).toBeDisabled();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /^continuar con pagar al final/i }));
+      await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1));
+      expect(createOrder.mock.calls[0]?.[1]).toMatchObject({ pago_diferido: true, metodo_pago: 'efectivo' });
+    });
+  });
 });

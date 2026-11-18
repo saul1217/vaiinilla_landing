@@ -16,6 +16,7 @@ import { api } from '../lib/api';
 import { resolveClientSession } from '../lib/client-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { errorMessage } from '../lib/api-error';
+import { cardMinimumErrorMessage } from '../lib/card-minimum';
 import { forgetIdempotencyKey, idempotencyKeyFor } from '../lib/idempotency';
 import { formatAmount } from '../lib/money';
 import { assignmentStatus } from '../lib/assignment-status';
@@ -317,7 +318,7 @@ export function OrderDetailPage() {
       setTimedOut(false);
       clearStripeConfirming(order.id);
     } catch (cause) {
-      setError(errorMessage(cause));
+      setError(cardMinimumErrorMessage(cause) ?? errorMessage(cause));
     } finally {
       setRetrying(false);
     }

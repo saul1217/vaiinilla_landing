@@ -11,6 +11,7 @@ import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { canAcceptOrders, canPayAtEnd, cardFee, cartTotal, toCreateOrderInput, unitFor } from '../lib/cart';
+import { cardBelowMinimum, cardMinimumErrorMessage, cardMinimumMessage, cardMinimumNotice } from '../lib/card-minimum';
 import { leftoverPeekProducts, peekCatalogProducts, productImageUrl } from '../lib/catalog-images';
 import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
 import { formatAmount, linePreview, moneyToCents } from '../lib/money';
@@ -269,6 +270,13 @@ export function CartPage() {
   const total = totalWithFee(subtotal, homeFee);
   // Desglose de la comisión: el total con tarjeta se ve igual, pero se dice por qué subió.
   const fee = useMemo(() => (chargedPayment === 'stripe' ? cardFee(lines) : null), [lines, chargedPayment]);
+  // Mínimo por cobro con tarjeta (cafeterías): lo que la tarjeta cobraría es el total con precio
+  // de tarjeta. Mientras no llega el estado operativo no se afirma ningún mínimo. A domicilio no
+  // se decide en la UI (el mínimo con envío o con anticipo está pendiente): ahí manda el 422.
+  const cardTotalPreview = useMemo(() => cartTotal(lines, 'stripe'), [lines]);
+  const cardMinimum = status?.tarjeta_minimo ?? null;
+  const cardTooSmall = !isHome && cardMinimum !== null && cardBelowMinimum(cardTotalPreview, cardMinimum);
+  const cardBlocked = cardTooSmall && payment === 'stripe';
   const homeProblem =
     isHome && homeOffer
       ? homeCheckoutProblem({
@@ -508,6 +516,11 @@ export function CartPage() {
       if (isHome && !homeDeliveryOffer(operational)) {
         throw new Error('Este negocio dejó de entregar a domicilio. Elige para llevar.');
       }
+      // Se vuelve a revisar con el estado recién leído: el servidor igual responde 422 si no cumple.
+      const freshMinimum = operational.tarjeta_minimo ?? null;
+      if (method === 'stripe' && !isHome && freshMinimum !== null && cardBelowMinimum(cardTotalPreview, freshMinimum)) {
+        throw new Error(cardMinimumMessage(freshMinimum));
+      }
       // Si aún no se sabía de la renta (se paga antes de que llegue), se busca aquí.
       let target = space;
       let here = forHere;
@@ -630,7 +643,8 @@ export function CartPage() {
         setError(label ? `${cause.message} El primer día disponible es ${/^(Hoy|Mañana)$/.test(label) ? label.toLowerCase() : `el ${label}`}.` : cause.message);
         return;
       }
-      setError(errorMessage(cause));
+      // 422 CARD_MIN_AMOUNT: el carrito y el método elegido se conservan para cambiar a caja.
+      setError(cardMinimumErrorMessage(cause) ?? errorMessage(cause));
     } finally {
       endCheckoutGuard();
       if (!retried) confirming.current = false;
@@ -896,16 +910,27 @@ export function CartPage() {
                 icon="card"
                 title="Tarjeta"
                 badge="Pago seguro"
-                subtitle={stripeEnabled ? 'Tarjeta de débito o crédito. Pago seguro.' : STRIPE_UNAVAILABLE_COPY}
-                disabled={!stripeEnabled}
+                subtitle={
+                  !stripeEnabled
+                    ? STRIPE_UNAVAILABLE_COPY
+                    : cardTooSmall && cardMinimum
+                      ? cardMinimumNotice(cardMinimum)
+                      : 'Tarjeta de débito o crédito. Pago seguro.'
+                }
+                disabled={!stripeEnabled || cardTooSmall}
                 onSelect={() => {
-                  if (!stripeEnabled) return;
+                  if (!stripeEnabled || cardTooSmall) return;
                   setPayment('stripe');
                   setPayAtEnd(false);
                 }}
               />
               ) : null}
               {error ? <p className="alumno-error">{error}</p> : null}
+              {cardBlocked && cardMinimum && !error ? (
+                <p className="alumno-error" role="alert">
+                  {cardMinimumMessage(cardMinimum)}
+                </p>
+              ) : null}
               {insufficientBalance ? (
                 <p className="alumno-error">
                   No tienes saldo suficiente para este pedido.{' '}
@@ -924,6 +949,7 @@ export function CartPage() {
                 type="button"
                 disabled={
                   submitting ||
+                  cardBlocked ||
                   Boolean(insufficientBalance) ||
                   Boolean(pendingStripeOrderId) ||
                   (guestLike && !guestNameValid)
