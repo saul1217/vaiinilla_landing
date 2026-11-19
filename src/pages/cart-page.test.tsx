@@ -340,7 +340,7 @@ describe('CartPage', () => {
     expect(await screen.findByRole('button', { name: /^continuar$/i })).toBeInTheDocument();
     expect(document.querySelector('.alumno-line__thumb--vaini img')).toHaveAttribute(
       'src',
-      '/vaini/cutout-frente.png',
+      '/vaini/cutout-frente-512.webp',
     );
     expect(screen.getByText('$120 c/u')).toBeInTheDocument();
     expect(screen.getByText('Total $120')).toBeInTheDocument();

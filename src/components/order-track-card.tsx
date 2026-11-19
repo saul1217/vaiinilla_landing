@@ -130,10 +130,10 @@ export function OrderTrackCard({
       </header>
       <div className="alumno-track-card__body">
         {imageUrl && failedImage !== imageUrl ? (
-          <img className="alumno-track-card__thumb" src={imageUrl} alt="" onError={() => setFailedImage(imageUrl)} />
+          <img className="alumno-track-card__thumb" src={imageUrl} alt="" loading="lazy" decoding="async" onError={() => setFailedImage(imageUrl)} />
         ) : (
           <div className="alumno-track-card__thumb alumno-track-card__thumb--vaini" aria-hidden="true">
-            <img src="/vaini/cutout-frente.png" alt="" />
+            <img src="/vaini/cutout-frente-512.webp" alt="" loading="lazy" decoding="async" />
           </div>
         )}
         <div className="alumno-track-card__copy">

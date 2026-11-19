@@ -250,7 +250,7 @@ describe("MenuPage", () => {
     expect(photo).not.toHaveClass("is-ready");
     expect(document.querySelector(".alumno-psheet__vaini")).toHaveAttribute(
       "src",
-      "/vaini/cutout-frente.png",
+      "/vaini/cutout-frente-512.webp",
     );
     fireEvent.load(photo!);
     expect(photo).toHaveClass("is-ready");
