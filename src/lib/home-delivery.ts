@@ -170,6 +170,26 @@ export function totalWithFee(subtotal: string | null, fee: string | null): strin
   return a === null || b === null ? subtotal : centsToMoney(a + b);
 }
 
+/**
+ * El anticipo como lo calcula el back (`anticipoCents` en entrega-domicilio.js): el porcentaje del
+ * total con envío, redondeado al centavo hacia arriba desde la mitad. Null si no hay datos.
+ */
+export function depositAmount(total: string | null, percent: number | null): string | null {
+  if (!total || percent == null || !Number.isInteger(percent) || percent < 0) return null;
+  const cents = moneyToCents(total);
+  if (cents === null) return null;
+  return centsToMoney((cents * BigInt(percent) + 50n) / 100n);
+}
+
+/** Lo que la tarjeta cobra a domicilio: el total con envío o, con anticipo, solo esa parte. */
+export function homeCardCharge(
+  payment: Exclude<HomePayment, 'on_arrival'>,
+  total: string | null,
+  percent: number | null,
+): string | null {
+  return payment === 'deposit' ? depositAmount(total, percent) : total;
+}
+
 /** Lo que cuesta el envío en una etiqueta corta. */
 export function feeLabel(fee: string): string {
   return moneyToCents(fee) === 0n ? 'Envío gratis' : `Envío ${formatAmount(fee)}`;

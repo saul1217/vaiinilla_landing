@@ -1,4 +1,5 @@
 import { VaiinillaApiError } from './api-error';
+import { homeCardCharge, type HomePayment } from './home-delivery';
 import { centsToMoney, formatMoney, moneyToCents } from './money';
 
 /**
@@ -22,22 +23,38 @@ export function cardBelowMinimum(amount: string | null | undefined, minimum: str
   return amountCents <= minimumCents;
 }
 
+/**
+ * A domicilio (decisión de Kikin, 18-nov, back #265): la tarjeta cobra el total con envío, y con
+ * anticipo solo esa parte. Devuelve las formas de pago con tarjeta cuyo cobro no supera el mínimo.
+ * Sin mínimo o sin total no se bloquea ninguna: el servidor sigue respondiendo 422.
+ */
+export function homePaymentsBelowMinimum(
+  offered: HomePayment[],
+  cardTotal: string | null,
+  depositPercent: number | null,
+  minimum: string | null | undefined,
+): HomePayment[] {
+  return offered.filter(
+    (payment) => payment !== 'on_arrival' && cardBelowMinimum(homeCardCharge(payment, cardTotal, depositPercent), minimum),
+  );
+}
+
 /** "$30.01": el primer cobro que sí acepta la tarjeta. */
 export function cardFromLabel(minimum: string): string {
   const cents = cardMinimumCents(minimum);
   return cents === null ? formatMoney(minimum) : `$${centsToMoney(cents + 1n)}`;
 }
 
-/** Subtítulo de la opción «Tarjeta» cuando el cobro no llega al mínimo. */
-export function cardMinimumNotice(minimum: string): string {
-  return `Tarjeta desde ${cardFromLabel(minimum)}: el cobro debe ser mayor a ${formatMoney(minimum)}.`;
+/** Subtítulo de la opción «Tarjeta» (o «Anticipo») cuando el cobro no llega al mínimo. */
+export function cardMinimumNotice(minimum: string, label = 'Tarjeta'): string {
+  return `${label} desde ${cardFromLabel(minimum)}: el cobro debe ser mayor a ${formatMoney(minimum)}.`;
 }
 
 /** Mensaje para el cliente: con caja disponible se le ofrece; si no, que agregue productos. */
-export function cardMinimumMessage(minimum: string, cashAvailable = true): string {
+export function cardMinimumMessage(minimum: string, cashAvailable = true, cashLabel = 'pago en caja'): string {
   const base = `El cobro con tarjeta debe ser mayor a ${formatMoney(minimum)} (tarjeta desde ${cardFromLabel(minimum)}).`;
   return cashAvailable
-    ? `${base} Elige pago en caja o agrega productos.`
+    ? `${base} Elige ${cashLabel} o agrega productos.`
     : `${base} Agrega productos para continuar.`;
 }
 

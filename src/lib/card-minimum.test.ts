@@ -6,6 +6,7 @@ import {
   cardMinimumErrorMessage,
   cardMinimumMessage,
   cardMinimumNotice,
+  homePaymentsBelowMinimum,
 } from './card-minimum';
 
 describe('mínimo por cobro con tarjeta', () => {
@@ -24,10 +25,28 @@ describe('mínimo por cobro con tarjeta', () => {
     expect(cardBelowMinimum('5.00', 'treinta')).toBe(false);
   });
 
+  it('a domicilio compara el total con envío para tarjeta y solo el anticipo para anticipo', () => {
+    const todas = ['card', 'deposit', 'on_arrival'] as const;
+    // Total con envío 30.00: tarjeta no pasa; anticipo del 50% (15.00) tampoco; al recibir nunca se bloquea.
+    expect(homePaymentsBelowMinimum([...todas], '30.00', 50, '30.00')).toEqual(['card', 'deposit']);
+    // 30.01: la tarjeta pasa y el anticipo (15.01) no.
+    expect(homePaymentsBelowMinimum([...todas], '30.01', 50, '30.00')).toEqual(['deposit']);
+    // Anticipo de 30.00 exacto (60.00 al 50%) no pasa; 30.01 (60.02) sí.
+    expect(homePaymentsBelowMinimum([...todas], '60.00', 50, '30.00')).toEqual(['deposit']);
+    expect(homePaymentsBelowMinimum([...todas], '60.02', 50, '30.00')).toEqual([]);
+    // Sin mínimo o sin total no se bloquea nada.
+    expect(homePaymentsBelowMinimum([...todas], '10.00', 50, null)).toEqual([]);
+    expect(homePaymentsBelowMinimum([...todas], null, 50, '30.00')).toEqual([]);
+  });
+
   it('dice desde cuánto acepta tarjeta', () => {
     expect(cardFromLabel('30.00')).toBe('$30.01');
     expect(cardFromLabel('49.99')).toBe('$50.00');
     expect(cardMinimumNotice('30.00')).toBe('Tarjeta desde $30.01: el cobro debe ser mayor a $30.00 MXN.');
+    expect(cardMinimumNotice('30.00', 'Anticipo')).toBe('Anticipo desde $30.01: el cobro debe ser mayor a $30.00 MXN.');
+    expect(cardMinimumMessage('30.00', true, 'pago al recibir')).toBe(
+      'El cobro con tarjeta debe ser mayor a $30.00 MXN (tarjeta desde $30.01). Elige pago al recibir o agrega productos.',
+    );
     expect(cardMinimumMessage('30.00', false)).toBe(
       'El cobro con tarjeta debe ser mayor a $30.00 MXN (tarjeta desde $30.01). Agrega productos para continuar.',
     );
