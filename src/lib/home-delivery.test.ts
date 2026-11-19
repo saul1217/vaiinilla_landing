@@ -5,7 +5,9 @@ import {
   EMPTY_HOME_ADDRESS,
   addressProblem,
   areaOf,
+  depositAmount,
   effectiveHomePayment,
+  homeCardCharge,
   homeCheckoutProblem,
   homeDeliveryFee,
   homeDeliveryOffer,
@@ -140,6 +142,18 @@ describe('envío y pedido', () => {
     expect(totalWithFee('120.50', '40.00')).toBe('160.50');
     expect(totalWithFee(null, '40.00')).toBeNull();
     expect(normalizeMoney('abc')).toBeNull();
+  });
+
+  it('el anticipo se calcula como el back: porcentaje del total con envío, half-up al centavo', () => {
+    expect(depositAmount('60.00', 50)).toBe('30.00');
+    expect(depositAmount('60.01', 50)).toBe('30.01');
+    expect(depositAmount('60.02', 50)).toBe('30.01');
+    expect(depositAmount('33.33', 30)).toBe('10.00');
+    expect(depositAmount('60.00', null)).toBeNull();
+    expect(depositAmount('60.00', 12.5)).toBeNull();
+    expect(depositAmount(null, 50)).toBeNull();
+    expect(homeCardCharge('card', '60.00', 50)).toBe('60.00');
+    expect(homeCardCharge('deposit', '60.00', 50)).toBe('30.00');
   });
 
   it('arma `entrega` con las claves que valida el back y solo la bandera de pago que aplica', () => {

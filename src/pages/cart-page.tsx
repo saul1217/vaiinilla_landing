@@ -11,6 +11,13 @@ import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
 import { canAcceptOrders, canPayAtEnd, cardFee, cartTotal, toCreateOrderInput, unitFor } from '../lib/cart';
+import {
+  cardBelowMinimum,
+  cardMinimumErrorMessage,
+  cardMinimumMessage,
+  cardMinimumNotice,
+  homePaymentsBelowMinimum,
+} from '../lib/card-minimum';
 import { leftoverPeekProducts, peekCatalogProducts, productImageUrl } from '../lib/catalog-images';
 import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
 import { formatAmount, linePreview, moneyToCents } from '../lib/money';
@@ -32,6 +39,7 @@ import { isHomeDeliveryEnabled, SHOW_WALLET } from '../lib/features';
 import {
   EMPTY_HOME_ADDRESS,
   effectiveHomePayment,
+  homeCardCharge,
   homeCheckoutProblem,
   homeDeliveryFee,
   homeDeliveryOffer,
@@ -256,7 +264,23 @@ export function CartPage() {
     () => (homeOffer ? homePayments(homeOffer, cardOffered && stripeEnabled) : []),
     [homeOffer, cardOffered, stripeEnabled],
   );
-  const chosenHomePayment = effectiveHomePayment(homePayment, offeredHomePayments);
+  // Mínimo por cobro con tarjeta (cafeterías): lo que la tarjeta cobraría es el total con precio de
+  // tarjeta; a domicilio, ese total más el envío, o solo el anticipo (decidido por Kikin, 18-nov).
+  // Mientras no llega el estado operativo no se afirma ningún mínimo: el servidor responde 422.
+  const cardMinimum = status?.tarjeta_minimo ?? null;
+  const cardTotalPreview = useMemo(() => cartTotal(lines, 'stripe'), [lines]);
+  const homeFee = isHome && homeOffer ? homeDeliveryFee(homeOffer, homeQuote) : null;
+  const homeCardTotal = isHome ? totalWithFee(cardTotalPreview, homeFee) : null;
+  const homeDepositPercent = homeOffer?.depositPercent ?? null;
+  const blockedHomePayments = useMemo(
+    () => homePaymentsBelowMinimum(offeredHomePayments, homeCardTotal, homeDepositPercent, cardMinimum),
+    [offeredHomePayments, homeCardTotal, homeDepositPercent, cardMinimum],
+  );
+  const selectableHomePayments = useMemo(
+    () => offeredHomePayments.filter((option) => !blockedHomePayments.includes(option)),
+    [offeredHomePayments, blockedHomePayments],
+  );
+  const chosenHomePayment = effectiveHomePayment(homePayment, selectableHomePayments);
   // A domicilio la forma de pago es la de domicilio: al recibir es efectivo y lo demás tarjeta.
   const chargedPayment: PaymentMethod = isHome
     ? chosenHomePayment
@@ -265,19 +289,24 @@ export function CartPage() {
     : payment;
   // Solo la tarjeta lleva la comisión: el total y la validación de saldo siguen al método.
   const subtotal = useMemo(() => cartTotal(lines, chargedPayment), [lines, chargedPayment]);
-  const homeFee = isHome && homeOffer ? homeDeliveryFee(homeOffer, homeQuote) : null;
   const total = totalWithFee(subtotal, homeFee);
   // Desglose de la comisión: el total con tarjeta se ve igual, pero se dice por qué subió.
   const fee = useMemo(() => (chargedPayment === 'stripe' ? cardFee(lines) : null), [lines, chargedPayment]);
+  const cardTooSmall = !isHome && cardMinimum !== null && cardBelowMinimum(cardTotalPreview, cardMinimum);
+  const cardBlocked = cardTooSmall && payment === 'stripe';
+  // A domicilio sin ninguna forma de pago que pase el mínimo (solo tarjeta o anticipo, y el cobro
+  // no lo supera): se dice por qué en vez de «no tiene cómo cobrar».
+  const homeCardOnlyBelowMinimum =
+    isHome && offeredHomePayments.length > 0 && selectableHomePayments.length === 0 && cardMinimum !== null;
   const homeProblem =
     isHome && homeOffer
-      ? homeCheckoutProblem({
+      ? (homeCheckoutProblem({
           draft: homeDraft,
           quote: homeQuote,
           offer: homeOffer,
           payments: offeredHomePayments,
           subtotal,
-        })
+        }) ?? (homeCardOnlyBelowMinimum && cardMinimum ? cardMinimumMessage(cardMinimum, false) : null))
       : null;
   // Encargos (misma bandera): si el carrito tarda días o el negocio deja pedir para otro día, se
   // elige el día de entrega. En una mesa se come ahora, así que ahí no se pregunta.
@@ -508,6 +537,24 @@ export function CartPage() {
       if (isHome && !homeDeliveryOffer(operational)) {
         throw new Error('Este negocio dejó de entregar a domicilio. Elige para llevar.');
       }
+      // Se vuelve a revisar con el estado recién leído: el servidor igual responde 422 si no cumple.
+      // A domicilio se compara lo que cobra la tarjeta: el total con envío o el anticipo.
+      const freshMinimum = operational.tarjeta_minimo ?? null;
+      const freshCharge =
+        isHome && chosenHomePayment && chosenHomePayment !== 'on_arrival'
+          ? homeCardCharge(
+              chosenHomePayment,
+              homeCardTotal,
+              homeDeliveryOffer(operational)?.depositPercent ?? homeDepositPercent,
+            )
+          : cardTotalPreview;
+      if (method === 'stripe' && freshMinimum !== null && cardBelowMinimum(freshCharge, freshMinimum)) {
+        throw new Error(
+          isHome
+            ? cardMinimumMessage(freshMinimum, offeredHomePayments.includes('on_arrival'), 'pago al recibir')
+            : cardMinimumMessage(freshMinimum),
+        );
+      }
       // Si aún no se sabía de la renta (se paga antes de que llegue), se busca aquí.
       let target = space;
       let here = forHere;
@@ -630,7 +677,8 @@ export function CartPage() {
         setError(label ? `${cause.message} El primer día disponible es ${/^(Hoy|Mañana)$/.test(label) ? label.toLowerCase() : `el ${label}`}.` : cause.message);
         return;
       }
-      setError(errorMessage(cause));
+      // 422 CARD_MIN_AMOUNT: el carrito y el método elegido se conservan para cambiar a caja.
+      setError(cardMinimumErrorMessage(cause) ?? errorMessage(cause));
     } finally {
       endCheckoutGuard();
       if (!retried) confirming.current = false;
@@ -837,6 +885,8 @@ export function CartPage() {
               {isHome ? (
                 <HomePayOptions
                   offered={offeredHomePayments}
+                  blocked={blockedHomePayments}
+                  cardMinimum={cardMinimum}
                   selected={chosenHomePayment}
                   depositPercent={homeOffer?.depositPercent ?? null}
                   transferDetails={homeOffer?.transferDetails ?? null}
@@ -896,16 +946,27 @@ export function CartPage() {
                 icon="card"
                 title="Tarjeta"
                 badge="Pago seguro"
-                subtitle={stripeEnabled ? 'Tarjeta de débito o crédito. Pago seguro.' : STRIPE_UNAVAILABLE_COPY}
-                disabled={!stripeEnabled}
+                subtitle={
+                  !stripeEnabled
+                    ? STRIPE_UNAVAILABLE_COPY
+                    : cardTooSmall && cardMinimum
+                      ? cardMinimumNotice(cardMinimum)
+                      : 'Tarjeta de débito o crédito. Pago seguro.'
+                }
+                disabled={!stripeEnabled || cardTooSmall}
                 onSelect={() => {
-                  if (!stripeEnabled) return;
+                  if (!stripeEnabled || cardTooSmall) return;
                   setPayment('stripe');
                   setPayAtEnd(false);
                 }}
               />
               ) : null}
               {error ? <p className="alumno-error">{error}</p> : null}
+              {cardBlocked && cardMinimum && !error ? (
+                <p className="alumno-error" role="alert">
+                  {cardMinimumMessage(cardMinimum)}
+                </p>
+              ) : null}
               {insufficientBalance ? (
                 <p className="alumno-error">
                   No tienes saldo suficiente para este pedido.{' '}
@@ -924,6 +985,7 @@ export function CartPage() {
                 type="button"
                 disabled={
                   submitting ||
+                  cardBlocked ||
                   Boolean(insufficientBalance) ||
                   Boolean(pendingStripeOrderId) ||
                   (guestLike && !guestNameValid)
@@ -1393,12 +1455,17 @@ const HOME_PAY_LABEL: Record<HomePayment, string> = {
 /** Las formas de pago a domicilio, en el orden de Android: tarjeta, anticipo y al recibir. */
 function HomePayOptions({
   offered,
+  blocked = [],
+  cardMinimum = null,
   selected,
   depositPercent,
   transferDetails,
   onSelect,
 }: {
   offered: HomePayment[];
+  /** Las de tarjeta cuyo cobro no supera el mínimo: se ven deshabilitadas y dicen desde cuánto. */
+  blocked?: HomePayment[];
+  cardMinimum?: string | null;
   selected: HomePayment | null;
   depositPercent: number | null;
   transferDetails: string | null;
@@ -1415,8 +1482,15 @@ function HomePayOptions({
           icon="card"
           title="Tarjeta"
           badge="Pago seguro"
-          subtitle="Pagas todo ahora con tarjeta de débito o crédito."
-          onSelect={() => onSelect('card')}
+          subtitle={
+            blocked.includes('card') && cardMinimum
+              ? cardMinimumNotice(cardMinimum)
+              : 'Pagas todo ahora con tarjeta de débito o crédito.'
+          }
+          disabled={blocked.includes('card')}
+          onSelect={() => {
+            if (!blocked.includes('card')) onSelect('card');
+          }}
         />
       ) : null}
       {offered.includes('deposit') ? (
@@ -1425,8 +1499,15 @@ function HomePayOptions({
           icon="card"
           title="Anticipo con tarjeta"
           badge={depositPercent != null ? `${depositPercent}%` : 'Anticipo'}
-          subtitle={`Pagas ${depositPercent != null ? `el ${depositPercent}%` : 'una parte'} con tarjeta y el resto al recibir.`}
-          onSelect={() => onSelect('deposit')}
+          subtitle={
+            blocked.includes('deposit') && cardMinimum
+              ? cardMinimumNotice(cardMinimum, 'Anticipo')
+              : `Pagas ${depositPercent != null ? `el ${depositPercent}%` : 'una parte'} con tarjeta y el resto al recibir.`
+          }
+          disabled={blocked.includes('deposit')}
+          onSelect={() => {
+            if (!blocked.includes('deposit')) onSelect('deposit');
+          }}
         />
       ) : null}
       {offered.includes('on_arrival') ? (
