@@ -508,6 +508,17 @@ export function CardReloadPanel({
   return (
     <section className="alumno-card wallet-reload__card" aria-labelledby="wallet-reload-card">
       <h2 id="wallet-reload-card">Recargar con tarjeta</h2>
+      <label className="wallet-reload__amount">
+        <span>Monto a recargar</span>
+        <input
+          inputMode="decimal"
+          autoComplete="off"
+          placeholder="0.00"
+          value={amountText}
+          onChange={(event) => edit(event.target.value)}
+          aria-invalid={problem ? true : undefined}
+        />
+      </label>
       <div className="wallet-reload__quick" role="group" aria-label="Montos rápidos">
         {QUICK_RELOAD_AMOUNTS.map((quick) => (
           <button
@@ -520,17 +531,6 @@ export function CardReloadPanel({
           </button>
         ))}
       </div>
-      <label className="wallet-reload__amount">
-        <span>Otro monto</span>
-        <input
-          inputMode="decimal"
-          autoComplete="off"
-          placeholder="0.00"
-          value={amountText}
-          onChange={(event) => edit(event.target.value)}
-          aria-invalid={problem ? true : undefined}
-        />
-      </label>
       {hint ? (
         <p className={phase.kind === 'failed' || problem ? 'alumno-error' : 'alumno-muted'} role={phase.kind === 'failed' ? 'alert' : undefined}>
           {hint}

@@ -19,8 +19,22 @@ const apiProxy: Record<string, ProxyOptions> = {
   },
 };
 
+// En Vercel Preview (develop → sand-user.vaiinilla.app) se encienden las banderas no-hotel por defecto;
+// en pruebas (Vitest) y producción no se inyectan aquí, así los defaults del código y los tests no cambian.
+const previewFeatureDefines =
+  process.env.VERCEL_ENV === 'preview'
+    ? {
+        'import.meta.env.VITE_FEATURE_CARTERA': JSON.stringify(process.env.VITE_FEATURE_CARTERA ?? 'true'),
+        'import.meta.env.VITE_FEATURE_MODO_PAPAS': JSON.stringify(process.env.VITE_FEATURE_MODO_PAPAS ?? 'true'),
+        'import.meta.env.VITE_FEATURE_DOMICILIO': JSON.stringify(process.env.VITE_FEATURE_DOMICILIO ?? 'true'),
+        'import.meta.env.VITE_FEATURE_ASISTENTE_CLIENTE': JSON.stringify(process.env.VITE_FEATURE_ASISTENTE_CLIENTE ?? 'true'),
+        'import.meta.env.VITE_FEATURE_RESERVAS_BOLICHE': JSON.stringify(process.env.VITE_FEATURE_RESERVAS_BOLICHE ?? 'true'),
+      }
+    : undefined;
+
 // El build SSR (--ssr src/prerender.tsx) solo produce el render de las rutas públicas: sin PWA ni SEO.
 export default defineConfig(({ mode, isSsrBuild }) => ({
+  define: previewFeatureDefines,
   plugins: [
     react(),
     !isSsrBuild &&

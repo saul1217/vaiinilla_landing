@@ -163,7 +163,7 @@ describe('WalletReloadPage', () => {
     await user.click(await screen.findByRole('tab', { name: 'Con tarjeta' }));
     const pay = screen.getByRole('button', { name: 'Recargar' });
     expect(pay).toBeDisabled();
-    await user.type(screen.getByLabelText('Otro monto'), '20');
+    await user.type(screen.getByLabelText('Monto a recargar'), '20');
     expect(screen.getByText('La recarga debe ser de $50.00 a $2000.00.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '$200' }));
     await user.click(screen.getByRole('button', { name: 'Recargar $200' }));
