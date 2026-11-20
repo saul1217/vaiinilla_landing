@@ -175,6 +175,19 @@ export function canAnnounceArrival(order: OrderDetail): boolean {
 
 /** Lo que se dice bajo la píldora cuando la tarjeta está cerrada. */
 export function orderCollapsedHint(order: OrderDetail, now: Date = new Date()): string {
+  return withoutKitchenCopy(order, collapsedHint(order, now));
+}
+
+/**
+ * «Cocina recibió…» solo cuando hay algo para Cocina. Lo que prepara la barra (o un negocio sin
+ * cocina, que guarda lo de cocina como barra) no se anuncia como cocina.
+ */
+function withoutKitchenCopy(order: OrderDetail, text: string): string {
+  if (!skipsKitchen(order)) return text;
+  return text.replace(/Cocina recibió (tu pedido|la comanda)/, 'Ya están preparando tu pedido');
+}
+
+function collapsedHint(order: OrderDetail, now: Date): string {
   if (order.reserva) {
     const step = rentalStep(order, now);
     if (!step) return '';
@@ -254,8 +267,11 @@ function markSkippedPreparing(order: OrderDetail, steps: OrderTrackStep[]): Orde
 
 export function orderTrackSteps(order: OrderDetail, now: Date = new Date()): OrderTrackStep[] {
   if (order.reserva) return rentalTrackSteps(order, now);
-  if (order.pago_diferido) return markSkippedPreparing(order, tabTrackSteps(order));
-  return markSkippedPreparing(order, flowTrackSteps(order));
+  const steps = order.pago_diferido ? tabTrackSteps(order) : flowTrackSteps(order);
+  return markSkippedPreparing(order, steps).map((step) => ({
+    ...step,
+    hint: withoutKitchenCopy(order, step.hint),
+  }));
 }
 
 function flowTrackSteps(order: OrderDetail): OrderTrackStep[] {
