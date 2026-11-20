@@ -326,6 +326,10 @@ export interface OrderDetail {
   } | null;
   items: OrderItem[];
   qr_token?: string | null;
+  /** 4 dígitos para recoger sin escanear; llegan con el QR al crear el pedido. */
+  codigo_recoger?: string | null;
+  /** Dónde se forma para recogerlo (migración 222). Sin el back nuevo no viene. */
+  fila?: { id: number; nombre: string; express: boolean } | null;
   pago?: OrderPayment | null;
   vence_operacion_en?: string | null;
   motivo_pendiente_operativo?: 'caja_inactiva' | 'cocina_inactiva' | null;

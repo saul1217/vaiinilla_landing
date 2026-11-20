@@ -26,7 +26,7 @@ import { piecesLabel, splitPieces } from '../lib/product-pieces';
 import { resolveClientSession } from '../lib/client-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { orderHistoryHeadline } from '../lib/order-labels';
-import { rememberPickupQrToken } from '../lib/pickup-qr';
+import { rememberPickupCode, rememberPickupQrToken } from '../lib/pickup-qr';
 import { activeRentalSpace, forgetSpace, readSpace, rememberSpace } from '../lib/space-session';
 import { deliveredAtLabel, isSharableSpace, spaceNoun } from '../lib/space-words';
 import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
@@ -619,6 +619,7 @@ export function CartPage() {
         throw cause;
       }
       rememberPickupQrToken(order.id, order.qr_token);
+      rememberPickupCode(order.id, order.codigo_recoger);
       // Un encargo con tarjeta llega sin `pago`: se cobra cuando el negocio lo acepte.
       if (method === 'stripe' && !isAwaitingAcceptance(order)) {
         const stripeSession = stripeSessionFromCreatedOrder(order);

@@ -454,8 +454,8 @@ export const api = {
     return (await request<OrderDetail>(`/pedidos/${id}`, { token, cache: 'no-store' })).data;
   },
 
-  async getOrderQr(token: string, id: string): Promise<{ qr_token: string }> {
-    return (await request<{ qr_token: string }>(`/pedidos/${id}/qr`, { token })).data;
+  async getOrderQr(token: string, id: string): Promise<{ qr_token: string; codigo_recoger?: string | null }> {
+    return (await request<{ qr_token: string; codigo_recoger?: string | null }>(`/pedidos/${id}/qr`, { token })).data;
   },
 
   /** "Ya llegué" (drive-thru): sin cuerpo; avisar otra vez conserva la primera hora. */
