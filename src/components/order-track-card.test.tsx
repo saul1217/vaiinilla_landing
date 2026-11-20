@@ -89,7 +89,8 @@ describe("OrderTrackCard pickup", () => {
     expect(document.querySelector(".alumno-pickup")).toBeNull();
     expect(
       document.querySelector(".alumno-track-card__status"),
-    ).toHaveTextContent(/Recibimos tu pedido\s+Cocina recibió la comanda/i);
+    // Solo trae algo de caja: no se anuncia como cocina (tanda 1, negocio sin cocina).
+    ).toHaveTextContent(/Recibimos tu pedido\s+Ya están preparando tu pedido/i);
     expect(
       document.querySelector(
         ".alumno-timeline li.is-current .alumno-timeline__mark",
