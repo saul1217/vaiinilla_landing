@@ -69,6 +69,8 @@ export interface PublicEstablishment {
   acepta_tarjeta?: boolean;
   /** Permite pagar al final: sin sesión, lo dice la ficha pública. */
   permite_pago_al_final?: boolean;
+  /** `false` = no cobra en caja: quien pide sin cuenta tiene que entrar. Ausente = sí. */
+  permite_pago_en_caja?: boolean;
   /** Saldo y recargas: el dueño puede apagarlo. Ausente (backend viejo) = sí hay saldo. */
   permite_saldo?: boolean;
   /** La tienda tiene el asistente de pedidos para clientes (`asistente_modo = 'ambos'`). Ausente = sí. */

@@ -674,6 +674,19 @@ describe('CartPage', () => {
       };
     });
 
+    it('si el negocio no cobra en caja, no ofrece efectivo y pide entrar a la cuenta', async () => {
+      getEstablishment.mockResolvedValue({ id: '1', nombre: 'Escuela', slug: 'demo-a', acepta_tarjeta: false, permite_pago_en_caja: false });
+      const user = userEvent.setup();
+      renderCart();
+
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
+      expect(screen.queryByRole('radio', { name: /pago en caja/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Entra a tu cuenta' })).toHaveAttribute('href', '/cuenta');
+      await user.type(screen.getByLabelText('Tu nombre'), 'Lupita');
+      expect(screen.getByRole('button', { name: /^continuar con/i })).toBeDisabled();
+      expect(createOrder).not.toHaveBeenCalled();
+    });
+
     it('pide solo el nombre, no ofrece saldo y abre Mis pedidos (efectivo)', async () => {
       createOrder.mockResolvedValue({ id: 'ord-g', folio: 21, estado: 'por_cobrar', metodo_pago: 'efectivo', destino: 'para_llevar', qr_token: 'qr', espacio: null, total: '240.00', items: [], invitado: true, seguimiento_token: SEGUIMIENTO });
       const user = userEvent.setup();

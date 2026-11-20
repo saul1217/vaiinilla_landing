@@ -170,11 +170,10 @@ export function CartPage() {
     : forHere && Boolean(space) && place?.permite_pago_al_final === true;
   const useTab = payAtEnd && tabAllowed && payment === 'efectivo';
   // Solo saldo o tarjeta: el negocio apagó «Pago en caja». El back también lo rechaza.
-  const cashAllowed = guestLike || cashAtRegisterAllowed(status);
-  // El carrito empieza en «Pago en caja»: si el negocio lo apagó, se pasa a saldo.
-  useEffect(() => {
-    if (!cashAllowed && payment === 'efectivo' && !payAtEnd) setPayment('saldo');
-  }, [cashAllowed, payment, payAtEnd]);
+  // Sin cuenta lo dice la ficha pública (lo único que tiene un invitado es pagar en caja).
+  const cashAllowed = guestLike ? place?.permite_pago_en_caja !== false : cashAtRegisterAllowed(status);
+  // Un invitado no tiene saldo ni tarjeta: si el negocio no cobra en caja, tiene que entrar.
+  const guestCannotPay = guestLike && !cashAllowed && !useTab;
   const stripeEnabled = isStripeCheckoutEnabled();
   const cardOffered = offersCardPayment(place);
   const pendingStripeOrderId = readPendingStripeOrderId();
@@ -454,6 +453,16 @@ export function CartPage() {
     total &&
     wallet &&
     (moneyToCents(wallet.wallet.saldo) ?? 0n) < (moneyToCents(total) ?? 0n);
+
+  // El carrito empieza en «Pago en caja»: si el negocio lo apagó, pasa a saldo, o a tarjeta si
+  // el saldo no alcanza y la tarjeta sí se puede usar.
+  useEffect(() => {
+    if (cashAllowed || guestLike || payment !== 'efectivo' || useTab) return;
+    const walletShort =
+      !wallet || !total || (moneyToCents(wallet.wallet.saldo) ?? 0n) < (moneyToCents(total) ?? 0n);
+    const cardUsable = cardOffered && stripeEnabled && !cardTooSmall;
+    setPayment(walletShort && cardUsable ? 'stripe' : 'saldo');
+  }, [cashAllowed, guestLike, payment, useTab, wallet, total, cardOffered, stripeEnabled, cardTooSmall]);
 
   async function confirm(retried = false) {
     // Un solo pedido a la vez: un segundo toque mientras se crea no abre otro.
@@ -974,6 +983,18 @@ export function CartPage() {
                   {cardMinimumMessage(cardMinimum)}
                 </p>
               ) : null}
+              {!cashAllowed && !useTab && !isHome ? (
+                <p className="alumno-muted">
+                  {guestLike ? (
+                    <>
+                      Este negocio no cobra en caja. <Link to="/cuenta">Entra a tu cuenta</Link> para pagar con saldo o
+                      tarjeta.
+                    </>
+                  ) : (
+                    'Este negocio no cobra en caja: paga con saldo o tarjeta.'
+                  )}
+                </p>
+              ) : null}
               {insufficientBalance ? (
                 <p className="alumno-error">
                   No tienes saldo suficiente para este pedido.{' '}
@@ -995,6 +1016,7 @@ export function CartPage() {
                   cardBlocked ||
                   Boolean(insufficientBalance) ||
                   Boolean(pendingStripeOrderId) ||
+                  guestCannotPay ||
                   (guestLike && !guestNameValid)
                 }
                 onClick={() => void confirm()}
