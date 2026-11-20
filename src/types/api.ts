@@ -149,6 +149,12 @@ export interface OperationalStatus {
   consultado_en: string;
   /** Pagar al final: las apps lo ofrecen solo si es `true`. Ausente en backends viejos. */
   permite_pago_al_final?: boolean;
+  /** `false` = el negocio no acepta «Pago en caja» (efectivo) desde la app. Ausente = sí. */
+  permite_pago_en_caja?: boolean;
+  /** `false` = el negocio no tiene cocina: lo prepara la barra. Ausente = sí tiene. */
+  tiene_cocina?: boolean;
+  /** Qué pide Caja para entregar: qr_o_codigo, qr, codigo o ninguna. Ausente = QR o código. */
+  validacion_entrega?: 'qr_o_codigo' | 'qr' | 'codigo' | 'ninguna';
   /** Lo que el dueño dice que es el negocio; "Ya llegué" solo sale en `drive_thru`. */
   tipo?: EstablishmentKind;
   /** A domicilio (docs/reposteria-domicilio.md del back). Solo viaja si el negocio reparte. */

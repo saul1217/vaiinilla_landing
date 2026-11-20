@@ -10,7 +10,7 @@ import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
-import { canAcceptOrders, canPayAtEnd, cardFee, cartTotal, toCreateOrderInput, unitFor } from '../lib/cart';
+import { canAcceptOrders, canPayAtEnd, cardFee, cartTotal, cashAtRegisterAllowed, toCreateOrderInput, unitFor } from '../lib/cart';
 import {
   cardBelowMinimum,
   cardMinimumErrorMessage,
@@ -169,6 +169,12 @@ export function CartPage() {
     ? canPayAtEnd(status, forHere && Boolean(space))
     : forHere && Boolean(space) && place?.permite_pago_al_final === true;
   const useTab = payAtEnd && tabAllowed && payment === 'efectivo';
+  // Solo saldo o tarjeta: el negocio apagó «Pago en caja». El back también lo rechaza.
+  const cashAllowed = guestLike || cashAtRegisterAllowed(status);
+  // El carrito empieza en «Pago en caja»: si el negocio lo apagó, se pasa a saldo.
+  useEffect(() => {
+    if (!cashAllowed && payment === 'efectivo' && !payAtEnd) setPayment('saldo');
+  }, [cashAllowed, payment, payAtEnd]);
   const stripeEnabled = isStripeCheckoutEnabled();
   const cardOffered = offersCardPayment(place);
   const pendingStripeOrderId = readPendingStripeOrderId();
@@ -907,7 +913,7 @@ export function CartPage() {
                   }}
                 />
               ) : null}
-              {!isHome ? (
+              {!isHome && cashAllowed ? (
               <PayOption
                 selected={payment === 'efectivo' && !useTab}
                 icon="cash"
