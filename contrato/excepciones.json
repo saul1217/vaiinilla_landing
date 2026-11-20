@@ -1,0 +1,7 @@
+[
+  {
+    "llamada": "POST /publico/espacios/resolver",
+    "contiene": "«establecimiento_slug»",
+    "motivo": "PENDIENTE (diferencia real, sin error): el backend solo lee `token` y lo ignora, así que el código de mesa no queda limitado a esa tienda como espera la landing."
+  }
+]

@@ -16,7 +16,9 @@
     "test:e2e": "playwright test",
     "test:e2e:stack": "playwright test -c playwright.stack.config.ts",
     "test:ui": "playwright test -c playwright.ui.config.ts",
-    "lhci": "npx --yes @lhci/cli@0.15.x autorun --config=lighthouserc.json"
+    "lhci": "npx --yes @lhci/cli@0.15.x autorun --config=lighthouserc.json",
+    "contrato:revisar": "node contrato/revisar.mjs",
+    "contrato:traer": "cp ../vaiinilla_back/contrato/openapi.json contrato/openapi.json && node contrato/revisar.mjs"
   },
   "dependencies": {
     "@sentry/react": "^11.10.0",
