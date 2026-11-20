@@ -142,6 +142,8 @@ export interface CatalogResponse {
   productos: CatalogProduct[];
 }
 
+export type DeliveryValidation = 'qr_o_codigo' | 'qr' | 'codigo' | 'ninguna';
+
 export interface OperationalStatus {
   recibiendo_pedidos: boolean;
   sesion_caja_abierta: boolean;
@@ -157,6 +159,8 @@ export interface OperationalStatus {
   tiene_cocina?: boolean;
   /** Qué pide Caja para entregar: qr_o_codigo, qr, codigo o ninguna. Ausente = QR o código. */
   validacion_entrega?: 'qr_o_codigo' | 'qr' | 'codigo' | 'ninguna';
+  /** Caja pide el QR o el código del cliente para cobrar lo pedido en la app (migración 225). */
+  cobro_requiere_codigo?: boolean;
   /** Lo que el dueño dice que es el negocio; "Ya llegué" solo sale en `drive_thru`. */
   tipo?: EstablishmentKind;
   /** A domicilio (docs/reposteria-domicilio.md del back). Solo viaja si el negocio reparte. */

@@ -1,11 +1,7 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { ORDER_STATUS_HINT } from '../lib/order-labels';
-import {
-  resolvePickupCode,
-  shouldShowPickupQr,
-  shouldShowPickupSurface,
-} from '../lib/pickup-qr';
+import { pickupProofs, resolvePickupCode, type PickupRules } from '../lib/pickup-qr';
 import type { OrderDetail } from '../types/api';
 
 const FILA_STATES: OrderDetail['estado'][] = ['cobrado', 'preparando', 'listo'];
@@ -14,14 +10,18 @@ export function OrderPickupPanel({
   order,
   token,
   stripeOrder = false,
+  rules,
 }: {
   order: OrderDetail;
   token: string | null;
   stripeOrder?: boolean;
+  /** Cómo valida la entrega el negocio y si pide código al cobrar; sin ellas, QR y código. */
+  rules?: PickupRules;
 }) {
   const [qr, setQr] = useState<string | null>(null);
-  const showSurface = shouldShowPickupSurface(order);
-  const showQr = shouldShowPickupQr(order, token);
+  const proofs = pickupProofs(order, rules);
+  const showSurface = proofs.surface;
+  const showQr = proofs.qr !== 'hidden' && Boolean(token?.trim());
 
   useEffect(() => {
     if (!showQr || !token) {
@@ -55,7 +55,7 @@ export function OrderPickupPanel({
   }
 
   const listo = order.estado === 'listo';
-  const code = showSurface ? resolvePickupCode(order) : null;
+  const code = showSurface && proofs.code ? resolvePickupCode(order) : null;
   const atCounter = order.estado === 'por_cobrar' && order.metodo_pago !== 'stripe';
   // En mesa o cancha lo lleva el mesero: el código solo se muestra si te lo pide.
   const toSpace = order.destino === 'en_espacio';
@@ -93,14 +93,22 @@ export function OrderPickupPanel({
       ) : null}
       {code ? (
         <div className="alumno-pickup__code">
-          <span>Si no te escanean el QR, dicta este código</span>
+          <span>{proofs.qr === 'show' ? 'Si no te escanean el QR, dicta este código' : 'Dicta este código'}</span>
           <strong aria-label={`Código ${code.split('').join(' ')}`}>{code}</strong>
         </div>
       ) : null}
-      {qr ? (
+      {qr && proofs.qr === 'show' ? (
         <div className="alumno-pickup__qr-pad">
           <img className="alumno-pickup__qr" src={qr} alt={qrAlt} />
         </div>
+      ) : null}
+      {qr && proofs.qr === 'folded' ? (
+        <details className="alumno-pickup__fallback">
+          <summary>Si el código se bloquea, muestra este QR</summary>
+          <div className="alumno-pickup__qr-pad">
+            <img className="alumno-pickup__qr" src={qr} alt={qrAlt} />
+          </div>
+        </details>
       ) : null}
     </div>
   );

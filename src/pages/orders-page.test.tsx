@@ -55,11 +55,13 @@ const {
   joinTable: vi.fn(),
 }));
 
+const getOperationalStatus = vi.fn<(...args: unknown[]) => Promise<unknown>>(() => Promise.resolve({ validacion_entrega: "codigo", cobro_requiere_codigo: true }));
 vi.mock("../lib/api", () => ({
   api: {
     getEstablishment: (...args: unknown[]) =>
       getEstablishment(...args) as Promise<unknown>,
     listOrders: (...args: unknown[]) => listOrders(...args) as Promise<unknown>,
+    getOperationalStatus: (...args: unknown[]) => getOperationalStatus(...args),
     getOrderQr: (...args: unknown[]) => getOrderQr(...args) as Promise<unknown>,
     getGuestCatalog: (...args: unknown[]) =>
       getGuestCatalog(...args) as Promise<unknown>,
