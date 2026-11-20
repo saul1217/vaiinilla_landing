@@ -2465,6 +2465,38 @@ html[data-theme='dark'] .alumno-track-card.is-selected {
   flex: 0 0 auto;
 }
 
+.alumno-pickup__fila {
+  margin: 8px 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: #f4f1e7;
+}
+
+.alumno-pickup__code {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0 0;
+  color: #f4f1e7;
+}
+
+.alumno-pickup__code span {
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.alumno-pickup__code strong {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
 .alumno-pickup__hint {
   margin: 5px 0 0;
   font-size: 0.95rem;

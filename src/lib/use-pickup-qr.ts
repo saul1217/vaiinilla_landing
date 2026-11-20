@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from './api';
 import {
   persistPickupQrFromOrder,
+  rememberPickupCode,
   rememberPickupQrToken,
+  resolvePickupCode,
   resolvePickupQrToken,
   shouldRecoverPickupQr,
 } from './pickup-qr';
@@ -20,21 +22,24 @@ export function usePickupQrToken(order: OrderDetail | null, accessToken: string 
     }
 
     const local = persistPickupQrFromOrder(order);
-    if (local) {
+    // Un pedido de antes del código de 4 dígitos tiene el QR guardado pero no el código: se pide.
+    if (local && resolvePickupCode(order)) {
       setToken(local);
       return;
     }
+    if (local) setToken(local);
 
     if (!accessToken || !shouldRecoverPickupQr(order) || failedIds.current.has(order.id)) {
-      setToken(null);
+      if (!local) setToken(null);
       return;
     }
 
     let active = true;
     void api
       .getOrderQr(accessToken, order.id)
-      .then(({ qr_token: recoveredToken }) => {
+      .then(({ qr_token: recoveredToken, codigo_recoger: code }) => {
         if (!active || !recoveredToken?.trim()) return;
+        rememberPickupCode(order.id, code);
         rememberPickupQrToken(order.id, recoveredToken);
         setToken(recoveredToken.trim());
       })

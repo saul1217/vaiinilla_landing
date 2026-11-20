@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { ORDER_STATUS_HINT } from '../lib/order-labels';
 import {
+  resolvePickupCode,
   shouldShowPickupQr,
   shouldShowPickupSurface,
 } from '../lib/pickup-qr';
 import type { OrderDetail } from '../types/api';
+
+const FILA_STATES: OrderDetail['estado'][] = ['cobrado', 'preparando', 'listo'];
 
 export function OrderPickupPanel({
   order,
@@ -38,9 +41,21 @@ export function OrderPickupPanel({
     };
   }, [showQr, token]);
 
-  if (!showSurface && !showQr) return null;
+  // La fila se avisa desde que lo pagó: así se forma en la correcta antes de que esté listo.
+  const fila =
+    order.fila && FILA_STATES.includes(order.estado) && order.destino !== 'a_domicilio' ? order.fila : null;
+  if (!showSurface && !showQr) {
+    if (!fila) return null;
+    return (
+      <p className="alumno-pickup alumno-pickup__fila" role="status">
+        Cuando esté listo, recógelo en <strong>{fila.nombre}</strong>
+        {fila.express ? ' (express)' : ''}.
+      </p>
+    );
+  }
 
   const listo = order.estado === 'listo';
+  const code = showSurface ? resolvePickupCode(order) : null;
   const atCounter = order.estado === 'por_cobrar' && order.metodo_pago !== 'stripe';
   // En mesa o cancha lo lleva el mesero: el código solo se muestra si te lo pide.
   const toSpace = order.destino === 'en_espacio';
@@ -70,6 +85,18 @@ export function OrderPickupPanel({
         </div>
         <p className="alumno-pickup__folio" aria-label={`Número de pedido ${order.folio}`}>#{order.folio}</p>
       </div>
+      {fila ? (
+        <p className="alumno-pickup__fila">
+          Fórmate en <strong>{fila.nombre}</strong>
+          {fila.express ? ' (express)' : ''}
+        </p>
+      ) : null}
+      {code ? (
+        <div className="alumno-pickup__code">
+          <span>Si no te escanean el QR, dicta este código</span>
+          <strong aria-label={`Código ${code.split('').join(' ')}`}>{code}</strong>
+        </div>
+      ) : null}
       {qr ? (
         <div className="alumno-pickup__qr-pad">
           <img className="alumno-pickup__qr" src={qr} alt={qrAlt} />

@@ -76,7 +76,28 @@ export function resolvePickupQrToken(order: OrderDetail): string | null {
 export function persistPickupQrFromOrder(order: OrderDetail): string | null {
   const fromOrder = pickupQrPayloadFromOrder(order);
   if (fromOrder) rememberPickupQrToken(order.id, fromOrder);
+  rememberPickupCode(order.id, order.codigo_recoger);
   return resolvePickupQrToken(order);
+}
+
+const CODE_PREFIX = 'vaiinilla.buyer.pickup-code.v1.';
+const PICKUP_CODE = /^\d{4}$/;
+
+/**
+ * Los 4 dígitos que el cliente dicta en la barra si no le escanean el QR. Llegan con el QR al crear
+ * el pedido o al recuperarlo; se guardan igual que el QR para verlos en otra visita.
+ */
+export function rememberPickupCode(orderId: string, code: string | null | undefined): void {
+  if (typeof window === 'undefined' || !code || !PICKUP_CODE.test(code.trim())) return;
+  window.localStorage.setItem(`${CODE_PREFIX}${orderId}`, code.trim());
+}
+
+export function resolvePickupCode(order: OrderDetail): string | null {
+  const fromOrder = order.codigo_recoger?.trim();
+  if (fromOrder && PICKUP_CODE.test(fromOrder)) return fromOrder;
+  if (typeof window === 'undefined') return null;
+  const saved = window.localStorage.getItem(`${CODE_PREFIX}${order.id}`)?.trim();
+  return saved && PICKUP_CODE.test(saved) ? saved : null;
 }
 
 export function shouldShowPickupSurface(order: OrderDetail): boolean {
