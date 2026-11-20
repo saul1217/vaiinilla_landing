@@ -272,7 +272,7 @@ export function OrdersPage() {
           </section>
         ) : null}
         {myCodeView && !loading ? (
-          <MyCodeSection orders={orders} rules={pickupRules} slug={place?.slug ?? placeGuess ?? null} />
+          <MyCodeSection orders={orders} rules={pickupRules} slug={place?.slug ?? placeGuess ?? null} accessToken={context?.access_token ?? null} />
         ) : null}
         {loading && orders.length === 0 && !error ? (
           <LoadingSkeleton shape="orders" label="Cargando pedidos…" />

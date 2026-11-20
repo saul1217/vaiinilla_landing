@@ -353,6 +353,9 @@ export interface OrderDetail {
   /** Solo al crear un pedido de invitado: el token de su enlace de seguimiento. */
   seguimiento_token?: string;
   pago_diferido?: boolean;
+  /** Importes del registro de pagos; un back anterior no los manda. */
+  monto_pagado?: string;
+  saldo_pendiente?: string;
   /** Va a la cuenta y aún no se cobra. */
   pago_pendiente?: boolean;
   /** Cuándo avisó "ya llegué" (drive-thru); `null` si no lo ha hecho. */

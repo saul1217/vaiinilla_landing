@@ -113,7 +113,22 @@ export function shouldShowPickupQr(order: OrderDetail, token: string | null | un
   return true;
 }
 
+/**
+ * Un pedido en efectivo que todavía se paga en caja: por cobrar, o preparándose o listo sin pagar
+ * (con «Cocina prepara antes de cobrar» avanza antes del cobro). Con el cobro con código (225) el
+ * cliente enseña su código ahí. Sin `saldo_pendiente` (back anterior), solo por cobrar.
+ */
+export function owesAtCounter(order: OrderDetail): boolean {
+  if (order.metodo_pago !== 'efectivo' || order.pago_diferido === true) return false;
+  if (order.estado === 'por_cobrar') return true;
+  if (order.estado !== 'preparando' && order.estado !== 'listo') return false;
+  const due = Number(order.saldo_pendiente ?? '0');
+  return Number.isFinite(due) && due > 0;
+}
+
 export function shouldRecoverPickupQr(order: OrderDetail): boolean {
+  // Por pagar en caja: el back da el código solo si el negocio pide código para cobrar.
+  if (owesAtCounter(order)) return true;
   if (!RECOVER_STATES.includes(order.estado)) return false;
   if (order.metodo_pago === 'stripe' && !isStripePaymentConfirmedByBackend(order)) return false;
   return true;
@@ -140,7 +155,7 @@ export function pickupProofs(
   order: OrderDetail,
   rules: PickupRules = {},
 ): { surface: boolean; code: boolean; qr: 'show' | 'folded' | 'hidden' } {
-  const atCounter = order.estado === 'por_cobrar' && order.metodo_pago !== 'stripe' && rules.cobroCodigo === true;
+  const atCounter = owesAtCounter(order) && rules.cobroCodigo === true;
   const surface = shouldShowPickupSurface(order) || atCounter;
   if (!surface) return { surface: false, code: false, qr: 'hidden' };
   const mode = rules.mode === 'ninguna' && atCounter ? 'qr_o_codigo' : rules.mode;

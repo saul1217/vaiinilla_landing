@@ -9,6 +9,8 @@ import {
   shouldShowPickupSurface,
   pickupProofs,
   myCodeOrders,
+  owesAtCounter,
+  shouldRecoverPickupQr,
 } from './pickup-qr';
 import type { OrderDetail } from '../types/api';
 
@@ -120,5 +122,38 @@ describe('qué prueba enseña el cliente (225 y 227)', () => {
       '2026-11-20',
     );
     expect(list.map((x) => x.folio)).toEqual([3, 4, 2, 1]);
+  });
+});
+
+describe('se paga en caja (cobro con código)', () => {
+  const o = (estado: string, extra: object = {}) =>
+    ({ id: 'p', folio: 1, estado, metodo_pago: 'efectivo', ...extra }) as unknown as OrderDetail;
+
+  it('por cobrar, o preparándose o listo con saldo pendiente', () => {
+    expect(owesAtCounter(o('por_cobrar'))).toBe(true);
+    expect(owesAtCounter(o('preparando', { saldo_pendiente: '40.00' }))).toBe(true);
+    expect(owesAtCounter(o('listo', { saldo_pendiente: '40.00' }))).toBe(true);
+    expect(owesAtCounter(o('listo', { saldo_pendiente: '0.00' }))).toBe(false);
+    expect(owesAtCounter(o('preparando'))).toBe(false);
+    expect(owesAtCounter(o('por_cobrar', { pago_diferido: true }))).toBe(false);
+    expect(owesAtCounter(o('por_cobrar', { metodo_pago: 'stripe' }))).toBe(false);
+  });
+
+  it('listo sin pagar con «sin validar» y el cobro con código: enseña código y QR', () => {
+    expect(pickupProofs(o('listo', { saldo_pendiente: '40.00' }), { mode: 'ninguna', cobroCodigo: true })).toEqual({
+      surface: true,
+      code: true,
+      qr: 'show',
+    });
+    expect(pickupProofs(o('preparando', { saldo_pendiente: '40.00' }), { mode: 'codigo', cobroCodigo: true })).toEqual({
+      surface: true,
+      code: true,
+      qr: 'folded',
+    });
+  });
+
+  it('se recupera el código de lo que se paga en caja', () => {
+    expect(shouldRecoverPickupQr(o('por_cobrar'))).toBe(true);
+    expect(shouldRecoverPickupQr(o('preparando', { saldo_pendiente: '40.00' }))).toBe(true);
   });
 });
