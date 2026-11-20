@@ -20,6 +20,7 @@ import { useHeightMorph } from '../lib/use-height-morph';
 import { ArrivalButton } from './arrival-button';
 import type { ArrivalClient } from '../lib/arrival-api';
 import { OrderPickupPanel } from './order-pickup-panel';
+import type { PickupRules } from '../lib/pickup-qr';
 import { statusAsPhrase } from '../lib/status-phrase';
 
 export function OrderTrackCard({
@@ -32,6 +33,7 @@ export function OrderTrackCard({
   imageUrl = null,
   pickupToken = null,
   arrivalClient,
+  pickupRules,
 }: {
   order: OrderDetail;
   expanded: boolean;
@@ -42,6 +44,8 @@ export function OrderTrackCard({
   imageUrl?: string | null;
   pickupToken?: string | null;
   arrivalClient?: ArrivalClient;
+  /** Cómo valida la entrega el negocio y si pide código al cobrar (migraciones 225 y 227). */
+  pickupRules?: PickupRules;
 }) {
   const rental = Boolean(order.reserva);
   const holdTicking = rentalHoldRemainingMs(order) !== null;
@@ -200,6 +204,7 @@ export function OrderTrackCard({
             order={order}
             token={pickupTokenResolved}
             stripeOrder={order.metodo_pago === 'stripe'}
+            rules={pickupRules}
           />
           <ArrivalButton order={order} client={arrivalClient} />
           <ol className="alumno-timeline">

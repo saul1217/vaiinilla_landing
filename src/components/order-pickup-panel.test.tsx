@@ -64,3 +64,22 @@ describe('OrderPickupPanel', () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+describe('OrderPickupPanel según cómo valida el negocio', () => {
+  it('«solo código»: el código grande y el QR plegado para cuando se bloquee', async () => {
+    render(<OrderPickupPanel order={{ ...base, codigo_recoger: '0133' }} token="pickup-5" rules={{ mode: 'codigo' }} />);
+    expect(screen.getByText('Dicta este código')).toBeVisible();
+    expect(await screen.findByText('Si el código se bloquea, muestra este QR')).toBeInTheDocument();
+  });
+
+  it('«solo QR»: sin código', async () => {
+    render(<OrderPickupPanel order={{ ...base, codigo_recoger: '0133' }} token="pickup-5" rules={{ mode: 'qr' }} />);
+    expect(await screen.findByRole('img', { name: /Código de retiro/ })).toBeInTheDocument();
+    expect(screen.queryByText('0133')).toBeNull();
+  });
+
+  it('por pagar en caja con el cobro con código: enseña su código', () => {
+    render(<OrderPickupPanel order={{ ...base, estado: 'por_cobrar', codigo_recoger: '0133' }} token={null} rules={{ mode: 'qr_o_codigo', cobroCodigo: true }} />);
+    expect(screen.getByText('0133')).toBeVisible();
+  });
+});

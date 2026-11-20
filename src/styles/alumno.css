@@ -8614,3 +8614,77 @@ html[data-theme='dark'] body[data-shell='alumno'] .alumno-card--ticket .alumno-c
 a.order-help__case:active { transform: scale(0.98); }
 a.order-help__case:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .order-help__case { transition: none; } }
+
+/* «Mi código»: los pedidos de hoy con su código, en el orden en que se necesitan. */
+.alumno-mycode {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 20px;
+}
+.alumno-mycode__list {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.alumno-mycode__item {
+  display: grid;
+  gap: 8px;
+}
+.alumno-mycode__state,
+.alumno-mycode__empty,
+.alumno-mycode__rescan {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+.alumno-mycode__rescan {
+  color: var(--alumno-muted, #8a8a8a);
+}
+.alumno-mycode__detail,
+.alumno-mycode__rescan a {
+  justify-self: start;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.alumno-pickup__fallback {
+  margin: 10px 0 0;
+  color: #f4f1e7;
+}
+.alumno-pickup__fallback summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 700;
+}
+.alumno-mycode-fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: #1a1b19;
+  color: #f4f1e7;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.18);
+}
+.alumno-mycode-fab:focus-visible {
+  outline: 3px solid #c8f04a;
+  outline-offset: 3px;
+}
+@media (min-width: 900px) {
+  .alumno-mycode-fab {
+    bottom: 24px;
+  }
+}
