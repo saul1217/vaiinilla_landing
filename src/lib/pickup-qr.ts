@@ -181,7 +181,6 @@ const MY_CODE_RANK: Partial<Record<OrderDetail['estado'], number>> = {
   por_aceptar: 2,
   cobrado: 3,
   preparando: 3,
-  en_camino: 3,
   entregado: 4,
 };
 
