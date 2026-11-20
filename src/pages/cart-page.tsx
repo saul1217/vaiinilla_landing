@@ -94,6 +94,8 @@ export function CartPage() {
   const [status, setStatus] = useState<OperationalStatus | null>(null);
   const [operationalError, setOperationalError] = useState<string | null>(null);
   const [wallet, setWallet] = useState<WalletData | null>(null);
+  // La consulta de la cartera ya terminó (con o sin cartera).
+  const [walletChecked, setWalletChecked] = useState(false);
   const [payment, setPayment] = useState<PaymentMethod>('efectivo');
   const [payAtEnd, setPayAtEnd] = useState(() => readSpace(slug)?.pagaAlFinal === true);
   const [notes, setNotes] = useState('');
@@ -355,11 +357,13 @@ export function CartPage() {
     if (!context || !place || context.contexto.establecimiento_id !== place.id) {
       setStatus(null);
       setWallet(null);
+      setWalletChecked(false);
       setOperationalError(null);
       return;
     }
     let active = true;
     setStatus(null);
+    setWalletChecked(false);
     setOperationalError(null);
     void Promise.all([
       api.getOperationalStatus(context.access_token),
@@ -371,6 +375,7 @@ export function CartPage() {
         setRentalSpace(activeRentalSpace(slug, rentals, Date.now()));
         setStatus(nextStatus);
         setWallet(nextWallet);
+        setWalletChecked(true);
       })
       .catch((cause: unknown) => {
         if (!active) return;
@@ -457,12 +462,23 @@ export function CartPage() {
   // El carrito empieza en «Pago en caja»: si el negocio lo apagó, pasa a saldo, o a tarjeta si
   // el saldo no alcanza y la tarjeta sí se puede usar.
   useEffect(() => {
-    if (cashAllowed || guestLike || payment !== 'efectivo' || useTab) return;
+    if (cashAllowed || guestLike || payment !== 'efectivo' || useTab || !walletChecked) return;
     const walletShort =
       !wallet || !total || (moneyToCents(wallet.wallet.saldo) ?? 0n) < (moneyToCents(total) ?? 0n);
     const cardUsable = cardOffered && stripeEnabled && !cardTooSmall;
     setPayment(walletShort && cardUsable ? 'stripe' : 'saldo');
-  }, [cashAllowed, guestLike, payment, useTab, wallet, total, cardOffered, stripeEnabled, cardTooSmall]);
+  }, [
+    cashAllowed,
+    guestLike,
+    payment,
+    useTab,
+    walletChecked,
+    wallet,
+    total,
+    cardOffered,
+    stripeEnabled,
+    cardTooSmall,
+  ]);
 
   async function confirm(retried = false) {
     // Un solo pedido a la vez: un segundo toque mientras se crea no abre otro.
