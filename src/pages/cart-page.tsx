@@ -546,6 +546,13 @@ export function CartPage() {
           const cashLike = !isHome && method !== 'saldo' && method !== 'stripe';
           const pending =
             code === 'IDENTITY_NOT_REGISTERED' || (code === 'EMAIL_NOT_VERIFIED' && retried);
+          // Donde el negocio pide cuenta no hay invitado al cual caer: el servidor lo rechazaría.
+          if (pending && cashLike && accountRequired(place)) {
+            setError('Este negocio pide cuenta: verifica tu correo para poder pedir aquí.');
+            confirming.current = false;
+            setSubmitting(false);
+            return;
+          }
           if (pending && cashLike && !fallbackGuest) {
             setFallbackGuest(true);
             if (!guestName.trim()) {

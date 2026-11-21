@@ -853,6 +853,29 @@ describe('CartPage', () => {
       expect(await screen.findByText(/revisa tu bandeja/i)).toBeInTheDocument();
     });
 
+    it('cuenta sin alta en un negocio que pide cuenta: no la manda como invitado, le pide verificar', async () => {
+      authState.user = { email: 'ana@example.test', displayName: 'Ana', getIdToken: vi.fn().mockResolvedValue('t') };
+      buyerSessionState.context = { access_token: 'jwt', contexto: { establecimiento_id: '1' } };
+      getEstablishment.mockResolvedValue({ id: '1', nombre: 'Escuela', slug: 'demo-a', identificador_cliente_etiqueta: 'Matrícula', identificador_cliente_obligatorio: false, cuenta_obligatoria: true, acepta_tarjeta: true });
+      cartState.cart = {
+        slug: 'demo-a',
+        establishmentName: 'Escuela',
+        lines: [{ productId: 1, quantity: 1, optionIds: [], productName: 'Chocolate $120', unitPreview: '120.00', imageUrl: null }],
+      };
+      buyerSessionState.context = null;
+      openClientSession.mockRejectedValue(
+        new VaiinillaApiError(403, { code: 'IDENTITY_NOT_REGISTERED', message: 'Termina tu registro.' }),
+      );
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
+      await user.click(screen.getByRole('button', { name: /^continuar con/i }));
+      expect((await screen.findAllByText('Este negocio pide cuenta: verifica tu correo para poder pedir aquí.')).length).toBeGreaterThan(0);
+      expect(createGuest).not.toHaveBeenCalled();
+      expect(createOrder).not.toHaveBeenCalled();
+      authState.user = { email: 'ana@example.test', displayName: 'Ana' };
+    });
+
     it('mientras el reintento sigue en curso, el botón no se libera ni crea un segundo pedido', async () => {
       const getIdToken = vi.fn().mockResolvedValue('fresh-token');
       authState.user = { email: 'ana@example.test', displayName: 'Ana', getIdToken };
