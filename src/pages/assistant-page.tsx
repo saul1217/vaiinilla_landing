@@ -43,6 +43,7 @@ import { peekResource, resourceKeys } from '../lib/resource-cache';
 import { readSpace } from '../lib/space-session';
 import type { CatalogResponse, PublicEstablishment } from '../types/api';
 import { NotFoundPage } from './not-found-page';
+import { accountRequired } from '../lib/account-required';
 
 export interface AssistantPageDeps {
   ask?: (token: string, turns: AssistantTurn[], establishmentId: string) => Promise<AssistantReply>;
@@ -97,7 +98,7 @@ export function AssistantPage({ deps = {} }: { deps?: AssistantPageDeps }) {
   const listEnd = useRef<HTMLDivElement>(null);
   const table = readSpace(slug);
   const enabled = showsCustomerAssistant(place, deps.enabled);
-  const needsAccount = !user && place?.identificador_cliente_obligatorio === true;
+  const needsAccount = !user && accountRequired(place);
 
   useEffect(() => {
     let active = true;

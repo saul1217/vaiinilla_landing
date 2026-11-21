@@ -81,6 +81,7 @@ import type {
 import { LoadingSkeleton } from '../components/loading-skeleton';
 import { MotionSheet } from '../components/motion-sheet';
 import { PlaceEntry } from '../components/place-entry';
+import { accountRequired } from '../lib/account-required';
 
 export function CartPage() {
   const { slug = '' } = useParams();
@@ -179,7 +180,7 @@ export function CartPage() {
   const stripeEnabled = isStripeCheckoutEnabled();
   const cardOffered = offersCardPayment(place);
   const pendingStripeOrderId = readPendingStripeOrderId();
-  const guestBlocked = guest && place?.identificador_cliente_obligatorio === true;
+  const guestBlocked = guest && accountRequired(place);
   const canCheckout = !guestBlocked;
   const [guestName, setGuestName] = useState(() => readGuest()?.nombre ?? '');
   // En mesa con participante vigente no se pide nombre: el pedido ya va a su nombre.
@@ -545,6 +546,13 @@ export function CartPage() {
           const cashLike = !isHome && method !== 'saldo' && method !== 'stripe';
           const pending =
             code === 'IDENTITY_NOT_REGISTERED' || (code === 'EMAIL_NOT_VERIFIED' && retried);
+          // Donde el negocio pide cuenta no hay invitado al cual caer: el servidor lo rechazaría.
+          if (pending && cashLike && accountRequired(place)) {
+            setError('Este negocio pide cuenta: verifica tu correo para poder pedir aquí.');
+            confirming.current = false;
+            setSubmitting(false);
+            return;
+          }
           if (pending && cashLike && !fallbackGuest) {
             setFallbackGuest(true);
             if (!guestName.trim()) {

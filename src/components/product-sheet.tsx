@@ -157,7 +157,7 @@ export function ProductSheet(props: ProductSheetProps) {
                 Agregar · <span key={price} className="alumno-ticker">{price}</span>
               </button>
             ) : (
-              // Solo donde se pide con matrícula: ahí sin cuenta no se puede pedir.
+              // Donde se pide con matrícula o con cuenta: ahí sin cuenta no se puede pedir.
               <Link className="alumno-psheet__add" to={props.loginHref}>
                 Crea tu cuenta para pedir aquí
               </Link>

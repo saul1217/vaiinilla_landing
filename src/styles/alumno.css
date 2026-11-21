@@ -2507,7 +2507,8 @@ html[data-theme='dark'] .alumno-track-card.is-selected {
 }
 
 .alumno-pickup__qr-pad {
-  width: min(148px, 46%);
+  /* Lo escanea otro teléfono o un lector: abajo de unos 200 px ya no lo lee bien. */
+  width: min(240px, 72%);
   margin: 12px auto 0;
   padding: 10px;
   background: #f4f1e7;
@@ -2712,9 +2713,9 @@ html[data-theme='dark'] .alumno-track-card.is-selected {
   }
 
   .alumno-pickup__qr-pad {
-    width: min(96px, 32%);
-    margin-top: 6px;
-    padding: 6px;
+    width: min(220px, 66vw);
+    margin-top: 8px;
+    padding: 10px;
   }
 
   .alumno-main:has(.alumno-detail-split) {
@@ -3957,7 +3958,7 @@ html[data-theme='dark'] .alumno-track-card.is-selected {
 
   .alumno-orders-desk__detail .alumno-pickup__qr-pad,
   .alumno-detail-split .alumno-pickup__qr-pad {
-    width: min(168px, 42%);
+    width: min(260px, 48%);
   }
 
   .alumno-orders-desk__hint {
