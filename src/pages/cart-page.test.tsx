@@ -742,6 +742,15 @@ describe('CartPage', () => {
       expect(await screen.findByRole('button', { name: 'Crea tu cuenta para pedir aquí' })).toBeInTheDocument();
     });
 
+    it('donde el negocio quitó «pedir sin cuenta», sin cuenta no se puede pedir', async () => {
+      getEstablishment.mockResolvedValue({ id: '1', nombre: 'Escuela', slug: 'demo-a', identificador_cliente_etiqueta: 'Matrícula', identificador_cliente_obligatorio: false, cuenta_obligatoria: true, acepta_tarjeta: true });
+      const user = userEvent.setup();
+      renderCart();
+      await user.click(await screen.findByRole('button', { name: 'Crea tu cuenta para pedir aquí' }));
+      expect(createGuest).not.toHaveBeenCalled();
+      expect(createOrder).not.toHaveBeenCalled();
+    });
+
     it('invitado: no guarda pending Stripe y puede pedir otra ronda', async () => {
       const savePending = vi.spyOn(stripePendingLib, 'savePendingStripeOrderId');
       sessionStorage.removeItem('vaiinilla.buyer.stripe-pending-order.v1');

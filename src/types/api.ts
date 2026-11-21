@@ -80,6 +80,8 @@ export interface PublicEstablishment {
   slug: string;
   identificador_cliente_etiqueta: string;
   identificador_cliente_obligatorio: boolean;
+  /** Sin «pedir sin cuenta» en este negocio (migración 228). Ausente en un back anterior = se pide sin cuenta. */
+  cuenta_obligatoria?: boolean;
   tipo?: EstablishmentKind;
   // Public profile (backend migrations 39–40); null until the business fills it in.
   descripcion?: string | null;

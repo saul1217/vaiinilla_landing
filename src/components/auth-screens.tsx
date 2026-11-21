@@ -20,11 +20,13 @@ import { cartTotal } from '../lib/cart';
 import { readCart } from '../lib/cart-storage';
 import { formatAmount } from '../lib/money';
 import { entryAfterAccess, guestEntryAfterAccess, guestMenuPath, scannedSpace } from '../lib/space-session';
+import { accountRequired } from '../lib/account-required';
+import { peekResource, resourceKeys } from '../lib/resource-cache';
 import { splashContextFor } from '../lib/splash-context';
 import { staffAccesses } from '../lib/staff-access';
 import { markVerificationSent } from '../lib/verification';
 import { beginRegistrationFormDraft } from '../lib/pwa-update';
-import type { LegalVersions, SessionAccess } from '../types/api';
+import type { LegalVersions, PublicEstablishment, SessionAccess } from '../types/api';
 import { AlumnoBack, AlumnoLockup, AlumnoLogo } from './alumno-brand';
 import { SignupSteps } from './signup-steps';
 import { StaffNotice } from './staff-notice';
@@ -169,6 +171,11 @@ export function AuthScreens({
   const cart = readCart();
   const cartAmount = cart ? cartTotal(cart.lines) : null;
   const splashContext = splashContextFor(next, cartAmount ? formatAmount(cartAmount) : null);
+  // Si ya se sabe a qué negocio va y ahí se pide con cuenta, no se ofrece pedir sin ella.
+  const guestSlug = /^\/e\/([^/?#]+)/.exec(guestMenuPath(next))?.[1];
+  const offerGuest = !(
+    guestSlug && accountRequired(peekResource<PublicEstablishment>(resourceKeys.establishment(guestSlug)))
+  );
   const [mode, setMode] = useState<AuthMode>(unregisteredUser ? 'google-legal' : 'splash');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -521,13 +528,15 @@ export function AuthScreens({
         </div>
         {error ? <p className="alumno-error" role="alert">{error}</p> : null}
         <div className="alumno-splash__actions">
-          {allowExplore ? (
+          {allowExplore && offerGuest ? (
             <button className="alumno-btn alumno-btn--lime" type="button" onClick={buyAsGuest}>
               Pedir sin registrarme
             </button>
           ) : null}
           <button
-            className={allowExplore ? 'alumno-btn alumno-btn--google' : 'alumno-btn alumno-btn--lime alumno-splash__google'}
+            className={
+              allowExplore && offerGuest ? 'alumno-btn alumno-btn--google' : 'alumno-btn alumno-btn--lime alumno-splash__google'
+            }
             type="button"
             disabled={busy || !configured}
             onClick={() => void onGoogle()}
@@ -537,7 +546,7 @@ export function AuthScreens({
             </span>
             Continuar con Google
           </button>
-          {!allowExplore ? (
+          {!allowExplore && offerGuest ? (
             <button className="alumno-btn alumno-btn--ghost" type="button" onClick={buyAsGuest}>
               Continuar sin cuenta
             </button>

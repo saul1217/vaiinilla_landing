@@ -31,6 +31,7 @@ import { statusAsPhrase } from '../lib/status-phrase';
 import { readSpace } from '../lib/space-session';
 import { assistantPath, showsCustomerAssistant } from '../lib/customer-assistant-flag';
 import type { OrderDetail } from '../types/api';
+import { accountRequired } from '../lib/account-required';
 
 export function MenuPage({ assistantEnabled }: { assistantEnabled?: boolean } = {}) {
   const qaFixture = useMenuQaFixture();
@@ -43,8 +44,8 @@ export function MenuPage({ assistantEnabled }: { assistantEnabled?: boolean } = 
   const { addLine, cart } = useCart();
   // Lo ya cargado se ve al instante; la carga de abajo lo actualiza en segundo plano.
   const [place, setPlace] = useState<PublicEstablishment | null>(() => qaFixture?.place ?? peekResource(resourceKeys.establishment(slug)) ?? null);
-  // Compra sin cuenta: cualquiera agrega al carrito, salvo donde se pide con matrícula.
-  const canAddToCart = Boolean(user) || place?.identificador_cliente_obligatorio !== true;
+  // Compra sin cuenta: cualquiera agrega al carrito, salvo donde se pide con matrícula o con cuenta.
+  const canAddToCart = Boolean(user) || !accountRequired(place);
   const [catalog, setCatalog] = useState<CatalogResponse | null>(() => qaFixture?.catalog ?? peekResource(resourceKeys.catalog(slug)) ?? null);
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
