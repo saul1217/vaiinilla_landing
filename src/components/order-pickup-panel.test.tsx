@@ -30,4 +30,56 @@ describe('OrderPickupPanel', () => {
     rerender(<OrderPickupPanel order={{ ...base, estado: 'preparando' }} token="pickup-5" />);
     expect(screen.queryByRole('region', { name: 'Pedido número 5. Código de retiro' })).not.toBeInTheDocument();
   });
+
+  it('listo: muestra el código de 4 dígitos y la fila donde formarse', () => {
+    render(
+      <OrderPickupPanel
+        order={{ ...base, codigo_recoger: '0133', fila: { id: 3, nombre: 'Barra 3', express: false } }}
+        token={null}
+      />,
+    );
+    expect(screen.getByText('0133')).toHaveAccessibleName('Código 0 1 3 3');
+    expect(screen.getByText(/dicta este código/i)).toBeVisible();
+    expect(screen.getByText('Barra 3')).toBeVisible();
+  });
+
+  it('preparando: ya dice en qué fila lo va a recoger, sin enseñar el código', () => {
+    render(
+      <OrderPickupPanel
+        order={{ ...base, estado: 'preparando', codigo_recoger: '0133', fila: { id: 4, nombre: 'Fila 4', express: true } }}
+        token={null}
+      />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('Cuando esté listo, recógelo en Fila 4 (express).');
+    expect(screen.queryByText('0133')).toBeNull();
+  });
+
+  it('a domicilio no habla de filas', () => {
+    const { container } = render(
+      <OrderPickupPanel
+        order={{ ...base, estado: 'preparando', destino: 'a_domicilio', fila: { id: 4, nombre: 'Fila 4', express: false } }}
+        token={null}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('OrderPickupPanel según cómo valida el negocio', () => {
+  it('«solo código»: el código grande y el QR plegado para cuando se bloquee', async () => {
+    render(<OrderPickupPanel order={{ ...base, codigo_recoger: '0133' }} token="pickup-5" rules={{ mode: 'codigo' }} />);
+    expect(screen.getByText('Dicta este código')).toBeVisible();
+    expect(await screen.findByText('Si el código se bloquea, muestra este QR')).toBeInTheDocument();
+  });
+
+  it('«solo QR»: sin código', async () => {
+    render(<OrderPickupPanel order={{ ...base, codigo_recoger: '0133' }} token="pickup-5" rules={{ mode: 'qr' }} />);
+    expect(await screen.findByRole('img', { name: /Código de retiro/ })).toBeInTheDocument();
+    expect(screen.queryByText('0133')).toBeNull();
+  });
+
+  it('por pagar en caja con el cobro con código: enseña su código', () => {
+    render(<OrderPickupPanel order={{ ...base, estado: 'por_cobrar', codigo_recoger: '0133' }} token={null} rules={{ mode: 'qr_o_codigo', cobroCodigo: true }} />);
+    expect(screen.getByText('0133')).toBeVisible();
+  });
 });

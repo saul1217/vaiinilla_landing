@@ -20,11 +20,13 @@ import { cartTotal } from '../lib/cart';
 import { readCart } from '../lib/cart-storage';
 import { formatAmount } from '../lib/money';
 import { entryAfterAccess, guestEntryAfterAccess, guestMenuPath, scannedSpace } from '../lib/space-session';
+import { accountRequired } from '../lib/account-required';
+import { peekResource, resourceKeys } from '../lib/resource-cache';
 import { splashContextFor } from '../lib/splash-context';
 import { staffAccesses } from '../lib/staff-access';
 import { markVerificationSent } from '../lib/verification';
 import { beginRegistrationFormDraft } from '../lib/pwa-update';
-import type { LegalVersions, SessionAccess } from '../types/api';
+import type { LegalVersions, PublicEstablishment, SessionAccess } from '../types/api';
 import { AlumnoBack, AlumnoLockup, AlumnoLogo } from './alumno-brand';
 import { SignupSteps } from './signup-steps';
 import { StaffNotice } from './staff-notice';
@@ -39,23 +41,25 @@ interface AuthCopy {
   panelTitle: string;
 }
 
+// Nueve escenas distintas, una cada 40° del anillo (.is-1 a .is-9 en alumno.css). AUTH_SCENES usa
+// los mismos archivos para que el navegador no descargue dos veces las escenas que se repiten.
 const SPLASH_BUBBLES = [
-  { src: '/vaini/scene-laptop.png', className: 'is-1' },
-  { src: '/vaini/scene-taller.png', className: 'is-2' },
-  { src: '/assets/vaini-oxxo.jpg', className: 'is-3' },
-  { src: '/vaini/scene-karate.png', className: 'is-4' },
-  { src: '/vaini/scene-bloques.png', className: 'is-5' },
-  { src: '/assets/vaini-tacos.jpg', className: 'is-6' },
-  { src: '/vaini/scene-puente.png', className: 'is-7' },
-  { src: '/assets/vaini-camion.jpg', className: 'is-8' },
-  { src: '/assets/vaini-moto.jpg', className: 'is-9' },
+  { src: '/vaini/scene-laptop-256.webp', className: 'is-1' },
+  { src: '/vaini/scene-taller-256.webp', className: 'is-2' },
+  { src: '/vaini/scene-oxxo-256.webp', className: 'is-3' },
+  { src: '/vaini/scene-karate-256.webp', className: 'is-4' },
+  { src: '/vaini/scene-bloques-256.webp', className: 'is-5' },
+  { src: '/vaini/scene-tacos-256.webp', className: 'is-6' },
+  { src: '/vaini/scene-puente-256.webp', className: 'is-7' },
+  { src: '/vaini/scene-camion-256.webp', className: 'is-8' },
+  { src: '/vaini/scene-moto-256.webp', className: 'is-9' },
 ] as const;
 
 const AUTH_SCENES = [
-  { src: '/assets/vaini-oxxo.jpg', className: 'is-oxxo' },
-  { src: '/assets/vaini-tacos.jpg', className: 'is-tacos' },
-  { src: '/assets/vaini-camion.jpg', className: 'is-camion' },
-  { src: '/assets/vaini-moto.jpg', className: 'is-moto' },
+  { src: '/vaini/scene-oxxo-256.webp', className: 'is-oxxo' },
+  { src: '/vaini/scene-tacos-256.webp', className: 'is-tacos' },
+  { src: '/vaini/scene-camion-256.webp', className: 'is-camion' },
+  { src: '/vaini/scene-moto-256.webp', className: 'is-moto' },
 ] as const;
 
 const AUTH_COPY = {
@@ -167,6 +171,11 @@ export function AuthScreens({
   const cart = readCart();
   const cartAmount = cart ? cartTotal(cart.lines) : null;
   const splashContext = splashContextFor(next, cartAmount ? formatAmount(cartAmount) : null);
+  // Si ya se sabe a qué negocio va y ahí se pide con cuenta, no se ofrece pedir sin ella.
+  const guestSlug = /^\/e\/([^/?#]+)/.exec(guestMenuPath(next))?.[1];
+  const offerGuest = !(
+    guestSlug && accountRequired(peekResource<PublicEstablishment>(resourceKeys.establishment(guestSlug)))
+  );
   const [mode, setMode] = useState<AuthMode>(unregisteredUser ? 'google-legal' : 'splash');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -502,12 +511,12 @@ export function AuthScreens({
           <div className="alumno-splash__orbit" aria-hidden="true">
             {SPLASH_BUBBLES.map((bubble) => (
               <span key={bubble.className} className={`alumno-splash__bubble ${bubble.className} is-scene`}>
-                <img src={bubble.src} alt="" />
+                <img src={bubble.src} alt="" width="256" height="256" decoding="async" />
               </span>
             ))}
           </div>
           <div className="alumno-splash__vaini">
-            <img src="/vaini/cutout-frente.png" alt="Vaini, la mascota de Vaiinilla" />
+            <img src="/vaini/cutout-frente-512.webp" alt="Vaini, la mascota de Vaiinilla" width="512" height="512" fetchPriority="high" />
           </div>
         </div>
         <div className="alumno-splash__copy">
@@ -519,13 +528,15 @@ export function AuthScreens({
         </div>
         {error ? <p className="alumno-error" role="alert">{error}</p> : null}
         <div className="alumno-splash__actions">
-          {allowExplore ? (
+          {allowExplore && offerGuest ? (
             <button className="alumno-btn alumno-btn--lime" type="button" onClick={buyAsGuest}>
               Pedir sin registrarme
             </button>
           ) : null}
           <button
-            className={allowExplore ? 'alumno-btn alumno-btn--google' : 'alumno-btn alumno-btn--lime alumno-splash__google'}
+            className={
+              allowExplore && offerGuest ? 'alumno-btn alumno-btn--google' : 'alumno-btn alumno-btn--lime alumno-splash__google'
+            }
             type="button"
             disabled={busy || !configured}
             onClick={() => void onGoogle()}
@@ -535,7 +546,7 @@ export function AuthScreens({
             </span>
             Continuar con Google
           </button>
-          {!allowExplore ? (
+          {!allowExplore && offerGuest ? (
             <button className="alumno-btn alumno-btn--ghost" type="button" onClick={buyAsGuest}>
               Continuar sin cuenta
             </button>
@@ -791,11 +802,11 @@ function AuthSplit({
     <main id="main-content" className={`alumno-auth alumno-auth--${mode}`}>
       <div className="alumno-auth__mosaic" aria-hidden="true">
         {AUTH_SCENES.map((scene) => (
-          <img key={scene.className} className={`alumno-auth__scene ${scene.className}`} src={scene.src} alt="" />
+          <img key={scene.className} className={`alumno-auth__scene ${scene.className}`} src={scene.src} alt="" loading="lazy" decoding="async" />
         ))}
       </div>
       <section className="alumno-auth__brand">
-        <AlumnoLogo onDark className="alumno-auth__logo" />
+        <AlumnoLogo onDark className="alumno-auth__logo" loading="lazy" />
         <p className="alumno-kicker">{copy.kicker}</p>
         <h2 className="alumno-auth__headline">{copy.headline}</h2>
         <p className="alumno-auth__brand-lead">{copy.lead}</p>
@@ -803,9 +814,9 @@ function AuthSplit({
       <section className="alumno-auth__panel">
         <div className="alumno-auth__mobile-header">
           {onBack ? <AlumnoBack onClick={onBack}>Volver</AlumnoBack> : <span />}
-          <img src="/vaini/cutout-frente.png" alt="" />
+          <img src="/vaini/cutout-frente-512.webp" alt="" loading="lazy" decoding="async" />
         </div>
-        <AlumnoLogo className="alumno-auth__window-logo" alt="" />
+        <AlumnoLogo className="alumno-auth__window-logo" alt="" loading="lazy" />
         <p className="alumno-kicker">{copy.panelKicker}</p>
         <h1>{copy.panelTitle}</h1>
         {children}

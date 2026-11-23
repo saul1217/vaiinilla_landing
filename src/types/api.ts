@@ -69,6 +69,8 @@ export interface PublicEstablishment {
   acepta_tarjeta?: boolean;
   /** Permite pagar al final: sin sesión, lo dice la ficha pública. */
   permite_pago_al_final?: boolean;
+  /** `false` = no cobra en caja: quien pide sin cuenta tiene que entrar. Ausente = sí. */
+  permite_pago_en_caja?: boolean;
   /** Saldo y recargas: el dueño puede apagarlo. Ausente (backend viejo) = sí hay saldo. */
   permite_saldo?: boolean;
   /** La tienda tiene el asistente de pedidos para clientes (`asistente_modo = 'ambos'`). Ausente = sí. */
@@ -78,6 +80,8 @@ export interface PublicEstablishment {
   slug: string;
   identificador_cliente_etiqueta: string;
   identificador_cliente_obligatorio: boolean;
+  /** Sin «pedir sin cuenta» en este negocio (migración 228). Ausente en un back anterior = se pide sin cuenta. */
+  cuenta_obligatoria?: boolean;
   tipo?: EstablishmentKind;
   // Public profile (backend migrations 39–40); null until the business fills it in.
   descripcion?: string | null;
@@ -140,6 +144,8 @@ export interface CatalogResponse {
   productos: CatalogProduct[];
 }
 
+export type DeliveryValidation = 'qr_o_codigo' | 'qr' | 'codigo' | 'ninguna';
+
 export interface OperationalStatus {
   recibiendo_pedidos: boolean;
   sesion_caja_abierta: boolean;
@@ -149,6 +155,14 @@ export interface OperationalStatus {
   consultado_en: string;
   /** Pagar al final: las apps lo ofrecen solo si es `true`. Ausente en backends viejos. */
   permite_pago_al_final?: boolean;
+  /** `false` = el negocio no acepta «Pago en caja» (efectivo) desde la app. Ausente = sí. */
+  permite_pago_en_caja?: boolean;
+  /** `false` = el negocio no tiene cocina: lo prepara la barra. Ausente = sí tiene. */
+  tiene_cocina?: boolean;
+  /** Qué pide Caja para entregar: qr_o_codigo, qr, codigo o ninguna. Ausente = QR o código. */
+  validacion_entrega?: 'qr_o_codigo' | 'qr' | 'codigo' | 'ninguna';
+  /** Caja pide el QR o el código del cliente para cobrar lo pedido en la app (migración 225). */
+  cobro_requiere_codigo?: boolean;
   /** Lo que el dueño dice que es el negocio; "Ya llegué" solo sale en `drive_thru`. */
   tipo?: EstablishmentKind;
   /** A domicilio (docs/reposteria-domicilio.md del back). Solo viaja si el negocio reparte. */
@@ -165,6 +179,15 @@ export interface OperationalStatus {
   dias_adelanto_pedido?: number;
   /** "18:00": pasada esa hora, hoy ya no cuenta como día de margen. */
   hora_corte_pedido?: string | null;
+  /** El negocio es una escuela: el alumno ve con quién conectar su cuenta. */
+  modo_escuela?: boolean;
+  /** Escuela: si el tutor ya validó el código de la escuela para agregar hijos. Ausente = sí. */
+  tutor_habilitado?: boolean;
+  /**
+   * Cafeterías (back #265): cada cobro con tarjeta debe ser MAYOR que esto ("30.00"); si no, el
+   * servidor responde 422 CARD_MIN_AMOUNT. null o ausente = sin mínimo propio.
+   */
+  tarjeta_minimo?: string | null;
 }
 
 export interface HomeDeliveryStatus {
@@ -317,6 +340,10 @@ export interface OrderDetail {
   } | null;
   items: OrderItem[];
   qr_token?: string | null;
+  /** 4 dígitos para recoger sin escanear; llegan con el QR al crear el pedido. */
+  codigo_recoger?: string | null;
+  /** Dónde se forma para recogerlo (migración 222). Sin el back nuevo no viene. */
+  fila?: { id: number; nombre: string; express: boolean } | null;
   pago?: OrderPayment | null;
   vence_operacion_en?: string | null;
   motivo_pendiente_operativo?: 'caja_inactiva' | 'cocina_inactiva' | null;
@@ -328,6 +355,9 @@ export interface OrderDetail {
   /** Solo al crear un pedido de invitado: el token de su enlace de seguimiento. */
   seguimiento_token?: string;
   pago_diferido?: boolean;
+  /** Importes del registro de pagos; un back anterior no los manda. */
+  monto_pagado?: string;
+  saldo_pendiente?: string;
   /** Va a la cuenta y aún no se cobra. */
   pago_pendiente?: boolean;
   /** Cuándo avisó "ya llegué" (drive-thru); `null` si no lo ha hecho. */
@@ -339,6 +369,9 @@ export interface OrderDetail {
   aceptar_antes_de?: string | null;
   /** Encargo con tarjeta ya aceptado: hasta cuándo puede pagar el cliente. */
   pagar_antes_de?: string | null;
+  /** Comida apartada de la escuela: el día y la franja en que se entrega. */
+  fecha_entrega?: string | null;
+  franja_entrega?: string | null;
 }
 
 export interface OrderPayment {

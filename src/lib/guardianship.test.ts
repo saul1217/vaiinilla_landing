@@ -1,9 +1,23 @@
 import { describe, expect, it, vi } from 'vitest';
 import { parseFeatureFlag } from './features';
 import {
+  addChildFormProblem,
   allergensLine,
   blockedLine,
+  canCancelScheduled,
   canViewDependent,
+  controlAmountProblem,
+  emptyControls,
+  encodeControls,
+  encodeWeekOrders,
+  LINK_CODE_LENGTH,
+  normalizeCodeInput,
+  parseChildMenuCalendar,
+  parseControlMoneyOrNull,
+  parseMyControls,
+  parseStudentRequests,
+  plannerBlockReason,
+  plannerDates,
   dailyRemainingLabel,
   DependentContextSession,
   isConsentRequired,
@@ -280,5 +294,81 @@ describe('parseFeatureFlag', () => {
     expect(parseFeatureFlag('')).toBe(false);
     expect(parseFeatureFlag('false')).toBe(false);
     expect(parseFeatureFlag('1')).toBe(false);
+  });
+});
+
+describe('reglas de modo papás para cambiar y apartar', () => {
+  it('normaliza códigos y valida el alta', () => {
+    expect(normalizeCodeInput(' ab-c 23 4x ', LINK_CODE_LENGTH)).toBe('ABC234');
+    const base = { withCode: true, name: '', studentId: '', code: 'ABC23', consentAccepted: true, noticeReady: true };
+    expect(addChildFormProblem(base)).toBe('Escribe el código de 6 letras o números.');
+    expect(addChildFormProblem({ ...base, code: 'ABC234' })).toBeNull();
+    expect(addChildFormProblem({ ...base, consentAccepted: false })).toBe('Marca que eres su madre, padre o tutor.');
+    expect(addChildFormProblem({ ...base, withCode: false, name: 'Ana' })).toBe('Escribe la matrícula de su credencial.');
+  });
+
+  it('montos de controles: vacío quita, cero o letras no', () => {
+    expect(controlAmountProblem('')).toBeNull();
+    expect(controlAmountProblem('$1,200')).toBeNull();
+    expect(controlAmountProblem('0')).toBe('Tiene que ser mayor a cero.');
+    expect(controlAmountProblem('abc')).toMatch(/cantidad válida/);
+    expect(parseControlMoneyOrNull('120')).toBe('120.00');
+    expect(parseControlMoneyOrNull('')).toBeNull();
+  });
+
+  it('encodeControls manda nulos y listas ordenadas completas', () => {
+    expect(
+      encodeControls({ ...emptyControls(), notes: '  ', blockedProductIds: [9, 2], allergens: ['soya', 'huevo'] }),
+    ).toEqual({
+      limite_diario: null,
+      umbral_saldo_bajo: null,
+      notas: null,
+      productos_bloqueados: [2, 9],
+      categorias_bloqueadas: [],
+      alergenos: ['huevo', 'soya'],
+    });
+  });
+
+  it('omite solicitudes con tipo o estado desconocido', () => {
+    expect(
+      parseStudentRequests([
+        { id: 'r1', tipo: 'devolucion', estado: 'pendiente', saldo_al_pedir: 40 },
+        { id: 'r2', tipo: 'otra', estado: 'pendiente' },
+      ]).map((item) => item.id),
+    ).toEqual(['r1']);
+  });
+
+  it('días para apartar: hoy sale después de la hora de corte', () => {
+    const calendar = parseChildMenuCalendar({
+      programacion: { hoy: '2026-11-30', dias_adelanto_pedido: 2, hora_corte_pedido: '09:00:00' },
+    });
+    expect(plannerDates(calendar, '08:59')).toEqual(['2026-11-30', '2026-12-01', '2026-12-02']);
+    expect(plannerDates(calendar, '09:00')).toEqual(['2026-12-01', '2026-12-02']);
+  });
+
+  it('un apartado de hoy no se cancela pasada la hora de corte', () => {
+    const order = { estado: 'cobrado' as const, fecha_entrega: '2026-11-30' };
+    expect(canCancelScheduled(order, '2026-11-30', '08:00', '07:59')).toBe(true);
+    expect(canCancelScheduled(order, '2026-11-30', '08:00', '08:00')).toBe(false);
+    expect(canCancelScheduled({ ...order, estado: 'entregado' as const }, '2026-11-29', null)).toBe(false);
+  });
+
+  it('encodeWeekOrders arma el cuerpo de /pedidos/semana', () => {
+    expect(
+      encodeWeekOrders([{ date: '2026-12-01', slot: null, items: [{ productId: 3, quantity: 2, optionIds: [7] }] }]),
+    ).toEqual({ pedidos: [{ fecha_entrega: '2026-12-01', items: [{ producto_id: 3, cantidad: 2, opcion_ids: [7] }] }] });
+  });
+});
+
+describe('qué no se le aparta', () => {
+  it('lee de mis-controles lo que tiene alérgeno o no está revisado', () => {
+    const controls = parseMyControls({
+      tutores: [{ nombre: 'Laura' }],
+      controles: { productos_con_alergeno: [4], productos_sin_revisar: [7], alergenos: ['huevo'] },
+    });
+    expect(plannerBlockReason(4, controls)).toBe('Tiene un alérgeno');
+    expect(plannerBlockReason(7, controls)).toBe('Sin alérgenos revisados');
+    expect(plannerBlockReason(9, controls)).toBeNull();
+    expect(plannerBlockReason(4, null)).toBeNull();
   });
 });

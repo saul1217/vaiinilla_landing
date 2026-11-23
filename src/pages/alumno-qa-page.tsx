@@ -526,7 +526,7 @@ export function AlumnoQaOrdersPage() {
                 </>
               ) : (
                 <div className="alumno-orders-desk__hint">
-                  <img src="/vaini/cutout-frente.png" alt="" />
+                  <img src="/vaini/cutout-frente-512.webp" alt="" />
                   <p>Elige un pedido para ver el seguimiento.</p>
                 </div>
               )}

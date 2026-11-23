@@ -1,8 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { AddChildSheet } from '../components/add-child-sheet';
 import { AlumnoPageHeader } from '../components/alumno-brand';
 import { AppShell } from '../components/app-shell';
+import { ChildControlsSheet } from '../components/child-controls-sheet';
+import { ChildReloadSheet } from '../components/child-reload-sheet';
+import { ChildSecuritySection } from '../components/child-security-section';
 import { LoadingSkeleton } from '../components/loading-skeleton';
+import { WeekPlannerSheet } from '../components/week-planner-sheet';
 import { useAuth } from '../context/auth-context';
 import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
@@ -13,21 +18,27 @@ import {
   ACCESS_LOST_CODES,
   allergensLine,
   blockedLine,
+  canCancelScheduled,
   canViewDependent,
   dailyRemainingLabel,
+  dayShortLabel,
   DependentContextSession,
   firstName,
   isConsentRequired,
   movementLabel,
   orderSummary,
+  scheduledOrderPolicyText,
   shortDate,
   signedAmount,
+  type ChildMenuCalendar,
   type Dependent,
   type PrivacyNotice,
+  type StudentRequest,
 } from '../lib/guardianship';
 import { createIdempotencyKey } from '../lib/idempotency';
 import { lastPlaceSlug } from '../lib/last-place';
 import { formatAmount } from '../lib/money';
+import { STRIPE_RETURN_PARAMS } from './wallet-reload-page';
 import { ORDER_STATUS_LABEL } from '../lib/order-labels';
 import type { OrderDetail, WalletData } from '../types/api';
 
@@ -41,6 +52,7 @@ function useGuardianSession() {
   const { context, openClientSession } = useBuyerSession();
   const [token, setToken] = useState<string | null>(null);
   const [placeName, setPlaceName] = useState('');
+  const [placeSlug, setPlaceSlug] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -69,6 +81,7 @@ function useGuardianSession() {
         }
         setToken(resolved.context.access_token);
         setPlaceName(resolved.place?.nombre ?? '');
+        setPlaceSlug(resolved.slug ?? resolved.place?.slug ?? null);
         setError(null);
       } catch (cause) {
         if (active) setError(errorMessage(cause));
@@ -81,7 +94,7 @@ function useGuardianSession() {
     };
   }, [cart?.slug, context, openClientSession, ready, user]);
 
-  return { user, ready, token, placeName, error, loading };
+  return { user, ready, token, placeName, placeSlug, error, loading };
 }
 
 /** `/cuenta/hijos`: Mis hijos con su saldo y lo que les queda hoy. */
@@ -89,6 +102,10 @@ export function ParentModePage() {
   const { user, ready, token, placeName, error: sessionError, loading: sessionLoading } = useGuardianSession();
   const [children, setChildren] = useState<Dependent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  // Sin `tutor_habilitado` (backend anterior) el tutor ya puede agregar hijos, como en Expo.
+  const [parentUnlocked, setParentUnlocked] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!token) {
@@ -106,10 +123,16 @@ export function ParentModePage() {
       .catch((cause) => {
         if (active) setError(errorMessage(cause));
       });
+    void Promise.resolve()
+      .then(() => api.getOperationalStatus(token))
+      .then((status) => {
+        if (active) setParentUnlocked(status?.tutor_habilitado ?? true);
+      })
+      .catch(() => undefined);
     return () => {
       active = false;
     };
-  }, [token]);
+  }, [token, reloadKey]);
 
   if (ready && !user) return <Navigate to="/cuenta?next=/cuenta/hijos" replace />;
 
@@ -139,8 +162,8 @@ export function ParentModePage() {
           <section className="alumno-card parent-mode__empty">
             <h2>Aún no tienes hijos en esta escuela</h2>
             <p className="alumno-muted">
-              Agrégalos desde la app de Vaiinilla en Cartera › Opciones avanzadas. Cuando la escuela te apruebe, aquí
-              verás su saldo y lo que compran.
+              Agrégalo con sus datos de la escuela o con su código. Cuando la escuela te apruebe, aquí verás su saldo y lo
+              que compra.
             </p>
           </section>
         ) : null}
@@ -152,6 +175,20 @@ export function ParentModePage() {
               </li>
             ))}
           </ul>
+        ) : null}
+        {token && children ? (
+          <button className="alumno-btn alumno-btn--lime parent-mode__add" type="button" onClick={() => setAdding(true)}>
+            Agregar a mi hijo
+          </button>
+        ) : null}
+        {adding && token ? (
+          <AddChildSheet
+            token={token}
+            parentUnlocked={parentUnlocked}
+            onUnlocked={() => setParentUnlocked(true)}
+            onAdded={() => setReloadKey((value) => value + 1)}
+            onClosed={() => setAdding(false)}
+          />
         ) : null}
       </main>
     </AppShell>
@@ -307,7 +344,17 @@ function ConsentCard({
 /** `/cuenta/hijos/:id`: la cuenta de un hijo vista con su contexto (saldo, movimientos y pedidos). */
 export function ChildAccountPage() {
   const { id = '' } = useParams();
-  const { user, ready, token, error: sessionError } = useGuardianSession();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { user, ready, token, placeSlug, error: sessionError } = useGuardianSession();
+
+  // Al volver del 3D Secure de una recarga, el client secret de Stripe no se queda en la URL.
+  useEffect(() => {
+    if (!STRIPE_RETURN_PARAMS.some((name) => searchParams.has(name))) return;
+    const next = new URLSearchParams(searchParams);
+    for (const name of STRIPE_RETURN_PARAMS) next.delete(name);
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
   const [child, setChild] = useState<Dependent | null>(null);
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [orders, setOrders] = useState<OrderDetail[] | null>(null);
@@ -316,6 +363,15 @@ export function ChildAccountPage() {
   const [accessLost, setAccessLost] = useState(false);
   const [consentMissing, setConsentMissing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [requests, setRequests] = useState<StudentRequest[]>([]);
+  const [calendar, setCalendar] = useState<ChildMenuCalendar | null>(null);
+  const [childToken, setChildToken] = useState<string | null>(null);
+  const [sheet, setSheet] = useState<'reload' | 'week' | 'controls' | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [cancelling, setCancelling] = useState<OrderDetail | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelBusy, setCancelBusy] = useState(false);
 
   const session = useMemo(
     () => (token ? new DependentContextSession(() => api.issueDependentContext(token, id)) : null),
@@ -335,6 +391,9 @@ export function ChildAccountPage() {
       cause instanceof VaiinillaApiError && (ACCESS_LOST_CODES.has(cause.code) || cause.status === 404);
     void (async () => {
       setLoading(true);
+      // Cada carga empieza limpia: un primer intento con la sesión de otro negocio no deja la ficha bloqueada.
+      setAccessLost(false);
+      setConsentMissing(false);
       try {
         const list = await api.listDependents(token);
         const found = list.find((item) => item.userId === id) ?? null;
@@ -373,6 +432,25 @@ export function ChildAccountPage() {
         } else if (!lost(ordersResult.reason)) {
           setOrdersFailed(true);
         }
+        // Lo que no bloquea la ficha: sus solicitudes a la escuela, el menú por día y el token para recargarle.
+        void Promise.resolve()
+          .then(() => api.listStudentRequests(token, id))
+          .then((list) => {
+            if (active) setRequests(list ?? []);
+          })
+          .catch(() => undefined);
+        void session
+          .run((childToken) => api.getDependentMenuCalendar(childToken))
+          .then((next) => {
+            if (active) setCalendar(next ?? null);
+          })
+          .catch(() => undefined);
+        void session
+          .validToken()
+          .then((next) => {
+            if (active) setChildToken(next);
+          })
+          .catch(() => undefined);
       } catch (cause) {
         if (!active) return;
         if (isConsentRequired(cause)) setConsentMissing(true);
@@ -386,7 +464,25 @@ export function ChildAccountPage() {
       active = false;
       session.clear();
     };
-  }, [id, session, token]);
+  }, [id, session, token, refreshKey]);
+
+  const refresh = useCallback(() => setRefreshKey((value) => value + 1), []);
+
+  const cancelScheduled = async () => {
+    if (!cancelling || !session || cancelBusy) return;
+    setCancelBusy(true);
+    setCancelError(null);
+    try {
+      await session.run((childToken) => api.cancelDependentOrder(childToken, cancelling, createIdempotencyKey()));
+      setCancelling(null);
+      setNotice('Cancelamos lo apartado. El saldo regresa a su cuenta.');
+      refresh();
+    } catch (cause) {
+      setCancelError(errorMessage(cause));
+    } finally {
+      setCancelBusy(false);
+    }
+  };
 
   if (ready && !user) return <Navigate to={`/cuenta?next=/cuenta/hijos/${encodeURIComponent(id)}`} replace />;
 
@@ -416,8 +512,111 @@ export function ChildAccountPage() {
         {loading && !wallet && !shownError && !accessLost && !consentMissing ? (
           <LoadingSkeleton shape="wallet" label={`Abriendo la cuenta de ${firstName(name)}…`} />
         ) : null}
+        {notice ? (
+          <p className="alumno-banner parent-mode__notice-banner" role="status">
+            {notice}
+          </p>
+        ) : null}
         {child && canViewDependent(child) && !accessLost && !consentMissing && (wallet || !loading) ? (
-          <ChildAccountView child={child} wallet={wallet} orders={orders} ordersFailed={ordersFailed} />
+          <>
+            <div className="parent-mode__actions" role="group" aria-label={`Acciones para ${firstName(name)}`}>
+              <button className="alumno-btn alumno-btn--lime" type="button" disabled={!wallet || !childToken} onClick={() => setSheet('reload')}>
+                Recargar
+              </button>
+              <button className="alumno-btn alumno-btn--ghost" type="button" onClick={() => setSheet('week')}>
+                Apartar
+              </button>
+              <button className="alumno-btn alumno-btn--ghost" type="button" onClick={() => setSheet('controls')}>
+                Controles
+              </button>
+            </div>
+            <ChildAccountView
+              child={child}
+              wallet={wallet}
+              orders={orders}
+              ordersFailed={ordersFailed}
+              scheduled={
+                <ScheduledSection
+                  orders={orders}
+                  calendar={calendar}
+                  onCancel={(order) => {
+                    setCancelError(null);
+                    setCancelling(order);
+                  }}
+                />
+              }
+            />
+            {cancelling ? (
+              <div className="parent-sheet__confirm" role="alertdialog" aria-label="¿Cancelar lo apartado?">
+                <p>
+                  <strong>¿Cancelar lo apartado?</strong> {orderSummary(cancelling) || `Pedido #${cancelling.folio}`}. El saldo
+                  regresa a su cuenta.
+                </p>
+                {cancelError ? (
+                  <p className="alumno-error" role="alert">
+                    {cancelError}
+                  </p>
+                ) : null}
+                <button className="alumno-btn alumno-btn--danger" type="button" disabled={cancelBusy} onClick={() => void cancelScheduled()}>
+                  {cancelBusy ? 'Cancelando…' : 'Sí, cancelar'}
+                </button>
+                <button className="alumno-btn alumno-btn--ghost" type="button" disabled={cancelBusy} onClick={() => setCancelling(null)}>
+                  No
+                </button>
+              </div>
+            ) : null}
+            {token ? (
+              <ChildSecuritySection
+                token={token}
+                child={child}
+                balance={wallet?.wallet.saldo ?? child.balance ?? '0.00'}
+                requests={requests}
+                onChildChanged={setChild}
+                onRequestsChanged={setRequests}
+                onNotice={setNotice}
+              />
+            ) : null}
+          </>
+        ) : null}
+        {sheet === 'reload' && child && wallet && childToken && session ? (
+          <ChildReloadSheet
+            child={child}
+            childToken={childToken}
+            wallet={wallet}
+            client={{
+              start: (amount, key) => session.run((next) => api.startDependentCardReload(next, amount, key)),
+              status: (reloadId) => session.run((next) => api.getDependentCardReload(next, reloadId)),
+            }}
+            onSettled={refresh}
+            onClosed={() => setSheet(null)}
+          />
+        ) : null}
+        {sheet === 'week' && child && session ? (
+          <WeekPlannerSheet
+            child={child}
+            placeSlug={placeSlug}
+            loadCalendar={() => session.run((next) => api.getDependentMenuCalendar(next))}
+            loadControls={() => session.run((next) => api.getDependentControls(next))}
+            reserve={(days, key) => session.run((next) => api.reserveDependentWeek(next, days, key))}
+            onReserved={(count) => {
+              setNotice(count === 1 ? 'Listo, apartamos 1 día.' : `Listo, apartamos ${count} días.`);
+              refresh();
+            }}
+            onClosed={() => setSheet(null)}
+          />
+        ) : null}
+        {sheet === 'controls' && child && token ? (
+          <ChildControlsSheet
+            token={token}
+            child={child}
+            placeSlug={placeSlug}
+            onSaved={(updated) => {
+              setChild(updated);
+              setNotice('Guardamos sus controles.');
+            }}
+            onUnlinked={() => navigate('/cuenta/hijos', { replace: true })}
+            onClosed={() => setSheet(null)}
+          />
         ) : null}
       </main>
     </AppShell>
@@ -429,11 +628,14 @@ export function ChildAccountView({
   wallet,
   orders,
   ordersFailed,
+  scheduled,
 }: {
   child: Dependent;
   wallet: WalletData | null;
   orders: OrderDetail[] | null;
   ordersFailed: boolean;
+  /** «Su comida apartada», entre los controles y los movimientos como en Expo. */
+  scheduled?: ReactNode;
 }) {
   const balance = wallet?.wallet.saldo ?? child.balance ?? '0.00';
   const controls = child.controls;
@@ -478,8 +680,9 @@ export function ChildAccountView({
         {!child.isPrincipal && principal ? (
           <p className="alumno-muted">Los controles los pone {firstName(principal.name)}.</p>
         ) : null}
-        <p className="alumno-muted">Para recargar o cambiar sus controles usa la app de Vaiinilla.</p>
       </section>
+
+      {scheduled}
 
       <section className="alumno-wallet-rest" aria-labelledby="child-moves">
         <h2 className="alumno-section-label" id="child-moves">
@@ -536,4 +739,69 @@ export function ChildAccountView({
       </section>
     </>
   );
+}
+
+function schoolToday(calendar: ChildMenuCalendar | null): string {
+  return calendar?.schedule.today || new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date());
+}
+
+/** «Su comida apartada»: los pedidos de la escuela con día de entrega de hoy en adelante. */
+function ScheduledSection({
+  orders,
+  calendar,
+  onCancel,
+}: {
+  orders: OrderDetail[] | null;
+  calendar: ChildMenuCalendar | null;
+  onCancel: (order: OrderDetail) => void;
+}) {
+  const today = schoolToday(calendar);
+  const cancelCutoff = calendar?.schedule.cancelCutoff ?? null;
+  const scheduled = (orders ?? [])
+    .filter((order) => {
+      const delivery = order.fecha_entrega?.slice(0, 10);
+      return delivery && delivery >= today && order.estado !== 'cancelado';
+    })
+    .sort((a, b) => (a.fecha_entrega ?? '').localeCompare(b.fecha_entrega ?? ''));
+  return (
+    <section className="alumno-wallet-rest" aria-labelledby="child-scheduled">
+      <h2 className="alumno-section-label" id="child-scheduled">
+        Su comida apartada
+      </h2>
+      {scheduled.length === 0 ? (
+        <p className="alumno-muted">Todavía no tiene comidas apartadas.</p>
+      ) : (
+        <>
+          <ul className="alumno-moves parent-mode__orders">
+            {scheduled.map((order) => (
+              <li key={order.id}>
+                <span>
+                  <strong>{orderSummary(order) || `Pedido #${order.folio}`}</strong>
+                  <span className="alumno-muted">
+                    {[dayLabel(order.fecha_entrega ?? '', today), order.franja_entrega, formatAmount(order.total, 'always')]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                </span>
+                {canCancelScheduled(order, today, cancelCutoff) ? (
+                  <button className="alumno-link parent-sheet__danger-link" type="button" onClick={() => onCancel(order)}>
+                    Cancelar
+                  </button>
+                ) : (
+                  <span className="alumno-muted">{ORDER_STATUS_LABEL[order.estado] ?? order.estado}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="alumno-muted">{scheduledOrderPolicyText(cancelCutoff)}</p>
+        </>
+      )}
+    </section>
+  );
+}
+
+function dayLabel(date: string, today: string): string {
+  const day = date.slice(0, 10);
+  if (!day) return '';
+  return dayShortLabel(day, today);
 }

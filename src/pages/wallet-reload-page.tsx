@@ -34,7 +34,13 @@ import {
   waitForCardReload,
   walletRechargeNote,
 } from '../lib/wallet-reload';
-import type { CardReloadCheckout, WalletData } from '../types/api';
+import type { CardReload, CardReloadCheckout, WalletData } from '../types/api';
+
+/** Cómo se crea y se consulta la recarga; por defecto, la cartera propia. Modo papás la hace con el token del hijo. */
+export interface CardReloadClient {
+  start: (amount: string, idempotencyKey: string) => Promise<CardReloadCheckout>;
+  status: (reloadId: string) => Promise<CardReload>;
+}
 import '../styles/wallet-reload.css';
 
 type Method = 'card' | 'cash';
@@ -50,7 +56,7 @@ type CardPhase =
   | { kind: 'failed'; message: string };
 
 /** Lo que Stripe agrega a la URL al volver del 3D Secure; el client secret no debe quedarse a la vista. */
-const STRIPE_RETURN_PARAMS = ['payment_intent', 'payment_intent_client_secret', 'redirect_status'] as const;
+export const STRIPE_RETURN_PARAMS = ['payment_intent', 'payment_intent_client_secret', 'redirect_status'] as const;
 
 export const CARD_RELOAD_NOTE =
   'Pago seguro con Stripe (modo de prueba) · cuándo llega el saldo depende del banco. Es para usar en este lugar.';
@@ -337,6 +343,9 @@ export function CardReloadPanel({
   onSettled,
   onBeforeConfirm,
   onConfirmFailed,
+  client,
+  returnPath = '/cuenta/saldo/recargar',
+  done = { to: '/cuenta/saldo', label: 'Ir a mi saldo', title: (amount: string) => `Listo, entraron ${formatAmount(amount)} a tu saldo` },
 }: {
   token: string;
   wallet: WalletData;
@@ -345,7 +354,15 @@ export function CardReloadPanel({
   onSettled?: () => void;
   onBeforeConfirm?: (reloadId: string) => void;
   onConfirmFailed?: () => void;
+  client?: CardReloadClient;
+  /** A dónde vuelve el banco después del 3D Secure (con `?recarga=<id>`). */
+  returnPath?: string;
+  done?: { to: string; label: string; title: (amount: string) => string };
 }) {
+  const reloads: CardReloadClient = client ?? {
+    start: (amount, key) => api.startCardReload(token, amount, key),
+    status: (reloadId) => api.getCardReload(token, reloadId),
+  };
   const range = reloadRangeOf(wallet);
   const [amountText, setAmountText] = useState('');
   const [phase, setPhase] = useState<CardPhase>(() =>
@@ -359,7 +376,7 @@ export function CardReloadPanel({
   useEffect(() => {
     if (!confirmingId) return;
     let active = true;
-    void waitForCardReload(() => api.getCardReload(token, confirmingId), {
+    void waitForCardReload(() => reloads.status(confirmingId), {
       ...(pollMs !== undefined ? { intervalMs: pollMs } : {}),
       isActive: () => active,
     }).then((outcome) => {
@@ -394,7 +411,7 @@ export function CardReloadPanel({
     const key = idempotencyKeyFor(cardReloadFingerprint(wallet, amount));
     setPhase({ kind: 'starting' });
     try {
-      const checkout = await api.startCardReload(token, amount, key);
+      const checkout = await reloads.start(amount, key);
       setPhase(reloadExtraCharge(checkout.recarga) ? { kind: 'review', checkout } : { kind: 'paying', checkout });
     } catch (cause) {
       setPhase({ kind: 'failed', message: errorMessage(cause) });
@@ -404,9 +421,9 @@ export function CardReloadPanel({
   if (phase.kind === 'credited') {
     return (
       <section className="alumno-card wallet-reload__done" role="status">
-        <h2>Listo, entraron {formatAmount(phase.amount)} a tu saldo</h2>
-        <Link className="alumno-btn alumno-btn--lime" to="/cuenta/saldo">
-          Ir a mi saldo
+        <h2>{done.title(phase.amount)}</h2>
+        <Link className="alumno-btn alumno-btn--lime" to={done.to}>
+          {done.label}
         </Link>
       </section>
     );
@@ -439,6 +456,7 @@ export function CardReloadPanel({
     return (
       <CardReloadStripe
         checkout={phase.checkout}
+        returnPath={returnPath}
         onBeforeConfirm={onBeforeConfirm}
         onConfirmFailed={onConfirmFailed}
         onPaid={() => setPhase({ kind: 'confirming', reloadId: phase.checkout.recarga.id })}
@@ -490,6 +508,17 @@ export function CardReloadPanel({
   return (
     <section className="alumno-card wallet-reload__card" aria-labelledby="wallet-reload-card">
       <h2 id="wallet-reload-card">Recargar con tarjeta</h2>
+      <label className="wallet-reload__amount">
+        <span>Monto a recargar</span>
+        <input
+          inputMode="decimal"
+          autoComplete="off"
+          placeholder="0.00"
+          value={amountText}
+          onChange={(event) => edit(event.target.value)}
+          aria-invalid={problem ? true : undefined}
+        />
+      </label>
       <div className="wallet-reload__quick" role="group" aria-label="Montos rápidos">
         {QUICK_RELOAD_AMOUNTS.map((quick) => (
           <button
@@ -502,17 +531,6 @@ export function CardReloadPanel({
           </button>
         ))}
       </div>
-      <label className="wallet-reload__amount">
-        <span>Otro monto</span>
-        <input
-          inputMode="decimal"
-          autoComplete="off"
-          placeholder="0.00"
-          value={amountText}
-          onChange={(event) => edit(event.target.value)}
-          aria-invalid={problem ? true : undefined}
-        />
-      </label>
       {hint ? (
         <p className={phase.kind === 'failed' || problem ? 'alumno-error' : 'alumno-muted'} role={phase.kind === 'failed' ? 'alert' : undefined}>
           {hint}
@@ -528,12 +546,14 @@ export function CardReloadPanel({
 
 function CardReloadStripe({
   checkout,
+  returnPath,
   onPaid,
   onCancel,
   onBeforeConfirm,
   onConfirmFailed,
 }: {
   checkout: CardReloadCheckout;
+  returnPath: string;
   onPaid: () => void;
   onCancel: () => void;
   onBeforeConfirm?: (reloadId: string) => void;
@@ -574,6 +594,7 @@ function CardReloadStripe({
         >
           <CardReloadForm
             reloadId={checkout.recarga.id}
+            returnPath={returnPath}
             onPaid={onPaid}
             onCancel={onCancel}
             onBeforeConfirm={onBeforeConfirm}
@@ -587,12 +608,14 @@ function CardReloadStripe({
 
 export function CardReloadForm({
   reloadId,
+  returnPath = '/cuenta/saldo/recargar',
   onPaid,
   onCancel,
   onBeforeConfirm,
   onConfirmFailed,
 }: {
   reloadId: string;
+  returnPath?: string;
   onPaid: () => void;
   onCancel: () => void;
   onBeforeConfirm?: (reloadId: string) => void;
@@ -614,7 +637,7 @@ export function CardReloadForm({
         elements,
         // Si el banco pide 3D Secure y redirige, al volver la página retoma esta recarga.
         confirmParams: {
-          return_url: `${window.location.origin}/cuenta/saldo/recargar?recarga=${encodeURIComponent(reloadId)}`,
+          return_url: `${window.location.origin}${returnPath}?recarga=${encodeURIComponent(reloadId)}`,
         },
         redirect: 'if_required',
       });

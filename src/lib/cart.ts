@@ -134,14 +134,21 @@ export function isOperationallyReady(status: {
   sesion_caja_abierta: boolean;
   caja_en_linea: boolean;
   cocina_en_linea: boolean;
+  tiene_cocina?: boolean;
 } | null): boolean {
   if (!status) return false;
   return (
     status.recibiendo_pedidos &&
     status.sesion_caja_abierta &&
     status.caja_en_linea &&
-    status.cocina_en_linea
+    // Un negocio sin cocina (lo prepara la barra) no la necesita en línea.
+    (status.cocina_en_linea || status.tiene_cocina === false)
   );
+}
+
+/** «Pago en caja» se esconde solo si el negocio lo apagó; sin dato, como siempre. */
+export function cashAtRegisterAllowed(status: { permite_pago_en_caja?: boolean } | null): boolean {
+  return status?.permite_pago_en_caja !== false;
 }
 
 /** La política del establecimiento decide si recibe pedidos; las estaciones

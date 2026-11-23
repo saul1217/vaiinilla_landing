@@ -150,3 +150,28 @@ describe('AppShell', () => {
     expect(() => notifyUnauthorized()).not.toThrow();
   });
 });
+
+describe('botón «Mi código»', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it('con cuenta está a la mano y lleva a la vista de códigos', () => {
+    authState.user = { email: 'ana@example.test' };
+    render(<MemoryRouter><AppShell tab="menu"><main>contenido</main></AppShell></MemoryRouter>);
+    expect(screen.getByRole('link', { name: 'Mi código' })).toHaveAttribute('href', '/cuenta/pedidos?vista=codigo');
+  });
+
+  it('no sale estando ya en «Mi código» ni sin cuenta', () => {
+    authState.user = { email: 'ana@example.test' };
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/cuenta/pedidos?vista=codigo']}><AppShell tab="orders"><main>contenido</main></AppShell></MemoryRouter>,
+    );
+    expect(screen.queryByRole('link', { name: 'Mi código' })).toBeNull();
+    unmount();
+    authState.user = null;
+    render(<MemoryRouter><AppShell tab="menu"><main>contenido</main></AppShell></MemoryRouter>);
+    expect(screen.queryByRole('link', { name: 'Mi código' })).toBeNull();
+  });
+});

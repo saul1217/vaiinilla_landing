@@ -154,8 +154,17 @@ export function BottomNav({ tab }: { tab: Exclude<AlumnoTab, 'none'> }) {
   ];
 
   const activeIndex = items.findIndex((item) => item.active);
+  // «Mi código»: a la mano en todas las pantallas para quien ya puede tener pedidos.
+  const myCodeOpen = location.pathname === '/cuenta/pedidos' && new URLSearchParams(location.search).get('vista') === 'codigo';
+  const showMyCode = (Boolean(user) || guest) && !myCodeOpen;
 
   return (
+    <>
+    {showMyCode ? (
+      <Link className="alumno-mycode-fab" to="/cuenta/pedidos?vista=codigo">
+        Mi código
+      </Link>
+    ) : null}
     <nav className="alumno-nav" aria-label="Navegación">
       <div className="alumno-nav__brand">
         <AlumnoLockup />
@@ -176,6 +185,7 @@ export function BottomNav({ tab }: { tab: Exclude<AlumnoTab, 'none'> }) {
         ))}
       </div>
     </nav>
+    </>
   );
 }
 

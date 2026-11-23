@@ -31,6 +31,7 @@ import { statusAsPhrase } from '../lib/status-phrase';
 import { readSpace } from '../lib/space-session';
 import { assistantPath, showsCustomerAssistant } from '../lib/customer-assistant-flag';
 import type { OrderDetail } from '../types/api';
+import { accountRequired } from '../lib/account-required';
 
 export function MenuPage({ assistantEnabled }: { assistantEnabled?: boolean } = {}) {
   const qaFixture = useMenuQaFixture();
@@ -43,8 +44,8 @@ export function MenuPage({ assistantEnabled }: { assistantEnabled?: boolean } = 
   const { addLine, cart } = useCart();
   // Lo ya cargado se ve al instante; la carga de abajo lo actualiza en segundo plano.
   const [place, setPlace] = useState<PublicEstablishment | null>(() => qaFixture?.place ?? peekResource(resourceKeys.establishment(slug)) ?? null);
-  // Compra sin cuenta: cualquiera agrega al carrito, salvo donde se pide con matrícula.
-  const canAddToCart = Boolean(user) || place?.identificador_cliente_obligatorio !== true;
+  // Compra sin cuenta: cualquiera agrega al carrito, salvo donde se pide con matrícula o con cuenta.
+  const canAddToCart = Boolean(user) || !accountRequired(place);
   const [catalog, setCatalog] = useState<CatalogResponse | null>(() => qaFixture?.catalog ?? peekResource(resourceKeys.catalog(slug)) ?? null);
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
@@ -336,10 +337,10 @@ export function MenuPage({ assistantEnabled }: { assistantEnabled?: boolean } = 
               onClick={() => openProduct(product)}
             >
               {thumb ? (
-                <img src={thumb} alt="" width="160" height="112" />
+                <img src={thumb} alt="" width="160" height="112" loading="lazy" decoding="async" />
               ) : (
                 <span className="alumno-product__ph alumno-product__ph--vaini" aria-hidden="true">
-                  <img src="/vaini/cutout-frente.png" alt="" />
+                  <img src="/vaini/cutout-frente-512.webp" alt="" loading="lazy" decoding="async" />
                 </span>
               )}
               <div>
@@ -356,7 +357,7 @@ export function MenuPage({ assistantEnabled }: { assistantEnabled?: boolean } = 
         {rentsCourts ? <Link className="alumno-courts-entry alumno-courts-entry--compact" to={`/e/${slug}/canchas`}><strong>Apartar una {rentalVocabulary(isBowlingVenue(place?.tipo)).court}</strong><span>Elige día y hora · paga al apartar</span><b aria-hidden="true">→</b></Link> : null}
         {catalog && searching && products.length === 0 ? (
           <div className="alumno-empty alumno-arrive" role="status">
-            <img src="/vaini/cutout-frente.png" alt="" />
+            <img src="/vaini/cutout-frente-512.webp" alt="" />
             <h2>No encontramos “{query.trim()}” en el menú</h2>
             <button className="alumno-btn alumno-btn--lime" type="button" onClick={() => setQuery('')}>
               Limpiar búsqueda

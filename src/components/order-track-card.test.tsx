@@ -89,7 +89,8 @@ describe("OrderTrackCard pickup", () => {
     expect(document.querySelector(".alumno-pickup")).toBeNull();
     expect(
       document.querySelector(".alumno-track-card__status"),
-    ).toHaveTextContent(/Recibimos tu pedido\s+Cocina recibió la comanda/i);
+    // Solo trae algo de caja: no se anuncia como cocina (tanda 1, negocio sin cocina).
+    ).toHaveTextContent(/Recibimos tu pedido\s+Ya están preparando tu pedido/i);
     expect(
       document.querySelector(
         ".alumno-timeline li.is-current .alumno-timeline__mark",
@@ -362,7 +363,7 @@ describe('OrderTrackCard: foto del producto', () => {
     expect(photo).toHaveAttribute('src', 'https://cdn/rota.jpg');
     fireEvent.error(photo);
     expect(document.querySelector('img.alumno-track-card__thumb')).toBeNull();
-    expect(document.querySelector('.alumno-track-card__thumb--vaini img')).toHaveAttribute('src', '/vaini/cutout-frente.png');
+    expect(document.querySelector('.alumno-track-card__thumb--vaini img')).toHaveAttribute('src', '/vaini/cutout-frente-512.webp');
   });
 });
 

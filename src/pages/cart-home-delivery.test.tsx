@@ -291,6 +291,148 @@ describe('CartPage a domicilio', () => {
     expect(api.createOrder.mock.calls[0]?.[1]).toMatchObject({ metodo_pago: 'stripe', destino: 'a_domicilio' });
   });
 
+  describe('mínimo por cobro con tarjeta (cafeterías, decisión de Kikin 18-nov)', () => {
+    // A domicilio la tarjeta cobra el total con envío, o solo el anticipo; el cobro debe ser MAYOR
+    // que tarjeta_minimo. Envío de $10 y sin mínimo de pedido para aislar la regla de la tarjeta.
+    const cafeteria = (extra: Record<string, unknown> = {}) => ({
+      ...reparteStatus,
+      tipo: 'cafeteria',
+      reparto: { activo: true, radio_km: '5', costo: '10.00', minimo: null },
+      tarjeta_minimo: '30.00',
+      ...extra,
+    });
+    const carrito = (cardUnit: string) => {
+      cartState.cart = {
+        slug: 'demo-a',
+        establishmentName: 'Cafetería Demo',
+        lines: [{ productId: 1, quantity: 1, optionIds: [], productName: 'Café', unitPreview: cardUnit, unitCounter: cardUnit, imageUrl: null }],
+      };
+    };
+    const pedidoTarjeta = (total: string) => ({
+      id: 'ord-casa-min',
+      folio: 11,
+      estado: 'por_cobrar',
+      metodo_pago: 'stripe',
+      destino: 'a_domicilio',
+      qr_token: 'pickup',
+      espacio: null,
+      total,
+      items: [],
+      pago: {
+        payment_attempt_id: 'attempt-min',
+        payment_intent_id: 'pi_test_min',
+        stripe_account_id: 'acct_test_min',
+        payment_status: 'pendiente_pago',
+        client_secret: 'pi_test_min_secret_test', // gitleaks:allow
+        publishable_key: 'pk_test_51Vaiinilla', // gitleaks:allow (pk_test_ ficticia de prueba)
+      },
+    });
+    const llenarDomicilio = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.click(await screen.findByRole('radio', { name: /a domicilio/i }));
+      await user.click(screen.getByRole('button', { name: /elegir en el mapa/i }));
+      await user.click(screen.getByRole('button', { name: /mapa de prueba/i }));
+      await screen.findByText('Aldama 1408, Centro, Chihuahua');
+      await user.type(screen.getByLabelText(/teléfono/i), '6141234567');
+    };
+    beforeEach(() => {
+      vi.stubEnv('VITE_FEATURE_DOMICILIO', 'true');
+      api.quoteHomeDelivery.mockResolvedValue({ llega: true, distancia_km: '2.4', costo: '10.00', minimo: null });
+    });
+
+    it('con envío: total de $30.00 deja la tarjeta deshabilitada y ofrece al recibir', async () => {
+      api.getOperationalStatus.mockResolvedValue(cafeteria());
+      carrito('20.00');
+      const user = userEvent.setup();
+      renderCart();
+      await llenarDomicilio(user);
+      await waitFor(() => expect(screen.getByRole('button', { name: /^continuar$/i })).toBeEnabled());
+      await user.click(screen.getByRole('button', { name: /^continuar$/i }));
+      const card = await screen.findByRole('radio', { name: /^tarjeta/i });
+      expect(card).toBeDisabled();
+      expect(card).toHaveTextContent('Tarjeta desde $30.01: el cobro debe ser mayor a $30.00 MXN.');
+      // La forma de pago elegida pasa sola a la siguiente que sí se puede: al recibir.
+      expect(screen.getByRole('radio', { name: /al recibir/i })).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getByRole('button', { name: /continuar con pago al recibir/i })).toBeEnabled();
+    });
+
+    it('con envío: total de $30.01 deja pagar con tarjeta y crea el pedido', async () => {
+      api.getOperationalStatus.mockResolvedValue(cafeteria());
+      api.createOrder.mockResolvedValue(pedidoTarjeta('30.01'));
+      carrito('20.01');
+      const user = userEvent.setup();
+      renderCart();
+      await llenarDomicilio(user);
+      await waitFor(() => expect(screen.getByRole('button', { name: /^continuar$/i })).toBeEnabled());
+      await user.click(screen.getByRole('button', { name: /^continuar$/i }));
+      const card = await screen.findByRole('radio', { name: /^tarjeta/i });
+      expect(card).toBeEnabled();
+      expect(card).toHaveAttribute('aria-checked', 'true');
+      await user.click(screen.getByRole('button', { name: /continuar con tarjeta/i }));
+      await waitFor(() => expect(api.createOrder).toHaveBeenCalledTimes(1));
+      expect(api.createOrder.mock.calls[0]?.[1]).toMatchObject({ metodo_pago: 'stripe', destino: 'a_domicilio' });
+    });
+
+    it('con anticipo: un anticipo de $30.00 queda deshabilitado aunque el total con tarjeta sí pase', async () => {
+      // 50 de productos + 10 de envío = 60.00; el 50% es 30.00.
+      api.getOperationalStatus.mockResolvedValue(cafeteria({ anticipo_porcentaje: 50 }));
+      carrito('50.00');
+      const user = userEvent.setup();
+      renderCart();
+      await llenarDomicilio(user);
+      await waitFor(() => expect(screen.getByRole('button', { name: /^continuar$/i })).toBeEnabled());
+      await user.click(screen.getByRole('button', { name: /^continuar$/i }));
+      const deposit = await screen.findByRole('radio', { name: /anticipo con tarjeta/i });
+      expect(deposit).toBeDisabled();
+      expect(deposit).toHaveTextContent('Anticipo desde $30.01: el cobro debe ser mayor a $30.00 MXN.');
+      expect(screen.getByRole('radio', { name: /^tarjeta/i })).toBeEnabled();
+    });
+
+    it('con anticipo: un anticipo de $30.01 se puede elegir y viaja con_anticipo', async () => {
+      // 50.02 + 10 = 60.02; el 50% es 30.01.
+      api.getOperationalStatus.mockResolvedValue(cafeteria({ anticipo_porcentaje: 50 }));
+      api.createOrder.mockResolvedValue(pedidoTarjeta('60.02'));
+      carrito('50.02');
+      const user = userEvent.setup();
+      renderCart();
+      await llenarDomicilio(user);
+      await waitFor(() => expect(screen.getByRole('button', { name: /^continuar$/i })).toBeEnabled());
+      await user.click(screen.getByRole('button', { name: /^continuar$/i }));
+      const deposit = await screen.findByRole('radio', { name: /anticipo con tarjeta/i });
+      expect(deposit).toBeEnabled();
+      await user.click(deposit);
+      await user.click(screen.getByRole('button', { name: /continuar con anticipo con tarjeta/i }));
+      await waitFor(() => expect(api.createOrder).toHaveBeenCalledTimes(1));
+      expect(api.createOrder.mock.calls[0]?.[1]).toMatchObject({ metodo_pago: 'stripe', destino: 'a_domicilio', con_anticipo: true });
+    });
+
+    it('si solo cobra con tarjeta y el total con envío es $30.00, explica el mínimo y no deja continuar', async () => {
+      api.getOperationalStatus.mockResolvedValue(cafeteria({ permite_contra_entrega: false }));
+      carrito('20.00');
+      const user = userEvent.setup();
+      renderCart();
+      await llenarDomicilio(user);
+      expect(
+        await screen.findByText(
+          'El cobro con tarjeta debe ser mayor a $30.00 MXN (tarjeta desde $30.01). Agrega productos para continuar.',
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^continuar$/i })).toBeDisabled();
+      expect(api.createOrder).not.toHaveBeenCalled();
+    });
+
+    it('sin tarjeta_minimo (no es cafetería) no bloquea un cobro chico', async () => {
+      api.getOperationalStatus.mockResolvedValue(cafeteria({ tarjeta_minimo: null }));
+      carrito('5.00');
+      const user = userEvent.setup();
+      renderCart();
+      await llenarDomicilio(user);
+      await waitFor(() => expect(screen.getByRole('button', { name: /^continuar$/i })).toBeEnabled());
+      await user.click(screen.getByRole('button', { name: /^continuar$/i }));
+      expect(await screen.findByRole('radio', { name: /^tarjeta/i })).toBeEnabled();
+      expect(screen.queryByText(/tarjeta desde/i)).not.toBeInTheDocument();
+    });
+  });
+
   it('fuera de la zona no deja continuar', async () => {
     vi.stubEnv('VITE_FEATURE_DOMICILIO', 'true');
     api.quoteHomeDelivery.mockResolvedValue({ llega: false, distancia_km: '9.0', costo: '40.00', minimo: null });

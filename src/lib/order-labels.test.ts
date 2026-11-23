@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { OrderDetail } from '../types/api';
 import {
   orderCancelReason,
+  orderCollapsedHint,
   orderOperationalHint,
   orderRejectedItemsHint,
   orderCollapsedStatusHint,
@@ -213,5 +214,35 @@ describe('orderOperationalHint con motivo obsoleto', () => {
     expect(orderOperationalHint({ motivo_pendiente_operativo: 'caja_inactiva', estado: 'listo' })).toBeNull();
     expect(orderOperationalHint({ motivo_pendiente_operativo: 'cocina_inactiva', estado: 'listo' })).toBeNull();
     expect(orderOperationalHint({ motivo_pendiente_operativo: 'caja_inactiva', estado: 'por_cobrar' })).toMatch(/Caja/);
+  });
+});
+
+describe('sin cocina no se anuncia «Cocina recibió»', () => {
+  const deBarra = (estado: OrderDetail['estado']) =>
+    order({
+      estado,
+      metodo_pago: 'saldo',
+      items: [
+        {
+          id: 1,
+          producto_id: 1,
+          nombre_producto: 'Chilaquiles',
+          estacion_preparacion: 'caja',
+          cantidad: 1,
+          precio_digital_unitario: '73.70',
+          subtotal: '73.70',
+          opciones: [],
+        },
+      ],
+    });
+
+  it('lo que prepara la barra dice que ya lo están preparando', () => {
+    expect(orderCollapsedHint(deBarra('cobrado'))).toBe('Ya están preparando tu pedido.');
+    const pasos = orderTrackSteps(deBarra('cobrado')).map((paso) => paso.hint);
+    expect(pasos.some((hint) => hint.includes('Cocina recibió'))).toBe(false);
+  });
+
+  it('con algo para Cocina sigue diciendo que Cocina lo recibió', () => {
+    expect(orderCollapsedHint(order({ estado: 'cobrado', metodo_pago: 'saldo' }))).toBe('Cocina recibió la comanda.');
   });
 });

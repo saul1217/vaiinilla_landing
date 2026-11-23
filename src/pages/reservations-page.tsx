@@ -18,7 +18,7 @@ import { trackingPath } from '../lib/guest-orders';
 import { guestSession } from '../lib/guest-session';
 import { createReservationsClient } from '../lib/reservations-client';
 import { formatAmount } from '../lib/money';
-import { rememberPickupQrToken } from '../lib/pickup-qr';
+import { rememberPickupCode, rememberPickupQrToken } from '../lib/pickup-qr';
 import { rememberSpace } from '../lib/space-session';
 import { savePendingStripeOrderId } from '../lib/stripe-pending';
 import { rememberStripeCheckoutSession, stripeSessionFromCreatedOrder } from '../lib/stripe-session';
@@ -194,6 +194,7 @@ export function ReservationsScreen({
     const order = payment.order;
     if (!order) return;
     rememberPickupQrToken(order.id, order.qr_token);
+      rememberPickupCode(order.id, order.codigo_recoger);
     rememberSpace({
       slug,
       espacioId: payment.reservation.courtId,

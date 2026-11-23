@@ -284,11 +284,12 @@ export function HomePage() {
               </div>
               <img
                 className="business__vaini"
-                src="/vaini/scene-taller.png"
+                src="/vaini/scene-taller-640.webp"
                 alt=""
-                width="720"
-                height="720"
+                width="640"
+                height="640"
                 loading="lazy"
+                decoding="async"
               />
             </div>
           </div>
@@ -307,7 +308,7 @@ export function HomePage() {
         <section className="cta" id="cta">
           <div className="container">
             <div className="cta__card" data-reveal>
-              <img className="cta__vaini" src="/vaini/cutout-frente.png" alt="" width="640" height="860" loading="lazy" />
+              <img className="cta__vaini" src="/vaini/cutout-frente-512.webp" alt="" width="512" height="512" loading="lazy" decoding="async" />
               <div className="cta__copy">
                 <h2>
                   Tu siguiente pedido

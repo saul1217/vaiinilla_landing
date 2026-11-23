@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogProduct } from '../types/api';
-import { cardFee, cartTotal, defaultOptionIds, previewForProduct, toCreateOrderInput, validateSelections } from './cart';
+import { cardFee, cartTotal, cashAtRegisterAllowed, defaultOptionIds, isOperationallyReady, previewForProduct, toCreateOrderInput, validateSelections } from './cart';
 
 const burrito = {
   id: 103,
@@ -170,5 +170,20 @@ describe('precio según cómo se paga (comisión pasada al cliente)', () => {
   it('la comisión por tarjeta es la diferencia contra mostrador; sin diferencia no hay desglose', () => {
     expect(cardFee([line])).toBe('22.00');
     expect(cardFee([{ ...line, unitPreview: '110.00' }])).toBeNull();
+  });
+});
+
+describe('solo saldo o tarjeta y negocio sin cocina', () => {
+  it('«Pago en caja» se esconde solo con false explícito', () => {
+    expect(cashAtRegisterAllowed({ permite_pago_en_caja: false })).toBe(false);
+    expect(cashAtRegisterAllowed({ permite_pago_en_caja: true })).toBe(true);
+    expect(cashAtRegisterAllowed({})).toBe(true);
+    expect(cashAtRegisterAllowed(null)).toBe(true);
+  });
+
+  it('sin cocina no hace falta Cocina en línea', () => {
+    const base = { recibiendo_pedidos: true, sesion_caja_abierta: true, caja_en_linea: true, cocina_en_linea: false };
+    expect(isOperationallyReady(base)).toBe(false);
+    expect(isOperationallyReady({ ...base, tiene_cocina: false })).toBe(true);
   });
 });

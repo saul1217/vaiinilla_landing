@@ -14,7 +14,8 @@ import { lastPlaceSlug } from "../lib/last-place";
 import { errorMessage, VaiinillaApiError } from "../lib/api-error";
 import { catalogImageMap, orderThumbUrl } from "../lib/catalog-images";
 import { formatAmount } from "../lib/money";
-import { persistPickupQrFromOrder } from "../lib/pickup-qr";
+import { persistPickupQrFromOrder, type PickupRules } from "../lib/pickup-qr";
+import { MyCodeSection } from "../components/my-code-section";
 import { isActiveOrder, openTab } from "../lib/order-labels";
 import { readGuestOrders } from "../lib/guest-orders";
 import { forgetGuest } from "../lib/guest-session";
@@ -51,6 +52,10 @@ export function OrdersPage() {
   const navigate = useNavigate();
   // Recién pedido: el carrito llega con ?nuevo=<id> y ese pedido ya se ve abierto.
   const [expandedId, setExpandedId] = useState<string | null>(() => searchParams.get("nuevo"));
+  // «Mi código» (botón fijo): los pedidos de hoy con su código, arriba de todo.
+  const myCodeView = searchParams.get("vista") === "codigo";
+  // Cómo valida la entrega el negocio y si pide código al cobrar (migraciones 225 y 227).
+  const [pickupRules, setPickupRules] = useState<PickupRules | undefined>(undefined);
   const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
   // Reclamo invitado → cuenta: tras pasarlos se vuelve a consultar para verlos aquí.
   const [claimKey, setClaimKey] = useState(0);
@@ -108,6 +113,13 @@ export function OrdersPage() {
         }
         const result = await api.listOrders(resolved.context.access_token);
         if (!active) return;
+        // Sin el estado se enseña lo de siempre (QR y código): no frena la lista.
+        void Promise.resolve()
+          .then(() => api.getOperationalStatus(resolved.context.access_token))
+          .then((status) => {
+            if (active) setPickupRules({ mode: status.validacion_entrega, cobroCodigo: status.cobro_requiere_codigo === true });
+          })
+          .catch(() => undefined);
         result.orders.forEach((item) => persistPickupQrFromOrder(item));
         if (resolved.slug) storeResource(resourceKeys.orders(user.uid, resolved.slug), result.orders);
         setOrders(result.orders);
@@ -259,12 +271,15 @@ export function OrdersPage() {
             <span className="alumno-tab__total">{formatAmount(tab.total)}</span>
           </section>
         ) : null}
+        {myCodeView && !loading ? (
+          <MyCodeSection orders={orders} rules={pickupRules} slug={place?.slug ?? placeGuess ?? null} accessToken={context?.access_token ?? null} />
+        ) : null}
         {loading && orders.length === 0 && !error ? (
           <LoadingSkeleton shape="orders" label="Cargando pedidos…" />
         ) : null}
         {orders.length === 0 && !error && !loading ? (
           <div className="alumno-empty">
-            <img src="/vaini/cutout-frente.png" alt="" />
+            <img src="/vaini/cutout-frente-512.webp" alt="" />
             <p>Aún no has hecho pedidos.</p>
           </div>
         ) : (
@@ -281,6 +296,7 @@ export function OrdersPage() {
                   <div className="alumno-order-list alumno-arrive">
                     {activeOrders.map((order) => (
                       <OrderTrackCard
+                        pickupRules={pickupRules}
                         key={order.id}
                         order={order}
                         expanded={!deskPane && expandedId === order.id}
@@ -310,6 +326,7 @@ export function OrdersPage() {
                   <div className="alumno-order-list alumno-arrive">
                     {pastOrders.map((order) => (
                       <OrderTrackCard
+                        pickupRules={pickupRules}
                         key={order.id}
                         order={order}
                         expanded={!deskPane && expandedId === order.id}
@@ -343,6 +360,7 @@ export function OrdersPage() {
                       Ocultar
                     </button>
                     <OrderTrackCard
+                      pickupRules={pickupRules}
                       order={selected}
                       expanded
                       completeLink
@@ -358,7 +376,7 @@ export function OrdersPage() {
                   </>
                 ) : (
                   <div className="alumno-orders-desk__hint">
-                    <img src="/vaini/cutout-frente.png" alt="" />
+                    <img src="/vaini/cutout-frente-512.webp" alt="" />
                     <p>Elige un pedido para ver el seguimiento.</p>
                   </div>
                 )}

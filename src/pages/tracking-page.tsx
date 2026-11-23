@@ -164,7 +164,7 @@ export function TrackingPage() {
       <AppShell tab="none">
         <main id="main-content" className="alumno-main alumno-tracking">
           <div className="alumno-empty alumno-arrive" role="alert">
-            <img src="/vaini/cutout-frente.png" alt="" />
+            <img src="/vaini/cutout-frente-512.webp" alt="" />
             <h2>No encontramos este pedido</h2>
             <p className="alumno-lead">No pudimos encontrar el pedido. Revisa el enlace o vuelve a Mis pedidos.</p>
             <div className="alumno-tracking__actions">

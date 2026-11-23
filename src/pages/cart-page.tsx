@@ -10,7 +10,14 @@ import { useBuyerSession } from '../context/buyer-session';
 import { useCart } from '../context/cart-context';
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
-import { canAcceptOrders, canPayAtEnd, cardFee, cartTotal, toCreateOrderInput, unitFor } from '../lib/cart';
+import { canAcceptOrders, canPayAtEnd, cardFee, cartTotal, cashAtRegisterAllowed, toCreateOrderInput, unitFor } from '../lib/cart';
+import {
+  cardBelowMinimum,
+  cardMinimumErrorMessage,
+  cardMinimumMessage,
+  cardMinimumNotice,
+  homePaymentsBelowMinimum,
+} from '../lib/card-minimum';
 import { leftoverPeekProducts, peekCatalogProducts, productImageUrl } from '../lib/catalog-images';
 import { forgetIdempotencyKey, idempotencyKeyFor, orderFingerprint } from '../lib/idempotency';
 import { formatAmount, linePreview, moneyToCents } from '../lib/money';
@@ -19,7 +26,7 @@ import { piecesLabel, splitPieces } from '../lib/product-pieces';
 import { resolveClientSession } from '../lib/client-session';
 import { lastPlaceSlug } from '../lib/last-place';
 import { orderHistoryHeadline } from '../lib/order-labels';
-import { rememberPickupQrToken } from '../lib/pickup-qr';
+import { rememberPickupCode, rememberPickupQrToken } from '../lib/pickup-qr';
 import { activeRentalSpace, forgetSpace, readSpace, rememberSpace } from '../lib/space-session';
 import { deliveredAtLabel, isSharableSpace, spaceNoun } from '../lib/space-words';
 import { readPendingStripeOrderId, savePendingStripeOrderId } from '../lib/stripe-pending';
@@ -32,6 +39,7 @@ import { isHomeDeliveryEnabled, SHOW_WALLET } from '../lib/features';
 import {
   EMPTY_HOME_ADDRESS,
   effectiveHomePayment,
+  homeCardCharge,
   homeCheckoutProblem,
   homeDeliveryFee,
   homeDeliveryOffer,
@@ -73,6 +81,7 @@ import type {
 import { LoadingSkeleton } from '../components/loading-skeleton';
 import { MotionSheet } from '../components/motion-sheet';
 import { PlaceEntry } from '../components/place-entry';
+import { accountRequired } from '../lib/account-required';
 
 export function CartPage() {
   const { slug = '' } = useParams();
@@ -86,6 +95,8 @@ export function CartPage() {
   const [status, setStatus] = useState<OperationalStatus | null>(null);
   const [operationalError, setOperationalError] = useState<string | null>(null);
   const [wallet, setWallet] = useState<WalletData | null>(null);
+  // La consulta de la cartera ya terminó (con o sin cartera).
+  const [walletChecked, setWalletChecked] = useState(false);
   const [payment, setPayment] = useState<PaymentMethod>('efectivo');
   const [payAtEnd, setPayAtEnd] = useState(() => readSpace(slug)?.pagaAlFinal === true);
   const [notes, setNotes] = useState('');
@@ -161,10 +172,15 @@ export function CartPage() {
     ? canPayAtEnd(status, forHere && Boolean(space))
     : forHere && Boolean(space) && place?.permite_pago_al_final === true;
   const useTab = payAtEnd && tabAllowed && payment === 'efectivo';
+  // Solo saldo o tarjeta: el negocio apagó «Pago en caja». El back también lo rechaza.
+  // Sin cuenta lo dice la ficha pública (lo único que tiene un invitado es pagar en caja).
+  const cashAllowed = guestLike ? place?.permite_pago_en_caja !== false : cashAtRegisterAllowed(status);
+  // Un invitado no tiene saldo ni tarjeta: si el negocio no cobra en caja, tiene que entrar.
+  const guestCannotPay = guestLike && !cashAllowed && !useTab;
   const stripeEnabled = isStripeCheckoutEnabled();
   const cardOffered = offersCardPayment(place);
   const pendingStripeOrderId = readPendingStripeOrderId();
-  const guestBlocked = guest && place?.identificador_cliente_obligatorio === true;
+  const guestBlocked = guest && accountRequired(place);
   const canCheckout = !guestBlocked;
   const [guestName, setGuestName] = useState(() => readGuest()?.nombre ?? '');
   // En mesa con participante vigente no se pide nombre: el pedido ya va a su nombre.
@@ -256,7 +272,23 @@ export function CartPage() {
     () => (homeOffer ? homePayments(homeOffer, cardOffered && stripeEnabled) : []),
     [homeOffer, cardOffered, stripeEnabled],
   );
-  const chosenHomePayment = effectiveHomePayment(homePayment, offeredHomePayments);
+  // Mínimo por cobro con tarjeta (cafeterías): lo que la tarjeta cobraría es el total con precio de
+  // tarjeta; a domicilio, ese total más el envío, o solo el anticipo (decidido por Kikin, 18-nov).
+  // Mientras no llega el estado operativo no se afirma ningún mínimo: el servidor responde 422.
+  const cardMinimum = status?.tarjeta_minimo ?? null;
+  const cardTotalPreview = useMemo(() => cartTotal(lines, 'stripe'), [lines]);
+  const homeFee = isHome && homeOffer ? homeDeliveryFee(homeOffer, homeQuote) : null;
+  const homeCardTotal = isHome ? totalWithFee(cardTotalPreview, homeFee) : null;
+  const homeDepositPercent = homeOffer?.depositPercent ?? null;
+  const blockedHomePayments = useMemo(
+    () => homePaymentsBelowMinimum(offeredHomePayments, homeCardTotal, homeDepositPercent, cardMinimum),
+    [offeredHomePayments, homeCardTotal, homeDepositPercent, cardMinimum],
+  );
+  const selectableHomePayments = useMemo(
+    () => offeredHomePayments.filter((option) => !blockedHomePayments.includes(option)),
+    [offeredHomePayments, blockedHomePayments],
+  );
+  const chosenHomePayment = effectiveHomePayment(homePayment, selectableHomePayments);
   // A domicilio la forma de pago es la de domicilio: al recibir es efectivo y lo demás tarjeta.
   const chargedPayment: PaymentMethod = isHome
     ? chosenHomePayment
@@ -265,19 +297,24 @@ export function CartPage() {
     : payment;
   // Solo la tarjeta lleva la comisión: el total y la validación de saldo siguen al método.
   const subtotal = useMemo(() => cartTotal(lines, chargedPayment), [lines, chargedPayment]);
-  const homeFee = isHome && homeOffer ? homeDeliveryFee(homeOffer, homeQuote) : null;
   const total = totalWithFee(subtotal, homeFee);
   // Desglose de la comisión: el total con tarjeta se ve igual, pero se dice por qué subió.
   const fee = useMemo(() => (chargedPayment === 'stripe' ? cardFee(lines) : null), [lines, chargedPayment]);
+  const cardTooSmall = !isHome && cardMinimum !== null && cardBelowMinimum(cardTotalPreview, cardMinimum);
+  const cardBlocked = cardTooSmall && payment === 'stripe';
+  // A domicilio sin ninguna forma de pago que pase el mínimo (solo tarjeta o anticipo, y el cobro
+  // no lo supera): se dice por qué en vez de «no tiene cómo cobrar».
+  const homeCardOnlyBelowMinimum =
+    isHome && offeredHomePayments.length > 0 && selectableHomePayments.length === 0 && cardMinimum !== null;
   const homeProblem =
     isHome && homeOffer
-      ? homeCheckoutProblem({
+      ? (homeCheckoutProblem({
           draft: homeDraft,
           quote: homeQuote,
           offer: homeOffer,
           payments: offeredHomePayments,
           subtotal,
-        })
+        }) ?? (homeCardOnlyBelowMinimum && cardMinimum ? cardMinimumMessage(cardMinimum, false) : null))
       : null;
   // Encargos (misma bandera): si el carrito tarda días o el negocio deja pedir para otro día, se
   // elige el día de entrega. En una mesa se come ahora, así que ahí no se pregunta.
@@ -321,11 +358,13 @@ export function CartPage() {
     if (!context || !place || context.contexto.establecimiento_id !== place.id) {
       setStatus(null);
       setWallet(null);
+      setWalletChecked(false);
       setOperationalError(null);
       return;
     }
     let active = true;
     setStatus(null);
+    setWalletChecked(false);
     setOperationalError(null);
     void Promise.all([
       api.getOperationalStatus(context.access_token),
@@ -337,6 +376,7 @@ export function CartPage() {
         setRentalSpace(activeRentalSpace(slug, rentals, Date.now()));
         setStatus(nextStatus);
         setWallet(nextWallet);
+        setWalletChecked(true);
       })
       .catch((cause: unknown) => {
         if (!active) return;
@@ -420,6 +460,27 @@ export function CartPage() {
     wallet &&
     (moneyToCents(wallet.wallet.saldo) ?? 0n) < (moneyToCents(total) ?? 0n);
 
+  // El carrito empieza en «Pago en caja»: si el negocio lo apagó, pasa a saldo, o a tarjeta si
+  // el saldo no alcanza y la tarjeta sí se puede usar.
+  useEffect(() => {
+    if (cashAllowed || guestLike || payment !== 'efectivo' || useTab || !walletChecked) return;
+    const walletShort =
+      !wallet || !total || (moneyToCents(wallet.wallet.saldo) ?? 0n) < (moneyToCents(total) ?? 0n);
+    const cardUsable = cardOffered && stripeEnabled && !cardTooSmall;
+    setPayment(walletShort && cardUsable ? 'stripe' : 'saldo');
+  }, [
+    cashAllowed,
+    guestLike,
+    payment,
+    useTab,
+    walletChecked,
+    wallet,
+    total,
+    cardOffered,
+    stripeEnabled,
+    cardTooSmall,
+  ]);
+
   async function confirm(retried = false) {
     // Un solo pedido a la vez: un segundo toque mientras se crea no abre otro.
     if (confirming.current && !retried) return;
@@ -485,6 +546,13 @@ export function CartPage() {
           const cashLike = !isHome && method !== 'saldo' && method !== 'stripe';
           const pending =
             code === 'IDENTITY_NOT_REGISTERED' || (code === 'EMAIL_NOT_VERIFIED' && retried);
+          // Donde el negocio pide cuenta no hay invitado al cual caer: el servidor lo rechazaría.
+          if (pending && cashLike && accountRequired(place)) {
+            setError('Este negocio pide cuenta: verifica tu correo para poder pedir aquí.');
+            confirming.current = false;
+            setSubmitting(false);
+            return;
+          }
           if (pending && cashLike && !fallbackGuest) {
             setFallbackGuest(true);
             if (!guestName.trim()) {
@@ -507,6 +575,24 @@ export function CartPage() {
       }
       if (isHome && !homeDeliveryOffer(operational)) {
         throw new Error('Este negocio dejó de entregar a domicilio. Elige para llevar.');
+      }
+      // Se vuelve a revisar con el estado recién leído: el servidor igual responde 422 si no cumple.
+      // A domicilio se compara lo que cobra la tarjeta: el total con envío o el anticipo.
+      const freshMinimum = operational.tarjeta_minimo ?? null;
+      const freshCharge =
+        isHome && chosenHomePayment && chosenHomePayment !== 'on_arrival'
+          ? homeCardCharge(
+              chosenHomePayment,
+              homeCardTotal,
+              homeDeliveryOffer(operational)?.depositPercent ?? homeDepositPercent,
+            )
+          : cardTotalPreview;
+      if (method === 'stripe' && freshMinimum !== null && cardBelowMinimum(freshCharge, freshMinimum)) {
+        throw new Error(
+          isHome
+            ? cardMinimumMessage(freshMinimum, offeredHomePayments.includes('on_arrival'), 'pago al recibir')
+            : cardMinimumMessage(freshMinimum),
+        );
       }
       // Si aún no se sabía de la renta (se paga antes de que llegue), se busca aquí.
       let target = space;
@@ -572,6 +658,7 @@ export function CartPage() {
         throw cause;
       }
       rememberPickupQrToken(order.id, order.qr_token);
+      rememberPickupCode(order.id, order.codigo_recoger);
       // Un encargo con tarjeta llega sin `pago`: se cobra cuando el negocio lo acepte.
       if (method === 'stripe' && !isAwaitingAcceptance(order)) {
         const stripeSession = stripeSessionFromCreatedOrder(order);
@@ -630,7 +717,8 @@ export function CartPage() {
         setError(label ? `${cause.message} El primer día disponible es ${/^(Hoy|Mañana)$/.test(label) ? label.toLowerCase() : `el ${label}`}.` : cause.message);
         return;
       }
-      setError(errorMessage(cause));
+      // 422 CARD_MIN_AMOUNT: el carrito y el método elegido se conservan para cambiar a caja.
+      setError(cardMinimumErrorMessage(cause) ?? errorMessage(cause));
     } finally {
       endCheckoutGuard();
       if (!retried) confirming.current = false;
@@ -837,6 +925,8 @@ export function CartPage() {
               {isHome ? (
                 <HomePayOptions
                   offered={offeredHomePayments}
+                  blocked={blockedHomePayments}
+                  cardMinimum={cardMinimum}
                   selected={chosenHomePayment}
                   depositPercent={homeOffer?.depositPercent ?? null}
                   transferDetails={homeOffer?.transferDetails ?? null}
@@ -856,7 +946,7 @@ export function CartPage() {
                   }}
                 />
               ) : null}
-              {!isHome ? (
+              {!isHome && cashAllowed ? (
               <PayOption
                 selected={payment === 'efectivo' && !useTab}
                 icon="cash"
@@ -896,16 +986,39 @@ export function CartPage() {
                 icon="card"
                 title="Tarjeta"
                 badge="Pago seguro"
-                subtitle={stripeEnabled ? 'Tarjeta de débito o crédito. Pago seguro.' : STRIPE_UNAVAILABLE_COPY}
-                disabled={!stripeEnabled}
+                subtitle={
+                  !stripeEnabled
+                    ? STRIPE_UNAVAILABLE_COPY
+                    : cardTooSmall && cardMinimum
+                      ? cardMinimumNotice(cardMinimum)
+                      : 'Tarjeta de débito o crédito. Pago seguro.'
+                }
+                disabled={!stripeEnabled || cardTooSmall}
                 onSelect={() => {
-                  if (!stripeEnabled) return;
+                  if (!stripeEnabled || cardTooSmall) return;
                   setPayment('stripe');
                   setPayAtEnd(false);
                 }}
               />
               ) : null}
               {error ? <p className="alumno-error">{error}</p> : null}
+              {cardBlocked && cardMinimum && !error ? (
+                <p className="alumno-error" role="alert">
+                  {cardMinimumMessage(cardMinimum)}
+                </p>
+              ) : null}
+              {!cashAllowed && !useTab && !isHome ? (
+                <p className="alumno-muted">
+                  {guestLike ? (
+                    <>
+                      Este negocio no cobra en caja. <Link to="/cuenta">Entra a tu cuenta</Link> para pagar con saldo o
+                      tarjeta.
+                    </>
+                  ) : (
+                    'Este negocio no cobra en caja: paga con saldo o tarjeta.'
+                  )}
+                </p>
+              ) : null}
               {insufficientBalance ? (
                 <p className="alumno-error">
                   No tienes saldo suficiente para este pedido.{' '}
@@ -924,8 +1037,10 @@ export function CartPage() {
                 type="button"
                 disabled={
                   submitting ||
+                  cardBlocked ||
                   Boolean(insufficientBalance) ||
                   Boolean(pendingStripeOrderId) ||
+                  guestCannotPay ||
                   (guestLike && !guestNameValid)
                 }
                 onClick={() => void confirm()}
@@ -1074,10 +1189,10 @@ export function CartFilledView({
           return (
             <div className="alumno-line" key={`${line.productId}-${line.optionIds.join(',')}-${line.notes || ''}`}>
               {thumb ? (
-                <img className="alumno-line__thumb" src={thumb} alt="" />
+                <img className="alumno-line__thumb" src={thumb} alt="" loading="lazy" decoding="async" />
               ) : (
                 <div className="alumno-line__thumb alumno-line__thumb--vaini" aria-hidden="true">
-                  <img src="/vaini/cutout-frente.png" alt="" />
+                  <img src="/vaini/cutout-frente-512.webp" alt="" loading="lazy" decoding="async" />
                 </div>
               )}
               <div className="alumno-line__copy">
@@ -1393,12 +1508,17 @@ const HOME_PAY_LABEL: Record<HomePayment, string> = {
 /** Las formas de pago a domicilio, en el orden de Android: tarjeta, anticipo y al recibir. */
 function HomePayOptions({
   offered,
+  blocked = [],
+  cardMinimum = null,
   selected,
   depositPercent,
   transferDetails,
   onSelect,
 }: {
   offered: HomePayment[];
+  /** Las de tarjeta cuyo cobro no supera el mínimo: se ven deshabilitadas y dicen desde cuánto. */
+  blocked?: HomePayment[];
+  cardMinimum?: string | null;
   selected: HomePayment | null;
   depositPercent: number | null;
   transferDetails: string | null;
@@ -1415,8 +1535,15 @@ function HomePayOptions({
           icon="card"
           title="Tarjeta"
           badge="Pago seguro"
-          subtitle="Pagas todo ahora con tarjeta de débito o crédito."
-          onSelect={() => onSelect('card')}
+          subtitle={
+            blocked.includes('card') && cardMinimum
+              ? cardMinimumNotice(cardMinimum)
+              : 'Pagas todo ahora con tarjeta de débito o crédito.'
+          }
+          disabled={blocked.includes('card')}
+          onSelect={() => {
+            if (!blocked.includes('card')) onSelect('card');
+          }}
         />
       ) : null}
       {offered.includes('deposit') ? (
@@ -1425,8 +1552,15 @@ function HomePayOptions({
           icon="card"
           title="Anticipo con tarjeta"
           badge={depositPercent != null ? `${depositPercent}%` : 'Anticipo'}
-          subtitle={`Pagas ${depositPercent != null ? `el ${depositPercent}%` : 'una parte'} con tarjeta y el resto al recibir.`}
-          onSelect={() => onSelect('deposit')}
+          subtitle={
+            blocked.includes('deposit') && cardMinimum
+              ? cardMinimumNotice(cardMinimum, 'Anticipo')
+              : `Pagas ${depositPercent != null ? `el ${depositPercent}%` : 'una parte'} con tarjeta y el resto al recibir.`
+          }
+          disabled={blocked.includes('deposit')}
+          onSelect={() => {
+            if (!blocked.includes('deposit')) onSelect('deposit');
+          }}
         />
       ) : null}
       {offered.includes('on_arrival') ? (

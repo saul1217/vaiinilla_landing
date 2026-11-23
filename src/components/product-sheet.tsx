@@ -55,7 +55,7 @@ export function ProductSheet(props: ProductSheetProps) {
                 />
               ) : null}
               {!photoUrl || !photoReady ? (
-                <img className="alumno-psheet__vaini" src="/vaini/cutout-frente.png" alt="" aria-hidden="true" />
+                <img className="alumno-psheet__vaini" src="/vaini/cutout-frente-512.webp" alt="" aria-hidden="true" decoding="async" />
               ) : null}
               <button className="alumno-psheet__action alumno-psheet__action--close" type="button" onClick={close} aria-label="Cerrar producto">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -157,7 +157,7 @@ export function ProductSheet(props: ProductSheetProps) {
                 Agregar · <span key={price} className="alumno-ticker">{price}</span>
               </button>
             ) : (
-              // Solo donde se pide con matrícula: ahí sin cuenta no se puede pedir.
+              // Donde se pide con matrícula o con cuenta: ahí sin cuenta no se puede pedir.
               <Link className="alumno-psheet__add" to={props.loginHref}>
                 Crea tu cuenta para pedir aquí
               </Link>
