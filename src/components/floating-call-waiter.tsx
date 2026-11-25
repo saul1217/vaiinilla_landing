@@ -21,6 +21,7 @@ import {
   type TableCall,
 } from '../lib/mesero-api';
 import { scannedSpace } from '../lib/space-session';
+import { LIVE_SAFETY_MS, useLiveSignal, type LiveStreamRef } from '../lib/live-events';
 
 const POLL_MS = 5000;
 const COOLDOWN_S = 60;
@@ -70,6 +71,19 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  // Avisos en vivo: con el canal abierto se relee al llegar un aviso de llamada o de mesa y, de
+  // seguridad, cada minuto; sin canal, cada 5 s como siempre.
+  const liveRefs = useMemo<LiveStreamRef[]>(
+    () => (token && !injected ? [{ kind: 'cliente', token }] : []),
+    [token, injected],
+  );
+  const [signal, setSignal] = useState(0);
+  const live = useLiveSignal(
+    liveRefs,
+    (event) => event.type === 'llamada' || event.type === 'mesa',
+    () => setSignal((n) => n + 1),
+  );
+
   // Recupera una llamada abierta tras recargar y la mantiene al día.
   useEffect(() => {
     if (!client || !espacioId) return;
@@ -89,12 +103,12 @@ export function FloatingCallWaiter({ client: injected }: { client?: BuyerCallCli
       }
     };
     void tick();
-    const id = window.setInterval(() => void tick(), POLL_MS);
+    const id = window.setInterval(() => void tick(), live ? LIVE_SAFETY_MS : POLL_MS);
     return () => {
       active = false;
       window.clearInterval(id);
     };
-  }, [client, espacioId]);
+  }, [client, espacioId, live, signal]);
 
   useEffect(() => {
     if (cooldown <= 0) return;

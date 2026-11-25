@@ -14,6 +14,7 @@ import {
   type TableCall,
 } from "../lib/mesero-api";
 import { useHeightMorph } from "../lib/use-height-morph";
+import { LIVE_SAFETY_MS, useLiveSignal, type LiveStreamRef } from "../lib/live-events";
 import type { OrderDetail } from "../types/api";
 
 const POLL_MS = 5000;
@@ -28,11 +29,14 @@ export function CallWaiter({
   order: OrderDetail;
   client?: BuyerCallClient;
 }) {
+  const token = useMemo(
+    () => (injected ? null : readStoredClientContext()?.context.access_token ?? null),
+    [injected],
+  );
   const client = useMemo(() => {
     if (injected) return injected;
-    const token = readStoredClientContext()?.context.access_token;
     return token ? createBuyerCallClient(token) : null;
-  }, [injected]);
+  }, [injected, token]);
   const espacioId = order.espacio?.id ?? 0;
   // Solo un pedido en mesa puede llamar: los demás no consultan al backend.
   const callable = canCallWaiter(order);
@@ -43,6 +47,19 @@ export function CallWaiter({
   const [cooldown, setCooldown] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   useHeightMorph(ref, `${view}:${call?.estado ?? ""}:${error ?? ""}`);
+
+  // Avisos en vivo: con el canal abierto se relee con cada aviso de llamada o de mesa y, de
+  // seguridad, cada minuto; sin canal, cada 5 s como siempre.
+  const liveRefs = useMemo<LiveStreamRef[]>(
+    () => (token && callable ? [{ kind: "cliente", token }] : []),
+    [token, callable],
+  );
+  const [signal, setSignal] = useState(0);
+  const live = useLiveSignal(
+    liveRefs,
+    (event) => event.type === "llamada" || event.type === "mesa",
+    () => setSignal((n) => n + 1),
+  );
 
   // Restore an open call after a reload, then keep it fresh while open.
   useEffect(() => {
@@ -64,12 +81,12 @@ export function CallWaiter({
       }
     };
     void tick();
-    const id = window.setInterval(() => void tick(), POLL_MS);
+    const id = window.setInterval(() => void tick(), live ? LIVE_SAFETY_MS : POLL_MS);
     return () => {
       active = false;
       window.clearInterval(id);
     };
-  }, [callable, client, espacioId]);
+  }, [callable, client, espacioId, live, signal]);
 
   useEffect(() => {
     if (cooldown <= 0) return;

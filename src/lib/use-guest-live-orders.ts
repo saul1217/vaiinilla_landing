@@ -3,7 +3,7 @@
 // sessionStorage y moría al cerrar la pestaña): cada consulta lleva la llave y el
 // negocio, y el servidor devuelve los pedidos con seguimiento en vivo.
 // Contrato: vaiinilla_back docs/compra-sin-cuenta.md.
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/auth-context';
 import { api } from './api';
 import { errorMessage, VaiinillaApiError } from './api-error';
@@ -12,6 +12,7 @@ import { forgetGuestOrderByToken } from './guest-orders';
 import { forgetGuest, readGuest } from './guest-session';
 import { isActiveOrder } from './order-labels';
 import type { TrackedOrder } from '../types/api';
+import { LIVE_SAFETY_MS, useLiveSignal, type LiveStreamRef } from './live-events';
 
 const POLL_MS = 5000;
 
@@ -32,6 +33,24 @@ export function useGuestLiveOrders(slug: string): GuestLiveOrdersState {
   // los enlaces de seguimiento guardados (otro dispositivo o datos borrados).
   const llave = !ready || user ? null : (readGuest()?.llave ?? null);
 
+  // Avisos en vivo por el enlace de seguimiento de cada pedido en curso: con el canal abierto se
+  // relee con cada aviso y, de seguridad, cada minuto; sin canal, cada 5 s como siempre.
+  const trackingKey = orders
+    .map((order) => order.seguimiento_token)
+    .filter((token): token is string => Boolean(token))
+    .sort()
+    .join(',');
+  const liveRefs = useMemo<LiveStreamRef[]>(
+    () => (trackingKey ? trackingKey.split(',').map((token) => ({ kind: 'seguimiento', token })) : []),
+    [trackingKey],
+  );
+  const [signal, setSignal] = useState(0);
+  const live = useLiveSignal(
+    liveRefs,
+    (event) => event.type === 'pedido',
+    () => setSignal((n) => n + 1),
+  );
+
   useEffect(() => {
     if (!ready) return;
     if (!llave || !slug) {
@@ -40,7 +59,9 @@ export function useGuestLiveOrders(slug: string): GuestLiveOrdersState {
       return;
     }
     let active = true;
-    setLoading(true);
+    // Una relectura por aviso (o al abrir el canal) no vuelve a mostrar "cargando".
+    const quiet = signal > 0 || live;
+    if (!quiet) setLoading(true);
     const load = async (silent = false) => {
       try {
         const next = await api.listGuestOrders(slug, llave);
@@ -67,15 +88,15 @@ export function useGuestLiveOrders(slug: string): GuestLiveOrdersState {
         if (active) setLoading(false);
       }
     };
-    void load();
+    void load(quiet);
     const timer = window.setInterval(() => {
       void load(true);
-    }, POLL_MS);
+    }, live ? LIVE_SAFETY_MS : POLL_MS);
     return () => {
       active = false;
       window.clearInterval(timer);
     };
-  }, [llave, slug, ready]);
+  }, [llave, slug, ready, live, signal]);
 
   return { orders, loading: loading || !ready, error };
 }

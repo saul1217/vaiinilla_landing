@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { AppShell } from '../components/app-shell';
 import { PedidoChargeOverlay } from '../components/pedido-charge-overlay';
@@ -46,6 +46,7 @@ import {
   stripePaymentCopy,
 } from '../lib/stripe-status';
 import { orderedGroups, tableOrderState } from '../lib/shared-table';
+import { LIVE_SAFETY_MS, useLiveSignal, type LiveStreamRef } from '../lib/live-events';
 import type { CatalogProduct, OrderDetail, SharedTable, StripePaymentSession } from '../types/api';
 
 const POLL_MS = 5000;
@@ -101,6 +102,34 @@ export function OrderDetailPage() {
   const orderId = order?.id;
   const orderSpaceId = order?.espacio?.id;
 
+  // Avisos en vivo (lib/live-events.ts): con el canal abierto el pedido se relee cuando llega su
+  // aviso y la mesa con cualquier aviso de mesa o de pedido; de seguridad, cada minuto. Sin canal,
+  // cada 5 s como siempre. Un pago con tarjeta sin confirmar sigue preguntando seguido.
+  const liveRefs = useMemo<LiveStreamRef[]>(
+    () => (accessToken ? [{ kind: 'cliente', token: accessToken }] : []),
+    [accessToken],
+  );
+  const refreshOrderRef = useRef<(() => void) | null>(null);
+  const [tableSignal, setTableSignal] = useState(0);
+  const live = useLiveSignal(
+    liveRefs,
+    (event) => event.type === 'pedido' || event.type === 'mesa',
+    (event) => {
+      if (event.type === 'resync' || (event.type === 'pedido' && event.data.id === id)) {
+        refreshOrderRef.current?.();
+      }
+      if (event.type !== 'pedido' || orderSpaceId != null) setTableSignal((n) => n + 1);
+    },
+  );
+  const liveRef = useRef(live);
+  liveRef.current = live;
+  // Si el canal se cae, se vuelve a preguntar ya y luego cada 5 s (no al terminar el minuto).
+  const wasLiveRef = useRef(false);
+  useEffect(() => {
+    if (wasLiveRef.current && !live) refreshOrderRef.current?.();
+    wasLiveRef.current = live;
+  }, [live]);
+
   useEffect(() => {
     if (!user) return;
     let active = true;
@@ -151,6 +180,17 @@ export function OrderDetailPage() {
     // Cada espera se calcula con el pedido más reciente: un pago Stripe sin confirmar se
     // consulta más seguido que el resto, aunque al montar todavía no se supiera qué era.
     let timer: number | undefined;
+    let running = false;
+    // Con un aviso se relee ya y se reprograma la siguiente consulta.
+    refreshOrderRef.current = () => {
+      if (!active || running) return;
+      window.clearTimeout(timer);
+      running = true;
+      void run(true).finally(() => {
+        running = false;
+        if (active) schedule();
+      });
+    };
     const schedule = () => {
       timer = window.setTimeout(() => {
         const current = orderRef.current;
@@ -158,16 +198,19 @@ export function OrderDetailPage() {
           schedule();
           return;
         }
+        running = true;
         void run(true).finally(() => {
+          running = false;
           if (active) schedule();
         });
-      }, currentPollMs(orderRef.current));
+      }, currentPollMs(orderRef.current, liveRef.current));
     };
     void run().finally(() => {
       if (active) schedule();
     });
     return () => {
       active = false;
+      refreshOrderRef.current = null;
       window.clearTimeout(timer);
     };
   }, [cart?.slug, context, id, openClientSession, user]);
@@ -193,13 +236,13 @@ export function OrderDetailPage() {
     void refreshTable();
     const timer = window.setInterval(() => {
       if (document.visibilityState === 'visible') void refreshTable();
-    }, POLL_MS);
+    }, live ? LIVE_SAFETY_MS : POLL_MS);
 
     return () => {
       active = false;
       window.clearInterval(timer);
     };
-  }, [accessToken, id, orderId, orderSpaceId]);
+  }, [accessToken, id, orderId, orderSpaceId, live, tableSignal]);
 
   useEffect(() => {
     const slug = cart?.slug ?? lastPlaceSlug();
@@ -584,9 +627,9 @@ function hasStripeRedirectParams(): boolean {
   return Boolean(params.get('payment_intent') || params.get('redirect_status'));
 }
 
-function currentPollMs(order: OrderDetail | null): number {
+function currentPollMs(order: OrderDetail | null, live = false): number {
   if (order?.metodo_pago === 'stripe' && !isStripePaymentConfirmedByBackend(order)) {
     return STRIPE_POLL_INTERVAL_MS;
   }
-  return POLL_MS;
+  return live ? LIVE_SAFETY_MS : POLL_MS;
 }

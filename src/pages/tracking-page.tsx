@@ -4,7 +4,7 @@
 // Abajo, el pedido completo (estado, artículos, total y método de pago).
 // Contrato: vaiinilla_back docs/compra-sin-cuenta.md.
 import { SHOW_WALLET } from '../lib/features';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { AlumnoPageHeader } from '../components/alumno-brand';
@@ -21,6 +21,7 @@ import { isStorageAvailable } from '../lib/storage-available';
 import { isActiveOrder } from '../lib/order-labels';
 import { isPermanentTrackingError, trackingRetryDelay } from '../lib/tracking-poll';
 import { isStripePaymentConfirmedByBackend } from '../lib/stripe-status';
+import { LIVE_SAFETY_MS, useLiveSignal, type LiveStreamRef } from '../lib/live-events';
 import { clearStripeCheckoutSession, peekStripeCheckoutSession } from '../lib/stripe-session';
 import type { SharedTable, StripePaymentSession, TrackedOrder } from '../types/api';
 
@@ -64,11 +65,45 @@ export function TrackingPage() {
   const [storageOk] = useState(isStorageAvailable);
   const whatsappHref = `https://wa.me/?text=${encodeURIComponent(`Mi pedido en Vaiinilla: ${link}`)}`;
 
+  // Avisos en vivo (lib/live-events.ts): el pedido por su enlace de seguimiento y, si el invitado
+  // está en una mesa, la mesa por su sesión. Con el canal abierto se relee con cada aviso y, de
+  // seguridad, cada minuto; sin canal, como siempre. El pago con tarjeta sigue preguntando seguido.
+  const liveRefs = useMemo<LiveStreamRef[]>(() => {
+    const refs: LiveStreamRef[] = [];
+    if (token) refs.push({ kind: 'seguimiento', token });
+    if (guestSpace.token) refs.push({ kind: 'cliente', token: guestSpace.token });
+    return refs;
+  }, [token, guestSpace.token]);
+  const refreshOrderRef = useRef<(() => void) | null>(null);
+  const [tableSignal, setTableSignal] = useState(0);
+  const live = useLiveSignal(
+    liveRefs,
+    (event) => event.type === 'pedido' || event.type === 'mesa',
+    (event) => {
+      if (event.type === 'resync' || (event.type === 'pedido' && event.data.id === order?.id)) {
+        refreshOrderRef.current?.();
+      }
+      setTableSignal((n) => n + 1);
+    },
+  );
+  const liveRef = useRef(live);
+  liveRef.current = live;
+
   useEffect(() => {
     let active = true;
     let timer: number | undefined;
     let failures = 0;
+    let running = false;
+    let formOpenNow = false;
+    // Con un aviso se relee ya (lo que siga lo programa `load`). Con el formulario de tarjeta a la
+    // vista no: recargar lo vaciaría a media captura.
+    refreshOrderRef.current = () => {
+      if (!active || running || formOpenNow) return;
+      window.clearTimeout(timer);
+      void load();
+    };
     const load = async () => {
+      running = true;
       try {
         const next = await api.getTracking(token);
         if (!active) return;
@@ -86,8 +121,12 @@ export function TrackingPage() {
         // Con el formulario de tarjeta a la vista no se recarga: lo vaciaría a media captura.
         const formOpen =
           next.metodo_pago === 'stripe' && next.estado === 'por_cobrar' && Boolean(session) && !paying;
+        formOpenNow = formOpen;
         if (isActiveOrder(next) && !formOpen)
-          timer = window.setTimeout(() => void load(), paying ? POLL_PAYING_MS : POLL_MS);
+          timer = window.setTimeout(
+            () => void load(),
+            paying ? POLL_PAYING_MS : liveRef.current ? LIVE_SAFETY_MS : POLL_MS,
+          );
       } catch (cause) {
         if (!active) return;
         setError(errorMessage(cause));
@@ -97,11 +136,14 @@ export function TrackingPage() {
         }
         failures += 1;
         timer = window.setTimeout(() => void load(), trackingRetryDelay(failures));
+      } finally {
+        running = false;
       }
     };
     void load();
     return () => {
       active = false;
+      refreshOrderRef.current = null;
       window.clearTimeout(timer);
     };
   }, [token, paying]);
@@ -130,12 +172,12 @@ export function TrackingPage() {
     void refreshTable();
     const interval = window.setInterval(() => {
       if (document.visibilityState === 'visible') void refreshTable();
-    }, TABLE_POLL_MS);
+    }, live ? LIVE_SAFETY_MS : TABLE_POLL_MS);
     return () => {
       active = false;
       window.clearInterval(interval);
     };
-  }, [guestSpace.token, order?.espacio?.id, order?.id]);
+  }, [guestSpace.token, order?.espacio?.id, order?.id, live, tableSignal]);
 
   async function copy() {
     try {

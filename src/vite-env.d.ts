@@ -23,6 +23,8 @@ interface ImportMetaEnv {
   readonly VITE_FEATURE_RESERVAS_BOLICHE?: string;
   readonly VITE_FEATURE_CARTERA?: string;
   readonly VITE_FEATURE_MODO_PAPAS?: string;
+  /** Avisos en vivo por SSE (lib/live-events.ts): prendidos salvo con 'false'. */
+  readonly VITE_TIEMPO_REAL?: string;
 }
 
 interface ImportMeta {

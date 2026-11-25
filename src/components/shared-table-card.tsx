@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { LoadingSkeleton } from './loading-skeleton';
 import { api } from '../lib/api';
 import { errorMessage, VaiinillaApiError } from '../lib/api-error';
@@ -9,6 +9,7 @@ import { forgetSpace } from '../lib/space-session';
 import { spaceNoun } from '../lib/space-words';
 import type { SharedTable } from '../types/api';
 import { assignmentStatus } from '../lib/assignment-status';
+import { LIVE_SAFETY_MS, useLiveSignal, type LiveStreamRef } from '../lib/live-events';
 
 const POLL_MS = 5000;
 const ALIAS_MAX = 30;
@@ -75,15 +76,24 @@ export function SharedTableCard({
     }
   }, [onUnauthorized, token]);
 
+  // Avisos en vivo: la mesa, sus pedidos y sus llamadas. Con el canal abierto se relee con cada
+  // aviso y, de seguridad, cada minuto; sin canal, cada 5 s como siempre.
+  const liveRefs = useMemo<LiveStreamRef[]>(() => (token ? [{ kind: 'cliente', token }] : []), [token]);
+  const [signal, setSignal] = useState(0);
+  const live = useLiveSignal(
+    liveRefs,
+    (event) => event.type === 'mesa' || event.type === 'pedido' || event.type === 'llamada',
+    () => setSignal((n) => n + 1),
+  );
   useEffect(() => {
     if (!token) return;
     void refresh();
     // Solo consulta mientras la pestaña está a la vista.
     const timer = window.setInterval(() => {
       if (document.visibilityState === 'visible') void refresh();
-    }, POLL_MS);
+    }, live ? LIVE_SAFETY_MS : POLL_MS);
     return () => window.clearInterval(timer);
-  }, [refresh, token]);
+  }, [refresh, token, live, signal]);
 
   async function join(event: FormEvent) {
     event.preventDefault();
