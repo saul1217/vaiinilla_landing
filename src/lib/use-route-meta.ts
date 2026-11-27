@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { metaForPath } from './seo';
+import { NOT_FOUND_META, metaForPath } from './seo';
 
 function setAttribute(selector: string, create: () => HTMLElement, attribute: string, value: string) {
   let element = document.head.querySelector<HTMLElement>(selector);
@@ -19,14 +19,25 @@ function meta(attribute: 'name' | 'property', key: string) {
   };
 }
 
+function addRouteNoindex() {
+  if (document.head.querySelector('meta[name="robots"][data-route]')) return;
+  const robots = document.createElement('meta');
+  robots.name = 'robots';
+  robots.content = 'noindex, nofollow';
+  robots.dataset.route = '';
+  document.head.appendChild(robots);
+}
+
 /**
  * Title, description, canonical, og y twitter de la ruta actual. Las rutas privadas reciben
  * noindex propio (marcado con data-route) sin tocar el noindex que el build pone fuera de producción.
+ * Va en useLayoutEffect para que una página pueda ajustar el head después con useEffect
+ * (useNotFoundMeta), porque los efectos del padre corren después de los del hijo.
  */
 export function useRouteMeta() {
   const { pathname } = useLocation();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const route = metaForPath(pathname);
     document.title = route.title;
     setAttribute('meta[name="description"]', meta('name', 'description'), 'content', route.description);
@@ -46,15 +57,27 @@ export function useRouteMeta() {
       route.canonical,
     );
 
-    const routeRobots = document.head.querySelector('meta[name="robots"][data-route]');
-    if (route.noindex && !routeRobots) {
-      const robots = document.createElement('meta');
-      robots.name = 'robots';
-      robots.content = 'noindex, nofollow';
-      robots.dataset.route = '';
-      document.head.appendChild(robots);
-    } else if (!route.noindex) {
-      routeRobots?.remove();
-    }
+    if (route.noindex) addRouteNoindex();
+    else document.head.querySelector('meta[name="robots"][data-route]')?.remove();
+  }, [pathname]);
+}
+
+/**
+ * La página «No encontramos esa página»: título propio, noindex y sin canonical ni og:url, igual
+ * que dist/404.html. Al navegar a otra ruta, useRouteMeta vuelve a poner los de esa ruta.
+ */
+export function useNotFoundMeta() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    document.title = NOT_FOUND_META.title;
+    document.head.querySelector('meta[name="description"]')?.setAttribute('content', NOT_FOUND_META.description);
+    document.head.querySelector('meta[property="og:title"]')?.setAttribute('content', NOT_FOUND_META.title);
+    document.head.querySelector('meta[property="og:description"]')?.setAttribute('content', NOT_FOUND_META.description);
+    document.head.querySelector('meta[name="twitter:title"]')?.setAttribute('content', NOT_FOUND_META.title);
+    document.head.querySelector('meta[name="twitter:description"]')?.setAttribute('content', NOT_FOUND_META.description);
+    document.head.querySelector('link[rel="canonical"]')?.remove();
+    document.head.querySelector('meta[property="og:url"]')?.remove();
+    addRouteNoindex();
   }, [pathname]);
 }

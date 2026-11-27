@@ -127,7 +127,23 @@
       "destination": "/soporte/index.html"
     },
     {
-      "source": "/((?!assets/|robots\\.txt$|sitemap\\.xml$|\\.well-known/|google[^/]*\\.html$).*)",
+      "source": "/(e/[^/]+(?:/(?:carrito|canchas|asistente|hotel(?:/[^/]+)?|m/[^/]+(?:/quien)?))?/?)",
+      "destination": "/spa.html"
+    },
+    {
+      "source": "/([^/]+/m/[^/]+(?:/quien)?/?)",
+      "destination": "/spa.html"
+    },
+    {
+      "source": "/((?:cuenta|acceso)(?:/.*)?)",
+      "destination": "/spa.html"
+    },
+    {
+      "source": "/((?:seguimiento|u)/[^/]+/?)",
+      "destination": "/spa.html"
+    },
+    {
+      "source": "/(cafeterias/?)",
       "destination": "/spa.html"
     }
   ]

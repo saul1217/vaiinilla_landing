@@ -31,6 +31,12 @@ export const PUBLIC_PAGES: Readonly<Record<string, PageMeta>> = {
   },
 };
 
+/** Página 404 (dist/404.html): Vercel la sirve con estado 404 a las rutas que no son de la app. */
+export const NOT_FOUND_META: PageMeta = {
+  title: 'Página no encontrada - Vaiinilla',
+  description: 'Esta dirección no existe en vaiinilla.app. Vuelve al inicio para pedir y recoger sin filas.',
+};
+
 /** Rutas de cuenta, tokens de seguimiento y mesas: nunca se indexan. */
 const PRIVATE_SECTIONS = ['/cuenta', '/acceso', '/seguimiento', '/u', '/__qa'];
 const TABLE_TOKEN = /\/m\/[^/]+/;
@@ -129,3 +135,15 @@ export function stripRouteSpecificTags(html: string): string {
     .replace(/\s*<meta\s+property="og:url"\s+content="[^"]*"\s*\/?>/, '');
 }
 
+/**
+ * Head de dist/404.html: título propio, noindex y sin canonical ni og:url, porque esa página
+ * responde a cualquier ruta desconocida. Si el build ya trae el noindex de fuera de producción,
+ * lo deja como está.
+ */
+export function notFoundHtml(html: string): string {
+  const withMeta = stripRouteSpecificTags(
+    applyMetaToHtml(html, { ...NOT_FOUND_META, canonical: SITE_URL, noindex: true }),
+  );
+  if (/<meta\s+name="robots"/.test(withMeta)) return withMeta;
+  return withMeta.replace('</title>', '</title>\n    <meta name="robots" content="noindex" />');
+}

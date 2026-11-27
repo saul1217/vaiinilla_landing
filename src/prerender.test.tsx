@@ -9,7 +9,7 @@ vi.mock('./context/auth-context', () => ({
   useAuth: () => ({ user: null, ready: false, configured: true, signOut: vi.fn() }),
 }));
 
-// Lo que scripts/prerender.mjs escribe en el <div id="root"> de dist/pedir/index.html.
+// Lo que scripts/prerender.mjs escribe en el <div id="root"> de dist/pedir/index.html y dist/404.html.
 describe('prerender', () => {
   it('/pedir sale con su h1, el texto de cómo funciona y enlaces a / y /soporte', () => {
     const html = render('/pedir');
@@ -20,4 +20,7 @@ describe('prerender', () => {
     expect(html).toContain('href="/"');
   });
 
+  it('una ruta desconocida sale con la página 404 de la app', () => {
+    expect(render('/pagina-no-encontrada')).toContain('No encontramos esa página');
+  });
 });

@@ -10,7 +10,7 @@ import { BuyerSessionProvider } from './context/buyer-session';
 import { CartProvider } from './context/cart-context';
 import { ThemeProvider } from './context/theme-context';
 
-export { applyMetaToHtml, metaForPath } from './lib/seo';
+export { applyMetaToHtml, metaForPath, notFoundHtml } from './lib/seo';
 
 /**
  * Sin VITE_STAFF_APP_URL los enlaces al panel caen en el respaldo de env.ts (el panel de

@@ -2,17 +2,37 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
   DEFAULT_META,
+  NOT_FOUND_META,
   applyMetaToHtml,
   canonicalUrl,
   isIndexable,
   isPrivatePath,
   metaForPath,
+  notFoundHtml,
   robotsTxt,
   sitemapXml,
   stripRouteSpecificTags,
 } from './seo';
 
 const INDEX_HTML = readFileSync('index.html', 'utf8');
+
+/** Destino del rewrite de vercel.json para una ruta, o null si cae en el 404.html (estado 404). */
+function rewriteFor(path: string): string | null {
+  const { rewrites } = JSON.parse(readFileSync('vercel.json', 'utf8')) as {
+    rewrites: { source: string; destination: string }[];
+  };
+  // Las fuentes son `/` más un solo grupo de regex, así que path-to-regexp y RegExp coinciden.
+  return rewrites.find((rule) => new RegExp(`^${rule.source}$`).test(path))?.destination ?? null;
+}
+
+/** Cada <Route path> de router.tsx con valores de ejemplo en los parámetros (sin /__qa, solo dev). */
+function appRoutePaths(): string[] {
+  const router = readFileSync('src/app/router.tsx', 'utf8');
+  return [...router.matchAll(/<Route path="([^"]+)"/g)]
+    .map((match) => match[1]!)
+    .filter((path) => path !== '*' && !path.startsWith('/__qa'))
+    .map((path) => path.replace(/:\w+/g, 'ejemplo-1'));
+}
 
 describe('seo', () => {
   it('ninguna URL absoluta de SEO usa www', () => {
@@ -109,6 +129,47 @@ describe('seo', () => {
     expect(INDEX_HTML).toContain(`<title>${DEFAULT_META.title}</title>`);
     expect(INDEX_HTML).toContain(`<meta name="description" content="${DEFAULT_META.description}" />`);
     expect(INDEX_HTML).toContain(`<meta property="og:description" content="${DEFAULT_META.description}" />`);
+  });
+
+  it('el 404.html lleva noindex, su propio título y ni canonical ni og:url', () => {
+    const html = notFoundHtml(INDEX_HTML);
+    expect(html).toContain(`<title>${NOT_FOUND_META.title}</title>`);
+    expect(html.match(/<meta name="robots" content="noindex" \/>/g)).toHaveLength(1);
+    expect(html).not.toContain('rel="canonical"');
+    expect(html).not.toContain('og:url');
+    expect(html).toContain('<div id="root"></div>');
+  });
+
+  it('el 404.html de un build fuera de producción no repite la meta robots', () => {
+    const preview = INDEX_HTML.replace('</head>', '<meta name="robots" content="noindex, nofollow">\n</head>');
+    const html = notFoundHtml(preview);
+    expect(html.match(/<meta name="robots"/g)).toHaveLength(1);
+    expect(html).toContain('content="noindex, nofollow"');
+  });
+
+  it('vercel.json manda las rutas prerenderizadas a su HTML y cada ruta de la app a spa.html', () => {
+    expect(rewriteFor('/')).toBe('/index.html');
+    expect(rewriteFor('/pedir')).toBe('/pedir/index.html');
+    expect(rewriteFor('/soporte')).toBe('/soporte/index.html');
+    const paths = appRoutePaths();
+    expect(paths.length).toBeGreaterThan(20);
+    for (const path of paths.filter((p) => !['/', '/pedir', '/soporte'].includes(p))) {
+      expect(rewriteFor(path), path).toBe('/spa.html');
+      expect(rewriteFor(`${path}/`), `${path}/`).toBe('/spa.html');
+    }
+    for (const path of ['/cuenta/saldo/recargar', '/e/hotel-sol/hotel/solicitudes', '/cafe-norte/m/tok_1/quien']) {
+      expect(rewriteFor(path), path).toBe('/spa.html');
+    }
+  });
+
+  it.each(['/ads.txt', '/cookies', '/cualquier-cosa', '/cuentas-claras', '/e', '/e/cafe/no-existe', '/seguimiento/abc/extra', '/assets/no-existe.js', '/wp-login.php'])(
+    'vercel.json no reescribe %s: cae en el 404.html',
+    (path) => expect(rewriteFor(path)).toBeNull(),
+  );
+
+  it('las redirecciones legales siguen antes de los rewrites', () => {
+    const { redirects } = JSON.parse(readFileSync('vercel.json', 'utf8')) as { redirects: { source: string }[] };
+    expect(redirects.map((r) => r.source)).toEqual(expect.arrayContaining(['/privacidad', '/terminos', '/legal']));
   });
 
   it('el sitemap lista solo las rutas públicas con URL absoluta', () => {

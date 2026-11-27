@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { PageShell } from '../components/shell';
+import { useNotFoundMeta } from '../lib/use-route-meta';
 
 export function NotFoundPage({
   title = 'No encontramos esa página',
@@ -10,6 +11,7 @@ export function NotFoundPage({
   lead?: string;
   cta?: { to: string; label: string };
 }) {
+  useNotFoundMeta();
   return (
     <PageShell>
       <main id="main-content" className="app-page">
