@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
+  DEFAULT_META,
   applyMetaToHtml,
   canonicalUrl,
   isIndexable,
@@ -90,6 +91,24 @@ describe('seo', () => {
     });
     expect(metaForPath('/e/hotel-sol')).toMatchObject({ noindex: false, canonical: 'https://vaiinilla.app/e/hotel-sol' });
     expect(robotsTxt(true)).toContain('Disallow: /e/*/hotel$\nDisallow: /e/*/hotel/\n');
+  });
+
+  it('el title y la description de / dicen Vaiinilla, vaiinilla.app y qué se busca', () => {
+    for (const text of [DEFAULT_META.title, DEFAULT_META.description]) {
+      expect(text).toContain('Vaiinilla');
+      expect(text.toLowerCase()).toContain('vaiinilla.app');
+    }
+    expect(DEFAULT_META.title).toMatch(/sin filas en Chihuahua/);
+    expect(DEFAULT_META.description).toMatch(/recoge sin filas en Chihuahua/);
+    expect(DEFAULT_META.description).toMatch(/app para negocios/);
+    expect(DEFAULT_META.title.length).toBeLessThanOrEqual(65);
+    expect(DEFAULT_META.description.length).toBeLessThanOrEqual(160);
+  });
+
+  it('index.html trae el mismo title y description que la home', () => {
+    expect(INDEX_HTML).toContain(`<title>${DEFAULT_META.title}</title>`);
+    expect(INDEX_HTML).toContain(`<meta name="description" content="${DEFAULT_META.description}" />`);
+    expect(INDEX_HTML).toContain(`<meta property="og:description" content="${DEFAULT_META.description}" />`);
   });
 
   it('el sitemap lista solo las rutas públicas con URL absoluta', () => {

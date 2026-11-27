@@ -11,18 +11,18 @@ export interface PageMeta {
 }
 
 export const DEFAULT_META: PageMeta = {
-  title: 'Vaiinilla - Pide y recoge, sin filas',
+  title: 'Vaiinilla - Pide y recoge sin filas en Chihuahua | vaiinilla.app',
   description:
-    'Pide en cualquier negocio de comida desde vaiinilla.app. Menú, carrito, saldo, pedidos y retiro. Apps nativas en App Store y Google Play, próximamente.',
+    'Pide y recoge sin filas en Chihuahua con vaiinilla.app: menú, pago y seguimiento desde el celular. Vaiinilla también es la app para negocios de comida.',
 };
 
 /** Rutas públicas fijas: van al sitemap y se prerenderizan con su propio head. */
 export const PUBLIC_PAGES: Readonly<Record<string, PageMeta>> = {
   '/': DEFAULT_META,
   '/pedir': {
-    title: 'Pedir comida - Vaiinilla',
+    title: 'Pedir y recoger sin filas - Vaiinilla',
     description:
-      'Busca el restaurante o cafetería, escribe tu mesa o escanea el código y arma tu pedido desde el celular.',
+      'Busca el restaurante o cafetería, escribe tu mesa o escanea el código, pide desde el celular y recoge sin filas en Chihuahua.',
   },
   '/soporte': {
     title: 'Soporte - Vaiinilla',
@@ -128,3 +128,4 @@ export function stripRouteSpecificTags(html: string): string {
     .replace(/\s*<link\s+rel="canonical"\s+href="[^"]*"\s*\/?>/, '')
     .replace(/\s*<meta\s+property="og:url"\s+content="[^"]*"\s*\/?>/, '');
 }
+
