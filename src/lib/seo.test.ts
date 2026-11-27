@@ -115,6 +115,7 @@ describe('seo', () => {
     const xml = sitemapXml('2026-11-03');
     expect(xml.match(/<loc>/g)).toHaveLength(3);
     expect(xml).toContain('<loc>https://vaiinilla.app/soporte</loc>');
+    expect(xml).toContain('<loc>https://vaiinilla.app/pedir</loc>');
     expect(xml).toContain('<lastmod>2026-11-03</lastmod>');
   });
 

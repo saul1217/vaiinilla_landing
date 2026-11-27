@@ -13,6 +13,7 @@ import type { PublicEstablishment } from '../types/api';
 import { LoadingSkeleton } from '../components/loading-skeleton';
 import { TableCodeSheet } from '../components/table-code-sheet';
 import { PlaceEntry } from '../components/place-entry';
+import { PedirIntro } from '../components/pedir-intro';
 
 type EntrySheet = 'qr' | 'code' | 'nfc' | null;
 
@@ -205,8 +206,9 @@ export function DiscoveryPage() {
   if (!ready) {
     return (
       <AppShell tab="none">
-        <main id="main-content" className="alumno-main" role="status">
-          Preparando la lista…
+        <main id="main-content" className="alumno-main">
+          <p role="status">Preparando la lista…</p>
+          <PedirIntro heading="h1" />
         </main>
       </AppShell>
     );
@@ -357,6 +359,7 @@ export function DiscoveryPage() {
             )}
           </div>
         </div>
+        <PedirIntro />
       </main>
     </AppShell>
   );

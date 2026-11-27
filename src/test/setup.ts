@@ -42,7 +42,10 @@ function ensureLocalStorage() {
   });
 }
 
-ensureLocalStorage();
+// Las pruebas con `@vitest-environment node` (el prerender) no tienen window ni almacenamiento.
+const hasWindow = typeof window !== 'undefined';
+
+if (hasWindow) ensureLocalStorage();
 
 class IntersectionObserverMock {
   observe(): void {}
@@ -56,20 +59,22 @@ Object.defineProperty(globalThis, 'IntersectionObserver', {
   value: IntersectionObserverMock,
 });
 
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  configurable: true,
-  value: (query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => undefined,
-    removeListener: () => undefined,
-    addEventListener: () => undefined,
-    removeEventListener: () => undefined,
-    dispatchEvent: () => false,
-  }),
-});
+if (hasWindow) {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    configurable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      dispatchEvent: () => false,
+    }),
+  });
+}
 
 afterEach(() => cleanup());
 

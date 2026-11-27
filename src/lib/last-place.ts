@@ -52,5 +52,10 @@ export function releasePlace(): void {
 }
 
 export function lastPlaceSlug(): string | null {
-  return localStorage.getItem(KEY) ?? sessionStorage.getItem(KEY);
+  try {
+    return localStorage.getItem(KEY) ?? sessionStorage.getItem(KEY);
+  } catch {
+    // Sin almacenamiento (el prerender de /pedir en Node, o el navegador lo bloquea) no hay tienda recordada.
+    return null;
+  }
 }

@@ -1,6 +1,7 @@
 // Prerender de las rutas públicas (issue #143): escribe en dist/ el HTML inicial con su head
-// propio. `/` y `/soporte` llevan además el contenido; `/pedir` depende del API y de la sesión,
-// así que solo cambia el head. Uso: después de `vite build` y `vite build --ssr src/prerender.tsx`.
+// propio y su contenido. En `/pedir` la lista de lugares sale del API, así que el HTML lleva el
+// estado de carga y el texto de qué es pedir y recoger sin filas (PedirIntro).
+// Uso: después de `vite build` y `vite build --ssr src/prerender.tsx`.
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -10,7 +11,7 @@ const SSR_DIST = 'dist-ssr';
 const ROUTES = [
   { path: '/', file: 'index.html', body: true },
   { path: '/soporte', file: 'soporte/index.html', body: true },
-  { path: '/pedir', file: 'pedir/index.html', body: false },
+  { path: '/pedir', file: 'pedir/index.html', body: true },
 ];
 const ROOT = '<div id="root"></div>';
 

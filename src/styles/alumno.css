@@ -8689,3 +8689,12 @@ a.order-help__case:focus-visible { outline: 2px solid var(--text); outline-offse
     bottom: 24px;
   }
 }
+
+/* /pedir: texto de qué es pedir y recoger sin filas, al pie de la lista y en el HTML prerenderizado. */
+.pedir-intro { margin: 32px 0 0; padding: 20px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); color: var(--text-soft); font-size: 0.92rem; line-height: 1.55; max-width: 720px; }
+.alumno-main .pedir-intro__title { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; margin: 0 0 10px; color: var(--text); }
+.pedir-intro__subtitle { font-size: 1rem; font-weight: 800; margin: 18px 0 8px; color: var(--text); }
+.pedir-intro__steps { margin: 0; padding-left: 1.25rem; display: grid; gap: 8px; }
+.pedir-intro__steps strong { color: var(--text); }
+.pedir-intro__links { margin-top: 16px; }
+.pedir-intro a { color: var(--text); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
