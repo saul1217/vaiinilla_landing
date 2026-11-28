@@ -11,24 +11,30 @@ export interface PageMeta {
 }
 
 export const DEFAULT_META: PageMeta = {
-  title: 'Vaiinilla - Pide y recoge, sin filas',
+  title: 'Vaiinilla - Pide y recoge sin filas en Chihuahua | vaiinilla.app',
   description:
-    'Pide en cualquier negocio de comida desde vaiinilla.app. Menú, carrito, saldo, pedidos y retiro. Apps nativas en App Store y Google Play, próximamente.',
+    'Pide y recoge sin filas en Chihuahua con vaiinilla.app: menú, pago y seguimiento desde el celular. Vaiinilla también es la app para negocios de comida.',
 };
 
 /** Rutas públicas fijas: van al sitemap y se prerenderizan con su propio head. */
 export const PUBLIC_PAGES: Readonly<Record<string, PageMeta>> = {
   '/': DEFAULT_META,
   '/pedir': {
-    title: 'Pedir comida - Vaiinilla',
+    title: 'Pedir y recoger sin filas - Vaiinilla',
     description:
-      'Busca el restaurante o cafetería, escribe tu mesa o escanea el código y arma tu pedido desde el celular.',
+      'Busca el restaurante o cafetería, escribe tu mesa o escanea el código, pide desde el celular y recoge sin filas en Chihuahua.',
   },
   '/soporte': {
     title: 'Soporte - Vaiinilla',
     description:
       'Ayuda con tu pedido, tu saldo, un pago o tu cuenta de Vaiinilla. Escríbenos a equipo@vaiinilla.app.',
   },
+};
+
+/** Página 404 (dist/404.html): Vercel la sirve con estado 404 a las rutas que no son de la app. */
+export const NOT_FOUND_META: PageMeta = {
+  title: 'Página no encontrada - Vaiinilla',
+  description: 'Esta dirección no existe en vaiinilla.app. Vuelve al inicio para pedir y recoger sin filas.',
 };
 
 /** Rutas de cuenta, tokens de seguimiento y mesas: nunca se indexan. */
@@ -127,4 +133,17 @@ export function stripRouteSpecificTags(html: string): string {
   return html
     .replace(/\s*<link\s+rel="canonical"\s+href="[^"]*"\s*\/?>/, '')
     .replace(/\s*<meta\s+property="og:url"\s+content="[^"]*"\s*\/?>/, '');
+}
+
+/**
+ * Head de dist/404.html: título propio, noindex y sin canonical ni og:url, porque esa página
+ * responde a cualquier ruta desconocida. Si el build ya trae el noindex de fuera de producción,
+ * lo deja como está.
+ */
+export function notFoundHtml(html: string): string {
+  const withMeta = stripRouteSpecificTags(
+    applyMetaToHtml(html, { ...NOT_FOUND_META, canonical: SITE_URL, noindex: true }),
+  );
+  if (/<meta\s+name="robots"/.test(withMeta)) return withMeta;
+  return withMeta.replace('</title>', '</title>\n    <meta name="robots" content="noindex" />');
 }

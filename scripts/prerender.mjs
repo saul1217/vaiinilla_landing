@@ -1,6 +1,9 @@
 // Prerender de las rutas públicas (issue #143): escribe en dist/ el HTML inicial con su head
-// propio. `/` y `/soporte` llevan además el contenido; `/pedir` depende del API y de la sesión,
-// así que solo cambia el head. Uso: después de `vite build` y `vite build --ssr src/prerender.tsx`.
+// propio y su contenido. En `/pedir` la lista de lugares sale del API, así que el HTML lleva el
+// estado de carga y el texto de qué es pedir y recoger sin filas (PedirIntro).
+// También escribe dist/404.html: Vercel lo sirve con estado 404 a lo que no está en los rewrites
+// de vercel.json; lleva noindex y la app, que muestra «No encontramos esa página».
+// Uso: después de `vite build` y `vite build --ssr src/prerender.tsx`.
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -10,11 +13,12 @@ const SSR_DIST = 'dist-ssr';
 const ROUTES = [
   { path: '/', file: 'index.html', body: true },
   { path: '/soporte', file: 'soporte/index.html', body: true },
-  { path: '/pedir', file: 'pedir/index.html', body: false },
+  { path: '/pedir', file: 'pedir/index.html', body: true },
 ];
+const NOT_FOUND_PATH = '/pagina-no-encontrada';
 const ROOT = '<div id="root"></div>';
 
-const { render, metaForPath, applyMetaToHtml, staffAppUrlConfigured } = await import(
+const { render, metaForPath, applyMetaToHtml, notFoundHtml, staffAppUrlConfigured } = await import(
   pathToFileURL(join(SSR_DIST, 'prerender.js')).href
 );
 if (!staffAppUrlConfigured) {
@@ -31,5 +35,10 @@ for (const route of ROUTES) {
   writeFileSync(target, html);
   console.log(`prerender ${route.path} -> ${target}`);
 }
+
+let notFound = notFoundHtml(shell);
+if (staffAppUrlConfigured) notFound = notFound.replace(ROOT, `<div id="root">${render(NOT_FOUND_PATH)}</div>`);
+writeFileSync(join(DIST, '404.html'), notFound);
+console.log(`prerender 404 -> ${join(DIST, '404.html')}`);
 
 rmSync(SSR_DIST, { recursive: true, force: true });

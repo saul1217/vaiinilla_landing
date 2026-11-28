@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -70,6 +70,21 @@ describe('DiscoveryPage', () => {
     expect(await screen.findByRole('heading', { name: /cafetería demo a/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /usar código/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /abrir menú/i })).toBeInTheDocument();
+  });
+
+  it('explica qué es pedir y recoger sin filas, con enlaces a la home y a soporte, y deja un solo h1', async () => {
+    render(
+      <MemoryRouter>
+        <DiscoveryPage />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('group', { name: 'Establecimientos' });
+    const intro = screen.getByRole('region', { name: /pide y recoge sin filas en chihuahua/i });
+    expect(screen.getAllByRole('heading', { level: 1 }).map((h) => h.textContent)).toEqual(['¿Dónde comemos?']);
+    expect(screen.getByRole('heading', { level: 2, name: /pide y recoge sin filas en chihuahua/i })).toBeInTheDocument();
+    expect(intro).toHaveTextContent(/cómo funciona/i);
+    expect(within(intro).getByRole('link', { name: 'Soporte' })).toHaveAttribute('href', '/soporte');
+    expect(within(intro).getByRole('link', { name: 'Vaiinilla' })).toHaveAttribute('href', '/');
   });
 
   it('la card despliega su detalle justo debajo de ella y se cierra al tocarla otra vez', async () => {

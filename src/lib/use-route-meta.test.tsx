@@ -1,8 +1,27 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
-import { MemoryRouter, useNavigate } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { useRouteMeta } from './use-route-meta';
+import { useNotFoundMeta, useRouteMeta } from './use-route-meta';
+
+function NotFoundProbe({ to }: { to?: string }) {
+  useNotFoundMeta();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (to) void navigate(to);
+  }, [navigate, to]);
+  return null;
+}
+
+function App({ to }: { to?: string }) {
+  useRouteMeta();
+  return (
+    <Routes>
+      <Route path="/pedir" element={null} />
+      <Route path="*" element={<NotFoundProbe to={to} />} />
+    </Routes>
+  );
+}
 
 function Probe({ to }: { to?: string }) {
   useRouteMeta();
@@ -50,6 +69,30 @@ describe('useRouteMeta', () => {
         <Probe to="/pedir" />
       </MemoryRouter>,
     );
+    expect(document.head.querySelector('meta[name="robots"][data-route]')).toBeNull();
+    expect(document.head.querySelectorAll('meta[name="robots"]')).toHaveLength(1);
+  });
+
+  it('la página 404 de la app lleva su título y noindex, sin canonical, y al salir vuelven los de la ruta', () => {
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/cookies']}>
+        <App />
+      </MemoryRouter>,
+    );
+    expect(document.title).toBe('Página no encontrada - Vaiinilla');
+    expect(content('meta[name="description"]')).toMatch(/no existe en vaiinilla\.app/);
+    expect(document.head.querySelector('link[rel="canonical"]')).toBeNull();
+    expect(document.head.querySelector('meta[property="og:url"]')).toBeNull();
+    expect(document.head.querySelectorAll('meta[name="robots"][data-route]')).toHaveLength(1);
+    unmount();
+
+    render(
+      <MemoryRouter initialEntries={['/cookies']}>
+        <App to="/pedir" />
+      </MemoryRouter>,
+    );
+    expect(document.title).toBe('Pedir y recoger sin filas - Vaiinilla');
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe('https://vaiinilla.app/pedir');
     expect(document.head.querySelector('meta[name="robots"][data-route]')).toBeNull();
     expect(document.head.querySelectorAll('meta[name="robots"]')).toHaveLength(1);
   });
